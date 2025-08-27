@@ -289,10 +289,20 @@ function initializeDatePickers() {
 // Open booking modal for a specific date
 function openBookingModal(dateStr) {
     const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+    
+    // Generate a new DR number based on the date
+    const date = new Date(dateStr);
+    const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+    
+    // Pre-fill the DR number and date
+    document.getElementById('drNumber').value = drNumber;
+    document.getElementById('deliveryDate').value = dateStr;
+    
+    // Show the modal
     bookingModal.show();
-
-    // Set the date in the modal if needed
-    // In a real implementation, this would pre-fill the date field
+    
+    // Log the selected date for debugging
+    console.log('Opening booking modal for date:', dateStr);
 }
 
 // Initialize calendar navigation

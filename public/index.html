@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCI Delivery Management System</title>
+    <title>MCI App</title>
     <!-- Bootstrap 5.3.0 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -582,6 +582,34 @@
             font-weight: 700;
             color: var(--primary);
             margin-top: 8px;
+            position: relative;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .distance-loading {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-preview {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #d0d7e2;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 10px;
         }
 
         /* Analytics Dashboard Specific Styles */
@@ -878,7 +906,7 @@
                 <div class="logo-icon">
                     <i class="bi bi-truck"></i>
                 </div>
-                <span class="logo-text">MCI Logistics</span>
+                <span class="logo-text">MCI App</span>
             </div>
         </div>
         <div class="px-3 py-4">
@@ -1855,7 +1883,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> New Delivery Booking</h5>
+                    <h5 class="modal-title">📋 DELIVERY BOOKING MODAL</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1863,10 +1891,17 @@
                         <!-- DR Number Section -->
                         <div class="form-section">
                             <h5 class="section-title"><i class="bi bi-receipt"></i> Delivery Reference</h5>
-                            <div class="mb-4">
-                                <label for="drNumber" class="form-label">DR Number</label>
-                                <input type="text" class="form-control" id="drNumber" placeholder="Enter DR number (e.g., DR-XXXXX)" required>
-                                <div class="form-text">Alphanumeric values only (e.g., DR-8842)</div>
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <label for="drNumber" class="form-label">DR Number</label>
+                                    <input type="text" class="form-control" id="drNumber" placeholder="Enter DR number (e.g., DR-XXXXX)" required>
+                                    <div class="form-text">Alphanumeric values only (e.g., DR-8842)</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="deliveryDate" class="form-label">Delivery Date</label>
+                                    <input type="date" class="form-control" id="deliveryDate" required>
+                                    <div class="form-text">Selected from calendar</div>
+                                </div>
                             </div>
                         </div>
 
@@ -1914,8 +1949,14 @@
 
                             <div class="mb-4">
                                 <label class="form-label">Calculated Distance</label>
-                                <div class="distance-box">
-                                    18.7 km
+                                <div class="distance-box" id="calculatedDistance">
+                                    <span id="distanceValue">-- km</span>
+                                    <div class="distance-loading d-none">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Calculating...</span>
+                                        </div>
+                                        <span class="ms-2">Calculating distance...</span>
+                                    </div>
                                 </div>
                                 <div class="form-text text-center mt-2">Distance calculated automatically between origin and destination</div>
                             </div>
@@ -1956,6 +1997,8 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Calendar JS -->
+    <script src="assets/js/calendar.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize all views
@@ -2201,22 +2244,90 @@
 
                 cell.appendChild(summary);
                 calendarGrid.appendChild(cell);
+                
+                // Add click event listener to open booking modal
+                cell.addEventListener('click', function() {
+                    const dateStr = this.dataset.date;
+                    openBookingModal(dateStr);
+                });
             }
+        }
+
+        // Open booking modal for a specific date
+        function openBookingModal(dateStr) {
+            const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+            
+            // Generate a new DR number based on the date
+            const date = new Date(dateStr);
+            const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+            
+            // Pre-fill the DR number and date
+            document.getElementById('drNumber').value = drNumber;
+            document.getElementById('deliveryDate').value = dateStr;
+            
+            // Show the modal
+            bookingModal.show();
+            
+            // Log the selected date for debugging
+            console.log('Opening booking modal for date:', dateStr);
         }
 
         // Booking modal functionality
         function initBookingModal() {
             const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+            let selectedOrigin = null;
+            let selectedDestination = null;
 
             // Origin selection toggle
             const originSelect = document.getElementById('originSelect');
             const customOriginContainer = document.getElementById('customOriginContainer');
+            const customOriginInput = document.getElementById('customOrigin');
+            const destinationInput = document.getElementById('destination');
+
+            // Predefined warehouse locations
+            const warehouseLocations = {
+                'alabang': {
+                    address: 'MCI Alabang warehouse',
+                    coordinates: { lat: 14.4297, lng: 121.0420 }
+                },
+                'cebu': {
+                    address: 'MCI Cebu warehouse', 
+                    coordinates: { lat: 10.3157, lng: 123.8854 }
+                },
+                'davao': {
+                    address: 'MCI Davao warehouse',
+                    coordinates: { lat: 7.1907, lng: 125.4553 }
+                }
+            };
 
             originSelect.addEventListener('change', function() {
                 if (this.value === '') {
                     customOriginContainer.classList.remove('d-none');
+                    selectedOrigin = null;
                 } else {
                     customOriginContainer.classList.add('d-none');
+                    selectedOrigin = warehouseLocations[this.value];
+                    calculateDistance();
+                }
+            });
+
+            // Custom origin input
+            customOriginInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    selectedOrigin = { address: this.value.trim(), coordinates: null };
+                    calculateDistance();
+                } else {
+                    selectedOrigin = null;
+                }
+            });
+
+            // Destination input
+            destinationInput.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    selectedDestination = { address: this.value.trim(), coordinates: null };
+                    calculateDistance();
+                } else {
+                    selectedDestination = null;
                 }
             });
 
@@ -2224,7 +2335,160 @@
             document.getElementById('pinOrigin').addEventListener('click', function() {
                 customOriginContainer.classList.remove('d-none');
                 originSelect.value = '';
+                showMapPinDialog('origin');
             });
+
+            document.getElementById('pinCustomOrigin').addEventListener('click', function() {
+                showMapPinDialog('custom-origin');
+            });
+
+            document.getElementById('pinDestination').addEventListener('click', function() {
+                showMapPinDialog('destination');
+            });
+
+            // Distance calculation function
+            async function calculateDistance() {
+                if (!selectedOrigin || !selectedDestination) {
+                    document.getElementById('distanceValue').textContent = '-- km';
+                    return;
+                }
+
+                const distanceLoading = document.querySelector('.distance-loading');
+                const distanceValue = document.getElementById('distanceValue');
+                
+                // Show loading state
+                distanceValue.style.display = 'none';
+                distanceLoading.classList.remove('d-none');
+
+                try {
+                    // In a real implementation, you would use Google Maps Distance Matrix API
+                    // For demo purposes, we'll simulate the calculation
+                    const distance = await simulateDistanceCalculation(selectedOrigin, selectedDestination);
+                    
+                    // Hide loading state
+                    distanceLoading.classList.add('d-none');
+                    distanceValue.style.display = 'block';
+                    distanceValue.textContent = `${distance.toFixed(1)} km`;
+                } catch (error) {
+                    console.error('Error calculating distance:', error);
+                    distanceLoading.classList.add('d-none');
+                    distanceValue.style.display = 'block';
+                    distanceValue.textContent = 'Error calculating';
+                }
+            }
+
+            // Simulate distance calculation (replace with real API)
+            async function simulateDistanceCalculation(origin, destination) {
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                /* REAL GOOGLE MAPS API INTEGRATION EXAMPLE:
+                
+                const service = new google.maps.DistanceMatrixService();
+                return new Promise((resolve, reject) => {
+                    service.getDistanceMatrix({
+                        origins: [origin.address],
+                        destinations: [destination.address],
+                        travelMode: google.maps.TravelMode.DRIVING,
+                        unitSystem: google.maps.UnitSystem.METRIC,
+                        avoidHighways: false,
+                        avoidTolls: false
+                    }, (response, status) => {
+                        if (status === 'OK') {
+                            const distance = response.rows[0].elements[0].distance.value / 1000; // Convert to km
+                            resolve(distance);
+                        } else {
+                            reject(new Error('Distance calculation failed'));
+                        }
+                    });
+                });
+                
+                END OF REAL API EXAMPLE */
+                
+                // Simulate distance calculation based on coordinates or addresses
+                if (origin.coordinates && destination.coordinates) {
+                    // Calculate distance using coordinates (Haversine formula)
+                    return calculateHaversineDistance(
+                        origin.coordinates.lat, origin.coordinates.lng,
+                        destination.coordinates.lat, destination.coordinates.lng
+                    );
+                } else {
+                    // Return a random distance for demo purposes
+                    return Math.random() * 50 + 5; // 5-55 km
+                }
+            }
+
+            // Haversine distance calculation
+            function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // Earth's radius in kilometers
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                         Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            // Map pin dialog simulation
+            function showMapPinDialog(target) {
+                /* REAL MAP INTEGRATION EXAMPLE:
+                
+                // Create a new modal with Google Maps
+                const mapModal = new bootstrap.Modal(document.createElement('div'));
+                mapModal._element.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Select Location on Map</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="map" style="height: 400px;"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="confirmLocation">Use This Location</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Initialize Google Map
+                const map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 14.5995, lng: 120.9842 }, // Manila
+                    zoom: 13
+                });
+                
+                // Add click listener to map
+                let selectedMarker;
+                map.addListener('click', (event) => {
+                    if (selectedMarker) selectedMarker.setMap(null);
+                    selectedMarker = new google.maps.Marker({
+                        position: event.latLng,
+                        map: map
+                    });
+                });
+                
+                END OF REAL MAP EXAMPLE */
+                
+                // In a real implementation, this would open a map modal
+                // For demo purposes, we'll use a simple prompt
+                const address = prompt(`Enter address for ${target.replace('-', ' ')}:`);
+                if (address) {
+                    if (target === 'origin') {
+                        customOriginInput.value = address;
+                        selectedOrigin = { address: address, coordinates: null };
+                    } else if (target === 'custom-origin') {
+                        customOriginInput.value = address;
+                        selectedOrigin = { address: address, coordinates: null };
+                    } else if (target === 'destination') {
+                        destinationInput.value = address;
+                        selectedDestination = { address: address, coordinates: null };
+                    }
+                    calculateDistance();
+                }
+            }
 
             // Add cost item functionality
             const addCostBtn = document.getElementById('addCostBtn');
@@ -2235,15 +2499,15 @@
                 costItem.className = 'cost-item';
                 costItem.innerHTML = `
                     <div class="flex-grow-1">
-                        <input type="text" class="form-control" placeholder="Description (e.g., Fuel Surcharge)">
+                        <input type="text" class="form-control cost-description" placeholder="Description (e.g., Fuel Surcharge)" required>
                     </div>
                     <div>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" placeholder="Amount">
+                            <input type="number" class="form-control cost-amount" placeholder="Amount" step="0.01" min="0" required>
                         </div>
                     </div>
-                    <button type="button" class="remove-cost">
+                    <button type="button" class="remove-cost" title="Remove cost item">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 `;
@@ -2253,16 +2517,77 @@
                 // Add event listener to the new remove button
                 costItem.querySelector('.remove-cost').addEventListener('click', function() {
                     costItem.remove();
+                    updateCostItemRemoveButtons();
                 });
+
+                // Update remove button states
+                updateCostItemRemoveButtons();
+
+                // Focus on the new description input
+                costItem.querySelector('.cost-description').focus();
             });
 
-            // Remove cost buttons
+            // Update remove button states (disable if only one item)
+            function updateCostItemRemoveButtons() {
+                const costItems = costItemsContainer.querySelectorAll('.cost-item');
+                const removeButtons = costItemsContainer.querySelectorAll('.remove-cost');
+                
+                removeButtons.forEach(button => {
+                    button.disabled = costItems.length <= 1;
+                });
+            }
+
+            // Initialize remove cost buttons
             document.querySelectorAll('.remove-cost').forEach(button => {
                 button.addEventListener('click', function() {
                     const costItem = this.closest('.cost-item');
                     costItem.remove();
+                    updateCostItemRemoveButtons();
                 });
             });
+
+            // Initialize remove button states
+            updateCostItemRemoveButtons();
+
+            // Reset modal when hidden
+            document.getElementById('bookingModal').addEventListener('hidden.bs.modal', function () {
+                resetBookingForm();
+            });
+
+            // Reset form function
+            function resetBookingForm() {
+                // Reset form fields
+                document.getElementById('drNumber').value = '';
+                document.getElementById('deliveryDate').value = '';
+                originSelect.value = '';
+                customOriginContainer.classList.add('d-none');
+                customOriginInput.value = '';
+                destinationInput.value = '';
+                
+                // Reset distance
+                document.getElementById('distanceValue').textContent = '-- km';
+                document.querySelector('.distance-loading').classList.add('d-none');
+                document.getElementById('distanceValue').style.display = 'block';
+                
+                // Reset variables
+                selectedOrigin = null;
+                selectedDestination = null;
+                
+                // Reset cost items to just one
+                const costItems = costItemsContainer.querySelectorAll('.cost-item');
+                for (let i = 1; i < costItems.length; i++) {
+                    costItems[i].remove();
+                }
+                
+                // Clear the first cost item
+                const firstCostItem = costItemsContainer.querySelector('.cost-item');
+                if (firstCostItem) {
+                    firstCostItem.querySelector('.cost-description').value = '';
+                    firstCostItem.querySelector('.cost-amount').value = '';
+                }
+                
+                updateCostItemRemoveButtons();
+            }
         }
 
         // Settings panel functionality
