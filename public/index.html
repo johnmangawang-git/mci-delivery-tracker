@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCI Delivery Management System</title>
+    <!-- Bootstrap 5.3.0 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts - Roboto for Material Design -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light-bg: #f8f9fa;
+            --card-shadow: 0 4px 20px rgba(44, 62, 80, 0.12);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, var(--primary) 0%, #1a2530 100%);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            z-index: 1000;
+            box-shadow: 3px 0 10px rgba(0, 0, 0, 0.08);
+            transition: var(--transition);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            background: var(--secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.75);
+            padding: 14px 20px;
+            border-radius: 8px;
+            margin: 6px 0;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 400;
+        }
+
+            .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+            }
+
+            .nav-link.active {
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                font-weight: 500;
+            }
+
+            .nav-link i {
+                font-size: 1.2rem;
+                width: 24px;
+                text-align: center;
+            }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            padding: 24px;
+            transition: var(--transition);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+            .page-title i {
+                color: var(--secondary);
+            }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Dashboard Cards */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            background: white;
+        }
+
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px rgba(44, 62, 80, 0.15);
+            }
+
+        .card-header {
+            padding: 20px;
+            border-bottom: none;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 12px 0;
+        }
+
+        .stat-desc {
+            color: #6c757d;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+            .stat-desc.up {
+                color: var(--success);
+            }
+
+            .stat-desc.down {
+                color: var(--danger);
+            }
+
+        /* Calendar Styles */
+        .calendar-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+            .month-nav h2 {
+                font-size: 22px;
+                font-weight: 600;
+                color: var(--primary);
+                margin: 0;
+            }
+
+        .calendar-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            padding: 20px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            padding: 12px 0;
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .calendar-cell {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            padding: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+            background: var(--light-bg);
+            color: #6c757d;
+        }
+
+            .calendar-cell:hover {
+                background: #e3e9f0;
+                transform: scale(1.03);
+            }
+
+            .calendar-cell.today {
+                background: #e3f2fd;
+                color: var(--primary);
+                font-weight: 600;
+                box-shadow: 0 0 0 2px var(--secondary);
+            }
+
+            .calendar-cell.booked {
+                background: #ffebee;
+            }
+
+            .calendar-cell .date-number {
+                font-size: 16px;
+                font-weight: 500;
+            }
+
+            .calendar-cell .booking-indicator {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                margin-top: 4px;
+                background: var(--success);
+            }
+
+            .calendar-cell.booked .booking-indicator {
+                background: var(--danger);
+            }
+
+        /* Booking Summary Popup */
+        .booking-summary {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 320px;
+            z-index: 1000;
+            padding: 16px;
+            display: none;
+            margin-top: 10px;
+            border: 1px solid #e0e6ed;
+        }
+
+            .booking-summary::before {
+                content: '';
+                position: absolute;
+                top: -8px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-bottom: 8px solid white;
+            }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .summary-date {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .summary-count {
+            background: var(--secondary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+
+        .booking-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f3f7;
+        }
+
+            .booking-item:last-child {
+                border-bottom: none;
+            }
+
+        .booking-dr {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .booking-details {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-top: 4px;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            min-width: 70px;
+            color: var(--primary);
+        }
+
+        /* Modal Styles */
+        .modal-content {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, #1a2530 100%);
+            color: white;
+            padding: 24px 30px;
+            border: none;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-section {
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+            .form-section:last-child {
+                border-bottom: none;
+                margin-bottom: 0;
+                padding-bottom: 0;
+            }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #d0d7e2;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 16px;
+            transition: var(--transition);
+            box-shadow: none;
+        }
+
+            .form-control:focus, .form-select:focus {
+                border-color: var(--secondary);
+                box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+            }
+
+        .input-group {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-group-text {
+            background: var(--light-bg);
+            border: none;
+            border-radius: 10px 0 0 10px;
+            padding: 0 16px;
+        }
+
+        .map-pin-btn {
+            background: white;
+            border: 1px solid #d0d7e2;
+            border-radius: 10px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+            .map-pin-btn:hover {
+                background: #f0f5ff;
+                color: var(--secondary);
+                border-color: var(--secondary);
+            }
+
+        .cost-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+            .cost-item:last-child {
+                margin-bottom: 0;
+            }
+
+        .remove-cost {
+            color: var(--danger);
+            background: #fff0f0;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+            .remove-cost:hover {
+                background: #ffebee;
+                transform: scale(1.1);
+            }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: none;
+            display: flex;
+            justify-content: end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--secondary);
+            border: none;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+            .btn-primary:hover {
+                background: #2980b9;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+            }
+
+        .btn-outline-secondary {
+            border-radius: 10px;
+            border: 1px solid #d0d7e2;
+            color: var(--primary);
+        }
+
+            .btn-outline-secondary:hover {
+                background: #f0f5ff;
+                border-color: var(--secondary);
+                color: var(--secondary);
+            }
+
+        .distance-box {
+            background: #f0f7ff;
+            border: 1px dashed var(--secondary);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 8px;
+        }
+
+        /* Analytics Dashboard Specific Styles */
+        .analytics-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e0e6ed;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .chart-filters {
+            display: flex;
+            gap: 10px;
+        }
+
+            .chart-filters .btn {
+                padding: 6px 12px;
+                font-size: 14px;
+                border-radius: 8px;
+            }
+
+                .chart-filters .btn.active {
+                    background: var(--secondary);
+                    color: white;
+                    border: none;
+                }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: #f8fafd;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .metric-title {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .metric-change {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+        }
+
+            .metric-change.positive {
+                color: var(--success);
+            }
+
+            .metric-change.negative {
+                color: var(--danger);
+            }
+
+        .dual-chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 992px) {
+            .dual-chart-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .data-table th {
+                background: #f0f5ff;
+                padding: 12px 15px;
+                text-align: left;
+                font-weight: 600;
+                color: var(--primary);
+                border-bottom: 2px solid #e0e6ed;
+            }
+
+            .data-table td {
+                padding: 12px 15px;
+                border-bottom: 1px solid #e0e6ed;
+            }
+
+            .data-table tr:hover {
+                background: #f8f9fa;
+            }
+
+        .trend-up {
+            color: var(--success);
+        }
+
+        .trend-down {
+            color: var(--danger);
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            width: fit-content;
+            margin-bottom: 24px;
+        }
+
+        .view-btn {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+            .view-btn.active {
+                background: white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                color: var(--primary);
+                font-weight: 600;
+            }
+
+            .view-btn:first-child {
+                border-radius: 10px 0 0 10px;
+            }
+
+            .view-btn:last-child {
+                border-radius: 0 10px 10px 0;
+            }
+
+        /* Content Views */
+        .content-view {
+            display: none;
+        }
+
+            .content-view.active {
+                display: block;
+            }
+
+        /* Responsive Adjustments */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: 100px;
+            }
+
+                .sidebar .logo-text,
+                .sidebar .nav-text {
+                    display: none;
+                }
+
+                .sidebar .nav-link {
+                    justify-content: center;
+                    padding: 16px 0;
+                }
+
+            .nav-link i {
+                font-size: 1.5rem;
+            }
+
+            .main-content {
+                margin-left: 100px;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .main-content {
+                margin-left: 70px;
+                padding: 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-profile {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .calendar-grid {
+                grid-template-columns: repeat(7, 1fr);
+                gap: 1px;
+            }
+
+            .calendar-cell {
+                padding: 6px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+                .sidebar.show {
+                    transform: translateX(0);
+                }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .dual-chart-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            margin-right: 16px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+            .no-data i {
+                font-size: 48px;
+                margin-bottom: 16px;
+                color: #e0e6ed;
+            }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <span class="logo-text">MCI Logistics</span>
+            </div>
+        </div>
+        <div class="px-3 py-4">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-view="booking">
+                        <i class="bi bi-calendar-check"></i>
+                        <span class="nav-text">Delivery Booking</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="analytics">
+                        <i class="bi bi-graph-up"></i>
+                        <span class="nav-text">Analytics Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="active-deliveries">
+                        <i class="bi bi-truck"></i>
+                        <span class="nav-text">Active Deliveries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="delivery-history">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span class="nav-text">Delivery History</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="customers">
+                        <i class="bi bi-people"></i>
+                        <span class="nav-text">Customers</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="warehouse-map">
+                        <i class="bi bi-geo-alt"></i>
+                        <span class="nav-text">Warehouse Map</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-view="settings">
+                        <i class="bi bi-gear"></i>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <button class="btn btn-outline-secondary mobile-toggle d-none">
+                <i class="bi bi-list"></i>
+            </button>
+            <div>
+                <h1 class="page-title">
+                    <i class="bi bi-calendar3"></i>
+                    Delivery Management System
+                </h1>
+            </div>
+            <div class="user-profile">
+                <div class="user-avatar">JS</div>
+                <div>
+                    <div class="fw-bold">John Smith</div>
+                    <div class="text-muted" style="font-size: 13px;">Logistics Manager</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking System View -->
+        <div id="bookingView" class="content-view active">
+            <!-- Dashboard Cards -->
+            <div class="dashboard-cards">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-calendar-check"></i> Booked Deliveries</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value">24</div>
+                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 12% from last week</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-truck"></i> Active Deliveries</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value">8</div>
+                        <div class="stat-desc"><i class="bi bi-arrow-down text-danger"></i> 3% from last week</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-geo-alt"></i> Total Distance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value">1,248 km</div>
+                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 18% from last week</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-currency-dollar"></i> Revenue</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value">$14,280</div>
+                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 22% from last week</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Section -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <div class="month-nav">
+                        <button class="btn btn-outline-secondary" id="prevMonth">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <h2 id="currentMonth">October 2023</h2>
+                        <button class="btn btn-outline-secondary" id="nextMonth">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="calendar-controls">
+                        <button class="btn btn-outline-secondary active" data-view="month"><i class="bi bi-calendar-month"></i> Month</button>
+                        <button class="btn btn-outline-secondary" data-view="week"><i class="bi bi-calendar-week"></i> Week</button>
+                        <button class="btn btn-outline-secondary" data-view="day"><i class="bi bi-calendar-day"></i> Day</button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar content will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Dashboard View -->
+        <div id="analyticsView" class="content-view">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-title">Total Bookings</div>
+                    <div class="metric-value">347</div>
+                    <div class="metric-change positive">
+                        <i class="bi bi-arrow-up"></i> 14.2% from last month
+                    </div>
+                </div>
+                <div class="metric-card" style="border-left-color: #2ecc71;">
+                    <div class="metric-title">Total Distance</div>
+                    <div class="metric-value">18,426 km</div>
+                    <div class="metric-change positive">
+                        <i class="bi bi-arrow-up"></i> 8.7% from last month
+                    </div>
+                </div>
+                <div class="metric-card" style="border-left-color: #f39c12;">
+                    <div class="metric-title">Total Additional Cost</div>
+                    <div class="metric-value">$4,280</div>
+                    <div class="metric-change positive">
+                        <i class="bi bi-arrow-up"></i> 5.3% from last month
+                    </div>
+                </div>
+                <div class="metric-card" style="border-left-color: #9b59b6;">
+                    <div class="metric-title">Avg. Cost per Booking</div>
+                    <div class="metric-value">$12.33</div>
+                    <div class="metric-change negative">
+                        <i class="bi bi-arrow-down"></i> 2.1% from last month
+                    </div>
+                </div>
+            </div>
+
+            <div class="dual-chart-container">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-header">
+                            <h5 class="chart-title">Bookings Over Time</h5>
+                            <div class="chart-filters">
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">Month</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="day">Day</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="bookingsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-header">
+                            <h5 class="chart-title">Additional Costs Analysis</h5>
+                            <div class="chart-filters">
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">Month</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="costsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dual-chart-container">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-header">
+                            <h5 class="chart-title">Booking Origin Distribution</h5>
+                            <div class="chart-filters">
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="all">All Time</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="month">This Month</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="originChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="chart-header">
+                            <h5 class="chart-title">Additional Cost Breakdown</h5>
+                            <div class="chart-filters">
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">This Month</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="week">This Week</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="costBreakdownChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Deliveries View -->
+        <div id="activeDeliveriesView" class="content-view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title"><i class="bi bi-truck"></i> Active Deliveries</h5>
+                        <div>
+                            <button class="btn btn-outline-secondary"><i class="bi bi-funnel"></i> Filter</button>
+                            <button class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>DR Number</th>
+                                    <th>Origin</th>
+                                    <th>Destination</th>
+                                    <th>Distance</th>
+                                    <th>Driver</th>
+                                    <th>Status</th>
+                                    <th>ETA</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>DR-8842</strong></td>
+                                    <td>MCI Alabang</td>
+                                    <td>123 Business Park, Makati</td>
+                                    <td>12.5 km</td>
+                                    <td>Michael Reyes</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> In Transit
+                                        </span>
+                                    </td>
+                                    <td>Today, 2:30 PM</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-geo-alt"></i> Track
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DR-8851</strong></td>
+                                    <td>MCI Cebu</td>
+                                    <td>456 University Ave, Cebu City</td>
+                                    <td>8.2 km</td>
+                                    <td>Sarah Gonzales</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> On Schedule
+                                        </span>
+                                    </td>
+                                    <td>Today, 11:15 AM</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-geo-alt"></i> Track
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DR-8855</strong></td>
+                                    <td>MCI Alabang</td>
+                                    <td>789 Industrial Park, Laguna</td>
+                                    <td>24.7 km</td>
+                                    <td>James Tan</td>
+                                    <td>
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-triangle"></i> Delayed
+                                        </span>
+                                    </td>
+                                    <td>Today, 3:45 PM</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-geo-alt"></i> Track
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DR-8862</strong></td>
+                                    <td>MCI Davao</td>
+                                    <td>101 Corporate Center, Davao</td>
+                                    <td>5.3 km</td>
+                                    <td>Maria Santos</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> On Schedule
+                                        </span>
+                                    </td>
+                                    <td>Today, 1:00 PM</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-geo-alt"></i> Track
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DR-8870</strong></td>
+                                    <td>MCI Cebu</td>
+                                    <td>202 Mall, Cebu City</td>
+                                    <td>14.8 km</td>
+                                    <td>Robert Lim</td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> In Transit
+                                        </span>
+                                    </td>
+                                    <td>Today, 4:20 PM</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-geo-alt"></i> Track
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery History View -->
+        <div id="deliveryHistoryView" class="content-view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title"><i class="bi bi-clipboard-check"></i> Delivery History</h5>
+                        <div>
+                            <button class="btn btn-outline-secondary"><i class="bi bi-funnel"></i> Filter</button>
+                            <button class="btn btn-outline-secondary"><i class="bi bi-download"></i> Export</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>DR Number</th>
+                                    <th>Origin</th>
+                                    <th>Destination</th>
+                                    <th>Distance</th>
+                                    <th>Additional Costs</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Oct 26, 2023</td>
+                                    <td><strong>DR-8842</strong></td>
+                                    <td>MCI Alabang</td>
+                                    <td>123 Business Park, Makati</td>
+                                    <td>12.5 km</td>
+                                    <td>$75.00</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Oct 25, 2023</td>
+                                    <td><strong>DR-8851</strong></td>
+                                    <td>MCI Cebu</td>
+                                    <td>456 University Ave, Cebu City</td>
+                                    <td>8.2 km</td>
+                                    <td>$42.50</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Oct 24, 2023</td>
+                                    <td><strong>DR-8855</strong></td>
+                                    <td>MCI Alabang</td>
+                                    <td>789 Industrial Park, Laguna</td>
+                                    <td>24.7 km</td>
+                                    <td>$75.00</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Oct 23, 2023</td>
+                                    <td><strong>DR-8862</strong></td>
+                                    <td>MCI Davao</td>
+                                    <td>101 Corporate Center, Davao</td>
+                                    <td>5.3 km</td>
+                                    <td>$32.00</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Oct 22, 2023</td>
+                                    <td><strong>DR-8870</strong></td>
+                                    <td>MCI Cebu</td>
+                                    <td>202 Mall, Cebu City</td>
+                                    <td>14.8 km</td>
+                                    <td>$58.00</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completed
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customers View -->
+        <div id="customersView" class="content-view">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title"><i class="bi bi-people"></i> Customer Management</h5>
+                        <button class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Add Customer
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" placeholder="Search customers...">
+                            </div>
+                        </div>
+                        <div class="col-md-3 ms-auto">
+                            <select class="form-select">
+                                <option>All Customers</option>
+                                <option>Active Customers</option>
+                                <option>Top Customers</option>
+                                <option>New Customers</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">ABC Corporation</h5>
+                                            <p class="card-text text-muted">Corporate Account</p>
+                                        </div>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-geo-alt text-secondary me-2"></i>
+                                            <span>123 Business Park, Makati</span>
+                                        </div>
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-telephone text-secondary me-2"></i>
+                                            <span>+63 912 345 6789</span>
+                                        </div>
+                                        <div class="d-flex">
+                                            <i class="bi bi-envelope text-secondary me-2"></i>
+                                            <span>info@abccorp.com</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-4">
+                                        <div>
+                                            <span class="text-muted">Bookings:</span>
+                                            <strong>42</strong>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Last Delivery:</span>
+                                            <strong>Oct 26</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-plus-circle"></i> New Booking
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">XYZ Retail</h5>
+                                            <p class="card-text text-muted">Retail Account</p>
+                                        </div>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-geo-alt text-secondary me-2"></i>
+                                            <span>456 Mall, Quezon City</span>
+                                        </div>
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-telephone text-secondary me-2"></i>
+                                            <span>+63 922 345 6789</span>
+                                        </div>
+                                        <div class="d-flex">
+                                            <i class="bi bi-envelope text-secondary me-2"></i>
+                                            <span>sales@xyzretail.com</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-4">
+                                        <div>
+                                            <span class="text-muted">Bookings:</span>
+                                            <strong>36</strong>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Last Delivery:</span>
+                                            <strong>Oct 25</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-plus-circle"></i> New Booking
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">123 Manufacturing</h5>
+                                            <p class="card-text text-muted">Industrial Account</p>
+                                        </div>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    </div>
+                                    <div class="mt-3">
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-geo-alt text-secondary me-2"></i>
+                                            <span>789 Industrial Park, Laguna</span>
+                                        </div>
+                                        <div class="d-flex mb-2">
+                                            <i class="bi bi-telephone text-secondary me-2"></i>
+                                            <span>+63 932 345 6789</span>
+                                        </div>
+                                        <div class="d-flex">
+                                            <i class="bi bi-envelope text-secondary me-2"></i>
+                                            <span>contact@123mfg.com</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-4">
+                                        <div>
+                                            <span class="text-muted">Bookings:</span>
+                                            <strong>28</strong>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Last Delivery:</span>
+                                            <strong>Oct 24</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-plus-circle"></i> New Booking
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Warehouse Map View -->
+        <div id="warehouseMapView" class="content-view">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="bi bi-geo-alt"></i> Warehouse Locations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="ratio ratio-16x9 mb-4" style="background: #e9ecef; border-radius: 12px; overflow: hidden;">
+                        <!-- Map would go here in a real implementation -->
+                        <div class="d-flex align-items-center justify-content-center" style="height: 100%; background: linear-gradient(135deg, #f0f5ff 0%, #d1e7ff 100%);">
+                            <i class="bi bi-geo-alt" style="font-size: 64px; color: var(--secondary); opacity: 0.2;"></i>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card border border-2 border-primary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-primary text-white rounded-circle p-2 me-3">
+                                            <i class="bi bi-building" style="font-size: 24px;"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">MCI Alabang Warehouse</h5>
+                                    </div>
+                                    <p class="text-muted mb-3">
+                                        <i class="bi bi-geo-alt me-2"></i> 123 Logistics Park, Alabang, Muntinlupa City
+                                    </p>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div>
+                                            <div class="text-muted small">Total Deliveries</div>
+                                            <div class="fw-bold">156</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Capacity Utilization</div>
+                                            <div class="fw-bold">78%</div>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 78%"></div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Last updated: Today, 10:30 AM</small>
+                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-success text-white rounded-circle p-2 me-3">
+                                            <i class="bi bi-building" style="font-size: 24px;"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">MCI Cebu Warehouse</h5>
+                                    </div>
+                                    <p class="text-muted mb-3">
+                                        <i class="bi bi-geo-alt me-2"></i> 456 Distribution Center, Cebu City
+                                    </p>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div>
+                                            <div class="text-muted small">Total Deliveries</div>
+                                            <div class="fw-bold">98</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Capacity Utilization</div>
+                                            <div class="fw-bold">65%</div>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Last updated: Today, 9:45 AM</small>
+                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card border h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-danger text-white rounded-circle p-2 me-3">
+                                            <i class="bi bi-building" style="font-size: 24px;"></i>
+                                        </div>
+                                        <h5 class="card-title mb-0">MCI Davao Warehouse</h5>
+                                    </div>
+                                    <p class="text-muted mb-3">
+                                        <i class="bi bi-geo-alt me-2"></i> 789 Logistics Hub, Davao City
+                                    </p>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <div>
+                                            <div class="text-muted small">Total Deliveries</div>
+                                            <div class="fw-bold">72</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small">Capacity Utilization</div>
+                                            <div class="fw-bold">52%</div>
+                                        </div>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 52%"></div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-light">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Last updated: Today, 11:20 AM</small>
+                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings View -->
+        <div id="settingsView" class="content-view">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="bi bi-gear"></i> System Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="list-group" id="settingsList">
+                                <a href="#" class="list-group-item list-group-item-action active" data-setting="profile">
+                                    <i class="bi bi-person me-2"></i> Profile Settings
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" data-setting="notifications">
+                                    <i class="bi bi-bell me-2"></i> Notification Preferences
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" data-setting="delivery">
+                                    <i class="bi bi-truck me-2"></i> Delivery Settings
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" data-setting="integrations">
+                                    <i class="bi bi-plug me-2"></i> System Integrations
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" data-setting="security">
+                                    <i class="bi bi-shield-lock me-2"></i> Security Settings
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action" data-setting="billing">
+                                    <i class="bi bi-credit-card me-2"></i> Billing & Payments
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div id="profileSettings" class="setting-panel">
+                                <h5 class="mb-4"><i class="bi bi-person me-2"></i> Profile Settings</h5>
+
+                                <div class="row mb-4">
+                                    <div class="col-md-4 text-center">
+                                        <div class="position-relative d-inline-block mb-3">
+                                            <img src="https://ui-avatars.com/api/?name=John+Smith&background=3498db&color=fff&size=128"
+                                                 class="rounded-circle"
+                                                 style="width: 128px; height: 128px; object-fit: cover;">
+                                            <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle p-2">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </div>
+                                        <h6 class="mt-2">John Smith</h6>
+                                        <p class="text-muted small">Logistics Manager</p>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">First Name</label>
+                                                <input type="text" class="form-control" value="John">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Last Name</label>
+                                                <input type="text" class="form-control" value="Smith">
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Email Address</label>
+                                                <input type="email" class="form-control" value="john.smith@mci.com">
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Phone Number</label>
+                                                <input type="tel" class="form-control" value="+63 912 345 6789">
+                                            </div>
+                                            <div class="col-md-12">
+                                                <label class="form-label">Job Title</label>
+                                                <input type="text" class="form-control" value="Logistics Manager" disabled>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Time Zone</label>
+                                        <select class="form-select">
+                                            <option>GMT+8 - Philippine Time</option>
+                                            <option>GMT+0 - UTC</option>
+                                            <option>GMT-5 - Eastern Time (US & Canada)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date Format</label>
+                                        <select class="form-select">
+                                            <option>MM/DD/YYYY</option>
+                                            <option selected>DD/MM/YYYY</option>
+                                            <option>YYYY-MM-DD</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-outline-secondary">Cancel</button>
+                                    <button class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </div>
+
+                            <div id="notificationsSettings" class="setting-panel" style="display: none;">
+                                <h5 class="mb-4"><i class="bi bi-bell me-2"></i> Notification Preferences</h5>
+
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Delivery Notifications</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="newBooking" checked>
+                                            <label class="form-check-label" for="newBooking">
+                                                <strong>New Booking Confirmation</strong>
+                                                <div class="text-muted small">Receive notification when a new booking is confirmed</div>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="deliveryUpdates" checked>
+                                            <label class="form-check-label" for="deliveryUpdates">
+                                                <strong>Delivery Status Updates</strong>
+                                                <div class="text-muted small">Get real-time updates on delivery status changes</div>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="etaChanges" checked>
+                                            <label class="form-check-label" for="etaChanges">
+                                                <strong>ETA Changes</strong>
+                                                <div class="text-muted small">Be notified when estimated time of arrival changes</div>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="completion" checked>
+                                            <label class="form-check-label" for="completion">
+                                                <strong>Delivery Completion</strong>
+                                                <div class="text-muted small">Receive confirmation when deliveries are completed</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">System Notifications</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="systemUpdates" checked>
+                                            <label class="form-check-label" for="systemUpdates">
+                                                <strong>System Updates</strong>
+                                                <div class="text-muted small">Receive notifications about system maintenance and updates</div>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
+                                            <label class="form-check-label" for="securityAlerts">
+                                                <strong>Security Alerts</strong>
+                                                <div class="text-muted small">Get notified about security-related events</div>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="billingUpdates">
+                                            <label class="form-check-label" for="billingUpdates">
+                                                <strong>Billing Updates</strong>
+                                                <div class="text-muted small">Receive notifications about billing and payment status</div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-outline-secondary">Cancel</button>
+                                    <button class="btn btn-primary">Save Preferences</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivery Booking Modal -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> New Delivery Booking</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <!-- DR Number Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-receipt"></i> Delivery Reference</h5>
+                            <div class="mb-4">
+                                <label for="drNumber" class="form-label">DR Number</label>
+                                <input type="text" class="form-control" id="drNumber" placeholder="Enter DR number (e.g., DR-XXXXX)" required>
+                                <div class="form-text">Alphanumeric values only (e.g., DR-8842)</div>
+                            </div>
+                        </div>
+
+                        <!-- Origin Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-geo-alt-fill"></i> Origin Details</h5>
+                            <div class="mb-4">
+                                <label class="form-label">Origin Warehouse</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="originSelect">
+                                        <option selected>Select warehouse</option>
+                                        <option value="alabang">MCI Alabang warehouse</option>
+                                        <option value="cebu">MCI Cebu warehouse</option>
+                                        <option value="davao">MCI Davao warehouse</option>
+                                    </select>
+                                    <button type="button" class="btn map-pin-btn" id="pinOrigin">
+                                        <i class="bi bi-geo-alt"></i> Pin on Map
+                                    </button>
+                                </div>
+                                <div class="form-text">Select from warehouse list or pin custom location</div>
+                            </div>
+                            <div class="mb-4 d-none" id="customOriginContainer">
+                                <label for="customOrigin" class="form-label">Custom Origin Address</label>
+                                <input type="text" class="form-control" id="customOrigin" placeholder="Enter full address">
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="button" class="btn map-pin-btn" id="pinCustomOrigin">
+                                        <i class="bi bi-geo-alt"></i> Pin on Map
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Destination Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-map"></i> Destination Details</h5>
+                            <div class="mb-4">
+                                <label for="destination" class="form-label">Destination Address</label>
+                                <input type="text" class="form-control" id="destination" placeholder="Enter full destination address" required>
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="button" class="btn map-pin-btn" id="pinDestination">
+                                        <i class="bi bi-geo-alt"></i> Pin on Map
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">Calculated Distance</label>
+                                <div class="distance-box">
+                                    18.7 km
+                                </div>
+                                <div class="form-text text-center mt-2">Distance calculated automatically between origin and destination</div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Costs Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="bi bi-currency-dollar"></i> Additional Costs</h5>
+                            <div id="costItemsContainer">
+                                <div class="cost-item">
+                                    <div class="flex-grow-1">
+                                        <input type="text" class="form-control" placeholder="Description (e.g., Fuel Surcharge)">
+                                    </div>
+                                    <div>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" placeholder="Amount">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="remove-cost" disabled>
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary mt-3" id="addCostBtn">
+                                <i class="bi bi-plus-circle me-2"></i>Add Additional Cost
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"><i class="bi bi-check-circle me-2"></i>Confirm Booking</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize all views
+            const views = {
+                booking: document.getElementById('bookingView'),
+                analytics: document.getElementById('analyticsView'),
+                'active-deliveries': document.getElementById('activeDeliveriesView'),
+                'delivery-history': document.getElementById('deliveryHistoryView'),
+                customers: document.getElementById('customersView'),
+                'warehouse-map': document.getElementById('warehouseMapView'),
+                settings: document.getElementById('settingsView')
+            };
+
+            // Initialize sidebar navigation
+            const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
+            const mobileToggle = document.querySelector('.mobile-toggle');
+            const sidebar = document.querySelector('.sidebar');
+
+            // Mobile sidebar toggle
+            if (mobileToggle) {
+                mobileToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('show');
+                });
+            }
+
+            // Sidebar navigation
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    // Update active state in sidebar
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Hide all views
+                    Object.values(views).forEach(view => {
+                        if (view) view.classList.remove('active');
+                    });
+
+                    // Show selected view
+                    const viewName = this.dataset.view;
+                    if (views[viewName]) {
+                        views[viewName].classList.add('active');
+
+                        // Special handling for analytics view
+                        if (viewName === 'analytics') {
+                            // Initialize charts when analytics view is shown
+                            initAnalyticsCharts();
+                        }
+                    }
+
+                    // Close sidebar on mobile after selection
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('show');
+                    }
+                });
+            });
+
+            // Initialize calendar
+            initCalendar();
+
+            // Initialize booking modal interactions
+            initBookingModal();
+
+            // Initialize settings panels
+            initSettingsPanels();
+
+            // Initialize analytics charts (only if analytics view is visible initially)
+            if (views.analytics.classList.contains('active')) {
+                initAnalyticsCharts();
+            }
+
+            // Initialize calendar navigation
+            document.getElementById('prevMonth').addEventListener('click', function() {
+                currentMonthIndex--;
+                if (currentMonthIndex < 0) {
+                    currentMonthIndex = 11;
+                    currentYear--;
+                }
+                updateCalendar();
+            });
+
+            document.getElementById('nextMonth').addEventListener('click', function() {
+                currentMonthIndex++;
+                if (currentMonthIndex > 11) {
+                    currentMonthIndex = 0;
+                    currentYear++;
+                }
+                updateCalendar();
+            });
+
+            // View toggle buttons
+            document.querySelectorAll('.view-toggle .view-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.view-toggle .view-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // Hide all views
+                    Object.values(views).forEach(view => {
+                        if (view) view.classList.remove('active');
+                    });
+
+                    // Show selected view
+                    const viewName = this.dataset.view;
+                    if (views[viewName]) {
+                        views[viewName].classList.add('active');
+
+                        // Special handling for analytics view
+                        if (viewName === 'analytics') {
+                            // Initialize charts when analytics view is shown
+                            initAnalyticsCharts();
+                        }
+                    }
+                });
+            });
+
+            // Calendar view toggle buttons
+            document.querySelectorAll('.calendar-controls .btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.calendar-controls .btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+
+            // Initialize analytics chart filters
+            document.querySelectorAll('[data-period]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const period = this.dataset.period;
+                    const container = this.closest('.chart-filters');
+
+                    container.querySelectorAll('[data-period]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // In a real implementation, this would update the chart data
+                    console.log(`Changed chart period to: ${period}`);
+                });
+            });
+        });
+
+        // Calendar functionality
+        let currentMonthIndex = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        function initCalendar() {
+            updateCalendar();
+        }
+
+        function updateCalendar() {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                              "July", "August", "September", "October", "November", "December"];
+
+            document.getElementById('currentMonth').textContent = `${monthNames[currentMonthIndex]} ${currentYear}`;
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            // Add day headers
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            daysOfWeek.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+
+            // Get first day of month and total days
+            const firstDay = new Date(currentYear, currentMonthIndex, 1);
+            const lastDay = new Date(currentYear, currentMonthIndex + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const firstDayIndex = firstDay.getDay();
+
+            // Add empty cells for previous month
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-cell';
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            // Add days of current month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                cell.dataset.date = `${currentYear}-${(currentMonthIndex+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+
+                const dateNumber = document.createElement('div');
+                dateNumber.className = 'date-number';
+                dateNumber.textContent = day;
+                cell.appendChild(dateNumber);
+
+                // Check if this is today
+                const today = new Date();
+                if (currentYear === today.getFullYear() &&
+                    currentMonthIndex === today.getMonth() &&
+                    day === today.getDate()) {
+                    cell.classList.add('today');
+                }
+
+                // Add booking indicator (random for demo)
+                const hasBooking = Math.random() > 0.7;
+                if (hasBooking) {
+                    cell.classList.add('booked');
+                }
+
+                const indicator = document.createElement('div');
+                indicator.className = 'booking-indicator';
+                cell.appendChild(indicator);
+
+                // Add booking summary popup
+                const summary = document.createElement('div');
+                summary.className = 'booking-summary';
+
+                if (hasBooking) {
+                    summary.innerHTML = `
+                        <div class="summary-header">
+                            <div class="summary-date">${monthNames[currentMonthIndex]} ${day}, ${currentYear}</div>
+                            <div class="summary-count">1</div>
+                        </div>
+                        <div class="booking-item">
+                            <div class="booking-dr">DR-${Math.floor(8800 + Math.random() * 100)}</div>
+                            <div class="booking-details">
+                                <div class="detail-row">
+                                    <div class="detail-label">From:</div>
+                                    <div>MCI ${['Alabang', 'Cebu', 'Davao'][Math.floor(Math.random() * 3)]} warehouse</div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">To:</div>
+                                    <div>${Math.floor(Math.random() * 1000)} ${['Business', 'Industrial', 'Corporate'][Math.floor(Math.random() * 3)]} Park</div>
+                                </div>
+                                <div class="detail-row">
+                                    <div class="detail-label">Distance:</div>
+                                    <div>${(Math.random() * 50).toFixed(1)} km</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                cell.appendChild(summary);
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+        // Booking modal functionality
+        function initBookingModal() {
+            const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+
+            // Origin selection toggle
+            const originSelect = document.getElementById('originSelect');
+            const customOriginContainer = document.getElementById('customOriginContainer');
+
+            originSelect.addEventListener('change', function() {
+                if (this.value === '') {
+                    customOriginContainer.classList.remove('d-none');
+                } else {
+                    customOriginContainer.classList.add('d-none');
+                }
+            });
+
+            // Map pin buttons
+            document.getElementById('pinOrigin').addEventListener('click', function() {
+                customOriginContainer.classList.remove('d-none');
+                originSelect.value = '';
+            });
+
+            // Add cost item functionality
+            const addCostBtn = document.getElementById('addCostBtn');
+            const costItemsContainer = document.getElementById('costItemsContainer');
+
+            addCostBtn.addEventListener('click', function() {
+                const costItem = document.createElement('div');
+                costItem.className = 'cost-item';
+                costItem.innerHTML = `
+                    <div class="flex-grow-1">
+                        <input type="text" class="form-control" placeholder="Description (e.g., Fuel Surcharge)">
+                    </div>
+                    <div>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" placeholder="Amount">
+                        </div>
+                    </div>
+                    <button type="button" class="remove-cost">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                `;
+
+                costItemsContainer.appendChild(costItem);
+
+                // Add event listener to the new remove button
+                costItem.querySelector('.remove-cost').addEventListener('click', function() {
+                    costItem.remove();
+                });
+            });
+
+            // Remove cost buttons
+            document.querySelectorAll('.remove-cost').forEach(button => {
+                button.addEventListener('click', function() {
+                    const costItem = this.closest('.cost-item');
+                    costItem.remove();
+                });
+            });
+        }
+
+        // Settings panel functionality
+        function initSettingsPanels() {
+            const settingLinks = document.querySelectorAll('#settingsList .list-group-item');
+            const settingPanels = document.querySelectorAll('.setting-panel');
+
+            settingLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    // Update active state in settings list
+                    settingLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Hide all panels
+                    settingPanels.forEach(panel => {
+                        panel.style.display = 'none';
+                    });
+
+                    // Show selected panel
+                    const panelId = this.dataset.setting + 'Settings';
+                    document.getElementById(panelId).style.display = 'block';
+                });
+            });
+        }
+
+        // Analytics charts
+        let bookingsChart, costsChart, originChart, costBreakdownChart;
+
+        function initAnalyticsCharts() {
+            // Destroy existing charts if they exist
+            if (bookingsChart) {
+                bookingsChart.destroy();
+                costsChart.destroy();
+                originChart.destroy();
+                costBreakdownChart.destroy();
+            }
+
+            // Bookings Chart - Total bookings per month/week/day
+            const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
+            bookingsChart = new Chart(bookingsCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                    datasets: [{
+                        label: 'Bookings',
+                        data: [285, 302, 318, 327, 335, 342, 338, 341, 345, 347],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                stepSize: 50
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Costs Chart - Total additional cost and additional cost per month/week
+            const costsCtx = document.getElementById('costsChart').getContext('2d');
+            costsChart = new Chart(costsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+                    datasets: [{
+                        label: 'Additional Costs',
+                        data: [3280, 3520, 3750, 3890, 4020, 4150, 4180, 4210, 4250, 4280],
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        borderColor: '#f39c12',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#f39c12',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 3000,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Origin Chart - Booking origin distribution (pie chart)
+            const originCtx = document.getElementById('originChart').getContext('2d');
+            originChart = new Chart(originCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
+                    datasets: [{
+                        data: [45, 28, 20, 7],
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(155, 89, 182, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(155, 89, 182, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+
+            // Cost Breakdown Chart - Additional cost breakdown
+            const costBreakdownCtx = document.getElementById('costBreakdownChart').getContext('2d');
+            costBreakdownChart = new Chart(costBreakdownCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
+                    datasets: [{
+                        data: [45, 25, 15, 10, 5],
+                        backgroundColor: [
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(149, 165, 166, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(243, 156, 18, 1)',
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(149, 165, 166, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

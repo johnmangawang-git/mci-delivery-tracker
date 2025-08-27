@@ -1,0 +1,21 @@
+{
+  "name": "mci-delivery-system",
+  "version": "1.0.0",
+  "description": "MCI Delivery Management System",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx serve public",
+    "build": "echo 'No build needed for static site'",
+    "supabase:db:push": "npx supabase db push",
+    "supabase:studio": "npx supabase studio"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "chart.js": "^4.4.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
