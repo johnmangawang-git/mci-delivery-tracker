@@ -3862,6 +3862,10 @@
                 const saveLocationBtn = document.getElementById('saveLocationBtn');
                 if (saveLocationBtn) {
                     saveLocationBtn.addEventListener('click', function() {
+                        console.log('Save location button clicked');
+                        console.log('selectedCoordinates:', selectedCoordinates);
+                        console.log('selectedAddress:', selectedAddress);
+                        
                         if (!selectedCoordinates || !selectedAddress) {
                             alert('Please select a location on the map first');
                             return;
@@ -3871,7 +3875,7 @@
                         showBookingSaveLocationModal(selectedCoordinates.lat, selectedCoordinates.lng, selectedAddress);
                     });
                 } else {
-                    console.error('Confirm location button not found');
+                    console.error('Save location button not found');
                 }
                 
                 // Clean up when modal is hidden
@@ -3961,7 +3965,7 @@
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-success" onclick="saveBookingLocation(${lat}, ${lng}, '${address.replace(/'/g, "\\'")}')">
+                                    <button type="button" class="btn btn-success" id="bookingSaveBtn">
                                         <i class="bi bi-bookmark-plus"></i> Save Location
                                     </button>
                                 </div>
@@ -3983,6 +3987,14 @@
                 const modal = new bootstrap.Modal(document.getElementById('bookingSaveLocationModal'));
                 modal.show();
 
+                // Add event listener for save button
+                const bookingSaveBtn = document.getElementById('bookingSaveBtn');
+                if (bookingSaveBtn) {
+                    bookingSaveBtn.addEventListener('click', function() {
+                        saveBookingLocation(lat, lng, address);
+                    });
+                }
+
                 // Focus on name input
                 setTimeout(() => {
                     document.getElementById('bookingLocationName').focus();
@@ -3991,8 +4003,16 @@
 
             // Save location from booking modal
             function saveBookingLocation(lat, lng, address) {
+                console.log('saveBookingLocation called with:', { lat, lng, address });
+                
                 const nameInput = document.getElementById('bookingLocationName');
                 const descriptionInput = document.getElementById('bookingLocationDescription');
+                
+                if (!nameInput || !descriptionInput) {
+                    console.error('Input elements not found');
+                    alert('Error: Form elements not found');
+                    return;
+                }
                 
                 const name = nameInput.value.trim();
                 if (!name) {
@@ -4033,7 +4053,12 @@
                     
                     try {
                         localStorage.setItem('mci-saved-locations', JSON.stringify(savedLocations));
-                        showToast(`Location "${name}" saved successfully!`, 'success');
+                        // Use showToast if available, otherwise use alert
+                        if (typeof showToast === 'function') {
+                            showToast(`Location "${name}" saved successfully!`, 'success');
+                        } else {
+                            alert(`Location "${name}" saved successfully!`);
+                        }
                     } catch (error) {
                         console.error('Error saving location:', error);
                         alert('Error saving location. Please try again.');
@@ -4076,14 +4101,32 @@
                     const popupContent = `
                         <div class="booking-saved-location-popup">
                             <h6><i class="bi bi-bookmark"></i> ${location.name}</h6>
-                            <p class="mb-2 small">${location.address}</p>
-                            <button class="btn btn-sm btn-primary" onclick="useSavedLocationInBooking('${location.id}', ${location.coordinates.lat}, ${location.coordinates.lng}, '${location.address.replace(/'/g, "\\'")}')">
+                            <p class="mb-2 small">${location.address || 'Custom Location'}</p>
+                            <button class="btn btn-sm btn-primary use-saved-location-btn" 
+                                    data-location-id="${location.id}" 
+                                    data-lat="${location.coordinates.lat}" 
+                                    data-lng="${location.coordinates.lng}" 
+                                    data-address="${location.address || 'Custom Location'}">
                                 <i class="bi bi-cursor"></i> Use This Location
                             </button>
                         </div>
                     `;
 
                     marker.bindPopup(popupContent);
+                    
+                    // Add event listener for the use location button
+                    marker.on('popupopen', function() {
+                        const useBtn = document.querySelector('.use-saved-location-btn[data-location-id="' + location.id + '"]');
+                        if (useBtn) {
+                            useBtn.addEventListener('click', function() {
+                                const lat = parseFloat(this.dataset.lat);
+                                const lng = parseFloat(this.dataset.lng);
+                                const address = this.dataset.address;
+                                const locationId = this.dataset.locationId;
+                                useSavedLocationInBooking(locationId, lat, lng, address);
+                            });
+                        }
+                    });
                 }
             }
 
@@ -4128,7 +4171,12 @@
                     marker = L.marker([lat, lng]).addTo(map);
                 }
                 
-                showToast(`Selected saved location: ${address}`, 'info');
+                // Use showToast if available, otherwise use console.log
+                if (typeof showToast === 'function') {
+                    showToast(`Selected saved location: ${address}`, 'info');
+                } else {
+                    console.log(`Selected saved location: ${address}`);
+                }
             }
 
             // Load saved locations on booking map
