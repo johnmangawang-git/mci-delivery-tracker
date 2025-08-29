@@ -4,7 +4,7 @@
   "description": "MCI Delivery Management System",
   "main": "index.js",
   "scripts": {
-    "start": "npx serve public",
+    "start": "npx serve public -p 8081",
     "build": "echo 'No build needed for static site'",
     "supabase:db:push": "npx supabase db push",
     "supabase:studio": "npx supabase studio"

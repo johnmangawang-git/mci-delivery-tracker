@@ -65,9 +65,7 @@ function updateCalendar() {
         }
 
         // Check if there are bookings for this date
-        const hasBooking = bookingsData.some(booking =>
-            booking.date.startsWith(dateStr)
-        );
+        const hasBooking = checkDateHasBooking(dateStr);
 
         if (hasBooking) {
             cell.classList.add('booked');
@@ -76,84 +74,187 @@ function updateCalendar() {
         const indicator = document.createElement('div');
         indicator.className = 'booking-indicator';
         cell.appendChild(indicator);
-
-        // Add booking summary popup
-        const summary = document.createElement('div');
-        summary.className = 'booking-summary';
-
-        if (hasBooking) {
-            const bookingsForDate = bookingsData.filter(booking =>
-                booking.date.startsWith(dateStr)
-            );
-
-            let bookingsHtml = '';
-            bookingsForDate.forEach(booking => {
-                bookingsHtml += `
-                    <div class="booking-item">
-                        <div class="booking-dr">${booking.dr_number}</div>
-                        <div class="booking-details">
-                            <div class="detail-row">
-                                <div class="detail-label">From:</div>
-                                <div>${booking.origin}</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">To:</div>
-                                <div>${booking.destination}</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">Distance:</div>
-                                <div>${booking.distance} km</div>
-                            </div>
-                            ${booking.additional_costs && booking.additional_costs.length > 0 ? `
-                            <div class="detail-row">
-                                <div class="detail-label">Costs:</div>
-                                <div>${booking.additional_costs.map(cost => `${cost.description}: $${cost.amount}`).join(', ')}</div>
-                            </div>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-
-            summary.innerHTML = `
-                <div class="summary-header">
-                    <div class="summary-date">${monthNames[currentMonthIndex]} ${day}, ${currentYear}</div>
-                    <div class="summary-count">${bookingsForDate.length}</div>
-                </div>
-                ${bookingsHtml}
-            `;
-        }
-
-        cell.appendChild(summary);
+        
         calendarGrid.appendChild(cell);
 
-        // Add event listeners
-        cell.addEventListener('mouseenter', function (e) {
-            const summary = this.querySelector('.booking-summary');
-            if (summary) {
-                summary.style.display = 'block';
-
-                // Position the summary relative to the cell
-                const rect = this.getBoundingClientRect();
-                const summaryRect = summary.getBoundingClientRect();
-
-                // Position above the cell
-                summary.style.top = (rect.top - summaryRect.height - 15) + 'px';
-                summary.style.left = (rect.left + rect.width / 2 - summaryRect.width / 2) + 'px';
-            }
-        });
-
-        cell.addEventListener('mouseleave', function () {
-            const summary = this.querySelector('.booking-summary');
-            if (summary) {
-                summary.style.display = 'none';
-            }
-        });
-
+        // Add event listeners for click functionality
         cell.addEventListener('click', function () {
             const dateStr = this.dataset.date;
             openBookingModal(dateStr);
         });
     }
+}
+
+// Function to check if a date has booking based on real delivery data
+function checkDateHasBooking(dateStr) {
+    // Get delivery data from the main app (if available)
+    const activeDeliveries = window.activeDeliveries || [];
+    const deliveryHistory = window.deliveryHistory || [];
+    
+    // Debug logging
+    console.log(`Calendar: Checking bookings for ${dateStr}, found ${activeDeliveries.length} active and ${deliveryHistory.length} history deliveries`);
+    
+    // Check active deliveries for matching booking/delivery dates
+    const hasActiveDelivery = activeDeliveries.some(delivery => {
+        // Check if delivery has a deliveryDate field (from booking)
+        if (delivery.deliveryDate) {
+            try {
+                const deliveryDate = new Date(delivery.deliveryDate);
+                const deliveryDateFormatted = deliveryDate.toISOString().split('T')[0];
+                console.log(`Comparing ${dateStr} with delivery date ${deliveryDateFormatted}`);
+                return dateStr === deliveryDateFormatted;
+            } catch (e) {
+                console.error('Error parsing delivery date:', e);
+            }
+        }
+        
+        // Fallback: Parse ETA to check if delivery is scheduled for this date
+        if (delivery.eta && delivery.eta.includes('Today')) {
+            const today = new Date().toISOString().split('T')[0];
+            return dateStr === today;
+        }
+        
+        // Parse ETA for future dates like "Nov 2, 3:30 PM"
+        if (delivery.eta && delivery.eta.match(/\w+ \d+/)) {
+            try {
+                const currentYear = new Date().getFullYear();
+                const etaDateStr = delivery.eta.split(',')[0]; // Get "Nov 2" part
+                const etaDate = new Date(`${etaDateStr}, ${currentYear}`);
+                const etaDateFormatted = etaDate.toISOString().split('T')[0];
+                return dateStr === etaDateFormatted;
+            } catch (e) {
+                // If parsing fails, ignore this delivery
+                return false;
+            }
+        }
+        
+        return false;
+    });
+    
+    // Check delivery history for matching completion dates
+    const hasHistoryDelivery = deliveryHistory.some(delivery => {
+        if (delivery.completedDate) {
+            try {
+                const completedDate = new Date(delivery.completedDate);
+                const completedDateFormatted = completedDate.toISOString().split('T')[0];
+                return dateStr === completedDateFormatted;
+            } catch (e) {
+                // If parsing fails, try different format
+                if (delivery.completedDate.includes(',')) {
+                    const currentYear = new Date().getFullYear();
+                    const historyDate = new Date(`${delivery.completedDate}, ${currentYear}`);
+                    const historyDateFormatted = historyDate.toISOString().split('T')[0];
+                    return dateStr === historyDateFormatted;
+                }
+                return false;
+            }
+        }
+        return false;
+    });
+    
+    // If no real data available, fall back to mock data
+    if (activeDeliveries.length === 0 && deliveryHistory.length === 0) {
+        return bookingsData.some(booking =>
+            booking.date.startsWith(dateStr)
+        );
+    }
+    
+    return hasActiveDelivery || hasHistoryDelivery;
+}
+
+// Function to get deliveries for a specific date
+function getDeliveriesForDate(dateStr) {
+    const activeDeliveries = window.activeDeliveries || [];
+    const deliveryHistory = window.deliveryHistory || [];
+    const deliveries = [];
+    
+    console.log(`Getting deliveries for date: ${dateStr}`);
+    
+    // Get active deliveries for this date
+    activeDeliveries.forEach(delivery => {
+        // Check if delivery has a deliveryDate field (from booking)
+        if (delivery.deliveryDate) {
+            try {
+                const deliveryDate = new Date(delivery.deliveryDate);
+                const deliveryDateFormatted = deliveryDate.toISOString().split('T')[0];
+                if (dateStr === deliveryDateFormatted) {
+                    console.log(`Found delivery for ${dateStr}:`, delivery);
+                    deliveries.push({
+                        ...delivery,
+                        type: 'active'
+                    });
+                    return; // Skip ETA checking since we found a match
+                }
+            } catch (e) {
+                console.error('Error parsing delivery date:', e);
+            }
+        }
+        
+        // Fallback: Check ETA for today's deliveries
+        if (delivery.eta && delivery.eta.includes('Today')) {
+            const today = new Date().toISOString().split('T')[0];
+            if (dateStr === today) {
+                deliveries.push({
+                    ...delivery,
+                    type: 'active'
+                });
+            }
+        }
+        
+        // Parse ETA for future dates
+        if (delivery.eta && delivery.eta.match(/\w+ \d+/)) {
+            try {
+                const currentYear = new Date().getFullYear();
+                const etaDateStr = delivery.eta.split(',')[0];
+                const etaDate = new Date(`${etaDateStr}, ${currentYear}`);
+                const etaDateFormatted = etaDate.toISOString().split('T')[0];
+                if (dateStr === etaDateFormatted) {
+                    deliveries.push({
+                        ...delivery,
+                        type: 'active'
+                    });
+                }
+            } catch (e) {
+                // Ignore parsing errors
+            }
+        }
+    });
+    
+    // Get history deliveries for this date
+    deliveryHistory.forEach(delivery => {
+        if (delivery.completedDate) {
+            try {
+                const completedDate = new Date(delivery.completedDate);
+                const completedDateFormatted = completedDate.toISOString().split('T')[0];
+                if (dateStr === completedDateFormatted) {
+                    deliveries.push({
+                        ...delivery,
+                        type: 'history'
+                    });
+                }
+            } catch (e) {
+                // Try different format
+                if (delivery.completedDate.includes(',')) {
+                    const currentYear = new Date().getFullYear();
+                    const historyDate = new Date(`${delivery.completedDate}, ${currentYear}`);
+                    const historyDateFormatted = historyDate.toISOString().split('T')[0];
+                    if (dateStr === historyDateFormatted) {
+                        deliveries.push({
+                            ...delivery,
+                            type: 'history'
+                        });
+                    }
+                }
+            }
+        }
+    });
+    
+    // If no real data available, fall back to mock data
+    if (deliveries.length === 0 && activeDeliveries.length === 0 && deliveryHistory.length === 0) {
+        return bookingsData.filter(booking => booking.date.startsWith(dateStr));
+    }
+    
+    return deliveries;
 }
 
 // Load bookings data from Supabase
@@ -224,31 +325,38 @@ function updateDashboardMetrics() {
 
     // Count total bookings
     const totalBookings = bookingsData.length;
-    document.getElementById('totalBookings').textContent = totalBookings;
+    const totalBookingsEl = document.getElementById('totalBookings');
+    if (totalBookingsEl) totalBookingsEl.textContent = totalBookings;
 
     // Count active deliveries (for demo, consider bookings for today as active)
     const activeDeliveries = bookingsData.filter(booking => {
         const bookingDate = new Date(booking.date);
         return bookingDate.toDateString() === today.toDateString();
     }).length;
-    document.getElementById('activeDeliveries').textContent = activeDeliveries;
+    const activeDeliveriesEl = document.getElementById('activeDeliveries');
+    if (activeDeliveriesEl) activeDeliveriesEl.textContent = activeDeliveries;
 
     // Calculate total distance
     const totalDistance = bookingsData.reduce((sum, booking) => sum + booking.distance, 0).toFixed(0);
-    document.getElementById('totalDistance').textContent = `${totalDistance} km`;
+    const totalDistanceEl = document.getElementById('totalDistance');
+    if (totalDistanceEl) totalDistanceEl.textContent = `${totalDistance} km`;
 
     // Calculate total revenue (for demo, revenue = distance * 10)
-    const totalRevenue = (totalDistance * 10).toLocaleString('en-US', {
+    const totalRevenue = (totalDistance * 10).toLocaleString('en-PH', {
         style: 'currency',
-        currency: 'USD',
+        currency: 'PHP',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     });
-    document.getElementById('totalRevenue').textContent = totalRevenue;
+    const totalRevenueEl = document.getElementById('totalRevenue');
+    if (totalRevenueEl) totalRevenueEl.textContent = totalRevenue;
 
     // Update analytics metrics
-    document.getElementById('analyticsTotalBookings').textContent = totalBookings;
-    document.getElementById('analyticsTotalDistance').textContent = `${totalDistance} km`;
+    const analyticsTotalBookingsEl = document.getElementById('analyticsTotalBookings');
+    if (analyticsTotalBookingsEl) analyticsTotalBookingsEl.textContent = totalBookings;
+    
+    const analyticsTotalDistanceEl = document.getElementById('analyticsTotalDistance');
+    if (analyticsTotalDistanceEl) analyticsTotalDistanceEl.textContent = `${totalDistance} km`;
 
     // Calculate total additional cost
     let totalAdditionalCost = 0;
@@ -260,18 +368,24 @@ function updateDashboardMetrics() {
         }
     });
 
-    document.getElementById('analyticsTotalCost').textContent = totalAdditionalCost.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    });
+    const analyticsTotalCostEl = document.getElementById('analyticsTotalCost');
+    if (analyticsTotalCostEl) {
+        analyticsTotalCostEl.textContent = totalAdditionalCost.toLocaleString('en-PH', {
+            style: 'currency',
+            currency: 'PHP'
+        });
+    }
 
     // Calculate average cost per booking
     const avgCost = totalBookings > 0 ? totalAdditionalCost / totalBookings : 0;
-    document.getElementById('analyticsAvgCost').textContent = avgCost.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-    });
+    const analyticsAvgCostEl = document.getElementById('analyticsAvgCost');
+    if (analyticsAvgCostEl) {
+        analyticsAvgCostEl.textContent = avgCost.toLocaleString('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
+            minimumFractionDigits: 2
+        });
+    }
 }
 
 // Initialize date pickers
@@ -288,15 +402,24 @@ function initializeDatePickers() {
 
 // Open booking modal for a specific date
 function openBookingModal(dateStr) {
-    const bookingModal = new bootstrap.Modal(document.getElementById('bookingModal'));
+    const bookingModalEl = document.getElementById('bookingModal');
+    if (!bookingModalEl) {
+        console.warn('Booking modal element not found');
+        return;
+    }
+    
+    const bookingModal = new bootstrap.Modal(bookingModalEl);
     
     // Generate a new DR number based on the date
     const date = new Date(dateStr);
     const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
     
     // Pre-fill the DR number and date
-    document.getElementById('drNumber').value = drNumber;
-    document.getElementById('deliveryDate').value = dateStr;
+    const drNumberEl = document.getElementById('drNumber');
+    if (drNumberEl) drNumberEl.value = drNumber;
+    
+    const deliveryDateEl = document.getElementById('deliveryDate');
+    if (deliveryDateEl) deliveryDateEl.value = dateStr;
     
     // Show the modal
     bookingModal.show();
@@ -305,23 +428,54 @@ function openBookingModal(dateStr) {
     console.log('Opening booking modal for date:', dateStr);
 }
 
+// Function to refresh calendar when bookings are updated
+function refreshCalendarData() {
+    console.log('Calendar: Refreshing calendar data...');
+    
+    // Show loading indicator
+    const calendarGrid = document.getElementById('calendarGrid');
+    if (calendarGrid) {
+        calendarGrid.style.opacity = '0.6';
+        calendarGrid.style.pointerEvents = 'none';
+        
+        // Add a subtle loading animation
+        setTimeout(() => {
+            updateCalendar();
+            calendarGrid.style.opacity = '1';
+            calendarGrid.style.pointerEvents = 'auto';
+        }, 200);
+    } else {
+        updateCalendar();
+    }
+}
+
+// Make refresh function globally available
+window.refreshCalendarData = refreshCalendarData;
+
 // Initialize calendar navigation
 document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('prevMonth').addEventListener('click', function () {
-        currentMonthIndex--;
-        if (currentMonthIndex < 0) {
-            currentMonthIndex = 11;
-            currentYear--;
-        }
-        updateCalendar();
-    });
-
-    document.getElementById('nextMonth').addEventListener('click', function () {
-        currentMonthIndex++;
-        if (currentMonthIndex > 11) {
-            currentMonthIndex = 0;
-            currentYear++;
-        }
-        updateCalendar();
-    });
+    const prevMonthBtn = document.getElementById('prevMonth');
+    const nextMonthBtn = document.getElementById('nextMonth');
+    
+    if (prevMonthBtn) {
+        prevMonthBtn.addEventListener('click', function () {
+            currentMonthIndex--;
+            if (currentMonthIndex < 0) {
+                currentMonthIndex = 11;
+                currentYear--;
+            }
+            updateCalendar();
+        });
+    }
+    
+    if (nextMonthBtn) {
+        nextMonthBtn.addEventListener('click', function () {
+            currentMonthIndex++;
+            if (currentMonthIndex > 11) {
+                currentMonthIndex = 0;
+                currentYear++;
+            }
+            updateCalendar();
+        });
+    }
 });

@@ -34,7 +34,7 @@ function initBookingModal() {
             </div>
             <div>
                 <div class="input-group">
-                    <span class="input-group-text">$</span>
+                    <span class="input-group-text">₱</span>
                     <input type="number" class="form-control" placeholder="Amount">
                 </div>
             </div>

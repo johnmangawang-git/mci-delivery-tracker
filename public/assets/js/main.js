@@ -143,20 +143,42 @@ function showError(message) {
 
 // Initialize auth
 function initAuth() {
+    // Clear any existing user data to force recreation with new name
+    localStorage.removeItem('mci-user');
+    
     // Check if user is logged in
-    const user = localStorage.getItem('mci-user');
+    let user = localStorage.getItem('mci-user');
+    
+    // For testing purposes, create mock user data if none exists
+    if (!user) {
+        const mockUser = {
+            name: 'MCI warehouse',
+            role: 'Administrator',
+            email: 'admin@mci.com'
+        };
+        localStorage.setItem('mci-user', JSON.stringify(mockUser));
+        user = JSON.stringify(mockUser);
+        console.log('Created mock user for testing');
+    }
+    
     if (user) {
         const userData = JSON.parse(user);
-        document.getElementById('userName').textContent = userData.name;
-        document.getElementById('userRole').textContent = userData.role;
-        document.getElementById('userAvatar').textContent = userData.name.charAt(0) + (userData.name.split(' ')[1] ? userData.name.split(' ')[1].charAt(0) : '');
-        document.getElementById('profileName').textContent = userData.name;
-        document.getElementById('profileRole').textContent = userData.role;
-        document.getElementById('firstName').value = userData.name.split(' ')[0];
-        document.getElementById('lastName').value = userData.name.split(' ')[1] || '';
-        document.getElementById('email').value = userData.email;
-    } else {
-        // Redirect to login page
-        window.location.href = '/login.html';
+        const userNameEl = document.getElementById('userName');
+        const userRoleEl = document.getElementById('userRole');
+        const userAvatarEl = document.getElementById('userAvatar');
+        const profileNameEl = document.getElementById('profileName');
+        const profileRoleEl = document.getElementById('profileRole');
+        const firstNameEl = document.getElementById('firstName');
+        const lastNameEl = document.getElementById('lastName');
+        const emailEl = document.getElementById('email');
+        
+        if (userNameEl) userNameEl.textContent = userData.name;
+        if (userRoleEl) userRoleEl.textContent = userData.role;
+        if (userAvatarEl) userAvatarEl.textContent = userData.name.charAt(0) + (userData.name.split(' ')[1] ? userData.name.split(' ')[1].charAt(0) : '');
+        if (profileNameEl) profileNameEl.textContent = userData.name;
+        if (profileRoleEl) profileRoleEl.textContent = userData.role;
+        if (firstNameEl) firstNameEl.value = userData.name.split(' ')[0];
+        if (lastNameEl) lastNameEl.value = userData.name.split(' ')[1] || '';
+        if (emailEl) emailEl.value = userData.email;
     }
 }
