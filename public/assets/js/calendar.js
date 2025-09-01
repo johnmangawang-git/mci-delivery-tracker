@@ -267,7 +267,7 @@ async function loadBookingsData() {
                 id: 1,
                 dr_number: 'DR-8842',
                 date: '2023-10-01T09:00:00Z',
-                origin: 'MCI Alabang warehouse',
+                origin: 'SMEG Alabang warehouse',
                 destination: '123 Business Park, Makati',
                 distance: 12.5,
                 additional_costs: [
@@ -279,7 +279,7 @@ async function loadBookingsData() {
                 id: 2,
                 dr_number: 'DR-8851',
                 date: '2023-10-03T10:30:00Z',
-                origin: 'MCI Cebu warehouse',
+                origin: 'SMEG Cebu warehouse',
                 destination: '456 University Ave, Cebu City',
                 distance: 8.2,
                 additional_costs: []
@@ -288,21 +288,12 @@ async function loadBookingsData() {
                 id: 3,
                 dr_number: 'DR-8855',
                 date: '2023-10-03T14:15:00Z',
-                origin: 'MCI Alabang warehouse',
+                origin: 'SMEG Alabang warehouse',
                 destination: '789 Industrial Park, Laguna',
                 distance: 24.7,
                 additional_costs: [
                     { description: 'Fuel', amount: 75 }
                 ]
-            },
-            {
-                id: 4,
-                dr_number: 'DR-8862',
-                date: '2023-10-10T08:45:00Z',
-                origin: 'MCI Davao warehouse',
-                destination: '101 Corporate Center, Davao',
-                distance: 5.3,
-                additional_costs: []
             }
         ];
 

@@ -7,7 +7,7 @@ class WarehouseMapManager {
         this.warehouseLocations = [
             {
                 id: 'alabang',
-                name: 'MCI Alabang Warehouse',
+                name: 'SMEG Alabang Warehouse',
                 address: '123 Logistics Park, Alabang, Muntinlupa City',
                 coordinates: { lat: 14.4297, lng: 121.0403 },
                 capacity: 1000,
@@ -16,20 +16,11 @@ class WarehouseMapManager {
             },
             {
                 id: 'cebu',
-                name: 'MCI Cebu Warehouse',
+                name: 'SMEG Cebu Warehouse',
                 address: '456 Distribution Center, Cebu City',
                 coordinates: { lat: 10.3157, lng: 123.8854 },
                 capacity: 800,
                 utilization: 520,
-                type: 'warehouse'
-            },
-            {
-                id: 'davao',
-                name: 'MCI Davao Warehouse',
-                address: '789 Logistics Hub, Davao City',
-                coordinates: { lat: 7.0731, lng: 125.6128 },
-                capacity: 600,
-                utilization: 312,
                 type: 'warehouse'
             }
         ];
@@ -39,7 +30,7 @@ class WarehouseMapManager {
     // Initialize the warehouse map
     initializeMap() {
         console.log('Initializing warehouse map...');
-        
+
         const mapContainer = document.getElementById('warehouseMapContainer');
         if (!mapContainer) {
             console.error('Warehouse map container not found');
@@ -62,7 +53,7 @@ class WarehouseMapManager {
 
         // Add warehouse markers
         this.addWarehouseMarkers();
-        
+
         // Add saved location markers
         this.addSavedLocationMarkers();
 
@@ -79,7 +70,7 @@ class WarehouseMapManager {
     addWarehouseMarkers() {
         this.warehouseLocations.forEach(warehouse => {
             const utilizationPercent = Math.round((warehouse.utilization / warehouse.capacity) * 100);
-            
+
             // Create custom warehouse icon
             const warehouseIcon = L.divIcon({
                 className: 'warehouse-marker',
@@ -182,7 +173,7 @@ class WarehouseMapManager {
     onMapClick(e) {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
-        
+
         // Show save location modal
         this.showSaveLocationModal(lat, lng);
     }
@@ -252,7 +243,7 @@ class WarehouseMapManager {
     saveLocation(lat, lng) {
         const nameInput = document.getElementById('locationName');
         const descriptionInput = document.getElementById('locationDescription');
-        
+
         const name = nameInput.value.trim();
         if (!name) {
             alert('Please enter a name for this location');
@@ -271,20 +262,20 @@ class WarehouseMapManager {
 
         // Add to saved locations
         this.savedLocations.push(newLocation);
-        
+
         // Save to localStorage
         this.saveSavedLocations();
-        
+
         // Add marker to map
         this.addSavedLocationMarker(newLocation);
-        
+
         // Close modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('saveLocationModal'));
         modal.hide();
-        
+
         // Show success message
         this.showToast(`Location "${name}" saved successfully!`, 'success');
-        
+
         // Update saved locations list
         this.updateSavedLocationsList();
     }
@@ -297,10 +288,10 @@ class WarehouseMapManager {
 
         // Remove from saved locations array
         this.savedLocations = this.savedLocations.filter(loc => loc.id !== locationId);
-        
+
         // Save to localStorage
         this.saveSavedLocations();
-        
+
         // Remove marker from map
         this.markers = this.markers.filter(marker => {
             if (marker.options.locationId === locationId) {
@@ -309,10 +300,10 @@ class WarehouseMapManager {
             }
             return true;
         });
-        
+
         // Refresh map
         this.refreshMap();
-        
+
         this.showToast('Location deleted successfully!', 'success');
         this.updateSavedLocationsList();
     }
@@ -327,10 +318,10 @@ class WarehouseMapManager {
 
         // Center map on the location
         this.map.setView([location.coordinates.lat, location.coordinates.lng], 15);
-        
+
         // Show success message
         this.showToast(`Centered map on "${location.name}"`, 'info');
-        
+
         // You can extend this to populate booking forms or other functionality
         console.log('Using location:', location);
     }
@@ -339,7 +330,7 @@ class WarehouseMapManager {
     addMapControls() {
         // Add custom control for saved locations list
         const savedLocationsControl = L.control({ position: 'topright' });
-        
+
         savedLocationsControl.onAdd = () => {
             const div = L.DomUtil.create('div', 'leaflet-control-custom');
             div.innerHTML = `
@@ -349,12 +340,12 @@ class WarehouseMapManager {
             `;
             return div;
         };
-        
+
         savedLocationsControl.addTo(this.map);
 
         // Add legend control
         const legendControl = L.control({ position: 'bottomright' });
-        
+
         legendControl.onAdd = () => {
             const div = L.DomUtil.create('div', 'map-legend');
             div.innerHTML = `
@@ -371,14 +362,14 @@ class WarehouseMapManager {
             `;
             return div;
         };
-        
+
         legendControl.addTo(this.map);
     }
 
     // Toggle saved locations list
     toggleSavedLocationsList() {
         let listPanel = document.getElementById('savedLocationsPanel');
-        
+
         if (listPanel) {
             listPanel.remove();
             return;
@@ -517,13 +508,13 @@ class WarehouseMapManager {
 let warehouseManager = null;
 
 // Global function to load warehouses (called from main.js)
-window.loadWarehouses = function() {
+window.loadWarehouses = function () {
     console.log('Loading warehouses...');
-    
+
     if (!warehouseManager) {
         warehouseManager = new WarehouseMapManager();
     }
-    
+
     // Small delay to ensure DOM is ready
     setTimeout(() => {
         warehouseManager.initializeMap();

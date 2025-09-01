@@ -1771,7 +1771,7 @@
             <div class="user-profile">
                 <div class="user-avatar">JS</div>
                 <div>
-                    <div class="fw-bold">MCI warehouse</div>
+                    <div class="fw-bold">SMEG warehouse</div>
                     <div class="text-muted" style="font-size: 13px;">Logistics Manager</div>
                 </div>
             </div>
@@ -2153,7 +2153,7 @@
                                         <div class="bg-primary text-white rounded-circle p-2 me-3">
                                             <i class="bi bi-building" style="font-size: 24px;"></i>
                                         </div>
-                                        <h5 class="card-title mb-0">MCI Alabang Warehouse</h5>
+                                        <h5 class="card-title mb-0">SMEG Alabang Warehouse</h5>
                                     </div>
                                     <p class="text-muted mb-3">
                                         <i class="bi bi-geo-alt me-2"></i> 123 Logistics Park, Alabang, Muntinlupa City
@@ -2188,7 +2188,7 @@
                                         <div class="bg-success text-white rounded-circle p-2 me-3">
                                             <i class="bi bi-building" style="font-size: 24px;"></i>
                                         </div>
-                                        <h5 class="card-title mb-0">MCI Cebu Warehouse</h5>
+                                        <h5 class="card-title mb-0">SMEG Cebu Warehouse</h5>
                                     </div>
                                     <p class="text-muted mb-3">
                                         <i class="bi bi-geo-alt me-2"></i> 456 Distribution Center, Cebu City
@@ -2216,40 +2216,7 @@
                             </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <div class="card border h-100">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="bg-danger text-white rounded-circle p-2 me-3">
-                                            <i class="bi bi-building" style="font-size: 24px;"></i>
-                                        </div>
-                                        <h5 class="card-title mb-0">MCI Davao Warehouse</h5>
-                                    </div>
-                                    <p class="text-muted mb-3">
-                                        <i class="bi bi-geo-alt me-2"></i> 789 Logistics Hub, Davao City
-                                    </p>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <div>
-                                            <div class="text-muted small">Total Deliveries</div>
-                                            <div class="fw-bold">72</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-muted small">Capacity Utilization</div>
-                                            <div class="fw-bold">52%</div>
-                                        </div>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-danger" role="progressbar" style="width: 52%"></div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light">
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Last updated: Today, 11:20 AM</small>
-                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -2292,14 +2259,14 @@
                                 <div class="row mb-4">
                                     <div class="col-md-4 text-center">
                                         <div class="position-relative d-inline-block mb-3">
-                                            <img src="https://ui-avatars.com/api/?name=MCI+warehouse&background=3498db&color=fff&size=128"
+                                            <img src="https://ui-avatars.com/api/?name=SMEG+warehouse&background=3498db&color=fff&size=128"
                                                  class="rounded-circle"
                                                  style="width: 128px; height: 128px; object-fit: cover;">
                                             <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle p-2">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                         </div>
-                                        <h6 class="mt-2">MCI warehouse</h6>
+                                        <h6 class="mt-2">SMEG warehouse</h6>
                                         <p class="text-muted small">Logistics Manager</p>
                                     </div>
                                     <div class="col-md-8">
@@ -2638,9 +2605,8 @@
                                 <div class="input-group">
                                     <select class="form-select" id="originSelect">
                                         <option selected>Select warehouse</option>
-                                        <option value="alabang">MCI Alabang warehouse</option>
-                                        <option value="cebu">MCI Cebu warehouse</option>
-                                        <option value="davao">MCI Davao warehouse</option>
+                                        <option value="alabang">SMEG Alabang warehouse</option>
+                                        <option value="cebu">SMEG Cebu warehouse</option>
                                     </select>
                                     <button type="button" class="btn map-pin-btn" id="pinOrigin">
                                         <i class="bi bi-geo-alt"></i> Pin on Map
@@ -2945,16 +2911,12 @@
             // Predefined warehouse locations
             const warehouseLocations = {
                 'alabang': {
-                    address: 'MCI Alabang warehouse',
+                    address: 'SMEG Alabang warehouse',
                     coordinates: { lat: 14.4297, lng: 121.0420 }
                 },
                 'cebu': {
-                    address: 'MCI Cebu warehouse', 
+                    address: 'SMEG Cebu warehouse', 
                     coordinates: { lat: 10.3157, lng: 123.8854 }
-                },
-                'davao': {
-                    address: 'MCI Davao warehouse',
-                    coordinates: { lat: 7.1907, lng: 125.4553 }
                 }
             };
 
@@ -3383,7 +3345,7 @@
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="button" class="btn btn-success" id="saveLocationBtn" disabled>
+                                    <button type="button" class="btn btn-success" id="saveLocationBtn">
                                         <i class="bi bi-bookmark-plus"></i> Save This Location
                                     </button>
                                     <button type="button" class="btn btn-primary" id="confirmLocation" disabled>Use This Location</button>
@@ -3479,12 +3441,6 @@
                                 const confirmBtn = document.getElementById('confirmLocation');
                                 if (confirmBtn) {
                                     confirmBtn.disabled = false;
-                                }
-                                
-                                // Enable save location button
-                                const saveBtn = document.getElementById('saveLocationBtn');
-                                if (saveBtn) {
-                                    saveBtn.disabled = false;
                                 }
                                 
                                 // Show success message
@@ -3691,12 +3647,6 @@
                                 // Enable confirm button
                                 document.getElementById('confirmLocation').disabled = false;
                                 
-                                // Enable save location button
-                                const saveLocationBtn = document.getElementById('saveLocationBtn');
-                                if (saveLocationBtn) {
-                                    saveLocationBtn.disabled = false;
-                                }
-                                
                                 // Update route visualization
                                 updateRouteVisualization();
                                 
@@ -3706,9 +3656,8 @@
                             
                             // Add warehouse markers for reference with enhanced info
                             const warehouseMarkers = [
-                                { lat: 14.4297, lng: 121.0420, name: 'MCI Alabang Warehouse', address: 'Alabang, Muntinlupa City' },
-                                { lat: 10.3157, lng: 123.8854, name: 'MCI Cebu Warehouse', address: 'Cebu City, Cebu' },
-                                { lat: 7.0731, lng: 125.6128, name: 'MCI Davao Warehouse', address: 'Davao City, Davao' }
+                                { lat: 14.4297, lng: 121.0420, name: 'SMEG Alabang Warehouse', address: 'Alabang, Muntinlupa City' },
+                                { lat: 10.3157, lng: 123.8854, name: 'SMEG Cebu Warehouse', address: 'Cebu City, Cebu' }
                             ];
                             
                             warehouseMarkers.forEach(warehouse => {
@@ -3863,16 +3812,25 @@
                 if (saveLocationBtn) {
                     saveLocationBtn.addEventListener('click', function() {
                         console.log('Save location button clicked');
-                        console.log('selectedCoordinates:', selectedCoordinates);
-                        console.log('selectedAddress:', selectedAddress);
                         
-                        if (!selectedCoordinates || !selectedAddress) {
-                            alert('Please select a location on the map first');
-                            return;
+                        // Open save location modal immediately
+                        // Use current map center if no location is selected
+                        let lat, lng, address;
+                        
+                        if (selectedCoordinates && selectedAddress) {
+                            lat = selectedCoordinates.lat;
+                            lng = selectedCoordinates.lng;
+                            address = selectedAddress;
+                        } else {
+                            // Use map center as fallback
+                            const center = map.getCenter();
+                            lat = center.lat;
+                            lng = center.lng;
+                            address = `Location at ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                         }
                         
                         // Show save location modal
-                        showBookingSaveLocationModal(selectedCoordinates.lat, selectedCoordinates.lng, selectedAddress);
+                        showBookingSaveLocationModal(lat, lng, address);
                     });
                 } else {
                     console.error('Save location button not found');
@@ -4072,6 +4030,10 @@
                 
                 // Add saved location marker to current booking map if it exists
                 addSavedLocationToBookingMap(newLocation);
+                
+                // Update origin dropdown and destination options
+                updateOriginDropdownWithSavedLocations();
+                updateDestinationOptionsWithSavedLocations();
             }
 
             // Add saved location marker to booking map
@@ -4193,6 +4155,81 @@
                     console.log(`Loaded ${savedLocations.length} saved locations on booking map`);
                 } catch (error) {
                     console.error('Error loading saved locations on booking map:', error);
+                }
+            }
+
+            // Update origin dropdown with saved locations
+            function updateOriginDropdownWithSavedLocations() {
+                try {
+                    const originSelect = document.getElementById('originSelect');
+                    if (!originSelect) return;
+                    
+                    const saved = localStorage.getItem('mci-saved-locations');
+                    if (!saved) return;
+                    
+                    const savedLocations = JSON.parse(saved);
+                    
+                    // Remove existing saved location options (keep only warehouses)
+                    const options = originSelect.querySelectorAll('option');
+                    options.forEach(option => {
+                        if (option.value.startsWith('saved_')) {
+                            option.remove();
+                        }
+                    });
+                    
+                    // Add saved locations to dropdown
+                    savedLocations.forEach(location => {
+                        const option = document.createElement('option');
+                        option.value = location.id;
+                        option.textContent = `📍 ${location.name}`;
+                        option.dataset.coordinates = JSON.stringify(location.coordinates);
+                        option.dataset.address = location.address || location.name;
+                        originSelect.appendChild(option);
+                    });
+                    
+                    console.log(`Added ${savedLocations.length} saved locations to origin dropdown`);
+                } catch (error) {
+                    console.error('Error updating origin dropdown:', error);
+                }
+            }
+
+            // Update destination options with saved locations
+            function updateDestinationOptionsWithSavedLocations() {
+                try {
+                    const saved = localStorage.getItem('mci-saved-locations');
+                    if (!saved) return;
+                    
+                    const savedLocations = JSON.parse(saved);
+                    
+                    // Add datalist for destination autocomplete if it doesn't exist
+                    let datalist = document.getElementById('savedLocationsDatalist');
+                    if (!datalist) {
+                        datalist = document.createElement('datalist');
+                        datalist.id = 'savedLocationsDatalist';
+                        document.body.appendChild(datalist);
+                        
+                        // Add datalist to all destination inputs
+                        const destinationInputs = document.querySelectorAll('.destination-area-input');
+                        destinationInputs.forEach(input => {
+                            input.setAttribute('list', 'savedLocationsDatalist');
+                        });
+                    }
+                    
+                    // Clear existing options
+                    datalist.innerHTML = '';
+                    
+                    // Add saved locations as options
+                    savedLocations.forEach(location => {
+                        const option = document.createElement('option');
+                        option.value = location.address || location.name;
+                        option.textContent = `📍 ${location.name}`;
+                        option.dataset.coordinates = JSON.stringify(location.coordinates);
+                        datalist.appendChild(option);
+                    });
+                    
+                    console.log(`Added ${savedLocations.length} saved locations to destination options`);
+                } catch (error) {
+                    console.error('Error updating destination options:', error);
                 }
             }
 
@@ -4453,18 +4490,36 @@
                         console.log('No map-calculated distance available, using fallback');
                     }
                     
+                    // Get origin coordinates from warehouse locations if available
+                    let originCoordinates = null;
+                    if (origin && origin !== 'Not specified') {
+                        const warehouseLocations = {
+                            'alabang': { lat: 14.4297, lng: 121.0403 },
+                            'cebu': { lat: 10.3157, lng: 123.8854 }
+                        };
+                        originCoordinates = warehouseLocations[origin] || null;
+                    }
+                    
+                    // Get the actual origin name for display
+                    let originName = origin;
+                    if (origin === 'alabang') {
+                        originName = 'SMEG Alabang warehouse';
+                    } else if (origin === 'cebu') {
+                        originName = 'SMEG Cebu warehouse';
+                    }
+                    
                     // Prepare booking data
                     const bookingData = {
                         drNumbers: drNumbers,
                         deliveryDate: deliveryDate,
                         truckPlateNumber: truckPlateNumber,
-                        origin: origin,
+                        origin: originName,
                         destinations: destinations,
                         additionalCosts: additionalCosts,
                         timestamp: new Date().toISOString(),
                         calculatedDistance: distanceValue, // Include the calculated distance
-                        originCoordinates: selectedOrigin?.coordinates || null,
-                        destinationCoordinates: selectedDestinations.map(dest => dest.coordinates).filter(coord => coord)
+                        originCoordinates: originCoordinates,
+                        destinationCoordinates: [] // Will be populated if map coordinates are available
                     };
                     
                     console.log('Booking data:', bookingData);

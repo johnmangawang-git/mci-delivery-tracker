@@ -152,7 +152,7 @@ function initAuth() {
     // For testing purposes, create mock user data if none exists
     if (!user) {
         const mockUser = {
-            name: 'MCI warehouse',
+            name: 'SMEG warehouse',
             role: 'Administrator',
             email: 'admin@mci.com'
         };
