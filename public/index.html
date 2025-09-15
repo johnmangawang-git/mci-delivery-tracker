@@ -161,7 +161,10 @@
                         <h5 class="card-title"><i class="bi bi-currency-exchange"></i> Revenue</h5>
                     </div>
                     <div class="card-body">
-                        <div class="stat-value">₱14,280</div>
+                        <div class="stat-value">
+                            <span class="coming-soon-tag">In Development</span>
+                            <div class="crossed-out">₱14,280</div>
+                        </div>
                         <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 22% from last week</div>
                     </div>
                 </div>
@@ -217,7 +220,10 @@
                 </div>
                 <div class="metric-card" style="border-left-color: #9b59b6;">
                     <div class="metric-title">Avg. Cost per Booking</div>
-                    <div class="metric-value">₱12.33</div>
+                    <div class="metric-value">
+                        <span class="coming-soon-tag">In Development</span>
+                        <div class="crossed-out">₱12.33</div>
+                    </div>
                     <div class="metric-change negative">
                         <i class="bi bi-arrow-down"></i> 2.1% from last month
                     </div>
@@ -667,19 +673,19 @@
                                         <div class="row g-3">
                                             <div class="col-md-6">
                                                 <label class="form-label">First Name</label>
-                                                <input type="text" class="form-control" value="MCI">
+                                                <input type="text" class="form-control" id="profileFirstName" value="MCI">
                                             </div>
                                             <div class="col-md-6">
                                                 <label class="form-label">Last Name</label>
-                                                <input type="text" class="form-control" value="warehouse">
+                                                <input type="text" class="form-control" id="profileLastName" value="warehouse">
                                             </div>
                                             <div class="col-md-12">
                                                 <label class="form-label">Email Address</label>
-                                                <input type="email" class="form-control" value="admin@mci.com">
+                                                <input type="email" class="form-control" id="profileEmail" value="admin@mci.com">
                                             </div>
                                             <div class="col-md-12">
                                                 <label class="form-label">Phone Number</label>
-                                                <input type="tel" class="form-control" value="+63 912 345 6789">
+                                                <input type="tel" class="form-control" id="profilePhone" value="+63 912 345 6789">
                                             </div>
                                             <div class="col-md-12">
                                                 <label class="form-label">Job Title</label>
@@ -692,7 +698,7 @@
                                 <div class="row mb-4">
                                     <div class="col-md-6">
                                         <label class="form-label">Time Zone</label>
-                                        <select class="form-select">
+                                        <select class="form-select" id="profileTimeZone">
                                             <option>GMT+8 - Philippine Time</option>
                                             <option>GMT+0 - UTC</option>
                                             <option>GMT-5 - Eastern Time (US & Canada)</option>
@@ -700,7 +706,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Date Format</label>
-                                        <select class="form-select">
+                                        <select class="form-select" id="profileDateFormat">
                                             <option>MM/DD/YYYY</option>
                                             <option selected>DD/MM/YYYY</option>
                                             <option>YYYY-MM-DD</option>
@@ -710,7 +716,7 @@
 
                                 <div class="d-flex justify-content-end gap-2">
                                     <button class="btn btn-outline-secondary">Cancel</button>
-                                    <button class="btn btn-primary">Save Changes</button>
+                                    <button class="btn btn-primary" id="saveProfileChangesBtn">Save Changes</button>
                                 </div>
                             </div>
 
@@ -789,8 +795,28 @@
 
                                 <div class="d-flex justify-content-end gap-2">
                                     <button class="btn btn-outline-secondary">Cancel</button>
-                                    <button class="btn btn-primary">Save Preferences</button>
+                                    <button class="btn btn-primary" id="saveNotificationChangesBtn">Save Preferences</button>
                                 </div>
+                            </div>
+
+                            <div id="deliverySettings" class="setting-panel" style="display: none;">
+                                <h5 class="mb-4"><i class="bi bi-truck me-2"></i> Delivery Settings <span class="coming-soon-tag">In Development</span></h5>
+                                <p class="text-muted">Delivery settings functionality is currently under development.</p>
+                            </div>
+
+                            <div id="integrationsSettings" class="setting-panel" style="display: none;">
+                                <h5 class="mb-4"><i class="bi bi-plug me-2"></i> System Integrations <span class="coming-soon-tag">In Development</span></h5>
+                                <p class="text-muted">System integrations functionality is currently under development.</p>
+                            </div>
+
+                            <div id="securitySettings" class="setting-panel" style="display: none;">
+                                <h5 class="mb-4"><i class="bi bi-shield-lock me-2"></i> Security Settings <span class="coming-soon-tag">In Development</span></h5>
+                                <p class="text-muted">Security settings functionality is currently under development.</p>
+                            </div>
+
+                            <div id="billingSettings" class="setting-panel" style="display: none;">
+                                <h5 class="mb-4"><i class="bi bi-credit-card me-2"></i> Billing & Payments <span class="coming-soon-tag">In Development</span></h5>
+                                <p class="text-muted">Billing and payment settings functionality is currently under development.</p>
                             </div>
                         </div>
                     </div>
@@ -804,15 +830,15 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="eSignatureModalLabel">E-Signature</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="eSignatureModalLabel"><i class="bi bi-pen me-2"></i>E-Signature</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-8">
                         <div class="card signature-card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Signature Pad</h6>
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Signature Pad</h6>
                             </div>
                             <div class="card-body">
                                 <div class="signature-pad-container" style="position: relative; width: 100%; max-width: 600px; height: 300px; margin: 0 auto; overflow: hidden;">
@@ -820,7 +846,7 @@
                                 </div>
                                 <div class="d-flex justify-content-center mt-3">
                                     <button type="button" class="btn btn-outline-danger" id="clearSignatureBtn">
-                                        <i class="bi bi-eraser"></i> Clear Signature
+                                        <i class="bi bi-eraser me-2"></i>Clear Signature
                                     </button>
                                 </div>
                                 <div class="text-center text-muted mt-2">
@@ -831,13 +857,14 @@
                     </div>
                     <div class="col-md-4">
                         <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Delivery Details</h6>
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Delivery Details</h6>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label">DR Number</label>
-                                    <input type="text" class="form-control" id="ePodDrNumber" readonly>
+                                    <!-- DR Number input with black text and bold font as per requirements -->
+                                    <input type="text" class="form-control" id="ePodDrNumber" readonly style="color: #000000; font-weight: bold;">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Customer Name</label>
@@ -861,9 +888,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
                 <button type="button" class="btn btn-primary" id="saveSignatureBtn">
-                    <i class="bi bi-save"></i> Save Signature
+                    <i class="bi bi-save me-2"></i>Save Signature
                 </button>
             </div>
         </div>
@@ -878,7 +905,7 @@
                     <h5 class="modal-title" id="addCustomerModalLabel">
                         <i class="bi bi-person-plus me-2"></i>Add New Customer
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="addCustomerForm">
@@ -931,7 +958,7 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
                     <button type="button" class="btn btn-primary" id="saveCustomerBtn">
                         <i class="bi bi-check-circle me-2"></i>Save Customer
                     </button>
@@ -948,7 +975,7 @@
                     <h5 class="modal-title" id="editCustomerModalLabel">
                         <i class="bi bi-pencil me-2"></i>Edit Customer
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editCustomerForm">
@@ -1001,7 +1028,7 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
                     <button type="button" class="btn btn-primary" id="updateCustomerBtn">
                         <i class="bi bi-check-circle me-2"></i>Update Customer
                     </button>
@@ -1015,7 +1042,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">📋 DELIVERY BOOKING MODAL</h5>
+                    <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Delivery Booking</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">

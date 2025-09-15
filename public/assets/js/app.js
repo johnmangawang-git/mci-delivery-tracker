@@ -159,6 +159,134 @@ console.log('app.js loaded');
         });
     }
 
+    // Export Active Deliveries to Excel
+    function exportActiveDeliveriesToExcel() {
+        try {
+            // Check if XLSX library is available
+            if (typeof XLSX === 'undefined') {
+                showToast('Excel export library not loaded. Please try again.', 'error');
+                return;
+            }
+
+            // Get data to export (filtered or all)
+            const dataToExport = currentSearchTerm ? filteredDeliveries : activeDeliveries;
+            
+            if (dataToExport.length === 0) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+
+            // Prepare data for export
+            const exportData = dataToExport.map(delivery => ({
+                'DR Number': delivery.drNumber || 'N/A',
+                'Origin': delivery.origin || 'N/A',
+                'Destination': delivery.destination || 'N/A',
+                'Distance': delivery.distance || 'N/A',
+                'Truck': delivery.truckPlateNumber || 'N/A',
+                'Status': delivery.status || 'N/A',
+                'Booked Date': delivery.deliveryDate || delivery.timestamp || 'N/A',
+                'Additional Costs': delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'
+            }));
+
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 15 }, // DR Number
+                { wch: 25 }, // Origin
+                { wch: 25 }, // Destination
+                { wch: 12 }, // Distance
+                { wch: 15 }, // Truck
+                { wch: 15 }, // Status
+                { wch: 15 }, // Booked Date
+                { wch: 15 }  // Additional Costs
+            ];
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Active Deliveries');
+            
+            // Generate filename with date
+            const date = new Date().toISOString().split('T')[0];
+            const searchTerm = currentSearchTerm ? `_${currentSearchTerm.replace(/\s+/g, '_')}` : '';
+            const filename = `Active_Deliveries_${date}${searchTerm}.xlsx`;
+            
+            // Export to file
+            XLSX.writeFile(wb, filename);
+            
+            showToast(`Exported ${dataToExport.length} delivery records to ${filename}`, 'success');
+        } catch (error) {
+            console.error('Error exporting Active Deliveries:', error);
+            showToast('Error exporting data. Please try again.', 'error');
+        }
+    }
+
+    // Export Delivery History to Excel
+    function exportDeliveryHistoryToExcel() {
+        try {
+            // Check if XLSX library is available
+            if (typeof XLSX === 'undefined') {
+                showToast('Excel export library not loaded. Please try again.', 'error');
+                return;
+            }
+
+            // Get data to export (filtered or all)
+            const dataToExport = currentHistorySearchTerm ? filteredHistory : deliveryHistory;
+            
+            if (dataToExport.length === 0) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+
+            // Prepare data for export
+            const exportData = dataToExport.map(delivery => ({
+                'Date': delivery.completedDate || 'N/A',
+                'DR Number': delivery.drNumber || 'N/A',
+                'Customer Name': delivery.customerName || 'N/A',
+                'Customer Number': delivery.customerNumber || 'N/A',
+                'Origin': delivery.origin || 'N/A',
+                'Destination': delivery.destination || 'N/A',
+                'Distance': delivery.distance || 'N/A',
+                'Additional Costs': delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00',
+                'Status': delivery.status || 'N/A'
+            }));
+
+            // Create worksheet
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 15 }, // Date
+                { wch: 15 }, // DR Number
+                { wch: 25 }, // Customer Name
+                { wch: 25 }, // Customer Number
+                { wch: 25 }, // Origin
+                { wch: 25 }, // Destination
+                { wch: 12 }, // Distance
+                { wch: 15 }, // Additional Costs
+                { wch: 15 }  // Status
+            ];
+
+            // Create workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Delivery History');
+            
+            // Generate filename with date
+            const date = new Date().toISOString().split('T')[0];
+            const searchTerm = currentHistorySearchTerm ? `_${currentHistorySearchTerm.replace(/\s+/g, '_')}` : '';
+            const filename = `Delivery_History_${date}${searchTerm}.xlsx`;
+            
+            // Export to file
+            XLSX.writeFile(wb, filename);
+            
+            showToast(`Exported ${dataToExport.length} delivery records to ${filename}`, 'success');
+        } catch (error) {
+            console.error('Error exporting Delivery History:', error);
+            showToast('Error exporting data. Please try again.', 'error');
+        }
+    }
+
     function loadActiveDeliveries() {
         console.log('loadActiveDeliveries called');
         console.log('Current activeDeliveries:', activeDeliveries);
@@ -563,6 +691,42 @@ console.log('app.js loaded');
         initHistorySearch();
         loadActiveDeliveries();
         loadDeliveryHistory();
+        
+        // Initialize export button event listeners
+        initExportButtons();
+    }
+
+    // Initialize export button event listeners
+    function initExportButtons() {
+        // Active Deliveries Export Button
+        const exportActiveBtn = document.getElementById('exportActiveDeliveriesBtn');
+        if (exportActiveBtn) {
+            exportActiveBtn.addEventListener('click', exportActiveDeliveriesToExcel);
+        }
+
+        // Delivery History Export Button
+        const exportHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
+        if (exportHistoryBtn) {
+            exportHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
+        }
+
+        // E-POD Export Button - This should use the function from main.js
+        const exportEPodBtn = document.getElementById('exportEPodBtn');
+        if (exportEPodBtn) {
+            // Remove any existing event listeners to prevent conflicts
+            const newExportEPodBtn = exportEPodBtn.cloneNode(true);
+            exportEPodBtn.parentNode.replaceChild(newExportEPodBtn, exportEPodBtn);
+            
+            // Add the click event listener
+            newExportEPodBtn.addEventListener('click', function() {
+                // Check if the exportEPodToPdf function exists in main.js
+                if (typeof window.exportEPodToPdf === 'function') {
+                    window.exportEPodToPdf();
+                } else {
+                    showToast('Export functionality not available. Please try again.', 'error');
+                }
+            });
+        }
     }
 
     // New function to add test data for E-signature testing
@@ -608,6 +772,91 @@ console.log('app.js loaded');
         showToast('Test data added for E-signature testing');
     }
 
+    // Function to handle profile settings save
+    function saveProfileSettings() {
+        // Get form values using ID selectors
+        const firstName = document.getElementById('profileFirstName').value;
+        const lastName = document.getElementById('profileLastName').value;
+        const email = document.getElementById('profileEmail').value;
+        const phone = document.getElementById('profilePhone').value;
+        const timeZone = document.getElementById('profileTimeZone').value;
+        const dateFormat = document.getElementById('profileDateFormat').value;
+        
+        // In a real app, you would save these values to a backend or localStorage
+        console.log('Profile settings saved:', { firstName, lastName, email, phone, timeZone, dateFormat });
+        
+        // Show success message
+        showToast('Profile settings saved successfully');
+        
+        // Close the settings view and return to the main dashboard
+        const settingsView = document.getElementById('settingsView');
+        const bookingView = document.getElementById('bookingView');
+        const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
+        
+        if (settingsView && bookingView) {
+            // Hide settings view
+            settingsView.classList.remove('active');
+            // Show booking view
+            bookingView.classList.add('active');
+            
+            // Update sidebar active state
+            sidebarLinks.forEach(link => {
+                if (link.dataset.view === 'settings') {
+                    link.classList.remove('active');
+                } else if (link.dataset.view === 'booking') {
+                    link.classList.add('active');
+                }
+            });
+        }
+    }
+
+    // Function to handle notification settings save
+    function saveNotificationSettings() {
+        // Get checkbox values with null checks
+        const newBooking = document.getElementById('newBooking');
+        const deliveryUpdates = document.getElementById('deliveryUpdates');
+        const etaChanges = document.getElementById('etaChanges');
+        const completion = document.getElementById('completion');
+        const systemUpdates = document.getElementById('systemUpdates');
+        const securityAlerts = document.getElementById('securityAlerts');
+        const billingUpdates = document.getElementById('billingUpdates');
+        
+        // In a real app, you would save these values to a backend or localStorage
+        console.log('Notification settings saved:', { 
+            newBooking: newBooking ? newBooking.checked : false,
+            deliveryUpdates: deliveryUpdates ? deliveryUpdates.checked : false,
+            etaChanges: etaChanges ? etaChanges.checked : false,
+            completion: completion ? completion.checked : false,
+            systemUpdates: systemUpdates ? systemUpdates.checked : false,
+            securityAlerts: securityAlerts ? securityAlerts.checked : false,
+            billingUpdates: billingUpdates ? billingUpdates.checked : false
+        });
+        
+        // Show success message
+        showToast('Notification preferences saved successfully');
+        
+        // Close the settings view and return to the main dashboard
+        const settingsView = document.getElementById('settingsView');
+        const bookingView = document.getElementById('bookingView');
+        const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
+        
+        if (settingsView && bookingView) {
+            // Hide settings view
+            settingsView.classList.remove('active');
+            // Show booking view
+            bookingView.classList.add('active');
+            
+            // Update sidebar active state
+            sidebarLinks.forEach(link => {
+                if (link.dataset.view === 'settings') {
+                    link.classList.remove('active');
+                } else if (link.dataset.view === 'booking') {
+                    link.classList.add('active');
+                }
+            });
+        }
+    }
+
     // Make functions globally accessible
     // Create getters to ensure we always access the current arrays
     Object.defineProperty(window, 'activeDeliveries', {
@@ -625,6 +874,11 @@ console.log('app.js loaded');
     window.initDeliveryManagement = initDeliveryManagement;
     window.addTestData = addTestData; // Add the new function
     window.showToast = showToast;
+    window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
+    window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
+    window.exportEPodToPdf = exportEPodToPdf;
+    window.saveProfileSettings = saveProfileSettings;
+    window.saveNotificationSettings = saveNotificationSettings;
     
     // Expose the internal functions that might be needed by other modules
     window.getStatusInfo = getStatusInfo;
@@ -633,5 +887,16 @@ console.log('app.js loaded');
     // Initialize the application when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         initDeliveryManagement();
+        
+        // Add event listeners for settings save buttons
+        const saveProfileBtn = document.getElementById('saveProfileChangesBtn');
+        if (saveProfileBtn) {
+            saveProfileBtn.addEventListener('click', saveProfileSettings);
+        }
+        
+        const saveNotificationBtn = document.getElementById('saveNotificationChangesBtn');
+        if (saveNotificationBtn) {
+            saveNotificationBtn.addEventListener('click', saveNotificationSettings);
+        }
     });
 })();

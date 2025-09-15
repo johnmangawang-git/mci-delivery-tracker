@@ -18,6 +18,8 @@ body {
     background-color: #f5f7fa;
     color: #333;
     overflow-x: hidden;
+    font-size: 14px;
+    zoom: 1; /* Ensure normal zoom level */
 }
 
 /* Sidebar Styles */
@@ -38,11 +40,11 @@ body {
 }
 
 .logo {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .logo-icon {
@@ -305,6 +307,13 @@ body {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    border: none;
+    transition: var(--transition);
+}
+
+.modal-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
 }
 
 .modal-header {
@@ -326,19 +335,64 @@ body {
     padding: 30px;
 }
 
-.form-section {
+.modal-footer {
+    padding: 20px 30px;
+    border-top: none;
+    display: flex;
+    justify-content: end;
+    gap: 12px;
+}
+
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Enhanced Booking Modal Styles */
+#bookingModal .modal-content {
+    box-shadow: var(--card-shadow);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: var(--transition);
+    border: none;
+}
+
+#bookingModal .modal-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.15);
+}
+
+#bookingModal .modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, #1a2530 100%);
+    color: white;
+    padding: 24px 30px;
+    border: none;
+}
+
+#bookingModal .modal-title {
+    font-size: 22px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#bookingModal .modal-body {
+    padding: 30px;
+}
+
+#bookingModal .form-section {
     margin-bottom: 28px;
     padding-bottom: 20px;
     border-bottom: 1px solid #e0e6ed;
 }
 
-    .form-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-    }
+#bookingModal .form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
 
-.section-title {
+#bookingModal .section-title {
     font-size: 18px;
     font-weight: 600;
     color: var(--primary);
@@ -348,14 +402,14 @@ body {
     gap: 10px;
 }
 
-.form-label {
+#bookingModal .form-label {
     font-weight: 500;
     color: var(--primary);
     margin-bottom: 8px;
     display: block;
 }
 
-.form-control, .form-select {
+#bookingModal .form-control, .form-select {
     border: 1px solid #d0d7e2;
     border-radius: 10px;
     padding: 12px 16px;
@@ -364,25 +418,29 @@ body {
     box-shadow: none;
 }
 
-    .form-control:focus, .form-select:focus {
-        border-color: var(--secondary);
-        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-    }
+#bookingModal .form-control:focus, .form-select:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
 
-.input-group {
+#bookingModal .form-control[readonly] {
+    background-color: #f8f9fa;
+}
+
+#bookingModal .input-group {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.input-group-text {
+#bookingModal .input-group-text {
     background: var(--light-bg);
     border: none;
     border-radius: 10px 0 0 10px;
     padding: 0 16px;
 }
 
-.map-pin-btn {
+#bookingModal .map-pin-btn {
     background: white;
     border: 1px solid #d0d7e2;
     border-radius: 10px;
@@ -394,24 +452,24 @@ body {
     transition: var(--transition);
 }
 
-    .map-pin-btn:hover {
-        background: #f0f5ff;
-        color: var(--secondary);
-        border-color: var(--secondary);
-    }
+#bookingModal .map-pin-btn:hover {
+    background: #f0f5ff;
+    color: var(--secondary);
+    border-color: var(--secondary);
+}
 
-.cost-item {
+#bookingModal .cost-item {
     display: flex;
     gap: 16px;
     margin-bottom: 16px;
     align-items: center;
 }
 
-    .cost-item:last-child {
-        margin-bottom: 0;
-    }
+#bookingModal .cost-item:last-child {
+    margin-bottom: 0;
+}
 
-.remove-cost {
+#bookingModal .remove-cost {
     color: var(--danger);
     background: #fff0f0;
     border: none;
@@ -425,12 +483,12 @@ body {
     transition: var(--transition);
 }
 
-    .remove-cost:hover {
-        background: #ffebee;
-        transform: scale(1.1);
-    }
+#bookingModal .remove-cost:hover {
+    background: #ffebee;
+    transform: scale(1.1);
+}
 
-.modal-footer {
+#bookingModal .modal-footer {
     padding: 20px 30px;
     border-top: none;
     display: flex;
@@ -438,7 +496,7 @@ body {
     gap: 12px;
 }
 
-.btn {
+#bookingModal .btn {
     padding: 12px 28px;
     border-radius: 10px;
     font-weight: 500;
@@ -446,31 +504,31 @@ body {
     transition: var(--transition);
 }
 
-.btn-primary {
+#bookingModal .btn-primary {
     background: var(--secondary);
     border: none;
     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
-    .btn-primary:hover {
-        background: #2980b9;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-    }
+#bookingModal .btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+}
 
-.btn-outline-secondary {
+#bookingModal .btn-outline-secondary {
     border-radius: 10px;
     border: 1px solid #d0d7e2;
     color: var(--primary);
 }
 
-    .btn-outline-secondary:hover {
-        background: #f0f5ff;
-        border-color: var(--secondary);
-        color: var(--secondary);
-    }
+#bookingModal .btn-outline-secondary:hover {
+    background: #f0f5ff;
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
 
-.distance-box {
+#bookingModal .distance-box {
     background: #f0f7ff;
     border: 1px dashed var(--secondary);
     border-radius: 10px;
@@ -766,3 +824,120 @@ body {
         margin-bottom: 16px;
         color: #e0e6ed;
     }
+
+.signature-card {
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    border: none;
+    transition: var(--transition);
+}
+
+.signature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.15);
+}
+
+.signature-card .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #e0e6ed;
+    padding: 20px;
+}
+
+.signature-card .card-body {
+    padding: 20px;
+}
+
+/* E-Signature Modal Styles */
+#eSignatureModal .form-control {
+    border: 1px solid #d0d7e2;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 16px;
+    transition: var(--transition);
+    box-shadow: none;
+}
+
+#eSignatureModal .form-control:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+#eSignatureModal .form-control[readonly] {
+    background-color: #f8f9fa;
+}
+
+/* Ensure DR Number is displayed with black text and bold font */
+#ePodDrNumber {
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* EPOD Card Styles - Make DR Number black for better readability */
+#ePodCardsContainer .card-header.bg-primary h6 {
+    color: #000000 !important;
+    font-weight: bold;
+}
+
+/* In Development Tag Animation */
+.coming-soon-tag {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffc107;
+    animation: pulseYellow 2s infinite;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+@keyframes pulseYellow {
+    0% { color: #ffc107; }
+    50% { color: #ff9800; }
+    100% { color: #ffc107; }
+}
+
+.stat-value .coming-soon-tag {
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.crossed-out {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+    background: white;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.15);
+}
+
+.card-header {
+    padding: 20px;
+    border-bottom: none;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.card-header.bg-light {
+    background: #f8f9fa !important;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-body {
+    padding: 20px;
+}
