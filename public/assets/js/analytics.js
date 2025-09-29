@@ -2,18 +2,53 @@
 let bookingsChart, costsChart, originChart, costBreakdownChart;
 
 function initAnalyticsCharts() {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js library is not loaded');
+        return;
+    }
+    
     // Destroy existing charts if they exist
     if (bookingsChart) {
         bookingsChart.destroy();
+        bookingsChart = null;
+    }
+    if (costsChart) {
         costsChart.destroy();
+        costsChart = null;
+    }
+    if (originChart) {
         originChart.destroy();
+        originChart = null;
+    }
+    if (costBreakdownChart) {
         costBreakdownChart.destroy();
+        costBreakdownChart = null;
     }
 
-    // Load analytics data
-    loadAnalyticsData().then(data => {
-        // Bookings Chart - Total bookings per month/week/day
-        const bookingsCtx = document.getElementById('bookingsChart').getContext('2d');
+    // Mock data for charts
+    const data = {
+        bookings: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+            values: [285, 302, 318, 327, 335, 342, 338, 341, 345, 347]
+        },
+        costs: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+            values: [3280, 3520, 3750, 3890, 4020, 4150, 4180, 4210, 4250, 4280]
+        },
+        origin: {
+            labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
+            values: [45, 28, 20, 7]
+        },
+        costBreakdown: {
+            labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
+            values: [45, 25, 15, 10, 5]
+        }
+    };
+
+    // Bookings Chart - Total bookings per month/week/day
+    const bookingsCtx = document.getElementById('bookingsOverTimeChart');
+    if (bookingsCtx) {
         bookingsChart = new Chart(bookingsCtx, {
             type: 'bar',
             data: {
@@ -63,65 +98,11 @@ function initAnalyticsCharts() {
                 }
             }
         });
+    }
 
-        // Costs Chart - Total additional cost and additional cost per month/week
-        const costsCtx = document.getElementById('costsChart').getContext('2d');
-        costsChart = new Chart(costsCtx, {
-            type: 'line',
-            data: {
-                labels: data.costs.labels,
-                datasets: [{
-                    label: 'Additional Costs',
-                    data: data.costs.values,
-                    backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                    borderColor: '#f39c12',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#f39c12',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                        padding: 12,
-                        titleFont: {
-                            size: 14
-                        },
-                        bodyFont: {
-                            size: 13
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        min: Math.min(...data.costs.values) * 0.95,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-
-        // Origin Chart - Booking origin distribution (pie chart)
-        const originCtx = document.getElementById('originChart').getContext('2d');
+    // Origin Chart - Booking origin distribution (pie chart)
+    const originCtx = document.getElementById('originChart');
+    if (originCtx) {
         originChart = new Chart(originCtx, {
             type: 'doughnut',
             data: {
@@ -164,9 +145,11 @@ function initAnalyticsCharts() {
                 cutout: '60%'
             }
         });
+    }
 
-        // Cost Breakdown Chart - Additional cost breakdown
-        const costBreakdownCtx = document.getElementById('costBreakdownChart').getContext('2d');
+    // Cost Breakdown Chart - Additional cost breakdown
+    const costBreakdownCtx = document.getElementById('costBreakdownChart');
+    if (costBreakdownCtx) {
         costBreakdownChart = new Chart(costBreakdownCtx, {
             type: 'pie',
             data: {
@@ -176,15 +159,15 @@ function initAnalyticsCharts() {
                     backgroundColor: [
                         'rgba(243, 156, 18, 0.8)',
                         'rgba(52, 152, 219, 0.8)',
-                        'rgba(155, 89, 182, 0.8)',
                         'rgba(46, 204, 113, 0.8)',
+                        'rgba(155, 89, 182, 0.8)',
                         'rgba(149, 165, 166, 0.8)'
                     ],
                     borderColor: [
                         'rgba(243, 156, 18, 1)',
                         'rgba(52, 152, 219, 1)',
-                        'rgba(155, 89, 182, 1)',
                         'rgba(46, 204, 113, 1)',
+                        'rgba(155, 89, 182, 1)',
                         'rgba(149, 165, 166, 1)'
                     ],
                     borderWidth: 1
@@ -210,6 +193,46 @@ function initAnalyticsCharts() {
                 }
             }
         });
+    }
+}
+
+// Expose function globally
+window.initAnalyticsCharts = initAnalyticsCharts;                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(149, 165, 166, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(243, 156, 18, 1)',
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(155, 89, 182, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(149, 165, 166, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // Initialize chart filters
         initChartFilters();
@@ -353,3 +376,6 @@ function updateCostBreakdownChart(period) {
     // In a real implementation, this would fetch new data based on period
     console.log(`Updating cost breakdown chart for ${period}`);
 }
+
+// Expose function globally
+window.initAnalyticsCharts = initAnalyticsCharts;

@@ -1,0 +1,1009 @@
+﻿// Booking modal functionality
+
+// Calculate real distance between two points using Haversine formula
+function calculateRealDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    return distance;
+}
+
+// Real address search using Nominatim API (OpenStreetMap)
+async function searchAddress(query) {
+    if (!query || query.trim().length < 3) {
+        return [];
+    }
+
+    try {
+        // Use Nominatim API with proper identification
+        const appEmail = 'mci-delivery-tracker@example.com';
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&email=${appEmail}&limit=5&addressdetails=1&countrycodes=ph`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'MCI-Delivery-Tracker/1.0 (mci-delivery-tracker@example.com)'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Transform Nominatim results to match expected format
+        return data.map(result => ({
+            lat: result.lat,
+            lng: result.lon,
+            display_name: result.display_name,
+            place_id: result.place_id,
+            importance: result.importance
+        }));
+    } catch (error) {
+        console.error('Error fetching geocoding data from Nominatim:', error);
+        // Return empty array on error
+        return [];
+    }
+}
+
+// Rate limiting for Nominatim API (max 1 request per second)
+let lastSearchTime = 0;
+const SEARCH_RATE_LIMIT = 1000; // 1 second
+
+async function searchAddressWithRateLimit(query) {
+    const now = Date.now();
+    const timeSinceLastSearch = now - lastSearchTime;
+    
+    if (timeSinceLastSearch < SEARCH_RATE_LIMIT) {
+        // Wait for the remaining time to respect rate limit
+        const waitTime = SEARCH_RATE_LIMIT - timeSinceLastSearch;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    lastSearchTime = Date.now();
+    return await searchAddress(query);
+}
+
+// Global variable to track the current map instance
+let currentMapInstance = null;
+
+// Initialize the map in the modal
+function initializeMapModal(type, index) {
+    console.log(`Initializing map modal for ${type}, index: ${index}`);
+    const mapContainer = document.getElementById('mapContainer');
+    if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+    }
+    // Remove any previous map instance
+    if (window.currentMapInstance) {
+        try {
+            window.currentMapInstance.remove();
+        } catch (e) {
+            console.warn('Error removing previous map instance:', e);
+        }
+        window.currentMapInstance = null;
+    }
+    // Ensure the container is visible and empty before initializing
+    mapContainer.style.display = 'block';
+    mapContainer.innerHTML = '';
+    // Initialize Leaflet map centered on Philippines
+    const map = L.map('mapContainer').setView([12.8797, 121.7740], 6);
+    window.currentMapInstance = map;
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Add a marker for the selected location (initially null)
+    let selectedMarker = null;
+    let selectedCoordinates = { lat: null, lng: null };
+
+    // Add click event to the map
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        // Update selected coordinates display
+        document.getElementById('selectedLat').textContent = lat.toFixed(6);
+        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+        
+        // Remove existing marker if any
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+        }
+        
+        // Add new marker
+        selectedMarker = L.marker([lat, lng]).addTo(map);
+        
+        // Update coordinates
+        selectedCoordinates = { lat, lng };
+        
+        // Enable confirm button
+        document.getElementById('confirmLocationBtn').disabled = false;
+    });
+
+    // Set up search functionality
+    const searchInput = document.getElementById('mapSearchInput');
+    const searchBtn = document.getElementById('mapSearchBtn');
+    if (searchInput && searchBtn) {
+        searchBtn.addEventListener('click', async function() {
+            const query = searchInput.value.trim();
+            if (query) {
+                // Show loading state
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+                try {
+                    const results = await searchAddressWithRateLimit(query);
+                    if (results.length > 0) {
+                        const result = results[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lng);
+                        // Only call setView if map is fully initialized and container is visible
+                        if (map && map._container && map._container.offsetParent !== null) {
+                            map.setView([lat, lng], 15);
+                        } else {
+                            console.warn('Map container is not visible or not initialized. Skipping setView.');
+                        }
+                        // Update selected coordinates display
+                        document.getElementById('selectedLat').textContent = lat.toFixed(6);
+                        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+                        // Remove existing marker if any
+                        if (selectedMarker) {
+                            map.removeLayer(selectedMarker);
+                        }
+                        // Add new marker
+                        selectedMarker = L.marker([lat, lng]).addTo(map);
+                        // Update coordinates
+                        selectedCoordinates = { lat, lng };
+                        // Enable confirm button
+                        document.getElementById('confirmLocationBtn').disabled = false;
+                        // Pre-fill location name and address if available
+                        if (result.display_name) {
+                            const locationParts = result.display_name.split(',');
+                            document.getElementById('locationNameInput').value = locationParts[0].trim();
+                        }
+                        document.getElementById('locationAddressInput').value = result.display_name || '';
+                        console.log(`Found location: ${result.display_name}`);
+                    } else {
+                        alert('No locations found for "' + query + '". Please try a different search term.');
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    alert('Error searching for location. Please try again.');
+                } finally {
+                    // Reset button state
+                    searchBtn.disabled = false;
+                    searchBtn.innerHTML = '<i class="bi bi-search"></i>';
+                }
+            }
+        });
+        
+        // Allow Enter key to trigger search
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchBtn.click();
+            }
+        });
+        
+        // Add real-time search suggestions (debounced)
+        let searchTimeout;
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            // Clear previous timeout
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Only search if query is at least 3 characters
+            if (query.length >= 3) {
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const results = await searchAddressWithRateLimit(query);
+                        // Could add dropdown suggestions here if needed
+                        console.log(`Found ${results.length} suggestions for "${query}"`);
+                    } catch (error) {
+                        console.error('Auto-suggestion error:', error);
+                    }
+                }, 800); // 800ms delay for debouncing
+            }
+        });
+    }
+
+    // Set up current location button
+    const useCurrentLocationBtn = document.getElementById('useCurrentLocationBtn');
+    if (useCurrentLocationBtn) {
+        useCurrentLocationBtn.addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        // Center map on current location
+                        map.setView([lat, lng], 15);
+                        
+                        // Update selected coordinates display
+                        document.getElementById('selectedLat').textContent = lat.toFixed(6);
+                        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+                        
+                        // Remove existing marker if any
+                        if (selectedMarker) {
+                            map.removeLayer(selectedMarker);
+                        }
+                        
+                        // Add new marker
+                        selectedMarker = L.marker([lat, lng]).addTo(map);
+                        
+                        // Update coordinates
+                        selectedCoordinates = { lat, lng };
+                        
+                        // Enable confirm button
+                        document.getElementById('confirmLocationBtn').disabled = false;
+                        
+                        // Pre-fill location name
+                        document.getElementById('locationNameInput').value = 'Current Location';
+                    },
+                    function(error) {
+                        console.error('Error getting current location:', error);
+                        alert('Unable to get current location. Please try clicking on the map instead.');
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        });
+    }
+
+    // Set up confirm button
+    const confirmBtn = document.getElementById('confirmLocationBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            if (selectedCoordinates.lat && selectedCoordinates.lng) {
+                // Get location details
+                const locationName = document.getElementById('locationNameInput').value || 'Selected Location';
+                const locationAddress = document.getElementById('locationAddressInput').value || 
+                    `${selectedCoordinates.lat.toFixed(6)}, ${selectedCoordinates.lng.toFixed(6)}`;
+                
+                // Update the appropriate input field
+                if (type === 'origin') {
+                    const customOrigin = document.getElementById('customOrigin');
+                    if (customOrigin) {
+                        customOrigin.value = locationAddress;
+                        customOrigin.setAttribute('data-lat', selectedCoordinates.lat);
+                        customOrigin.setAttribute('data-lng', selectedCoordinates.lng);
+                        
+                        // Show custom origin container
+                        const customOriginContainer = document.getElementById('customOriginContainer');
+                        if (customOriginContainer) {
+                            customOriginContainer.classList.remove('d-none');
+                        }
+                        
+                        // Reset origin select
+                        const originSelect = document.getElementById('originSelect');
+                        if (originSelect) {
+                            originSelect.value = '';
+                        }
+                    }
+                } else {
+                    // For destination, update the specific area input
+                    const destinationInputs = document.querySelectorAll('.destination-area-input');
+                    if (destinationInputs[index]) {
+                        destinationInputs[index].value = locationAddress;
+                        destinationInputs[index].setAttribute('data-lat', selectedCoordinates.lat);
+                        destinationInputs[index].setAttribute('data-lng', selectedCoordinates.lng);
+                    }
+                }
+                
+                // Update distance calculation
+                updateDistance();
+                
+                // Close the modal
+                const mapModal = document.getElementById('mapModal');
+                if (mapModal) {
+                    const modal = bootstrap.Modal.getInstance(mapModal);
+                    if (modal) {
+                        modal.hide();
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Show map pin dialog for selecting locations
+function showMapPinDialog(type, index = 0) {
+    console.log(`showMapPinDialog called with type: ${type}, index: ${index}`);
+    let mapModal = document.getElementById('mapModal');
+    if (!mapModal) {
+        mapModal = document.createElement('div');
+        mapModal.id = 'mapModal';
+        mapModal.className = 'modal fade';
+        mapModal.tabIndex = -1;
+        mapModal.setAttribute('aria-hidden', 'true');
+        mapModal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 95vw; width: 95vw;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-geo-alt me-2"></i>
+                            <span id="mapModalTitle">Select Location on Map</span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Search Location</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="mapSearchInput" placeholder="Search for a place...">
+                                        <button class="btn btn-outline-secondary" type="button" id="mapSearchBtn">
+                                            <i class="bi bi-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Selected Coordinates</label>
+                                    <div class="coordinates-display p-2 bg-light rounded">
+                                        <div class="coordinate-item">
+                                            <small class="text-muted">Latitude:</small>
+                                            <span id="selectedLat" class="fw-bold">--</span>
+                                        </div>
+                                        <div class="coordinate-item">
+                                            <small class="text-muted">Longitude:</small>
+                                            <span id="selectedLng" class="fw-bold">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Location Name</label>
+                                    <input type="text" class="form-control" id="locationNameInput" placeholder="Enter location name">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control" id="locationAddressInput" rows="2" placeholder="Enter address"></textarea>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-primary" id="confirmLocationBtn" disabled>
+                                        <i class="bi bi-check-circle me-2"></i>Confirm Location
+                                    </button>
+                                    <button class="btn btn-outline-secondary" id="useCurrentLocationBtn">
+                                        <i class="bi bi-geo-alt me-2"></i>Use Current Location
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div id="mapContainer" style="height: 600px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(mapModal);
+        mapModal.addEventListener('hidden.bs.modal', function() {
+            if (currentMapInstance) {
+                currentMapInstance.remove();
+                currentMapInstance = null;
+            }
+        });
+    }
+    const modalTitle = document.getElementById('mapModalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = type === 'origin' ? 'Select Origin Location' : `Select Destination Location #${index + 1}`;
+    }
+    const modal = new bootstrap.Modal(mapModal);
+    modal.show();
+    mapModal.addEventListener('shown.bs.modal', function() {
+        // Clear map container before initializing
+        const mapContainer = document.getElementById('mapContainer');
+        if (mapContainer) mapContainer.innerHTML = '';
+        initializeMapModal(type, index);
+    }, {once: true});
+}
+
+function updateDistance() {
+    const originSelect = document.getElementById('originSelect');
+    const destinationInputs = document.querySelectorAll('.destination-area-input');
+    const distanceBox = document.getElementById('calculatedDistance');
+    const distanceValue = document.getElementById('distanceValue');
+
+    // Get origin
+    let origin = '';
+    let originLat = null;
+    let originLng = null;
+    
+    if (originSelect.value && originSelect.value !== '') {
+        origin = originSelect.options[originSelect.selectedIndex].text;
+        // Get warehouse coordinates
+        if (window.warehouseManager && window.warehouseManager.warehouseLocations) {
+            const warehouse = window.warehouseManager.warehouseLocations.find(w => w.id === originSelect.value);
+            if (warehouse) {
+                originLat = warehouse.coordinates.lat;
+                originLng = warehouse.coordinates.lng;
+            }
+        }
+    }
+
+    if ((!origin || destinationInputs.length === 0) && !originLat) {
+        distanceValue.textContent = '-- km';
+        return;
+    }
+
+    // Get destinations
+    let totalDistance = 0;
+    let hasDestination = false;
+    
+    // Process each destination
+    destinationInputs.forEach(input => {
+        if (input.value.trim()) {
+            hasDestination = true;
+            
+            // Check if destination has coordinates
+            if (input.hasAttribute('data-lat') && input.hasAttribute('data-lng')) {
+                const destLat = parseFloat(input.getAttribute('data-lat'));
+                const destLng = parseFloat(input.getAttribute('data-lng'));
+                
+                // Calculate real distance if we have both origin and destination coordinates
+                if (originLat && originLng && destLat && destLng) {
+                    const distance = calculateRealDistance(originLat, originLng, destLat, destLng);
+                    totalDistance += distance;
+                } else {
+                    // Fallback to mock calculation
+                    let distance = 0;
+                    if (origin.includes('Alabang')) {
+                        if (input.value.includes('Makati')) distance = 12.5;
+                        else if (input.value.includes('Laguna')) distance = 24.7;
+                        else distance = 18.3;
+                    } else if (origin.includes('Cebu')) {
+                        if (input.value.includes('Cebu')) distance = 8.2;
+                        else distance = 14.8;
+                    } else if (origin.includes('Davao')) {
+                        if (input.value.includes('Davao')) distance = 5.3;
+                        else distance = 10.6;
+                    } else {
+                        distance = Math.floor(Math.random() * 50);
+                    }
+                    totalDistance += distance;
+                }
+            } else {
+                // Fallback to mock calculation
+                let distance = 0;
+                if (origin.includes('Alabang')) {
+                    if (input.value.includes('Makati')) distance = 12.5;
+                    else if (input.value.includes('Laguna')) distance = 24.7;
+                    else distance = 18.3;
+                } else if (origin.includes('Cebu')) {
+                    if (input.value.includes('Cebu')) distance = 8.2;
+                    else distance = 14.8;
+                } else if (origin.includes('Davao')) {
+                    if (input.value.includes('Davao')) distance = 5.3;
+                    else distance = 10.6;
+                } else {
+                    distance = Math.floor(Math.random() * 50);
+                }
+                totalDistance += distance;
+            }
+        }
+    });
+
+    if (hasDestination) {
+        distanceValue.textContent = `${totalDistance.toFixed(1)} km`;
+    } else {
+        distanceValue.textContent = '-- km';
+    }
+}
+
+// Ensure customer management is ready
+function ensureCustomerManagementReady() {
+    console.log('=== ENSURING CUSTOMER MANAGEMENT READY ===');
+    
+    // Make sure customers array is globally accessible
+    if (typeof window.customers === 'undefined') {
+        window.customers = [];
+        console.log('Initialized window.customers array');
+    }
+    
+    // Try to load existing customers from localStorage
+    const savedCustomers = localStorage.getItem('mci-customers');
+    if (savedCustomers && window.customers.length === 0) {
+        try {
+            window.customers = JSON.parse(savedCustomers);
+            console.log('Loaded customers from localStorage:', window.customers.length);
+        } catch (error) {
+            console.error('Error loading customers from localStorage:', error);
+        }
+    }
+    
+    // Sync with HTML customers array if it exists
+    if (typeof customers !== 'undefined') {
+        console.log('HTML customers array found with length:', customers.length);
+        if (customers.length > 0 && window.customers.length === 0) {
+            window.customers = [...customers];
+            console.log('Synced window.customers with HTML customers');
+        } else if (window.customers.length > 0 && customers.length === 0) {
+            customers.push(...window.customers);
+            console.log('Synced HTML customers with window.customers');
+        }
+    }
+    
+    // Make sure customer management functions are available
+    if (typeof window.loadCustomers === 'undefined') {
+        window.loadCustomers = function() {
+            console.log('Customer management not fully loaded yet');
+        };
+    }
+    
+    console.log('Customer management ready check completed');
+}
+
+// Auto-create customer from booking details
+async function autoCreateCustomer(customerName, customerNumber, destination) {
+    try {
+        console.log('=== AUTO CREATE CUSTOMER DEBUG ===');
+        console.log('Customer Name:', customerName);
+        console.log('Customer Number:', customerNumber);
+        console.log('Destination:', destination);
+        console.log('Window.customers exists:', !!window.customers);
+        console.log('Window.customers array:', window.customers);
+        
+        // Ensure customers array exists
+        if (!window.customers) {
+            console.log('No customers array found, initializing...');
+            window.customers = [];
+        }
+        
+        // Also check if the HTML customers array exists
+        if (typeof customers !== 'undefined') {
+            console.log('HTML customers array exists with length:', customers.length);
+            // Sync window.customers with HTML customers array
+            if (customers.length > 0 && window.customers.length === 0) {
+                window.customers = [...customers];
+                console.log('Synced window.customers with HTML customers array');
+            }
+        } else {
+            console.log('HTML customers array not found');
+        }
+        
+        // Check if customer already exists (by name or phone)
+        const existingCustomer = window.customers?.find(customer => 
+            customer.contactPerson.toLowerCase() === customerName.toLowerCase() ||
+            customer.phone === customerNumber
+        );
+        
+        console.log('Existing customer found:', existingCustomer);
+
+        if (existingCustomer) {
+            console.log('Customer already exists:', existingCustomer.contactPerson);
+            
+            // Update booking count and last delivery date for existing customer
+            existingCustomer.bookingsCount = (existingCustomer.bookingsCount || 0) + 1;
+            existingCustomer.lastDelivery = new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            // Also update in HTML customers array if it exists
+            if (typeof customers !== 'undefined') {
+                const htmlCustomerIndex = customers.findIndex(c => 
+                    c.contactPerson.toLowerCase() === customerName.toLowerCase() ||
+                    c.phone === customerNumber
+                );
+                if (htmlCustomerIndex !== -1) {
+                    customers[htmlCustomerIndex] = existingCustomer;
+                    console.log('Updated customer in HTML customers array');
+                }
+            }
+            
+            // Save updated customer data to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            
+            // Always refresh customers view to ensure updated data is visible
+            if (typeof window.loadCustomers === 'function') {
+                window.loadCustomers();
+            }
+            
+            // Also trigger the customer management refresh if available
+            if (typeof loadCustomers === 'function') {
+                loadCustomers();
+            }
+            
+            // Show update message
+            showToast(`Customer "${customerName}" booking count updated in Customer Management!`);
+            
+            return existingCustomer;
+        }
+
+        // Create new customer
+        const newCustomer = {
+            id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
+            contactPerson: customerName,
+            phone: customerNumber,
+            address: destination, // Use destination as address
+            accountType: 'Individual', // Default account type for individual customers
+            email: '', // Empty email - can be filled later
+            status: 'active',
+            notes: 'Auto-created from delivery booking',
+            bookingsCount: 1,
+            lastDelivery: new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            }),
+            createdAt: new Date()
+        };
+
+        // Add to customers array
+        window.customers.push(newCustomer);
+        console.log('New customer auto-created:', newCustomer.contactPerson);
+        console.log('Updated window.customers array:', window.customers);
+        
+        // Also add to HTML customers array if it exists
+        if (typeof customers !== 'undefined') {
+            customers.push(newCustomer);
+            console.log('Added to HTML customers array, new length:', customers.length);
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        console.log('Saved to localStorage');
+        
+        // Always refresh customers view to ensure new customer is visible
+        console.log('=== REFRESHING CUSTOMER DISPLAY ===');
+        
+        if (typeof window.loadCustomers === 'function') {
+            console.log('Calling window.loadCustomers()');
+            window.loadCustomers();
+        } else {
+            console.log('window.loadCustomers function not available');
+        }
+        
+        // Also trigger the customer management refresh if available
+        if (typeof loadCustomers === 'function') {
+            console.log('Calling loadCustomers() from HTML');
+            loadCustomers();
+        } else {
+            console.log('loadCustomers() from HTML not available');
+        }
+        
+        // Force refresh by triggering a custom event
+        const customerUpdateEvent = new CustomEvent('customerUpdated', {
+            detail: { customer: newCustomer, action: 'created' }
+        });
+        window.dispatchEvent(customerUpdateEvent);
+        console.log('Dispatched customerUpdated event');
+        
+        // Try to directly update the customer display if the container exists
+        const customersContainer = document.getElementById('customersContainer');
+        if (customersContainer) {
+            console.log('Found customersContainer, attempting direct refresh');
+            // Trigger a manual refresh after a short delay
+            setTimeout(() => {
+                if (typeof loadCustomers === 'function') {
+                    loadCustomers();
+                    console.log('Manual refresh triggered');
+                }
+            }, 100);
+        } else {
+            console.log('customersContainer not found');
+        }
+        
+        // Show success message
+        showToast(`Customer "${customerName}" automatically added to Customer Management section!`);
+
+        return newCustomer;
+    } catch (error) {
+        console.error('Error auto-creating customer:', error);
+        // Don't fail the booking if customer creation fails
+        return null;
+    }
+}
+
+// Reset booking form
+function resetBookingForm() {
+    document.getElementById('bookingForm').reset();
+    document.getElementById('distanceBox').textContent = '0.0 km';
+    document.getElementById('customOriginContainer').classList.add('d-none');
+
+    // Remove all additional cost items except the first one
+    const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
+    if (costItems.length > 1) {
+        for (let i = 1; i < costItems.length; i++) {
+            costItems[i].remove();
+        }
+    }
+
+    // Reset the first cost item
+    const firstCostItem = document.querySelector('#costItemsContainer .cost-item');
+    firstCostItem.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]').value = '';
+    firstCostItem.querySelector('input[placeholder="Amount"]').value = '';
+    firstCostItem.querySelector('.remove-cost').disabled = true;
+}
+
+// Save booking to Supabase
+async function saveBooking() {
+    try {
+        // Get all required elements
+        const drNumberEl = document.getElementById('drNumber');
+        const customerNameEl = document.getElementById('customerName');
+        const customerNumberEl = document.getElementById('customerNumber');
+        const originSelect = document.getElementById('originSelect');
+        const customOriginEl = document.getElementById('customOrigin');
+        const destinationEl = document.getElementById('destination');
+        const distanceBox = document.getElementById('distanceBox') || document.getElementById('calculatedDistance');
+
+        // Collect missing fields for better error reporting
+        const missingFields = [];
+        if (!drNumberEl) missingFields.push('DR Number');
+        if (!customerNameEl) missingFields.push('Customer Name');
+        if (!customerNumberEl) missingFields.push('Customer Number');
+        if (!originSelect && !customOriginEl) missingFields.push('Origin');
+        if (!destinationEl) missingFields.push('Destination');
+        if (!distanceBox) missingFields.push('Distance');
+
+        if (missingFields.length > 0) {
+            showError('Missing fields: ' + missingFields.join(', '));
+            return;
+        }
+
+        const drNumber = drNumberEl.value;
+        const customerName = customerNameEl.value;
+        const customerNumber = customerNumberEl.value;
+        const destination = destinationEl.value;
+        let origin = '';
+        if (originSelect && originSelect.value && originSelect.value !== '') {
+            origin = originSelect.options[originSelect.selectedIndex].text;
+        } else if (customOriginEl && customOriginEl.value) {
+            origin = customOriginEl.value;
+        }
+
+        // Validate form values
+        const missingValues = [];
+        if (!drNumber) missingValues.push('DR Number');
+        if (!customerName) missingValues.push('Customer Name');
+        if (!customerNumber) missingValues.push('Customer Number');
+        if (!origin) missingValues.push('Origin');
+        if (!destination) missingValues.push('Destination');
+        if (missingValues.length > 0) {
+            showError('Please fill in: ' + missingValues.join(', '));
+            return;
+        }
+
+        // Get distance
+        const distance = parseFloat(distanceBox.textContent.replace(' km', ''));
+
+        // Get additional costs
+        const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
+        const additionalCosts = [];
+        costItems.forEach(item => {
+            const descInput = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]');
+            const amtInput = item.querySelector('input[placeholder="Amount"]');
+            if (descInput && amtInput && descInput.value && amtInput.value) {
+                additionalCosts.push({
+                    description: descInput.value,
+                    amount: parseFloat(amtInput.value)
+                });
+            }
+        });
+
+        // Auto-create customer if not exists
+        await autoCreateCustomer(customerName, customerNumber, destination);
+
+        // Mock save
+        showToast('Booking confirmed successfully!');
+        resetBookingForm();
+        const bookingModal = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+        if (bookingModal) bookingModal.hide();
+        loadBookingsData().then(() => {
+            updateCalendar();
+        });
+    } catch (error) {
+        console.error('Error saving booking:', error);
+        showError('Failed to save booking');
+    }
+}
+
+// Calculate distance between origin and destination
+function calculateDistance() {
+    const originSelect = document.getElementById('originSelect');
+    const destination = document.getElementById('destination').value;
+    const distanceBox = document.getElementById('distanceBox');
+
+    // In a real implementation, this would use Google Maps API to calculate distance
+    // For demo purposes, we'll use mock data
+
+    if (!destination.value) {
+        distanceBox.textContent = '0.0 km';
+        return;
+    }
+
+    let origin = '';
+    if (originSelect.value && originSelect.value !== '') {
+        origin = originSelect.options[originSelect.selectedIndex].text;
+    } 
+
+    if (!origin) {
+        distanceBox.textContent = '0.0 km';
+        return;
+    }
+
+    // Mock distance calculation
+    let distance = 0;
+    if (origin.includes('Alabang')) {
+        if (destination.value.includes('Makati')) distance = 12.5;
+        else if (destination.value.includes('Laguna')) distance = 24.7;
+        else distance = 18.3;
+    } else if (origin.includes('Cebu')) {
+        if (destination.value.includes('Cebu')) distance = 8.2;
+        else distance = 14.8;
+    } else if (origin.includes('Davao')) {
+        if (destination.value.includes('Davao')) distance = 5.3;
+        else distance = 10.6;
+    } else {
+        distance = Math.floor(Math.random() * 50);
+    }
+
+    distanceBox.textContent = `${distance.toFixed(1)} km`;
+}
+
+// Initialize booking modal
+function initBookingModal() {
+    // Ensure customer management is available
+    ensureCustomerManagementReady();
+    // Ensure warehouse manager is available
+    if (!window.warehouseManager) {
+        window.warehouseManager = new WarehouseMapManager();
+    }
+    const bookingModalElement = document.getElementById('bookingModal');
+    if (!bookingModalElement) {
+        console.error('Booking modal element not found');
+        return;
+    }
+    const bookingModal = new bootstrap.Modal(bookingModalElement);
+    // Origin selection toggle (no custom origin logic)
+    const originSelect = document.getElementById('originSelect');
+    if (originSelect) {
+        originSelect.addEventListener('change', function () {
+            // No custom origin container logic
+        });
+    }
+    // Add destination area functionality
+    const addAreaBtn = document.getElementById('addAreaBtn');
+    const destinationAreasContainer = document.getElementById('destinationAreasContainer');
+    if (addAreaBtn && destinationAreasContainer) {
+        // Add event listeners for existing destination area inputs
+        document.querySelectorAll('.destination-area-input').forEach((input, index) => {
+            input.addEventListener('focus', function () {
+                showMapPinDialog('destination', index);
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
+                    return;
+                }
+                e.preventDefault();
+                showMapPinDialog('destination', index);
+            });
+            input.addEventListener('click', function () {
+                showMapPinDialog('destination', index);
+            });
+        });
+        // Add event listeners to existing pin-on-map buttons
+        document.querySelectorAll('.pin-on-map-btn').forEach((btn, index) => {
+            btn.addEventListener('click', function () {
+                const areaIndex = parseInt(this.dataset.areaIndex);
+                showMapPinDialog('destination', areaIndex);
+            });
+        });
+        // Add new area functionality
+        addAreaBtn.addEventListener('click', function () {
+            const areaIndex = document.querySelectorAll('.destination-area-item').length;
+            const areaItem = document.createElement('div');
+            areaItem.className = 'destination-area-item';
+            areaItem.innerHTML = `
+                <div class="input-group mb-2">
+                    <input type="text" class="form-control destination-area-input" placeholder="Click to select location on map" required>
+                    <button type="button" class="btn map-pin-btn pin-on-map-btn" data-area-index="${areaIndex}">
+                        <i class="bi bi-geo-alt"></i> Pin on Map
+                    </button>
+                    <button type="button" class="btn btn-outline-danger remove-area">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            `;
+            destinationAreasContainer.appendChild(areaItem);
+            // Add event listeners for the new elements
+            const pinBtn = areaItem.querySelector('.pin-on-map-btn');
+            const removeBtn = areaItem.querySelector('.remove-area');
+            const inputField = areaItem.querySelector('.destination-area-input');
+            inputField.addEventListener('focus', function () {
+                showMapPinDialog('destination', areaIndex);
+            });
+            inputField.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
+                    return;
+                }
+                e.preventDefault();
+                showMapPinDialog('destination', areaIndex);
+            });
+            inputField.addEventListener('click', function () {
+                showMapPinDialog('destination', areaIndex);
+            });
+            if (pinBtn) {
+                pinBtn.addEventListener('click', function () {
+                    showMapPinDialog('destination', areaIndex);
+                });
+            }
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function () {
+                    areaItem.remove();
+                    updateDistance();
+                });
+            }
+        });
+    }
+    // Confirm booking button
+    const confirmBookingBtn = document.getElementById('confirmBookingBtn');
+    if (confirmBookingBtn) {
+        confirmBookingBtn.addEventListener('click', function () {
+            saveBooking();
+        });
+    }
+    // Calculate distance when origin or destination changes
+    const originSelectElement = document.getElementById('originSelect');
+    if (originSelectElement) {
+        originSelectElement.addEventListener('change', updateDistance);
+    }
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.classList.contains('destination-area-input')) {
+            updateDistance();
+        }
+    });
+    // Add Pin on Map listener for Origin Warehouse section
+    const pinOriginBtn = document.getElementById('pinOrigin');
+    if (pinOriginBtn) {
+        pinOriginBtn.addEventListener('click', function () {
+            showMapPinDialog('origin', 0);
+        });
+    }
+    // Show coordinate preview for SMEG Alabang selection
+    const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
+    if (originSelect && originCoordinatesDisplay) {
+        originSelect.addEventListener('change', function () {
+            if (this.value === 'alabang') {
+                // Always use SMEG Alabang coordinates
+                originCoordinatesDisplay.innerHTML = `
+                    <span class="fw-bold">Latitude:</span> 14.444172<br>
+                    <span class="fw-bold">Longitude:</span> 121.046707<br>
+                    <span class="text-muted">Select from warehouse list or pin location on map</span>
+                `;
+            } else {
+                originCoordinatesDisplay.innerHTML = `<span class="text-muted">Select from warehouse list or pin location on map</span>`;
+            }
+        });
+        // Initial display
+        if (originSelect.value === 'alabang') {
+            originCoordinatesDisplay.innerHTML = `
+                <span class="fw-bold">Latitude:</span> 14.444172<br>
+                <span class="fw-bold">Longitude:</span> 121.046707<br>
+                <span class="text-muted">Select from warehouse list or pin location on map</span>
+            `;
+        } else {
+            originCoordinatesDisplay.innerHTML = `<span class="text-muted">Select from warehouse list or pin location on map</span>`;
+        }
+    }
+window.initBookingModal = initBookingModal;

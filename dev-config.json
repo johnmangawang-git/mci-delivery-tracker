@@ -1,0 +1,20 @@
+{
+  "development": {
+    "port": 3000,
+    "host": "localhost",
+    "autoOpen": true,
+    "liveReload": false,
+    "cors": true
+  },
+  "testing": {
+    "mockData": true,
+    "debugMode": true,
+    "logLevel": "verbose"
+  },
+  "features": {
+    "warehouseMap": true,
+    "analytics": true,
+    "deliveryTracking": true,
+    "customerManagement": true
+  }
+}

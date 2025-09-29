@@ -4,16 +4,22 @@
   "description": "MCI Delivery Management System",
   "main": "index.js",
   "scripts": {
-    "start": "npx serve public -p 8081",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "serve": "npx serve public -p 8081",
+    "test": "echo 'Opening test environment...' && start http://localhost:3000",
     "build": "echo 'No build needed for static site'",
     "supabase:db:push": "npx supabase db push",
     "supabase:studio": "npx supabase studio"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "chart.js": "^4.4.0"
+    "chart.js": "^4.4.0",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "nodemon": "^3.0.2",
     "serve": "^14.2.1"
   },
   "author": "Your Name",

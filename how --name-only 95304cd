@@ -1,0 +1,8 @@
+[33m684a364[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Implemented Settings modal enhancements: Added 'In Development' tags to incomplete sections, fixed Save Changes button functionality, and added auto-close feature after saving. Also updated Revenue and Avg. Cost per Booking sections with crossed-out amounts and 'In Development' tags.
+[33ma544988[m Update Delivery History view: Change status display to 'Completed - Signed' with color coding and remove View E-POD button
+[33m95304cd[m Update warehouse branding from MCI to SMEG and fix booking confirmation
+[33mefc3f89[m Fix JavaScript syntax errors - Fixed duplicate else statement causing syntax error - Removed conflicting booking.js include to prevent function conflicts - Keep the complete initBookingModal function in HTML with map functionality
+[33m412c41c[m Add comprehensive warehouse map with save location functionality
+[33m5c0e264[m Enhanced DELIVERY MODAL: Added Truck Reference section, Add DR Number functionality, and removed Customer Origin Address
+[33m2236301[m Fix calendar day click functionality - Added missing click events and openBookingModal function to enable delivery booking modal from calendar
+[33m9f5476e[m Initial commit: MCI Delivery Management System

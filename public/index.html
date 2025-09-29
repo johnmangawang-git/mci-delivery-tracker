@@ -3,37 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCI App</title>
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <title>MCI Delivery Tracker</title>
+    
     <!-- Bootstrap 5.3.0 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- Google Fonts - Roboto for Material Design -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Leaflet CSS for interactive maps -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-
-
-    <!-- Leaflet JavaScript for interactive maps -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Signature Pad Library -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
-    <!-- Custom styles for development -->
-    <style>
-        #addTestDataBtn {
-            background-color: #28a745 !important;
-            border-color: #28a745 !important;
-        }
-        
-        #addTestDataBtn:hover {
-            background-color: #218838 !important;
-            border-color: #1e7e34 !important;
-        }
-    </style>
 </head>
 <body>
     <!-- Sidebar Navigation -->
@@ -105,9 +87,6 @@
     <!-- Main Content -->
     <div class="main-content">
         <div class="header">
-            <button class="btn btn-outline-secondary mobile-toggle d-none">
-                <i class="bi bi-list"></i>
-            </button>
             <div>
                 <h1 class="page-title">
                     <i class="bi bi-calendar3"></i>
@@ -123,1089 +102,391 @@
             </div>
         </div>
 
-
-        
-        <!-- Booking System View -->
-        <div id="bookingView" class="content-view active">
-            <!-- Dashboard Cards -->
-            <div class="dashboard-cards">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-calendar-check"></i> Booked Deliveries</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="stat-value">24</div>
-                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 12% from last week</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-truck"></i> Active Deliveries</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="stat-value">8</div>
-                        <div class="stat-desc"><i class="bi bi-arrow-down text-danger"></i> 3% from last week</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-geo-alt"></i> Total Distance</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="stat-value">1,248 km</div>
-                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 18% from last week</div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-currency-exchange"></i> Revenue</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="stat-value">
-                            <span class="coming-soon-tag">In Development</span>
-                            <div class="crossed-out">₱14,280</div>
+        <div class="content">
+            <!-- Delivery Booking View -->
+            <div id="booking-view" class="view active">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-title">Booked Deliveries</div>
+                        <div class="metric-value">24</div>
+                        <div class="metric-change positive">
+                            <i class="bi bi-arrow-up"></i> 12% from last week
                         </div>
-                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 22% from last week</div>
+                    </div>
+                    <div class="metric-card" style="border-left-color: #3498db;">
+                        <div class="metric-title">Active Deliveries</div>
+                        <div class="metric-value">8</div>
+                        <div class="metric-change negative">
+                            <i class="bi bi-arrow-down"></i> 3% from last week
+                        </div>
+                    </div>
+                    <div class="metric-card" style="border-left-color: #2ecc71;">
+                        <div class="metric-title">Total Distance</div>
+                        <div class="metric-value">1,248 km</div>
+                        <div class="metric-change positive">
+                            <i class="bi bi-arrow-up"></i> 18% from last week
+                        </div>
+                    </div>
+                     <div class="metric-card" style="border-left-color: #e74c3c;">
+                        <div class="metric-title">Revenue</div>
+                        <div class="metric-value">₱14,280</div>
+                        <div class="metric-change positive">
+                            <i class="bi bi-arrow-up"></i> 22% from last week
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Section -->
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <div class="month-nav">
+                            <button class="btn btn-outline-secondary" id="prevMonth">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <h2 id="currentMonth">Loading...</h2>
+                            <button class="btn btn-outline-secondary" id="nextMonth">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                         <div class="calendar-controls">
+                            <button class="btn btn-outline-secondary active" data-view="month"><i class="bi bi-calendar-month"></i> Month</button>
+                            <button class="btn btn-outline-secondary" data-view="week"><i class="bi bi-calendar-week"></i> Week</button>
+                            <button class="btn btn-outline-secondary" data-view="day"><i class="bi bi-calendar-day"></i> Day</button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                        <!-- Calendar content will be generated by JavaScript -->
                     </div>
                 </div>
             </div>
 
-            <!-- Calendar Section -->
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <div class="month-nav">
-                        <button class="btn btn-outline-secondary" id="prevMonth">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <h2 id="currentMonth">October 2023</h2>
-                        <button class="btn btn-outline-secondary" id="nextMonth">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                    </div>
-                    <div class="calendar-controls">
-                        <button class="btn btn-outline-secondary active" data-view="month"><i class="bi bi-calendar-month"></i> Month</button>
-                        <button class="btn btn-outline-secondary" data-view="week"><i class="bi bi-calendar-week"></i> Week</button>
-                        <button class="btn btn-outline-secondary" data-view="day"><i class="bi bi-calendar-day"></i> Day</button>
-                    </div>
-                </div>
-                <div class="calendar-grid" id="calendarGrid">
-                    <!-- Calendar content will be generated by JavaScript -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics Dashboard View -->
-        <div id="analyticsView" class="content-view">
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-title">Total Bookings</div>
-                    <div class="metric-value">347</div>
-                    <div class="metric-change positive">
-                        <i class="bi bi-arrow-up"></i> 14.2% from last month
-                    </div>
-                </div>
-                <div class="metric-card" style="border-left-color: #2ecc71;">
-                    <div class="metric-title">Total Distance</div>
-                    <div class="metric-value">18,426 km</div>
-                    <div class="metric-change positive">
-                        <i class="bi bi-arrow-up"></i> 8.7% from last month
-                    </div>
-                </div>
-                <div class="metric-card" style="border-left-color: #f39c12;">
-                    <div class="metric-title">Total Additional Cost</div>
-                    <div class="metric-value">₱4,280</div>
-                    <div class="metric-change positive">
-                        <i class="bi bi-arrow-up"></i> 5.3% from last month
-                    </div>
-                </div>
-                <div class="metric-card" style="border-left-color: #9b59b6;">
-                    <div class="metric-title">Avg. Cost per Booking</div>
-                    <div class="metric-value">
-                        <span class="coming-soon-tag">In Development</span>
-                        <div class="crossed-out">₱12.33</div>
-                    </div>
-                    <div class="metric-change negative">
-                        <i class="bi bi-arrow-down"></i> 2.1% from last month
-                    </div>
-                </div>
-            </div>
-
-            <div class="dual-chart-container">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-header">
-                            <h5 class="chart-title">Bookings Over Time</h5>
-                            <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">Month</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="day">Day</button>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="bookingsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-header">
-                            <h5 class="chart-title">Additional Costs Analysis</h5>
-                            <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">Month</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="costsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dual-chart-container">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-header">
-                            <h5 class="chart-title">Booking Origin Distribution</h5>
-                            <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active" data-period="all">All Time</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="month">This Month</button>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="originChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <div class="chart-header">
-                            <h5 class="chart-title">Additional Cost Breakdown</h5>
-                            <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active" data-period="month">This Month</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="week">This Week</button>
-                            </div>
-                        </div>
-                        <div class="chart-container">
-                            <canvas id="costBreakdownChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Active Deliveries View -->
-        <div id="activeDeliveriesView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-truck"></i> Active Deliveries</h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="btn-group" role="group">
-                                <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" class="form-control search-input" id="drSearchInput" placeholder="Search by DR Number..." style="min-width: 180px;">
-                                <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearSearchBtn" title="Clear search">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-                            <button class="btn btn-outline-secondary" id="exportActiveDeliveriesBtn"><i class="bi bi-download"></i> Export</button>
-                            <button class="btn btn-primary" id="eSignatureBtn" disabled><i class="bi bi-pen"></i> E-Signature</button>
-                            <!-- Add test data button for development -->
-                            <button class="btn btn-success" id="addTestDataBtn" onclick="addTestData()"><i class="bi bi-plus-circle"></i> Add Test Data</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="searchResultsInfo" class="search-results-info mb-3" style="display: none;">
-                        <!-- Search results info will be displayed here -->
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllActive"></th>
-                                    <th>DR Number</th>
-                                    <th>Customer Name</th>
-                                    <th>Customer Number</th>
-                                    <th>Origin</th>
-                                    <th>Destination</th>
-                                    <th>Distance</th>
-                                    <th>Truck</th>
-                                    <th>Status</th>
-                                    <th>Booked Date</th>
-                                    <!-- Actions column hidden as requested -->
-                                </tr>
-                            </thead>
-                            <tbody id="activeDeliveriesTableBody">
-                                <!-- Dynamic content will be loaded here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- E-POD View -->
-        <div id="ePodView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-pen"></i> E-POD</h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="btn-group" role="group">
-                                <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" class="form-control search-input" id="ePodSearchInput" placeholder="Search by DR Number..." style="min-width: 180px;">
-                                <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearEPodSearchBtn" title="Clear search">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-                            <button class="btn btn-outline-secondary" id="exportEPodBtn"><i class="bi bi-download"></i> Export</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="ePodSearchResultsInfo" class="search-results-info mb-3" style="display: none;">
-                        <!-- Search results info will be displayed here -->
-                    </div>
-                    <div id="ePodCardsContainer" class="row">
-                        <!-- E-POD cards will be loaded here -->
-                    </div>
-                    <div id="ePodPagination" class="d-flex justify-content-center mt-4">
-                        <!-- Pagination controls will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delivery History View -->
-        <div id="deliveryHistoryView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-clipboard-check"></i> Delivery History</h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="btn-group" role="group">
-                                <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" class="form-control search-input" id="drSearchHistoryInput" placeholder="Search by DR Number..." style="min-width: 180px;">
-                                <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearHistorySearchBtn" title="Clear search">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-                            <button class="btn btn-outline-secondary" id="exportDeliveryHistoryBtn"><i class="bi bi-download"></i> Export</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="historySearchResultsInfo" class="search-results-info mb-3" style="display: none;">
-                        <!-- Search results info will be displayed here -->
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>DR Number</th>
-                                    <th>Customer Name</th>
-                                    <th>Customer Number</th>
-                                    <th>Origin</th>
-                                    <th>Destination</th>
-                                    <th>Distance</th>
-                                    <th>Additional Costs</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="deliveryHistoryTableBody">
-                                <!-- Dynamic content will be loaded here -->
-                                <tr>
-                                    <td>Oct 24, 2023</td>
-                                    <td><strong>DR-8848</strong></td>
-                                    <td>SMEG Alabang</td>
-                                    <td>123 Logistics Park, Alabang</td>
-                                    <td>Makati City</td>
-                                    <td>12.5 km</td>
-                                    <td>₱25.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Oct 23, 2023</td>
-                                    <td><strong>DR-8862</strong></td>
-                                    <td>MCI Davao</td>
-                                    <td>101 Corporate Center, Davao</td>
-                                    <td>5.3 km</td>
-                                    <td>₱32.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Oct 22, 2023</td>
-                                    <td><strong>DR-8870</strong></td>
-                                    <td>MCI Cebu</td>
-                                    <td>202 Mall, Cebu City</td>
-                                    <td>14.8 km</td>
-                                    <td>₱58.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customers View -->
-        <div id="customersView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-people"></i> Customer Management</h5>
-                        <button class="btn btn-primary" id="addCustomerBtn">
-                            <i class="bi bi-plus-circle"></i> Add Customer
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control" id="customerSearchInput" placeholder="Search customers...">
-                            </div>
-                        </div>
-                        <div class="col-md-3 ms-auto">
-                            <select class="form-select" id="customerFilterSelect">
-                                <option value="all">All Customers</option>
-                                <option value="active">Active Customers</option>
-                                <option value="pending">Pending Customers</option>
-                                <option value="top">Top Customers</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row g-4" id="customersContainer">
-                        <!-- Customer cards will be dynamically loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Warehouse Map View -->
-        <div id="warehouseMapView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-geo-alt"></i> Warehouse Locations & Saved Places</h5>
-                        <div class="d-flex gap-2">
-                            <span class="badge bg-success text-white px-3 py-2">
-                                <i class="bi bi-check-circle me-1"></i>
-                                Interactive Map
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Map Instructions -->
-                    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-                        <i class="bi bi-info-circle-fill me-3" style="font-size: 1.5rem;"></i>
-                        <div>
-                            <h6 class="alert-heading mb-1">Interactive Warehouse Map</h6>
-                            <p class="mb-0">Click anywhere on the map to save custom locations. Use the controls to view saved locations and navigate between warehouses.</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Interactive Map Container -->
-                    <div id="warehouseMapContainer" style="height: 500px; border-radius: 12px; overflow: hidden; border: 2px solid #e0e6ed;">
-                        <!-- Map will be initialized here -->
-                    </div>
-
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <div class="card border border-2 border-primary h-100">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="bg-primary text-white rounded-circle p-2 me-3">
-                                            <i class="bi bi-building" style="font-size: 24px;"></i>
-                                        </div>
-                                        <h5 class="card-title mb-0">SMEG Alabang Warehouse</h5>
-                                    </div>
-                                    <p class="text-muted mb-3">
-                                        <i class="bi bi-geo-alt me-2"></i> 123 Logistics Park, Alabang, Muntinlupa City
-                                    </p>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <div>
-                                            <div class="text-muted small">Total Deliveries</div>
-                                            <div class="fw-bold">156</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-muted small">Capacity Utilization</div>
-                                            <div class="fw-bold">78%</div>
-                                        </div>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-primary" role="progressbar" style="width: 78%"></div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light">
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Last updated: Today, 10:30 AM</small>
-                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <div class="card border h-100">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="bg-success text-white rounded-circle p-2 me-3">
-                                            <i class="bi bi-building" style="font-size: 24px;"></i>
-                                        </div>
-                                        <h5 class="card-title mb-0">SMEG Cebu Warehouse</h5>
-                                    </div>
-                                    <p class="text-muted mb-3">
-                                        <i class="bi bi-geo-alt me-2"></i> 456 Distribution Center, Cebu City
-                                    </p>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <div>
-                                            <div class="text-muted small">Total Deliveries</div>
-                                            <div class="fw-bold">98</div>
-                                        </div>
-                                        <div>
-                                            <div class="text-muted small">Capacity Utilization</div>
-                                            <div class="fw-bold">65%</div>
-                                        </div>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: 65%"></div>
-                                    </div>
-                                </div>
-                                <div class="card-footer bg-light">
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">Last updated: Today, 9:45 AM</small>
-                                        <button class="btn btn-sm btn-outline-primary">View Details</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Settings View -->
-        <div id="settingsView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title"><i class="bi bi-gear"></i> System Settings</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="list-group" id="settingsList">
-                                <a href="#" class="list-group-item list-group-item-action active" data-setting="profile">
-                                    <i class="bi bi-person me-2"></i> Profile Settings
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" data-setting="notifications">
-                                    <i class="bi bi-bell me-2"></i> Notification Preferences
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" data-setting="delivery">
-                                    <i class="bi bi-truck me-2"></i> Delivery Settings
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" data-setting="integrations">
-                                    <i class="bi bi-plug me-2"></i> System Integrations
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" data-setting="security">
-                                    <i class="bi bi-shield-lock me-2"></i> Security Settings
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action" data-setting="billing">
-                                    <i class="bi bi-credit-card me-2"></i> Billing & Payments
-                                </a>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div id="profileSettings" class="setting-panel">
-                                <h5 class="mb-4"><i class="bi bi-person me-2"></i> Profile Settings</h5>
-
-                                <div class="row mb-4">
-                                    <div class="col-md-4 text-center">
-                                        <div class="position-relative d-inline-block mb-3">
-                                            <img src="https://ui-avatars.com/api/?name=SMEG+warehouse&background=3498db&color=fff&size=128"
-                                                 class="rounded-circle"
-                                                 style="width: 128px; height: 128px; object-fit: cover;">
-                                            <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle p-2">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                        </div>
-                                        <h6 class="mt-2">SMEG warehouse</h6>
-                                        <p class="text-muted small">Logistics Manager</p>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">First Name</label>
-                                                <input type="text" class="form-control" id="profileFirstName" value="MCI">
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Last Name</label>
-                                                <input type="text" class="form-control" id="profileLastName" value="warehouse">
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="form-label">Email Address</label>
-                                                <input type="email" class="form-control" id="profileEmail" value="admin@mci.com">
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="form-label">Phone Number</label>
-                                                <input type="tel" class="form-control" id="profilePhone" value="+63 912 345 6789">
-                                            </div>
-                                            <div class="col-md-12">
-                                                <label class="form-label">Job Title</label>
-                                                <input type="text" class="form-control" value="Logistics Manager" disabled>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row mb-4">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Time Zone</label>
-                                        <select class="form-select" id="profileTimeZone">
-                                            <option>GMT+8 - Philippine Time</option>
-                                            <option>GMT+0 - UTC</option>
-                                            <option>GMT-5 - Eastern Time (US & Canada)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Date Format</label>
-                                        <select class="form-select" id="profileDateFormat">
-                                            <option>MM/DD/YYYY</option>
-                                            <option selected>DD/MM/YYYY</option>
-                                            <option>YYYY-MM-DD</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex justify-content-end gap-2">
-                                    <button class="btn btn-outline-secondary">Cancel</button>
-                                    <button class="btn btn-primary" id="saveProfileChangesBtn">Save Changes</button>
-                                </div>
-                            </div>
-
-                            <div id="notificationsSettings" class="setting-panel" style="display: none;">
-                                <h5 class="mb-4"><i class="bi bi-bell me-2"></i> Notification Preferences</h5>
-
-                                <div class="card mb-4">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">Delivery Notifications</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" id="newBooking" checked>
-                                            <label class="form-check-label" for="newBooking">
-                                                <strong>New Booking Confirmation</strong>
-                                                <div class="text-muted small">Receive notification when a new booking is confirmed</div>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" id="deliveryUpdates" checked>
-                                            <label class="form-check-label" for="deliveryUpdates">
-                                                <strong>Delivery Status Updates</strong>
-                                                <div class="text-muted small">Get real-time updates on delivery status changes</div>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" id="etaChanges" checked>
-                                            <label class="form-check-label" for="etaChanges">
-                                                <strong>ETA Changes</strong>
-                                                <div class="text-muted small">Be notified when estimated time of arrival changes</div>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="completion" checked>
-                                            <label class="form-check-label" for="completion">
-                                                <strong>Delivery Completion</strong>
-                                                <div class="text-muted small">Receive confirmation when deliveries are completed</div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="card mb-4">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">System Notifications</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" id="systemUpdates" checked>
-                                            <label class="form-check-label" for="systemUpdates">
-                                                <strong>System Updates</strong>
-                                                <div class="text-muted small">Receive notifications about system maintenance and updates</div>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check mb-3">
-                                            <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
-                                            <label class="form-check-label" for="securityAlerts">
-                                                <strong>Security Alerts</strong>
-                                                <div class="text-muted small">Get notified about security-related events</div>
-                                            </label>
-                                        </div>
-
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="billingUpdates">
-                                            <label class="form-check-label" for="billingUpdates">
-                                                <strong>Billing Updates</strong>
-                                                <div class="text-muted small">Receive notifications about billing and payment status</div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="d-flex justify-content-end gap-2">
-                                    <button class="btn btn-outline-secondary">Cancel</button>
-                                    <button class="btn btn-primary" id="saveNotificationChangesBtn">Save Preferences</button>
-                                </div>
-                            </div>
-
-                            <div id="deliverySettings" class="setting-panel" style="display: none;">
-                                <h5 class="mb-4"><i class="bi bi-truck me-2"></i> Delivery Settings <span class="coming-soon-tag">In Development</span></h5>
-                                <p class="text-muted">Delivery settings functionality is currently under development.</p>
-                            </div>
-
-                            <div id="integrationsSettings" class="setting-panel" style="display: none;">
-                                <h5 class="mb-4"><i class="bi bi-plug me-2"></i> System Integrations <span class="coming-soon-tag">In Development</span></h5>
-                                <p class="text-muted">System integrations functionality is currently under development.</p>
-                            </div>
-
-                            <div id="securitySettings" class="setting-panel" style="display: none;">
-                                <h5 class="mb-4"><i class="bi bi-shield-lock me-2"></i> Security Settings <span class="coming-soon-tag">In Development</span></h5>
-                                <p class="text-muted">Security settings functionality is currently under development.</p>
-                            </div>
-
-                            <div id="billingSettings" class="setting-panel" style="display: none;">
-                                <h5 class="mb-4"><i class="bi bi-credit-card me-2"></i> Billing & Payments <span class="coming-soon-tag">In Development</span></h5>
-                                <p class="text-muted">Billing and payment settings functionality is currently under development.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- E-Signature Modal -->
-<div class="modal fade" id="eSignatureModal" tabindex="-1" aria-labelledby="eSignatureModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="eSignatureModalLabel"><i class="bi bi-pen me-2"></i>E-Signature</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
+            <!-- Analytics View -->
+            <div id="analytics-view" class="view">
                 <div class="row">
-                    <div class="col-md-8">
-                        <div class="card signature-card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Signature Pad</h6>
-                            </div>
+                    <div class="col-12">
+                        <div class="card">
                             <div class="card-body">
-                                <div class="signature-pad-container" style="position: relative; width: 100%; max-width: 600px; height: 300px; margin: 0 auto; overflow: hidden;">
-                                    <canvas id="signaturePad" style="border: 2px dashed #3498db; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); user-select: none; -moz-user-select: none;"></canvas>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title">Bookings Over Time</h5>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-secondary active">Month</button>
+                                        <button type="button" class="btn btn-outline-secondary">Week</button>
+                                        <button type="button" class="btn btn-outline-secondary">Day</button>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-center mt-3">
-                                    <button type="button" class="btn btn-outline-danger" id="clearSignatureBtn">
-                                        <i class="bi bi-eraser me-2"></i>Clear Signature
+                                <canvas id="bookingsOverTimeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Booking Origin Distribution</h5>
+                                <canvas id="originChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Additional Cost Breakdown</h5>
+                                <canvas id="costBreakdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- E-POD View -->
+            <div id="e-pod-view" class="view">
+                 <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="bi bi-pen"></i> E-POD</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group" role="group">
+                                    <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control search-input" id="ePodSearchInput" placeholder="Search by DR Number..." style="min-width: 180px;">
+                                    <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearEPodSearchBtn" title="Clear search">
+                                        <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
-                                <div class="text-center text-muted mt-2">
-                                    <small>Draw your signature above</small>
-                                </div>
+                                <button class="btn btn-outline-secondary" id="exportEPodBtn"><i class="bi bi-download"></i> Export</button>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Delivery Details</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label">DR Number</label>
-                                    <!-- DR Number input with black text and bold font as per requirements -->
-                                    <input type="text" class="form-control" id="ePodDrNumber" readonly style="color: #000000; font-weight: bold;">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Customer Name</label>
-                                    <input type="text" class="form-control" id="ePodCustomerName" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Customer Contact</label>
-                                    <input type="text" class="form-control" id="ePodCustomerContact" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Truck Plate Number</label>
-                                    <input type="text" class="form-control" id="ePodTruckPlate" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Route</label>
-                                    <input type="text" class="form-control" id="ePodDeliveryRoute" readonly>
-                                </div>
-                            </div>
+                    <div class="card-body">
+                        <div id="ePodSearchResultsInfo" class="search-results-info mb-3" style="display: none;">
+                            <!-- Search results info will be displayed here -->
+                        </div>
+                        <div id="ePodCardsContainer" class="row">
+                            <!-- E-POD cards will be loaded here -->
+                        </div>
+                        <div id="ePodPagination" class="d-flex justify-content-center mt-4">
+                            <!-- Pagination controls will be loaded here -->
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveSignatureBtn">
-                    <i class="bi bi-save me-2"></i>Save Signature
-                </button>
+
+            <!-- Active Deliveries View -->
+            <div id="active-deliveries-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="bi bi-truck"></i> Active Deliveries</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group" role="group">
+                                    <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control search-input" id="drSearchInput" placeholder="Search by DR Number..." style="min-width: 180px;">
+                                    <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearSearchBtn" title="Clear search">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                                <button class="btn btn-outline-secondary" id="exportActiveDeliveriesBtn"><i class="bi bi-download"></i> Export</button>
+                                <button class="btn btn-primary" id="eSignatureBtn" disabled><i class="bi bi-pen"></i> E-Signature</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="searchResultsInfo" class="search-results-info mb-3" style="display: none;">
+                            <!-- Search results info will be displayed here -->
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllActive"></th>
+                                        <th>DR Number</th>
+                                        <th>Customer Name</th>
+                                        <th>Customer Number</th>
+                                        <th>Origin</th>
+                                        <th>Destination</th>
+                                        <th>Distance</th>
+                                        <th>Truck</th>
+                                        <th>Status</th>
+                                        <th>Booked Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeDeliveriesTableBody">
+                                    <!-- Dynamic content will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery History View -->
+            <div id="delivery-history-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="bi bi-clipboard-check"></i> Delivery History</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="btn-group" role="group">
+                                    <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control search-input" id="drSearchHistoryInput" placeholder="Search by DR Number..." style="min-width: 180px;">
+                                    <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearHistorySearchBtn" title="Clear search">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                                <button class="btn btn-outline-secondary" id="exportDeliveryHistoryBtn"><i class="bi bi-download"></i> Export</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="historySearchResultsInfo" class="search-results-info mb-3" style="display: none;">
+                            <!-- Search results info will be displayed here -->
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>DR Number</th>
+                                        <th>Customer Name</th>
+                                        <th>Customer Number</th>
+                                        <th>Origin</th>
+                                        <th>Destination</th>
+                                        <th>Distance</th>
+                                        <th>Additional Costs</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deliveryHistoryTableBody">
+                                    <!-- Dynamic content will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers View -->
+            <div id="customers-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="bi bi-people"></i> Customer Management</h5>
+                            <button class="btn btn-primary" id="addCustomerBtn">
+                                <i class="bi bi-plus-circle"></i> Add Customer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="customerSearchInput" placeholder="Search customers...">
+                                </div>
+                            </div>
+                            <div class="col-md-3 ms-auto">
+                                <select class="form-select" id="customerFilterSelect">
+                                    <option value="all">All Customers</option>
+                                    <option value="active">Active Customers</option>
+                                    <option value="pending">Pending Customers</option>
+                                    <option value="top">Top Customers</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-4" id="customersContainer">
+                            <!-- Customer cards will be dynamically loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warehouse Map View -->
+            <div id="warehouse-map-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title"><i class="bi bi-geo-alt"></i> Warehouse Locations & Saved Places</h5>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-success text-white px-3 py-2">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Interactive Map
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Map Instructions -->
+                        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                            <i class="bi bi-info-circle-fill me-3" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Interactive Warehouse Map</h6>
+                                <p class="mb-0">Click anywhere on the map to save custom locations. Use the controls to view saved locations and navigate between warehouses.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Interactive Map Container -->
+                        <div id="warehouseMapContainer" style="height: 500px; border-radius: 12px; overflow: hidden; border: 2px solid #e0e6ed;">
+                            <!-- Map will be initialized here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-gear"></i> System Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="list-group" id="settingsList">
+                                    <a href="#" class="list-group-item list-group-item-action active" data-setting="profile">
+                                        <i class="bi bi-person me-2"></i> Profile Settings
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action" data-setting="notifications">
+                                        <i class="bi bi-bell me-2"></i> Notification Preferences
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action" data-setting="delivery">
+                                        <i class="bi bi-truck me-2"></i> Delivery Settings
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action" data-setting="integrations">
+                                        <i class="bi bi-plug me-2"></i> System Integrations
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action" data-setting="security">
+                                        <i class="bi bi-shield-lock me-2"></i> Security Settings
+                                    </a>
+                                    <a href="#" class="list-group-item list-group-item-action" data-setting="billing">
+                                        <i class="bi bi-credit-card me-2"></i> Billing & Payments
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <!-- Setting Panels will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Add Customer Modal -->
-<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addCustomerModalLabel">
-                        <i class="bi bi-person-plus me-2"></i>Add New Customer
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addCustomerForm">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="accountType" class="form-label">Account Type *</label>
-                                <select class="form-select" id="accountType" required>
-                                    <option value="">Select account type</option>
-                                    <option value="Individual">Individual</option>
-                                    <option value="Corporate">Corporate Account</option>
-                                    <option value="Retail">Retail Account</option>
-                                    <option value="Industrial">Industrial Account</option>
-                                    <option value="Government">Government Account</option>
-                                    <option value="Small Business">Small Business</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="contactPerson" class="form-label">Contact Person *</label>
-                                <input type="text" class="form-control" id="contactPerson" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="email" class="form-label">Email Address *</label>
-                                <input type="email" class="form-control" id="email" required>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="phone" class="form-label">Phone Number *</label>
-                                <input type="tel" class="form-control" id="phone" required placeholder="+63 912 345 6789">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="customerStatus" class="form-label">Status</label>
-                                <select class="form-select" id="customerStatus">
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="address" class="form-label">Address *</label>
-                            <textarea class="form-control" id="address" rows="3" required placeholder="Complete business address"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="notes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="notes" rows="2" placeholder="Additional notes about this customer"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveCustomerBtn">
-                        <i class="bi bi-check-circle me-2"></i>Save Customer
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Customer Modal -->
-    <div class="modal fade" id="editCustomerModal" tabindex="-1" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editCustomerModalLabel">
-                        <i class="bi bi-pencil me-2"></i>Edit Customer
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editCustomerForm">
-                        <input type="hidden" id="editCustomerId">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="editAccountType" class="form-label">Account Type *</label>
-                                <select class="form-select" id="editAccountType" required>
-                                    <option value="Individual">Individual</option>
-                                    <option value="Corporate">Corporate Account</option>
-                                    <option value="Retail">Retail Account</option>
-                                    <option value="Industrial">Industrial Account</option>
-                                    <option value="Government">Government Account</option>
-                                    <option value="Small Business">Small Business</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="editContactPerson" class="form-label">Contact Person *</label>
-                                <input type="text" class="form-control" id="editContactPerson" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="editEmail" class="form-label">Email Address *</label>
-                                <input type="email" class="form-control" id="editEmail" required>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="editPhone" class="form-label">Phone Number *</label>
-                                <input type="tel" class="form-control" id="editPhone" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="editCustomerStatus" class="form-label">Status</label>
-                                <select class="form-select" id="editCustomerStatus">
-                                    <option value="active">Active</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editAddress" class="form-label">Address *</label>
-                            <textarea class="form-control" id="editAddress" rows="3" required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editNotes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="editNotes" rows="2"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
-                    <button type="button" class="btn btn-primary" id="updateCustomerBtn">
-                        <i class="bi bi-check-circle me-2"></i>Update Customer
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Modals -->
     <!-- Delivery Booking Modal -->
     <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-fullscreen-lg-down">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Delivery Booking</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body booking-modal-body">
                     <form id="bookingForm">
                         <!-- Customer Details Section -->
-                        <div class="form-section">
+                        <div class="form-section compact-section">
                             <h5 class="section-title"><i class="bi bi-person-circle"></i> Customer Details</h5>
                             <div class="row">
                                 <div class="col-md-6">
                                     <label for="customerName" class="form-label">Customer Name</label>
-                                    <input type="text" class="form-control" id="customerName" placeholder="Enter customer name" required>
-                                    <div class="form-text">Full name of the customer</div>
+                                    <input type="text" class="form-control form-control-sm" id="customerName" placeholder="Enter customer name" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="customerNumber" class="form-label">Customer Number</label>
-                                    <input type="tel" class="form-control" id="customerNumber" placeholder="Enter customer phone number" required>
-                                    <div class="form-text">Contact number for delivery coordination</div>
+                                    <input type="tel" class="form-control form-control-sm" id="customerNumber" placeholder="Enter customer phone number" required>
                                 </div>
                             </div>
                         </div>
 
                         <!-- DR Number Section -->
-                        <div class="form-section">
+                        <div class="form-section compact-section">
                             <h5 class="section-title"><i class="bi bi-receipt"></i> Delivery Reference</h5>
                             <div class="row">
                                 <div class="col-md-8">
                                     <label for="drNumber" class="form-label">DR Number</label>
                                     <div id="drNumbersContainer">
-                                        <div class="dr-number-item">
-                                            <div class="input-group">
-                                                <input type="text" class="form-control dr-number-input" id="drNumber" placeholder="Enter DR number (e.g., DR-XXXXX)" required>
-                                                <button type="button" class="btn btn-outline-secondary" id="addDrBtn">
-                                                    <i class="bi bi-plus-circle me-1"></i>Add DR Number
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <!-- DR Number inputs will be added here -->
                                     </div>
-                                    <div class="form-text">Alphanumeric values only (e.g., DR-8842)</div>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="addDrBtn">
+                                        <i class="bi bi-plus-circle me-1"></i>Add DR Number
+                                    </button>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="deliveryDate" class="form-label">Delivery Date</label>
-                                    <input type="date" class="form-control" id="deliveryDate" required>
-                                    <div class="form-text">Selected from calendar</div>
+                                    <input type="date" class="form-control form-control-sm" id="deliveryDate" required>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Truck Reference Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="bi bi-truck"></i> Truck Reference</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-4">
-                                    <label for="truckType" class="form-label">Truck Type</label>
-                                    <select class="form-select" id="truckType" required>
-                                        <option value="">Select truck type</option>
-                                        <option value="L300">L300</option>
-                                        <option value="Canter">Canter</option>
-                                        <option value="3PL">3PL</option>
-                                    </select>
-                                    <div class="form-text">Choose the type of truck</div>
-                                </div>
-                                <div class="col-md-6 mb-4">
-                                    <label for="truckPlateNumber" class="form-label">Truck Plate Number</label>
-                                    <input type="text" class="form-control" id="truckPlateNumber" placeholder="Enter plate number (e.g., ABC-1234)" required>
-                                    <div class="form-text">Put the Plate Number</div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Other sections from the old UI can be added here -->
 
-                        <!-- Origin Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="bi bi-geo-alt-fill"></i> Origin Details</h5>
-                            <div class="mb-4">
-                                <label class="form-label">Origin Warehouse</label>
-                                <div class="input-group">
-                                    <select class="form-select" id="originSelect">
-                                        <option value="" selected>Select warehouse</option>
-                                        <option value="alabang">SMEG Alabang warehouse</option>
-                                        <option value="cebu">SMEG Cebu warehouse</option>
-                                    </select>
-                                    <button type="button" class="btn map-pin-btn" id="pinOrigin">
-                                        <i class="bi bi-geo-alt"></i> Pin on Map
-                                    </button>
-                                </div>
-                                <div class="form-text">
-                                    Select from warehouse list or pin location on map
-                                    <span id="originCoordinatesDisplay" class="text-muted ms-2" style="font-family: monospace; font-size: 0.85em;"></span>
-                                </div>
-                                
-                                <!-- Custom Origin Container (hidden by default) -->
-                                <div id="customOriginContainer" class="d-none mt-3">
-                                    <label class="form-label">Custom Origin Location</label>
-                                    <input type="text" class="form-control" id="customOrigin" placeholder="Selected location will appear here" readonly>
-                                    <div class="form-text">Location selected from map</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Destination Areas Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="bi bi-map"></i> Destination Areas</h5>
-                            <div class="mb-4">
-                                <label class="form-label">Destination Areas</label>
-                                <div id="destinationAreasContainer">
-                                    <div class="destination-area-item">
-                                        <div class="input-group mb-2">
-                                            <input type="text" class="form-control destination-area-input" placeholder="Click to select location on map" required readonly style="cursor: pointer;">
-                                            <button type="button" class="btn map-pin-btn pin-on-map-btn" data-area-index="0">
-                                                <i class="bi bi-geo-alt"></i> Pin on Map
-                                            </button>
-                                            <button type="button" class="btn btn-outline-danger remove-area">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-outline-secondary mt-2" id="addAreaBtn">
-                                    <i class="bi bi-plus-circle me-2"></i>Add Area
-                                </button>
-                                <div class="form-text">
-                                    Click on the input field or Pin on Map button to select precise locations using the map interface
-                                    <div id="destinationCoordinatesDisplay" class="mt-2"></div>
-                                </div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label">Calculated Distance</label>
-                                <div class="distance-box" id="calculatedDistance">
-                                    <span id="distanceValue">-- km</span>
-                                    <div class="distance-loading d-none">
-                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span class="visually-hidden">Calculating...</span>
-                                        </div>
-                                        <span class="ms-2">Calculating distance...</span>
-                                    </div>
-                                </div>
-                                <div class="form-text text-center mt-2">Distance calculated automatically between origin and destination areas</div>
-                            </div>
-                        </div>
-
-                        <!-- Additional Costs Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="bi bi-currency-exchange"></i> Additional Costs</h5>
-                            <div id="costItemsContainer">
-                                <div class="cost-item">
-                                    <div class="flex-grow-1">
-                                        <input type="text" class="form-control" placeholder="Description (e.g., Fuel Surcharge)">
-                                    </div>
-                                    <div>
-                                        <div class="input-group">
-                                            <span class="input-group-text">₱</span>
-                                            <input type="number" class="form-control" placeholder="Amount">
-                                        </div>
-                                    </div>
-                                    <button type="button" class="remove-cost" disabled>
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-outline-secondary mt-3" id="addCostBtn">
-                                <i class="bi bi-plus-circle me-2"></i>Add Additional Cost
-                            </button>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -1216,35 +497,31 @@
         </div>
     </div>
 
+    <!-- Other Modals (Add Customer, Edit Customer, E-Signature, etc.) -->
+
+    <!-- Scripts -->
     <!-- SheetJS for Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
 
-    <!-- Bootstrap JS -->
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Include external JavaScript files -->
-    <script src="assets/js/analytics.js"></script>
-    <script src="assets/js/main.js"></script>
-    <script src="assets/js/calendar.js"></script>
-    <script src="assets/js/warehouse.js"></script>
-    <script src="assets/js/booking.js"></script>
-    <script src="assets/js/app.js"></script>
+    <!-- Signature Pad Library -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
     
-    <!-- Initialize signature pad when modal is shown -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('eSignatureModal');
-            if (modal) {
-                modal.addEventListener('shown.bs.modal', function () {
-                    // Small delay to ensure DOM is fully ready
-                    setTimeout(function() {
-                        if (typeof ensureSignaturePadInitialized === 'function') {
-                            ensureSignaturePadInitialized();
-                        }
-                    }, 100);
-                });
-            }
-        });
-    </script>
+    <!-- Application JavaScript Files -->
+    <script src="assets/js/modal-utils.js"></script>
+    <script src="assets/js/calendar.js"></script>
+    <script src="assets/js/booking.js"></script>
+    <script src="assets/js/customers.js"></script>
+    <script src="assets/js/analytics.js"></script>
+    <script src="assets/js/warehouse.js"></script>
+    <script src="assets/js/app.js"></script>
 </body>
 </html>
