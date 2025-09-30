@@ -472,7 +472,7 @@
                                 <div class="col-md-8">
                                     <label for="drNumber" class="form-label">DR Number</label>
                                     <div id="drNumbersContainer">
-                                        <!-- DR Number inputs will be added here -->
+                                        <input type="text" class="form-control form-control-sm mb-2" id="drNumber" placeholder="DR Number" required>
                                     </div>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="addDrBtn">
                                         <i class="bi bi-plus-circle me-1"></i>Add DR Number
@@ -485,8 +485,120 @@
                             </div>
                         </div>
 
-                        <!-- Other sections from the old UI can be added here -->
+                        <!-- Truck Reference Section -->
+                        <div class="form-section compact-section">
+                            <h5 class="section-title"><i class="bi bi-truck"></i> Truck Reference</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="truckType" class="form-label">Truck Type</label>
+                                    <select class="form-select form-select-sm" id="truckType" required>
+                                        <option value="">Select Truck Type</option>
+                                        <option value="l300">L300</option>
+                                        <option value="canter">Canter</option>
+                                        <option value="3pl">3PL</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="truckPlateNumber" class="form-label">Plate Number</label>
+                                    <input type="text" class="form-control form-control-sm" id="truckPlateNumber" placeholder="Enter plate number" required>
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- Origin Section -->
+                        <div class="form-section compact-section">
+                            <h5 class="section-title"><i class="bi bi-geo-alt"></i> Origin</h5>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="originSelect" class="form-label">Select Origin</label>
+                                    <select class="form-select form-select-sm" id="originSelect">
+                                        <option value="">Select Origin</option>
+                                        <option value="alabang">SMEG Alabang Warehouse</option>
+                                        <option value="cebu">SMEG Cebu Warehouse</option>
+                                        <option value="davao">SMEG Davao Warehouse</option>
+                                        <option value="custom">Custom Location</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mt-2 d-none" id="customOriginContainer">
+                                <div class="col-md-12">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control form-control-sm" id="customOrigin" placeholder="Click to select location on map" readonly style="cursor: pointer;">
+                                        <button type="button" class="btn map-pin-btn" id="pinOrigin">
+                                            <i class="bi bi-geo-alt"></i> Pin on Map
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Destination Areas Section -->
+                        <div class="form-section compact-section">
+                            <h5 class="section-title"><i class="bi bi-geo"></i> Destination Areas</h5>
+                            <div id="destinationAreasContainer">
+                                <div class="destination-area-item">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control form-control-sm destination-area-input" placeholder="Click to select location on map" required readonly style="cursor: pointer;">
+                                        <button type="button" class="btn map-pin-btn pin-on-map-btn btn-sm" data-area-index="0">
+                                            <i class="bi bi-geo-alt"></i> Pin on Map
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger remove-area btn-sm">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addAreaBtn">
+                                <i class="bi bi-plus-circle me-1"></i>Add Area
+                            </button>
+                        </div>
+
+                        <!-- Computed Distance Section -->
+                        <div class="form-section compact-section">
+                            <h5 class="section-title"><i class="bi bi-calculator"></i> Computed Distance</h5>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">Origin to Destination</h6>
+                                                    <p class="text-muted mb-0 small" id="originDestinationInfo">Select origin and destination to calculate distance</p>
+                                                </div>
+                                                <div class="text-end">
+                                                    <h4 class="mb-0" id="computedDistanceValue">-- km</h4>
+                                                    <p class="text-muted mb-0 small">Calculated Distance</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Costs Section -->
+                        <div class="form-section compact-section">
+                            <h5 class="section-title"><i class="bi bi-currency-dollar"></i> Additional Costs</h5>
+                            <div id="costItemsContainer">
+                                <div class="cost-item">
+                                    <div class="flex-grow-1">
+                                        <input type="text" class="form-control form-control-sm" placeholder="Description (e.g., Fuel Surcharge)">
+                                    </div>
+                                    <div>
+                                        <div class="input-group">
+                                            <span class="input-group-text">₱</span>
+                                            <input type="number" class="form-control form-control-sm" placeholder="Amount">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="remove-cost btn-sm" disabled>
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="addCostBtn">
+                                <i class="bi bi-plus-circle me-1"></i>Add Cost
+                            </button>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -515,6 +627,9 @@
     <!-- Signature Pad Library -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
     
+    <!-- Leaflet JS for maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <!-- Application JavaScript Files -->
     <script src="assets/js/modal-utils.js"></script>
     <script src="assets/js/calendar.js"></script>
@@ -522,6 +637,6 @@
     <script src="assets/js/customers.js"></script>
     <script src="assets/js/analytics.js"></script>
     <script src="assets/js/warehouse.js"></script>
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/main-fixed.js"></script>
 </body>
 </html>

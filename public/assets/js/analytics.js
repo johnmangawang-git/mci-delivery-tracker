@@ -197,47 +197,7 @@ function initAnalyticsCharts() {
 }
 
 // Expose function globally
-window.initAnalyticsCharts = initAnalyticsCharts;                            'rgba(52, 152, 219, 0.8)',
-                            'rgba(155, 89, 182, 0.8)',
-                            'rgba(46, 204, 113, 0.8)',
-                            'rgba(149, 165, 166, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(243, 156, 18, 1)',
-                            'rgba(52, 152, 219, 1)',
-                            'rgba(155, 89, 182, 1)',
-                            'rgba(46, 204, 113, 1)',
-                            'rgba(149, 165, 166, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
-                            padding: 12,
-                            titleFont: {
-                                size: 14
-                            },
-                            bodyFont: {
-                                size: 13
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Initialize chart filters
-        initChartFilters();
-    });
-}
+window.initAnalyticsCharts = initAnalyticsCharts;
 
 function initChartFilters() {
     // Bookings chart period filters

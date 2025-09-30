@@ -1,207 +1,136 @@
-(function() {
-    // 1. State Management
-    let state = {
-        currentMonthIndex: new Date().getMonth(),
-        currentYear: new Date().getFullYear(),
-        activeDeliveries: [],
-        deliveryHistory: [],
-        customers: [],
-    };
-
-    // 2. DOM Element References
-    const elements = {
-        sidebar: document.querySelector('.sidebar'),
-        mainContent: document.querySelector('.main-content'),
-        pageTitle: document.querySelector('.page-title'),
-        userProfile: document.querySelector('.user-profile'),
-        content: document.querySelector('.content'),
-        views: {
-            booking: document.getElementById('booking-view'),
-            analytics: document.getElementById('analytics-view'),
-            ePod: document.getElementById('e-pod-view'),
-            activeDeliveries: document.getElementById('active-deliveries-view'),
-            deliveryHistory: document.getElementById('delivery-history-view'),
-            customers: document.getElementById('customers-view'),
-            warehouseMap: document.getElementById('warehouse-map-view'),
-            settings: document.getElementById('settings-view'),
-        },
-        calendar: {
-            grid: document.getElementById('calendarGrid'),
-            currentMonth: document.getElementById('currentMonth'),
-            prevMonthBtn: document.getElementById('prevMonth'),
-            nextMonthBtn: document.getElementById('nextMonth'),
-        },
-        bookingModal: document.getElementById('bookingModal'),
-        // Add other element references here
-    };
-
-    // 3. View Management
-    function setActiveView(viewName) {
-        Object.values(elements.views).forEach(view => {
-            if (view) view.classList.remove('active');
-        });
-        if (elements.views[viewName]) {
-            elements.views[viewName].classList.add('active');
-        }
-
-        // Update sidebar active link
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.classList.remove('active');
-            if (link.dataset.view === viewName) {
-                link.classList.add('active');
-            }
-        });
-
-        // Load content for the selected view
-        loadViewContent(viewName);
-    }
-
-    // Load content for the selected view
-    function loadViewContent(viewName) {
-        switch(viewName) {
-            case 'analytics':
-                if (typeof initAnalyticsCharts === 'function') {
-                    initAnalyticsCharts();
-                }
-                break;
-            case 'customers':
-                if (typeof loadCustomers === 'function') {
-                    loadCustomers();
-                }
-                break;
-            case 'active-deliveries':
-                if (typeof loadActiveDeliveries === 'function') {
-                    loadActiveDeliveries();
-                }
-                break;
-            case 'delivery-history':
-                if (typeof loadDeliveryHistory === 'function') {
-                    loadDeliveryHistory();
-                }
-                break;
-            case 'e-pod':
-                if (typeof loadEPodDeliveries === 'function') {
-                    loadEPodDeliveries();
-                }
-                if (typeof initEPod === 'function') {
-                    initEPod();
-                }
-                break;
-            case 'warehouse-map':
-                if (typeof loadWarehouses === 'function') {
-                    loadWarehouses();
-                }
-                break;
-            case 'settings':
-                // Initialize settings view
-                break;
-            default:
-                // Booking view or other views
-                break;
-        }
-    }
-
-    // 4. Calendar Logic
-    function initCalendar() {
-        updateCalendar();
-        elements.calendar.prevMonthBtn.addEventListener('click', () => {
-            state.currentMonthIndex--;
-            if (state.currentMonthIndex < 0) {
-                state.currentMonthIndex = 11;
-                state.currentYear--;
-            }
-            updateCalendar();
-        });
-
-        elements.calendar.nextMonthBtn.addEventListener('click', () => {
-            state.currentMonthIndex++;
-            if (state.currentMonthIndex > 11) {
-                state.currentMonthIndex = 0;
-                state.currentYear++;
-            }
-            updateCalendar();
-        });
-    }
-
-    function updateCalendar() {
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        elements.calendar.currentMonth.textContent = `${monthNames[state.currentMonthIndex]} ${state.currentYear}`;
-
-        const calendarGrid = elements.calendar.grid;
-        calendarGrid.innerHTML = '';
-
-        const firstDay = new Date(state.currentYear, state.currentMonthIndex, 1);
-        const lastDay = new Date(state.currentYear, state.currentMonthIndex + 1, 0);
-        const daysInMonth = lastDay.getDate();
-        const firstDayIndex = firstDay.getDay();
-
-        for (let i = 0; i < firstDayIndex; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'calendar-cell empty';
-            calendarGrid.appendChild(emptyCell);
-        }
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const cell = document.createElement('div');
-            cell.className = 'calendar-cell';
-            const dateStr = `${state.currentYear}-${(state.currentMonthIndex + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            cell.dataset.date = dateStr;
-            cell.innerHTML = `<div class="date-number">${day}</div>`;
-            cell.addEventListener('click', () => openBookingModal(dateStr));
-            calendarGrid.appendChild(cell);
-        }
-    }
-
-    // 5. Booking Logic
-    function initBookingModal() {
-        // Initialization logic for the booking modal
-    }
-
-    function openBookingModal(dateStr) {
-        const modal = new bootstrap.Modal(elements.bookingModal);
-        // You might want to set the date in the modal form here
-        modal.show();
-    }
-
-    // 6. Data Loading and Persistence
-    function loadData() {
-        // Load data from localStorage or an API
-    }
-
-    function saveData() {
-        // Save data to localStorage or an API
-    }
-
-    // 7. Other Module Logic
+// 7. Other Module Logic
     function initAnalytics() {}
     function initCustomers() {}
-    function initActiveDeliveries() {}
+    function initActiveDeliveries() {
+        // Load active deliveries data
+        loadActiveDeliveries();
+    }
     function initDeliveryHistory() {}
     function initEpod() {}
     function initWarehouseMap() {}
     function initSettings() {}
 
-
-    // 8. Initialization
-    document.addEventListener('DOMContentLoaded', () => {
-        initCalendar();
-        initBookingModal();
-        initAnalytics();
-        initCustomers();
-        initActiveDeliveries();
-        initDeliveryHistory();
-        initEpod();
-        initWarehouseMap();
-        initSettings();
-
-        document.querySelectorAll('.sidebar .nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                setActiveView(link.dataset.view);
+    // Load active deliveries from localStorage
+    function loadActiveDeliveries() {
+        console.log('Loading active deliveries...');
+        
+        // Get bookings from localStorage
+        let bookings = JSON.parse(localStorage.getItem('mci-bookings') || '[]');
+        
+        // Filter for active deliveries (not completed)
+        const activeBookings = bookings.filter(booking => 
+            booking.status !== 'Completed' && booking.status !== 'Signed'
+        );
+        
+        // Update the UI with active deliveries
+        const tableBody = document.getElementById('activeDeliveriesTableBody');
+        if (tableBody) {
+            if (activeBookings.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></i>
+                            <h4 class="mt-2">No Active Deliveries</h4>
+                            <p class="text-muted mb-0">Bookings will appear here once confirmed</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Generate table rows
+            tableBody.innerHTML = activeBookings.map(booking => {
+                // Format destinations
+                const destinations = booking.destinations.join(', ');
+                
+                // Format distance
+                const distance = booking.distance ? `${booking.distance.toFixed(2)} km` : '-- km';
+                
+                // Format additional costs
+                const additionalCosts = booking.totalAdditionalCosts ? 
+                    `₱${booking.totalAdditionalCosts.toFixed(2)}` : '₱0.00';
+                
+                return `
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input select-delivery" data-dr="${booking.drNumber}"></td>
+                        <td><strong>${booking.drNumber}</strong></td>
+                        <td>${booking.customerName}</td>
+                        <td>${booking.customerNumber}</td>
+                        <td>${booking.origin}</td>
+                        <td>${destinations}</td>
+                        <td>${distance}</td>
+                        <td>${booking.truckPlateNumber}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success" style="min-width: 90px;">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    ${booking.status}
+                                </span>
+                                <select class="form-select form-select-sm status-selector" style="min-width: 120px; max-width: 140px;" data-dr="${booking.drNumber}">
+                                    <option value="On Schedule" ${booking.status === 'On Schedule' ? 'selected' : ''}>📅 On Schedule</option>
+                                    <option value="In Transit" ${booking.status === 'In Transit' ? 'selected' : ''}>🚛 In Transit</option>
+                                    <option value="Delayed" ${booking.status === 'Delayed' ? 'selected' : ''}>⚠️ Delayed</option>
+                                    <option value="Completed" ${booking.status === 'Completed' ? 'selected' : ''}>✅ Completed</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>${new Date(booking.deliveryDate).toLocaleDateString()}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Add event listeners for status selectors
+            document.querySelectorAll('.status-selector').forEach(select => {
+                select.addEventListener('change', function() {
+                    const drNumber = this.dataset.dr;
+                    const newStatus = this.value;
+                    updateBookingStatus(drNumber, newStatus);
+                });
             });
-        });
+            
+            // Add event listeners for checkboxes
+            document.querySelectorAll('.select-delivery').forEach(checkbox => {
+                checkbox.addEventListener('change', updateESignatureButton);
+            });
+        }
+    }
+    
+    // Update booking status
+    function updateBookingStatus(drNumber, newStatus) {
+        console.log(`Updating status for ${drNumber} to ${newStatus}`);
+        
+        // Get bookings from localStorage
+        let bookings = JSON.parse(localStorage.getItem('mci-bookings') || '[]');
+        
+        // Find and update the booking
+        const bookingIndex = bookings.findIndex(booking => booking.drNumber === drNumber);
+        if (bookingIndex !== -1) {
+            bookings[bookingIndex].status = newStatus;
+            
+            // If status is completed, move to delivery history
+            if (newStatus === 'Completed') {
+                // In a real implementation, you would move this to a separate history collection
+                console.log(`Booking ${drNumber} marked as completed`);
+            }
+            
+            // Save back to localStorage
+            localStorage.setItem('mci-bookings', JSON.stringify(bookings));
+            
+            // Show success message
+            showToast(`Status updated to ${newStatus}`, 'success');
+        }
+    }
+    
+    // Update E-Signature button based on selection
+    function updateESignatureButton() {
+        const eSignatureBtn = document.getElementById('eSignatureBtn');
+        if (!eSignatureBtn) return;
+        
+        const selectedCheckboxes = document.querySelectorAll('.select-delivery:checked');
+        eSignatureBtn.disabled = selectedCheckboxes.length === 0;
+    }
 
-        setActiveView('booking'); // Set default view
-        loadData();
-    });
-})();
+    // Make functions globally accessible
+    window.loadActiveDeliveries = loadActiveDeliveries;
+    window.updateBookingStatus = updateBookingStatus;
+    window.updateESignatureButton = updateESignatureButton;

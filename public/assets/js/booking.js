@@ -131,6 +131,12 @@ function showBookingModal(dateStr) {
         }
     }
     
+    // Update distance when modal is shown
+    setTimeout(function() {
+        console.log('Booking modal shown, calling updateDistance');
+        updateDistance();
+    }, 300); // Small delay to ensure DOM updates
+    
     // Log success
     console.log('showBookingModal function completed successfully');
 }
@@ -268,7 +274,7 @@ function initBookingModal() {
     const bookingModalElement = document.getElementById('bookingModal');
     console.log('Booking modal element found:', bookingModalElement);
     if (!bookingModalElement) {
-        console.error('Booking modal element not found');
+        console.log('Booking modal element not found');
         return;
     }
     
@@ -335,13 +341,56 @@ function initBookingModal() {
     const originSelect = document.getElementById('originSelect');
     const customOriginContainer = document.getElementById('customOriginContainer');
     
+    // Warehouse coordinates data
+    const warehouseCoordinates = {
+        'alabang': { lat: 14.444208, lng: 121.046787, name: 'SMEG Alabang Warehouse' },
+        'cebu': { lat: 10.3157, lng: 123.8854, name: 'SMEG Cebu Warehouse' },
+        'davao': { lat: 7.0759, lng: 125.6143, name: 'SMEG Davao Warehouse' }
+    };
+    
+    // Function to display warehouse coordinates
+    function displayWarehouseCoordinates(warehouseId) {
+        const coordinatesDisplay = document.getElementById('warehouseCoordinatesDisplay');
+        if (coordinatesDisplay) {
+            if (warehouseId && warehouseCoordinates[warehouseId]) {
+                const coords = warehouseCoordinates[warehouseId];
+                coordinatesDisplay.innerHTML = `
+                    <div class="mt-2 p-2 bg-light rounded small">
+                        <strong>Coordinates:</strong> ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}
+                    </div>
+                `;
+                coordinatesDisplay.style.display = 'block';
+                
+                // Update distance when warehouse coordinates are displayed
+                setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
+            } else {
+                coordinatesDisplay.style.display = 'none';
+            }
+        }
+    }
+    
     if (originSelect && customOriginContainer) {
+        // Create coordinates display element if it doesn't exist
+        if (!document.getElementById('warehouseCoordinatesDisplay')) {
+            const coordinatesDisplay = document.createElement('div');
+            coordinatesDisplay.id = 'warehouseCoordinatesDisplay';
+            coordinatesDisplay.style.display = 'none';
+            originSelect.parentNode.appendChild(coordinatesDisplay);
+        }
+        
         originSelect.addEventListener('change', function () {
-            if (this.value === '') {
+            console.log('Origin selection changed to:', this.value);
+            if (this.value === 'custom') {
                 customOriginContainer.classList.remove('d-none');
+                displayWarehouseCoordinates(null); // Hide coordinates for custom selection
             } else {
                 customOriginContainer.classList.add('d-none');
+                displayWarehouseCoordinates(this.value); // Show coordinates for warehouse selection
             }
+            
+            // Update distance when origin changes
+            console.log('Origin selection changed, calling updateDistance');
+            setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
         });
     }
 
@@ -350,7 +399,7 @@ function initBookingModal() {
     if (pinOriginBtn && customOriginContainer && originSelect) {
         pinOriginBtn.addEventListener('click', function () {
             customOriginContainer.classList.remove('d-none');
-            originSelect.value = '';
+            originSelect.value = 'custom'; // Set to custom option
             showMapPinDialog('origin');
         });
     }
@@ -360,37 +409,41 @@ function initBookingModal() {
     const destinationAreasContainer = document.getElementById('destinationAreasContainer');
 
     if (addAreaBtn && destinationAreasContainer) {
-        // Modify the event listener for existing destination area inputs to open map modal directly
-        document.querySelectorAll('.destination-area-input').forEach((input, index) => {
-            input.addEventListener('focus', function () {
-                // Open map modal directly when focusing on the destination area input
-                showMapPinDialog('destination', index);
-            });
+        // Use event delegation for destination area inputs and buttons
+        // This will work for both existing and dynamically added elements
+        
+        // Handle clicks on "Pin on Map" buttons and destination area inputs
+        destinationAreasContainer.addEventListener('click', function(e) {
+            // Handle pin on map button clicks
+            if (e.target.closest('.pin-on-map-btn')) {
+                const pinBtn = e.target.closest('.pin-on-map-btn');
+                const areaIndex = parseInt(pinBtn.dataset.areaIndex);
+                showMapPinDialog('destination', areaIndex);
+                return;
+            }
             
-            // Prevent the default behavior of typing in the input
-            input.addEventListener('keydown', function(e) {
-                // Allow Tab, Escape, and Enter keys
-                if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
-                    return;
+            // Handle remove area button clicks
+            if (e.target.closest('.remove-area')) {
+                const removeBtn = e.target.closest('.remove-area');
+                const areaItem = removeBtn.closest('.destination-area-item');
+                if (areaItem) {
+                    const areaIndex = Array.from(destinationAreasContainer.children).indexOf(areaItem);
+                    areaItem.remove();
+                    hideDestinationCoordinates(areaIndex);
+                    updateDistance();
                 }
-                // Prevent other keys and open map modal
-                e.preventDefault();
-                showMapPinDialog('destination', index);
-            });
+                return;
+            }
             
-            // Also open map modal on click
-            input.addEventListener('click', function () {
-                showMapPinDialog('destination', index);
-            });
-        });
-
-        // Add event listeners to existing destination area elements
-        document.querySelectorAll('.pin-on-map-btn').forEach((btn, index) => {
-            if (index >= 0) { // Include the origin pin button now
-                btn.addEventListener('click', function () {
-                    const areaIndex = parseInt(this.dataset.areaIndex);
+            // Handle clicks on destination area inputs
+            if (e.target.classList.contains('destination-area-input')) {
+                const input = e.target;
+                const areaItem = input.closest('.destination-area-item');
+                if (areaItem) {
+                    const areaIndex = Array.from(destinationAreasContainer.children).indexOf(areaItem);
                     showMapPinDialog('destination', areaIndex);
-                });
+                }
+                return;
             }
         });
 
@@ -400,11 +453,11 @@ function initBookingModal() {
             areaItem.className = 'destination-area-item';
             areaItem.innerHTML = `
                 <div class="input-group mb-2">
-                    <input type="text" class="form-control destination-area-input" placeholder="Click to select location on map" required>
-                    <button type="button" class="btn map-pin-btn pin-on-map-btn" data-area-index="${areaIndex}">
+                    <input type="text" class="form-control destination-area-input" placeholder="Click to select location on map" required readonly style="cursor: pointer;">
+                    <button type="button" class="btn map-pin-btn pin-on-map-btn btn-sm" data-area-index="${areaIndex}">
                         <i class="bi bi-geo-alt"></i> Pin on Map
                     </button>
-                    <button type="button" class="btn btn-outline-danger remove-area">
+                    <button type="button" class="btn btn-outline-danger remove-area btn-sm">
                         <i class="bi bi-x-lg"></i>
                     </button>
                 </div>
@@ -412,44 +465,7 @@ function initBookingModal() {
 
             destinationAreasContainer.appendChild(areaItem);
 
-            // Add event listeners for the new elements
-            const pinBtn = areaItem.querySelector('.pin-on-map-btn');
-            const removeBtn = areaItem.querySelector('.remove-area');
-            const inputField = areaItem.querySelector('.destination-area-input');
-
-            // Open map modal when clicking the input field
-            inputField.addEventListener('focus', function () {
-                showMapPinDialog('destination', areaIndex);
-            });
-            
-            // Prevent typing in the input field
-            inputField.addEventListener('keydown', function(e) {
-                // Allow Tab, Escape, and Enter keys
-                if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
-                    return;
-                }
-                // Prevent other keys and open map modal
-                e.preventDefault();
-                showMapPinDialog('destination', areaIndex);
-            });
-            
-            // Also open map modal on click
-            inputField.addEventListener('click', function () {
-                showMapPinDialog('destination', areaIndex);
-            });
-
-            if (pinBtn) {
-                pinBtn.addEventListener('click', function () {
-                    showMapPinDialog('destination', areaIndex);
-                });
-            }
-
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function () {
-                    areaItem.remove();
-                    updateDistance();
-                });
-            }
+            // No need to add individual event listeners since we're using event delegation
         });
     }
 
@@ -527,23 +543,102 @@ function initBookingModal() {
     const customOriginElement = document.getElementById('customOrigin');
     
     if (originSelectElement) {
-        originSelectElement.addEventListener('change', updateDistance);
+        originSelectElement.addEventListener('change', function() {
+            console.log('Origin select changed, calling updateDistance');
+            setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
+        });
     }
     
     if (customOriginElement) {
-        customOriginElement.addEventListener('change', updateDistance);
+        customOriginElement.addEventListener('change', function() {
+            console.log('Custom origin changed, calling updateDistance');
+            setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
+        });
     }
     
     // Add event listeners for destination area inputs
-    document.addEventListener('input', function(e) {
-        if (e.target && e.target.classList.contains('destination-area-input')) {
-            updateDistance();
-        }
+    // Remove this global listener as we're using event delegation instead
+    // document.addEventListener('input', function(e) {
+    //     if (e.target && e.target.classList.contains('destination-area-input')) {
+    //         console.log('Destination input changed, calling updateDistance');
+    //         console.log('Destination input value:', e.target.value);
+    //         console.log('Destination input dataset:', e.target.dataset);
+    //         setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
+    //     }
+    // });
+    
+    // Also listen for attribute changes on destination inputs
+    const destinationInputs = document.querySelectorAll('.destination-area-input');
+    destinationInputs.forEach(input => {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && (mutation.attributeName === 'data-lat' || mutation.attributeName === 'data-lng')) {
+                    console.log('Destination input attribute changed, calling updateDistance');
+                    console.log('Destination input value:', input.value);
+                    console.log('Destination input dataset:', input.dataset);
+                    setTimeout(updateDistance, 100); // Small delay to ensure DOM updates
+                }
+            });
+        });
+        
+        observer.observe(input, {
+            attributes: true
+        });
     });
+    
+    // Initial distance calculation
+    setTimeout(updateDistance, 200); // Small delay to ensure DOM is ready
 }
 
 // Make functions globally accessible
 window.initBookingModal = initBookingModal;
+
+// Function to display destination coordinates
+function displayDestinationCoordinates(index, lat, lng) {
+    console.log(`Displaying coordinates for destination ${index}:`, lat, lng);
+    
+    // Remove any existing coordinates display for this destination
+    const existingCoordsDisplay = document.getElementById(`destinationCoordinatesDisplay-${index}`);
+    if (existingCoordsDisplay) {
+        existingCoordsDisplay.remove();
+    }
+    
+    // Create coordinates display element
+    const coordinatesDisplay = document.createElement('div');
+    coordinatesDisplay.id = `destinationCoordinatesDisplay-${index}`;
+    coordinatesDisplay.className = 'mt-2 p-2 bg-light rounded small';
+    coordinatesDisplay.innerHTML = `<strong>Coordinates:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    
+    // Find the parent container for this destination area
+    const destinationItems = document.querySelectorAll('.destination-area-item');
+    console.log('Destination items found:', destinationItems.length);
+    if (destinationItems[index]) {
+        // Check if the coordinates display already exists as a child
+        const existing = destinationItems[index].querySelector(`#destinationCoordinatesDisplay-${index}`);
+        if (existing) {
+            existing.remove();
+        }
+        
+        destinationItems[index].appendChild(coordinatesDisplay);
+        console.log('Coordinates display added to destination item', index);
+    } else {
+        console.error('Destination item not found for index:', index);
+        // Try to append to the last destination item as a fallback
+        if (destinationItems.length > 0) {
+            const lastIndex = destinationItems.length - 1;
+            destinationItems[lastIndex].appendChild(coordinatesDisplay);
+            console.log('Coordinates display added to last destination item as fallback');
+        }
+    }
+}
+
+// Function to hide destination coordinates
+function hideDestinationCoordinates(index) {
+    const coordinatesDisplay = document.getElementById(`destinationCoordinatesDisplay-${index}`);
+    if (coordinatesDisplay) {
+        coordinatesDisplay.remove();
+    }
+}
 
 // Calculate real distance between two points using Haversine formula
 function calculateRealDistance(lat1, lon1, lat2, lon2) {
@@ -561,12 +656,139 @@ function calculateRealDistance(lat1, lon1, lat2, lon2) {
 
 // Function to update the calculated distance
 function updateDistance() {
-    // In a real implementation, this would calculate the distance between origin and destination
-    // For this demo, we'll just show a placeholder value
-    const distanceElement = document.getElementById('distanceValue');
-    if (distanceElement) {
-        distanceElement.textContent = '12.5 km';
+    console.log('=== UPDATE DISTANCE FUNCTION CALLED ===');
+    
+    // Calculate the distance between origin and destination
+    const computedDistanceElement = document.getElementById('computedDistanceValue');
+    const originDestinationInfoElement = document.getElementById('originDestinationInfo');
+    
+    // Get origin coordinates
+    const originSelect = document.getElementById('originSelect');
+    const customOrigin = document.getElementById('customOrigin');
+    
+    // Get destination coordinates
+    const destinationInputs = document.querySelectorAll('.destination-area-input');
+    
+    let originLat, originLng, destLat, destLng;
+    let originName = 'Unknown Origin';
+    let destName = 'Unknown Destination';
+    
+    console.log('Origin select value:', originSelect?.value);
+    console.log('Custom origin value:', customOrigin?.value);
+    console.log('Custom origin dataset:', customOrigin?.dataset);
+    console.log('Destination inputs count:', destinationInputs.length);
+    
+    // Get origin coordinates
+    if (originSelect && originSelect.value && originSelect.value !== 'custom') {
+        // Warehouse coordinates
+        const warehouseCoordinates = {
+            'alabang': { lat: 14.444208, lng: 121.046787, name: 'SMEG Alabang Warehouse' },
+            'cebu': { lat: 10.3157, lng: 123.8854, name: 'SMEG Cebu Warehouse' },
+            'davao': { lat: 7.0759, lng: 125.6143, name: 'SMEG Davao Warehouse' }
+        };
+        
+        if (warehouseCoordinates[originSelect.value]) {
+            originLat = warehouseCoordinates[originSelect.value].lat;
+            originLng = warehouseCoordinates[originSelect.value].lng;
+            originName = warehouseCoordinates[originSelect.value].name;
+            console.log('Using warehouse coordinates:', originLat, originLng);
+        }
+    } else if (customOrigin && customOrigin.value && customOrigin.dataset.lat && customOrigin.dataset.lng) {
+        // Custom origin coordinates
+        originLat = parseFloat(customOrigin.dataset.lat);
+        originLng = parseFloat(customOrigin.dataset.lng);
+        originName = customOrigin.value || 'Custom Origin';
+        console.log('Using custom origin coordinates:', originLat, originLng);
     }
+    
+    // Get destination coordinates (use the first destination for now)
+    if (destinationInputs.length > 0) {
+        const firstDestination = destinationInputs[0];
+        console.log('First destination value:', firstDestination.value);
+        console.log('First destination dataset:', firstDestination.dataset);
+        if (firstDestination.dataset.lat && firstDestination.dataset.lng) {
+            destLat = parseFloat(firstDestination.dataset.lat);
+            destLng = parseFloat(firstDestination.dataset.lng);
+            destName = firstDestination.value || 'Destination';
+            console.log('Using destination coordinates from dataset:', destLat, destLng);
+        } else if (firstDestination.value) {
+            // Try to extract coordinates from the input value if in format "lat, lng"
+            const coordsMatch = firstDestination.value.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+            if (coordsMatch) {
+                destLat = parseFloat(coordsMatch[1]);
+                destLng = parseFloat(coordsMatch[2]);
+                destName = firstDestination.value;
+                console.log('Extracted coordinates from input value:', destLat, destLng);
+            } else {
+                console.log('Could not extract coordinates from input value:', firstDestination.value);
+            }
+        } else {
+            console.log('No destination coordinates found');
+        }
+    }
+    
+    // Calculate distance if we have both origin and destination
+    if (originLat !== undefined && originLng !== undefined && 
+        destLat !== undefined && destLng !== undefined) {
+        const distance = calculateRealDistance(originLat, originLng, destLat, destLng);
+        console.log('Calculated distance:', distance);
+        
+        // Update the computed distance display
+        if (computedDistanceElement) {
+            computedDistanceElement.textContent = `${distance.toFixed(2)} km`;
+        }
+        
+        // Update origin/destination info
+        if (originDestinationInfoElement) {
+            originDestinationInfoElement.textContent = `${originName} to ${destName}`;
+        }
+        
+        // Also update the main dashboard distance if needed
+        updateDashboardDistance(distance);
+    } else {
+        console.log('Missing coordinates, showing -- km');
+        console.log('Origin lat/lng:', originLat, originLng);
+        console.log('Destination lat/lng:', destLat, destLng);
+        
+        // Update the computed distance display
+        if (computedDistanceElement) {
+            computedDistanceElement.textContent = '-- km';
+        }
+        
+        // Update origin/destination info
+        if (originDestinationInfoElement) {
+            originDestinationInfoElement.textContent = 'Select origin and destination to calculate distance';
+        }
+        
+        // Also update the main dashboard distance if needed
+        updateDashboardDistance(null);
+    }
+}
+
+// Function to update the main dashboard distance
+function updateDashboardDistance(distance) {
+    console.log('Updating dashboard distance:', distance);
+    
+    // Find the dashboard distance element
+    const dashboardDistanceElement = document.querySelector('#booking-view .metric-card:nth-child(3) .metric-value');
+    if (dashboardDistanceElement) {
+        if (distance !== null) {
+            dashboardDistanceElement.textContent = `${Math.round(distance)} km`;
+        } else {
+            dashboardDistanceElement.textContent = '0 km';
+        }
+    }
+    
+    // Also update any other distance displays if needed
+    updateAllDistanceDisplays(distance);
+}
+
+// Function to update all distance displays in the system
+function updateAllDistanceDisplays(distance) {
+    console.log('Updating all distance displays with:', distance);
+    
+    // This function can be expanded to update distances in other parts of the app
+    // For now, we're focusing on the main booking modal and dashboard
 }
 
 // Function to reset the booking form
@@ -637,6 +859,8 @@ function resetBookingForm() {
                 if (firstInput) {
                     firstInput.value = '';
                 }
+                // Hide coordinates display
+                hideDestinationCoordinates(0);
             });
         }
     }
@@ -751,29 +975,302 @@ setTimeout(() => {
 function showMapPinDialog(type, index = 0) {
     console.log(`showMapPinDialog called with type: ${type}, index: ${index}`);
     
-    // In a real implementation, this would show a map modal for selecting locations
-    // For this demo, we'll just log the call
-    console.log('Map pin dialog would be shown here for:', type, index);
+    // Create map modal HTML
+    const mapModalHtml = `
+        <div class="modal fade" id="mapPinModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-geo-alt me-2"></i>Select Location on Map
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <p class="text-muted">Click anywhere on the map to select a location. You can also use the quick location buttons below.</p>
+                        </div>
+                        
+                        <!-- Search Box -->
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="locationSearchInput" placeholder="Search for a location...">
+                            <button class="btn btn-outline-primary" type="button" id="locationSearchBtn">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Quick Location Buttons -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button class="btn btn-sm btn-outline-primary quick-location-btn" data-lat="14.444208" data-lng="121.046787" data-name="SMEG Alabang">
+                                <i class="bi bi-geo-alt me-1"></i>Alabang
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary quick-location-btn" data-lat="10.3157" data-lng="123.8854" data-name="SMEG Cebu">
+                                <i class="bi bi-geo-alt me-1"></i>Cebu
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary quick-location-btn" data-lat="7.0759" data-lng="125.6143" data-name="SMEG Davao">
+                                <i class="bi bi-geo-alt me-1"></i>Davao
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary quick-location-btn" data-lat="14.5995" data-lng="120.9842" data-name="Manila">
+                                <i class="bi bi-geo-alt me-1"></i>Manila
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary quick-location-btn" data-lat="14.5547" data-lng="121.0244" data-name="Makati">
+                                <i class="bi bi-geo-alt me-1"></i>Makati
+                            </button>
+                        </div>
+                        
+                        <!-- Map Container -->
+                        <div id="mapPinContainer" style="height: 400px; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;"></div>
+                        
+                        <!-- Selected Location Info -->
+                        <div class="mt-3 p-3 bg-light rounded" id="selectedLocationInfo" style="display: none;">
+                            <h6>Selected Location:</h6>
+                            <p class="mb-1" id="selectedLocationName">-</p>
+                            <p class="mb-1 text-muted small" id="selectedLocationCoords">Coordinates: -, -</p>
+                            <div class="input-group mt-2">
+                                <span class="input-group-text">Address</span>
+                                <input type="text" class="form-control" id="selectedLocationAddress" placeholder="Enter address or description">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="confirmLocationBtn" disabled>
+                            <i class="bi bi-check-circle me-1"></i>Confirm Location
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    // Simulate setting coordinates for demo purposes
-    if (type === 'origin') {
-        const customOrigin = document.getElementById('customOrigin');
-        if (customOrigin) {
-            customOrigin.value = 'Selected Origin Location';
-            customOrigin.setAttribute('data-lat', '14.5995');
-            customOrigin.setAttribute('data-lng', '120.9842');
+    // Remove existing map modal if it exists
+    const existingModal = document.getElementById('mapPinModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add the map modal to the DOM
+    document.body.insertAdjacentHTML('beforeend', mapModalHtml);
+    
+    // Show the modal
+    const mapModalElement = document.getElementById('mapPinModal');
+    const mapModal = new bootstrap.Modal(mapModalElement);
+    mapModal.show();
+    
+    // Initialize the map when modal is shown
+    mapModalElement.addEventListener('shown.bs.modal', function() {
+        initializeMapPinDialog(type, index);
+    });
+    
+    // Clean up when modal is hidden
+    mapModalElement.addEventListener('hidden.bs.modal', function() {
+        // Remove the modal from DOM
+        mapModalElement.remove();
+    });
+}
+
+// Initialize the map pin dialog
+function initializeMapPinDialog(type, index) {
+    console.log(`initializeMapPinDialog called with type: ${type}, index: ${index}`);
+    
+    // Check if Leaflet is available
+    if (typeof L === 'undefined') {
+        console.error('Leaflet is not available!');
+        alert('Map functionality is not available. Please try again later.');
+        return;
+    }
+    
+    // Initialize Leaflet map centered on Philippines
+    const map = L.map('mapPinContainer').setView([12.8797, 121.7740], 6);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Variable to store the selected location
+    let selectedLocation = null;
+    
+    // Handle map click for selecting locations
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        // Remove existing marker if any
+        if (window.mapPinMarker) {
+            map.removeLayer(window.mapPinMarker);
         }
-    } else {
-        const destinationInputs = document.querySelectorAll('.destination-area-input');
-        if (destinationInputs[index]) {
-            destinationInputs[index].value = 'Selected Destination Location';
-            destinationInputs[index].setAttribute('data-lat', '14.5995');
-            destinationInputs[index].setAttribute('data-lng', '120.9842');
+        
+        // Add marker at clicked location
+        window.mapPinMarker = L.marker([lat, lng]).addTo(map);
+        
+        // Update selected location info
+        selectedLocation = { lat, lng };
+        updateSelectedLocationInfo(selectedLocation);
+    });
+    
+    // Add event listeners for quick location buttons
+    document.querySelectorAll('.quick-location-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lat = parseFloat(this.dataset.lat);
+            const lng = parseFloat(this.dataset.lng);
+            const name = this.dataset.name;
+            
+            // Center map on selected location
+            map.setView([lat, lng], 12);
+            
+            // Remove existing marker if any
+            if (window.mapPinMarker) {
+                map.removeLayer(window.mapPinMarker);
+            }
+            
+            // Add marker at selected location
+            window.mapPinMarker = L.marker([lat, lng]).addTo(map);
+            
+            // Update selected location info
+            selectedLocation = { lat, lng, name };
+            updateSelectedLocationInfo(selectedLocation);
+        });
+    });
+    
+    // Add search functionality
+    const searchInput = document.getElementById('locationSearchInput');
+    const searchBtn = document.getElementById('locationSearchBtn');
+    
+    if (searchInput && searchBtn) {
+        // Search on button click
+        searchBtn.addEventListener('click', function() {
+            performLocationSearch(searchInput.value, map);
+        });
+        
+        // Search on Enter key
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performLocationSearch(searchInput.value, map);
+            }
+        });
+    }
+    
+    // Function to perform location search using Nominatim
+    function performLocationSearch(query, map) {
+        if (!query.trim()) return;
+        
+        // Show loading indicator
+        searchBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        searchBtn.disabled = true;
+        
+        // Use Nominatim API for geocoding
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=PH&limit=5`)
+            .then(response => response.json())
+            .then(results => {
+                if (results && results.length > 0) {
+                    const result = results[0]; // Use the first result
+                    const lat = parseFloat(result.lat);
+                    const lng = parseFloat(result.lon);
+                    const displayName = result.display_name;
+                    
+                    // Center map on the found location
+                    map.setView([lat, lng], 15);
+                    
+                    // Remove existing marker if any
+                    if (window.mapPinMarker) {
+                        map.removeLayer(window.mapPinMarker);
+                    }
+                    
+                    // Add marker at the found location
+                    window.mapPinMarker = L.marker([lat, lng]).addTo(map);
+                    
+                    // Update selected location info
+                    selectedLocation = { lat, lng, name: displayName };
+                    updateSelectedLocationInfo(selectedLocation);
+                } else {
+                    alert('Location not found. Please try a different search term.');
+                }
+            })
+            .catch(error => {
+                console.error('Error searching for location:', error);
+                alert('Error searching for location. Please try again.');
+            })
+            .finally(() => {
+                // Restore search button
+                searchBtn.innerHTML = '<i class="bi bi-search"></i>';
+                searchBtn.disabled = false;
+            });
+    }
+    
+    // Update selected location info display
+    function updateSelectedLocationInfo(location) {
+        const infoDiv = document.getElementById('selectedLocationInfo');
+        const nameElement = document.getElementById('selectedLocationName');
+        const coordsElement = document.getElementById('selectedLocationCoords');
+        const addressInput = document.getElementById('selectedLocationAddress');
+        const confirmBtn = document.getElementById('confirmLocationBtn');
+        
+        if (location) {
+            infoDiv.style.display = 'block';
+            nameElement.textContent = location.name || 'Custom Location';
+            coordsElement.textContent = `Coordinates: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+            addressInput.value = location.name || '';
+            confirmBtn.disabled = false;
+            
+            // Add event listener to confirm button
+            confirmBtn.onclick = function() {
+                confirmLocationSelection(type, index, location, addressInput.value);
+            };
+        } else {
+            infoDiv.style.display = 'none';
+            confirmBtn.disabled = true;
         }
     }
     
-    // Update distance calculation
-    updateDistance();
+    // Confirm location selection
+    function confirmLocationSelection(type, index, location, address) {
+        console.log(`confirmLocationSelection called with type: ${type}, index: ${index}, location:`, location);
+        
+        // Close the map modal
+        const mapModalElement = document.getElementById('mapPinModal');
+        const mapModal = bootstrap.Modal.getInstance(mapModalElement);
+        mapModal.hide();
+        
+        // Set the selected location in the booking form
+        if (type === 'origin') {
+            const customOrigin = document.getElementById('customOrigin');
+            if (customOrigin) {
+                customOrigin.value = address || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+                customOrigin.setAttribute('data-lat', location.lat);
+                customOrigin.setAttribute('data-lng', location.lng);
+                
+                // Trigger change event to update distance
+                const event = new Event('change', { bubbles: true });
+                customOrigin.dispatchEvent(event);
+            }
+        } else {
+            const destinationInputs = document.querySelectorAll('.destination-area-input');
+            if (destinationInputs[index]) {
+                destinationInputs[index].value = address || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+                destinationInputs[index].setAttribute('data-lat', location.lat);
+                destinationInputs[index].setAttribute('data-lng', location.lng);
+                
+                // Display coordinates below the destination area
+                console.log('Displaying destination coordinates for index:', index, location.lat, location.lng);
+                displayDestinationCoordinates(index, location.lat, location.lng);
+                
+                // Trigger input event to update distance
+                const event = new Event('input', { bubbles: true });
+                destinationInputs[index].dispatchEvent(event);
+            } else {
+                console.error('Destination input not found for index:', index);
+            }
+        }
+        
+        // Update distance calculation
+        console.log('Calling updateDistance after location selection');
+        setTimeout(updateDistance, 200); // Small delay to ensure DOM updates
+    }
+    
+    // Initialize with no selected location
+    updateSelectedLocationInfo(null);
 }
 
 // Auto-create customer from booking details
@@ -881,6 +1378,44 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
     }
 }
 
+// Show toast notification
+function showToast(message, type = 'success') {
+    // Create toast element
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    // Add to toast container or create one
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+    }
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    // Initialize and show toast
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    // Remove toast element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+
 // Save booking functionality
 async function saveBooking() {
     try {
@@ -898,356 +1433,186 @@ async function saveBooking() {
         const originSelect = document.getElementById('originSelect');
         const customOrigin = document.getElementById('customOrigin');
         let origin = '';
-        if (originSelect.value && originSelect.value !== '') {
-            origin = originSelect.options[originSelect.selectedIndex].text;
-        } else if (customOrigin.value) {
+        let originCoords = null;
+        
+        if (originSelect && originSelect.value && originSelect.value !== 'custom') {
+            // Warehouse coordinates
+            const warehouseCoordinates = {
+                'alabang': { lat: 14.444208, lng: 121.046787, name: 'SMEG Alabang Warehouse' },
+                'cebu': { lat: 10.3157, lng: 123.8854, name: 'SMEG Cebu Warehouse' },
+                'davao': { lat: 7.0759, lng: 125.6143, name: 'SMEG Davao Warehouse' }
+            };
+            
+            if (warehouseCoordinates[originSelect.value]) {
+                origin = warehouseCoordinates[originSelect.value].name;
+                originCoords = {
+                    lat: warehouseCoordinates[originSelect.value].lat,
+                    lng: warehouseCoordinates[originSelect.value].lng
+                };
+            }
+        } else if (customOrigin && customOrigin.value && customOrigin.dataset.lat && customOrigin.dataset.lng) {
             origin = customOrigin.value;
+            originCoords = {
+                lat: parseFloat(customOrigin.dataset.lat),
+                lng: parseFloat(customOrigin.dataset.lng)
+            };
         }
         
         // Get destinations
         const destinationInputs = document.querySelectorAll('.destination-area-input');
         const destinations = [];
+        const destinationCoords = [];
+        
         destinationInputs.forEach(input => {
             if (input.value.trim()) {
                 destinations.push(input.value);
+                
+                // Get coordinates if available
+                if (input.dataset.lat && input.dataset.lng) {
+                    destinationCoords.push({
+                        lat: parseFloat(input.dataset.lat),
+                        lng: parseFloat(input.dataset.lng)
+                    });
+                }
             }
         });
         
         // Get distance
-        const distance = document.getElementById('distanceValue').textContent;
+        const computedDistanceElement = document.getElementById('computedDistanceValue');
+        let distance = 0;
+        if (computedDistanceElement && computedDistanceElement.textContent !== '-- km') {
+            distance = parseFloat(computedDistanceElement.textContent);
+        }
         
         // Get additional costs
-        const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
+        const costItems = document.querySelectorAll('.cost-item');
         const additionalCosts = [];
+        let totalAdditionalCosts = 0;
+        
         costItems.forEach(item => {
-            const description = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]').value;
-            const amount = item.querySelector('input[placeholder="Amount"]').value;
-            if (description && amount) {
+            const descriptionInput = item.querySelector('input[type="text"]');
+            const amountInput = item.querySelector('input[type="number"]');
+            
+            if (descriptionInput && amountInput && descriptionInput.value.trim() && amountInput.value) {
+                const amount = parseFloat(amountInput.value);
                 additionalCosts.push({
-                    description,
-                    amount: parseFloat(amount)
+                    description: descriptionInput.value,
+                    amount: amount
                 });
+                totalAdditionalCosts += amount;
             }
         });
         
-        // Validate required fields
+        // Validate form
         if (!drNumber) {
-            alert('DR Number is required');
+            showToast('DR Number is required', 'error');
             return;
         }
         
         if (!customerName) {
-            alert('Customer Name is required');
+            showToast('Customer Name is required', 'error');
             return;
         }
         
         if (!customerNumber) {
-            alert('Customer Number is required');
+            showToast('Customer Number is required', 'error');
             return;
         }
         
         if (!deliveryDate) {
-            alert('Delivery Date is required');
+            showToast('Delivery Date is required', 'error');
             return;
         }
         
         if (!truckType) {
-            alert('Truck Type is required');
+            showToast('Truck Type is required', 'error');
             return;
         }
         
         if (!truckPlateNumber) {
-            alert('Truck Plate Number is required');
+            showToast('Truck Plate Number is required', 'error');
             return;
         }
         
         if (!origin) {
-            alert('Origin is required');
+            showToast('Origin is required', 'error');
             return;
         }
         
         if (destinations.length === 0) {
-            alert('At least one destination is required');
+            showToast('At least one destination is required', 'error');
             return;
         }
+        
+        // Create booking object
+        const booking = {
+            id: 'BOOKING-' + Date.now(),
+            drNumber: drNumber,
+            customerName: customerName,
+            customerNumber: customerNumber,
+            deliveryDate: deliveryDate,
+            truckType: truckType,
+            truckPlateNumber: truckPlateNumber,
+            origin: origin,
+            originCoords: originCoords,
+            destinations: destinations,
+            destinationCoords: destinationCoords,
+            distance: distance,
+            additionalCosts: additionalCosts,
+            totalAdditionalCosts: totalAdditionalCosts,
+            status: 'On Schedule', // Default status
+            createdAt: new Date().toISOString()
+        };
+        
+        console.log('Booking object created:', booking);
+        
+        // Save to localStorage (in a real implementation, this would be saved to a database)
+        let bookings = JSON.parse(localStorage.getItem('mci-bookings') || '[]');
+        bookings.push(booking);
+        localStorage.setItem('mci-bookings', JSON.stringify(bookings));
         
         // Auto-create customer if not exists
         console.log('=== SAVE BOOKING DEBUG ===');
         console.log('About to call autoCreateCustomer with:', {
             customerName,
             customerNumber,
-            destination: destinations[0] // Use first destination as the address
+            destination: destinations[0] || ''
         });
         
-        await autoCreateCustomer(customerName, customerNumber, destinations[0]);
+        await autoCreateCustomer(customerName, customerNumber, destinations[0] || '');
         
         console.log('autoCreateCustomer completed');
-        
-        // In a real implementation, this would save to Supabase or localStorage
-        console.log('Saving booking:', {
-            drNumber,
-            customerName,
-            customerNumber,
-            deliveryDate,
-            truckType,
-            truckPlateNumber,
-            origin,
-            destinations,
-            distance,
-            additionalCosts
-        });
-        
+
+        // In a real implementation, this would save to Supabase or another backend
+        console.log('Saving booking:', booking);
+
         // Show success message
-        alert('Booking confirmed successfully!');
+        showToast('Booking confirmed successfully!');
         
         // Reset form and close modal
         resetBookingForm();
-        const bookingModalElement = document.getElementById('bookingModal');
-        if (bookingModalElement) {
-            const bookingModalInstance = bootstrap.Modal.getInstance(bookingModalElement);
-            if (bookingModalInstance) {
-                bookingModalInstance.hide();
-            }
+        const bookingModal = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+        if (bookingModal) {
+            bookingModal.hide();
+        }
+        
+        // Refresh active deliveries if the function exists
+        if (typeof window.loadActiveDeliveries === 'function') {
+            window.loadActiveDeliveries();
         }
         
         // Refresh calendar data
-        if (typeof window.refreshCalendarData === 'function') {
-            window.refreshCalendarData();
+        if (typeof window.loadBookingsData === 'function' && typeof window.updateCalendar === 'function') {
+            window.loadBookingsData().then(() => {
+                window.updateCalendar();
+            });
         }
+        
     } catch (error) {
         console.error('Error saving booking:', error);
-        alert('Failed to save booking: ' + error.message);
-    }
-}
-
-// Load active deliveries
-function loadActiveDeliveries() {
-    console.log('Loading active deliveries...');
-    // In a real implementation, this would fetch data from Supabase or localStorage
-    
-    // Update the UI with active deliveries
-    const tableBody = document.getElementById('activeDeliveriesTableBody');
-    if (tableBody) {
-        // Add some mock data for demonstration
-        tableBody.innerHTML = `
-            <tr>
-                <td><input type="checkbox" class="form-check-input"></td>
-                <td><strong>DR-20231025-1234</strong></td>
-                <td>John Doe</td>
-                <td>+63 917 123 4567</td>
-                <td>MCI Alabang</td>
-                <td>Makati City</td>
-                <td>25 km</td>
-                <td>ABC-123</td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-success" style="min-width: 90px;">
-                            <i class="bi bi-check-circle me-1"></i>
-                            On Schedule
-                        </span>
-                        <select class="form-select form-select-sm status-selector" style="min-width: 120px; max-width: 140px;">
-                            <option value="On Schedule" selected>📅 On Schedule</option>
-                            <option value="In Transit">🚛 In Transit</option>
-                            <option value="Delayed">⚠️ Delayed</option>
-                            <option value="Completed">✅ Completed</option>
-                        </select>
-                    </div>
-                </td>
-                <td>Oct 25, 2023</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary e-signature-btn">
-                        <i class="bi bi-pencil"></i> E-Signature
-                    </button>
-                </td>
-            </tr>
-            <tr>
-                <td><input type="checkbox" class="form-check-input"></td>
-                <td><strong>DR-20231025-5678</strong></td>
-                <td>Jane Smith</td>
-                <td>+63 918 765 4321</td>
-                <td>MCI Cebu</td>
-                <td>Cebu City</td>
-                <td>15 km</td>
-                <td>XYZ-789</td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary" style="min-width: 90px;">
-                            <i class="bi bi-truck me-1"></i>
-                            In Transit
-                        </span>
-                        <select class="form-select form-select-sm status-selector" style="min-width: 120px; max-width: 140px;">
-                            <option value="On Schedule">📅 On Schedule</option>
-                            <option value="In Transit" selected>🚛 In Transit</option>
-                            <option value="Delayed">⚠️ Delayed</option>
-                            <option value="Completed">✅ Completed</option>
-                        </select>
-                    </div>
-                </td>
-                <td>Oct 25, 2023</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary e-signature-btn">
-                        <i class="bi bi-pencil"></i> E-Signature
-                    </button>
-                </td>
-            </tr>
-        `;
+        showToast('Failed to save booking', 'error');
     }
 }
 
 // Expose function globally
-window.loadActiveDeliveries = loadActiveDeliveries;
-
-// Load delivery history
-function loadDeliveryHistory() {
-    console.log('Loading delivery history...');
-    // In a real implementation, this would fetch data from Supabase or localStorage
-    
-    // Update the UI with delivery history
-    const tableBody = document.getElementById('deliveryHistoryTableBody');
-    if (tableBody) {
-        // Add some mock data for demonstration
-        tableBody.innerHTML = `
-            <tr>
-                <td>Oct 24, 2023</td>
-                <td><strong>DR-20231024-4321</strong></td>
-                <td>John Doe</td>
-                <td>+63 917 123 4567</td>
-                <td>MCI Alabang</td>
-                <td>Makati City</td>
-                <td>25 km</td>
-                <td>$150.00</td>
-                <td>
-                    <span class="badge bg-success">
-                        <i class="bi bi-check-circle"></i> Completed
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary view-e-pod-btn">
-                        <i class="bi bi-eye"></i> View E-POD
-                    </button>
-                </td>
-            </tr>
-            <tr>
-                <td>Oct 23, 2023</td>
-                <td><strong>DR-20231023-8765</strong></td>
-                <td>Jane Smith</td>
-                <td>+63 918 765 4321</td>
-                <td>MCI Cebu</td>
-                <td>Cebu City</td>
-                <td>15 km</td>
-                <td>$120.00</td>
-                <td>
-                    <span class="badge bg-success">
-                        <i class="bi bi-check-circle"></i> Completed
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary view-e-pod-btn">
-                        <i class="bi bi-eye"></i> View E-POD
-                    </button>
-                </td>
-            </tr>
-        `;
-    }
-}
-
-// Expose function globally
-window.loadDeliveryHistory = loadDeliveryHistory;
-
-// Load EPOD deliveries
-function loadEPodDeliveries() {
-    console.log('Loading EPOD deliveries...');
-    // In a real implementation, this would fetch data from Supabase or localStorage
-    
-    // Update the UI with EPOD deliveries
-    const container = document.getElementById('ePodCardsContainer');
-    if (container) {
-        // Add some mock data for demonstration
-        container.innerHTML = `
-            <div class="col-md-6 col-lg-4">
-                <div class="card e-pod-card">
-                    <div class="card-header bg-light">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="card-title mb-0">DR-20231025-1234</h6>
-                            <span class="badge bg-success">Completed</span>
-                        </div>
-                        <small class="text-muted">John Doe</small>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <p class="mb-1"><i class="bi bi-geo-alt me-2"></i>MCI Alabang → Makati City</p>
-                            <p class="mb-1"><i class="bi bi-truck me-2"></i>ABC-123</p>
-                            <p class="mb-0"><i class="bi bi-calendar me-2"></i>Oct 25, 2023</p>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="badge bg-primary">E-Signed</span>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">25 km</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="d-flex justify-content-between">
-                            <button class="btn btn-sm btn-outline-primary view-e-pod-btn">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary download-e-pod-btn">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="card e-pod-card">
-                    <div class="card-header bg-light">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="card-title mb-0">DR-20231025-5678</h6>
-                            <span class="badge bg-success">Completed</span>
-                        </div>
-                        <small class="text-muted">Jane Smith</small>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <p class="mb-1"><i class="bi bi-geo-alt me-2"></i>MCI Cebu → Cebu City</p>
-                            <p class="mb-1"><i class="bi bi-truck me-2"></i>XYZ-789</p>
-                            <p class="mb-0"><i class="bi bi-calendar me-2"></i>Oct 25, 2023</p>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <span class="badge bg-warning text-dark">Pending</span>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">15 km</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <div class="d-flex justify-content-between">
-                            <button class="btn btn-sm btn-outline-primary view-e-pod-btn">
-                                <i class="bi bi-eye"></i> View
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary download-e-pod-btn">
-                                <i class="bi bi-download"></i> Download
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-}
-
-// Expose function globally
-window.loadEPodDeliveries = loadEPodDeliveries;
-
-// Initialize EPOD
-function initEPod() {
-    console.log('Initializing EPOD...');
-    // In a real implementation, this would initialize EPOD functionality
-}
-
-// Expose function globally
-window.initEPod = initEPod;
+window.saveBooking = saveBooking;

@@ -899,13 +899,15 @@ body {
     }
 
 /* Content Views */
-.content-view {
+.view {
     display: none;
+    border: 2px solid red; /* Debug border */
 }
 
-    .content-view.active {
-        display: block;
-    }
+.view.active {
+    display: block;
+    border: 2px solid green; /* Debug border */
+}
 
 /* Responsive Adjustments */
 @media (max-width: 992px) {
