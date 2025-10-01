@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Configuration Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="bi bi-gear me-2"></i>Supabase Configuration Test</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Testing...</span>
+                                </div>
+                                <p class="mt-2">Checking Supabase configuration...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4" id="instructions" style="display: none;">
+                            <h5>Next Steps:</h5>
+                            <ol>
+                                <li>Follow the instructions in <a href="/SUPABASE_SETUP.md">SUPABASE_SETUP.md</a> to get your actual API key</li>
+                                <li>Update your <code>.env</code> file with the correct values</li>
+                                <li>Refresh this page to test again</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration -->
+    <script>
+        // Set Supabase configuration from environment variables or defaults
+        window.SUPABASE_URL = window.SUPABASE_URL || 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'YOUR_ACTUAL_SUPABASE_ANON_KEY_HERE';
+    </script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    
+    <!-- Application JavaScript Files -->
+    <script src="assets/js/supabase.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const testResults = document.getElementById('testResults');
+            const instructions = document.getElementById('instructions');
+            
+            // Function to add test result to the UI
+            function addTestResult(title, status, details = '') {
+                const resultClass = status === 'PASS' ? 'success' : status === 'FAIL' ? 'danger' : 'warning';
+                const icon = status === 'PASS' ? 'check-circle' : status === 'FAIL' ? 'x-circle' : 'exclamation-circle';
+                
+                const resultHtml = `
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-${icon} text-${resultClass} me-2" style="font-size: 1.5rem;"></i>
+                            <h5 class="mb-0">${title}</h5>
+                            <span class="badge bg-${resultClass} ms-2">${status}</span>
+                        </div>
+                        ${details ? `<div class="mt-2"><small class="text-muted">${details}</small></div>` : ''}
+                    </div>
+                    <hr>
+                `;
+                
+                testResults.innerHTML = testResults.innerHTML.replace(
+                    '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Testing...</span></div><p class="mt-2">Checking Supabase configuration...</p></div>',
+                    ''
+                ) + resultHtml;
+            }
+            
+            try {
+                // Test 1: Check configuration values
+                addTestResult('Check Configuration Values', 'RUNNING');
+                console.log('SUPABASE_URL:', window.SUPABASE_URL);
+                console.log('SUPABASE_ANON_KEY:', window.SUPABASE_ANON_KEY);
+                
+                if (window.SUPABASE_URL === 'https://ntyvrezyhrmflswxefbk.supabase.co') {
+                    if (window.SUPABASE_ANON_KEY === 'YOUR_ACTUAL_SUPABASE_ANON_KEY_HERE' || window.SUPABASE_ANON_KEY === 'REPLACE_WITH_YOUR_ACTUAL_ANON_KEY_FROM_SUPABASE_DASHBOARD') {
+                        addTestResult('Check Configuration Values', 'FAIL', 'You need to update your Supabase anon key in the HTML files (login.html and index.html)');
+                        instructions.style.display = 'block';
+                        return;
+                    } else if (window.SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY' || window.SUPABASE_ANON_KEY === 'your-anon-key-here') {
+                        addTestResult('Check Configuration Values', 'FAIL', 'You need to update your Supabase anon key in the HTML files (login.html and index.html)');
+                        instructions.style.display = 'block';
+                        return;
+                    } else {
+                        addTestResult('Check Configuration Values', 'PASS', 'Configuration values are set');
+                    }
+                } else {
+                    addTestResult('Check Configuration Values', 'FAIL', 'Supabase URL is not correctly configured');
+                    return;
+                }
+                
+                // Test 2: Initialize Supabase client
+                addTestResult('Initialize Supabase Client', 'RUNNING');
+                const supabase = window.initSupabase();
+                if (supabase) {
+                    addTestResult('Initialize Supabase Client', 'PASS', 'Supabase client initialized successfully');
+                } else {
+                    addTestResult('Initialize Supabase Client', 'FAIL', 'Failed to initialize Supabase client. Check console for details.');
+                    instructions.style.display = 'block';
+                    return;
+                }
+                
+                // Test 3: Test basic connection
+                addTestResult('Test Basic Connection', 'RUNNING');
+                try {
+                    // Try a simple query to test the connection
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .limit(1);
+                    
+                    if (error && error.message.includes('Invalid API key')) {
+                        addTestResult('Test Basic Connection', 'FAIL', 'Invalid API key. Please check your Supabase anon key.');
+                        instructions.style.display = 'block';
+                        return;
+                    } else if (error) {
+                        // Other errors might be okay (like table not found)
+                        addTestResult('Test Basic Connection', 'PASS', 'Connection successful (error was: ' + error.message + ')');
+                    } else {
+                        addTestResult('Test Basic Connection', 'PASS', 'Connection successful');
+                    }
+                } catch (error) {
+                    if (error.message.includes('Invalid API key')) {
+                        addTestResult('Test Basic Connection', 'FAIL', 'Invalid API key. Please check your Supabase anon key.');
+                        instructions.style.display = 'block';
+                        return;
+                    } else {
+                        addTestResult('Test Basic Connection', 'FAIL', 'Connection failed: ' + error.message);
+                        return;
+                    }
+                }
+                
+                // Add final success message
+                const finalHtml = `
+                    <div class="text-center mt-4">
+                        <h4 class="text-success"><i class="bi bi-check-circle-fill me-2"></i>Configuration Test Passed!</h4>
+                        <p class="text-muted">Your Supabase configuration is working correctly.</p>
+                        <a href="/login.html" class="btn btn-primary">Go to Login Page</a>
+                    </div>
+                `;
+                
+                testResults.innerHTML += finalHtml;
+                
+            } catch (error) {
+                addTestResult('Overall Test Execution', 'FAIL', `Test execution failed: ${error.message}`);
+                instructions.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
