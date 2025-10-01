@@ -1568,7 +1568,7 @@ function updateCalendarModal() {
     
     const calendarGridModal = document.getElementById('calendarGridModal');
     if (!calendarGridModal) {
-        console.warn('Modal calendar grid element not found - calendar modal feature not implemented');
+        console.error('Modal calendar grid element not found');
         return;
     }
     
@@ -1666,7 +1666,7 @@ window.refreshCalendarData = function() {
         updateCalendar();
     }
     
-    // Also refresh modal calendar (if implemented)
+    // Also refresh modal calendar
     const calendarGridModal = document.getElementById('calendarGridModal');
     console.log('Modal calendar grid element for refresh:', calendarGridModal);
     if (calendarGridModal) {
@@ -1680,8 +1680,8 @@ window.refreshCalendarData = function() {
             calendarGridModal.style.pointerEvents = 'auto';
         }, 200);
     } else {
-        console.log('Modal calendar grid not found - calendar modal feature not implemented');
-        // Don't call updateCalendarModal() as it will just produce an error
+        console.log('Modal calendar grid not found, updating modal calendar directly');
+        updateCalendarModal();
     }
 };
 

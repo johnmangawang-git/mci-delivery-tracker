@@ -66,13 +66,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show selected view
             const viewName = this.dataset.view;
             console.log('Showing view:', viewName);
-            console.log('Available views:', Object.keys(views));
             if (views[viewName]) {
                 // Hide all views first
-                console.log('Hiding all views');
                 Object.values(views).forEach(view => {
                     if (view) {
-                        console.log('Hiding view:', view.id);
                         view.classList.remove('active');
                         // Force reflow
                         view.offsetHeight;
@@ -91,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     const computedStyleAfter = window.getComputedStyle(views[viewName]);
                     console.log('View element computed display after:', computedStyleAfter.display);
                     console.log('View element computed visibility after:', computedStyleAfter.visibility);
-                    console.log('View element class list after:', views[viewName].classList);
                 }, 10);
 
                 // Special handling for analytics view
@@ -106,13 +102,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Special handling for active deliveries view
                 if (viewName === 'active-deliveries') {
                     console.log('Loading active deliveries');
-                    console.log('typeof loadActiveDeliveries:', typeof loadActiveDeliveries);
                     if (typeof loadActiveDeliveries === 'function') {
-                        console.log('Calling loadActiveDeliveries function');
                         loadActiveDeliveries();
-                        console.log('loadActiveDeliveries function completed');
-                    } else {
-                        console.log('loadActiveDeliveries function not available');
                     }
                 }
 

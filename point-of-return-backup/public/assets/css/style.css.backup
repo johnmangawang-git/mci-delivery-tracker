@@ -147,6 +147,154 @@ body {
     margin-bottom: 32px;
 }
 
+/* Modal Dashboard Cards - Ensures they fit in one row */
+#bookingModal .dashboard-cards {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px;
+    margin-bottom: 15px;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: nowrap !important;
+}
+
+/* Override Bootstrap grid behavior for modal dashboard cards */
+#bookingModal .dashboard-cards .card {
+    width: calc(33.333% - 6px) !important;
+    flex-basis: calc(33.333% - 6px) !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    max-width: calc(33.333% - 6px) !important;
+    border-radius: 8px;
+    margin: 0;
+    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.1);
+    min-height: 90px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#bookingModal .card-header {
+    padding: 8px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: none;
+    flex-shrink: 0;
+}
+
+#bookingModal .card-title {
+    font-size: 12px;
+    gap: 4px;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#bookingModal .card-title i {
+    font-size: 12px;
+}
+
+#bookingModal .card-body {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+}
+
+#bookingModal .stat-value {
+    font-size: 18px;
+    margin: 4px 0;
+    line-height: 1.1;
+    text-align: center;
+    font-weight: 700;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#bookingModal .stat-desc {
+    font-size: 10px;
+    gap: 2px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Modal Metrics Grid - Ensures they fit in one row */
+#bookingModal .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+#bookingModal .metric-card {
+    background: #f8fafd;
+    border-radius: 12px;
+    padding: 15px;
+    border-left: 4px solid var(--secondary);
+    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.1);
+    margin: 0;
+}
+
+#bookingModal .metric-title {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 6px;
+}
+
+#bookingModal .metric-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 5px 0;
+}
+
+#bookingModal .metric-change {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+#bookingModal .metric-change.positive {
+    color: var(--success);
+}
+
+#bookingModal .metric-change.negative {
+    color: var(--danger);
+}
+
+/* Modal Calendar - Takes remaining space */
+#bookingModal .calendar-container {
+    margin-bottom: 15px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(44, 62, 80, 0.1);
+    overflow: hidden;
+}
+
+/* Remove the old dashboard cards CSS since we're using metric cards now */
+#bookingModal .dashboard-cards,
+#bookingModal .dashboard-cards .card,
+#bookingModal .card-header,
+#bookingModal .card-title,
+#bookingModal .card-body,
+#bookingModal .stat-value,
+#bookingModal .stat-desc {
+    /* Styles removed as we're using metric cards instead */
+}
+
 .card {
     border: none;
     border-radius: 16px;
@@ -354,6 +502,7 @@ body {
     overflow: hidden;
     transition: var(--transition);
     border: none;
+    max-height: 95vh;
 }
 
 #bookingModal .modal-content:hover {
@@ -364,25 +513,27 @@ body {
 #bookingModal .modal-header {
     background: linear-gradient(135deg, var(--primary) 0%, #1a2530 100%);
     color: white;
-    padding: 24px 30px;
+    padding: 20px 25px;
     border: none;
 }
 
 #bookingModal .modal-title {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
-#bookingModal .modal-body {
-    padding: 30px;
+.booking-modal-body {
+    padding: 25px;
+    max-height: calc(95vh - 140px);
+    overflow-y: auto;
 }
 
 #bookingModal .form-section {
-    margin-bottom: 28px;
-    padding-bottom: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
     border-bottom: 1px solid #e0e6ed;
 }
 
@@ -392,30 +543,42 @@ body {
     padding-bottom: 0;
 }
 
+#bookingModal .form-section.compact-section {
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+}
+
 #bookingModal .section-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--primary);
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 #bookingModal .form-label {
     font-weight: 500;
     color: var(--primary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     display: block;
+    font-size: 14px;
 }
 
 #bookingModal .form-control, .form-select {
     border: 1px solid #d0d7e2;
-    border-radius: 10px;
-    padding: 12px 16px;
-    font-size: 16px;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
     transition: var(--transition);
     box-shadow: none;
+}
+
+#bookingModal .form-control-sm, .form-select-sm {
+    padding: 8px 10px;
+    font-size: 13px;
+    border-radius: 6px;
 }
 
 #bookingModal .form-control:focus, .form-select:focus {
@@ -428,7 +591,7 @@ body {
 }
 
 #bookingModal .input-group {
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
@@ -436,20 +599,22 @@ body {
 #bookingModal .input-group-text {
     background: var(--light-bg);
     border: none;
-    border-radius: 10px 0 0 10px;
-    padding: 0 16px;
+    border-radius: 8px 0 0 8px;
+    padding: 0 12px;
+    font-size: 13px;
 }
 
 #bookingModal .map-pin-btn {
     background: white;
     border: 1px solid #d0d7e2;
-    border-radius: 10px;
-    padding: 10px 16px;
+    border-radius: 8px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-weight: 500;
     transition: var(--transition);
+    font-size: 13px;
 }
 
 #bookingModal .map-pin-btn:hover {
@@ -458,10 +623,16 @@ body {
     border-color: var(--secondary);
 }
 
+#bookingModal .map-pin-btn.btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
 #bookingModal .cost-item {
     display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 12px;
     align-items: center;
 }
 
@@ -473,14 +644,15 @@ body {
     color: var(--danger);
     background: #fff0f0;
     border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: var(--transition);
+    font-size: 12px;
 }
 
 #bookingModal .remove-cost:hover {
@@ -488,20 +660,32 @@ body {
     transform: scale(1.1);
 }
 
+#bookingModal .remove-cost.btn-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+}
+
 #bookingModal .modal-footer {
-    padding: 20px 30px;
+    padding: 15px 25px;
     border-top: none;
     display: flex;
     justify-content: end;
-    gap: 12px;
+    gap: 10px;
 }
 
 #bookingModal .btn {
-    padding: 12px 28px;
-    border-radius: 10px;
+    padding: 10px 24px;
+    border-radius: 8px;
     font-weight: 500;
-    font-size: 16px;
+    font-size: 14px;
     transition: var(--transition);
+}
+
+#bookingModal .btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 6px;
 }
 
 #bookingModal .btn-primary {
@@ -517,9 +701,10 @@ body {
 }
 
 #bookingModal .btn-outline-secondary {
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid #d0d7e2;
     color: var(--primary);
+    font-size: 14px;
 }
 
 #bookingModal .btn-outline-secondary:hover {
@@ -528,16 +713,21 @@ body {
     color: var(--secondary);
 }
 
+#bookingModal .btn-outline-secondary.btn-sm {
+    font-size: 13px;
+    border-radius: 6px;
+}
+
 #bookingModal .distance-box {
     background: #f0f7ff;
     border: 1px dashed var(--secondary);
-    border-radius: 10px;
-    padding: 16px;
+    border-radius: 8px;
+    padding: 12px;
     text-align: center;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--primary);
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 /* Analytics Dashboard Specific Styles */
@@ -888,56 +1078,4 @@ body {
     margin-bottom: 5px;
 }
 
-@keyframes pulseYellow {
-    0% { color: #ffc107; }
-    50% { color: #ff9800; }
-    100% { color: #ffc107; }
-}
-
-.stat-value .coming-soon-tag {
-    display: block;
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-.crossed-out {
-    text-decoration: line-through;
-    opacity: 0.7;
-}
-
-.card {
-    border: none;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: var(--card-shadow);
-    transition: var(--transition);
-    background: white;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(44, 62, 80, 0.15);
-}
-
-.card-header {
-    padding: 20px;
-    border-bottom: none;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-}
-
-.card-header.bg-light {
-    background: #f8f9fa !important;
-}
-
-.card-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.card-body {
-    padding: 20px;
-}
+@

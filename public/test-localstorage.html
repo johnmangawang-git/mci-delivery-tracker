@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LocalStorage Test</title>
+</head>
+<body>
+    <h1>LocalStorage Test</h1>
+    <button onclick="showBookings()">Show Bookings</button>
+    <div id="output"></div>
+    
+    <script>
+        function showBookings() {
+            try {
+                const bookings = JSON.parse(localStorage.getItem('mci-bookings') || '[]');
+                document.getElementById('output').innerHTML = '<pre>' + JSON.stringify(bookings, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<p>Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

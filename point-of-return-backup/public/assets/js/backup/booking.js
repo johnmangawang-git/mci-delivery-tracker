@@ -3,9 +3,6 @@ function initBookingModal() {
     // Ensure customer management is available
     ensureCustomerManagementReady();
     
-    // Ensure warehouse manager is available
-    ensureWarehouseManagerReady();
-    
     const bookingModalElement = document.getElementById('bookingModal');
     if (!bookingModalElement) {
         console.error('Booking modal element not found');
@@ -19,32 +16,14 @@ function initBookingModal() {
     // Origin selection toggle
     const originSelect = document.getElementById('originSelect');
     const customOriginContainer = document.getElementById('customOriginContainer');
-
+    
     if (originSelect && customOriginContainer) {
         originSelect.addEventListener('change', function () {
             if (this.value === '') {
                 customOriginContainer.classList.remove('d-none');
-                // Clear coordinates display when custom location is selected
-                const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
-                if (originCoordinatesDisplay) {
-                    originCoordinatesDisplay.textContent = '';
-                }
             } else {
                 customOriginContainer.classList.add('d-none');
-                // Display warehouse coordinates
-                const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
-                // Ensure warehouse manager is ready before accessing it
-                ensureWarehouseManagerReady();
-                if (originCoordinatesDisplay && window.warehouseManager && window.warehouseManager.warehouseLocations) {
-                    const warehouse = window.warehouseManager.warehouseLocations.find(w => w.id === this.value);
-                    if (warehouse) {
-                        originCoordinatesDisplay.textContent = `(${warehouse.coordinates.lat.toFixed(6)}, ${warehouse.coordinates.lng.toFixed(6)})`;
-                    } else {
-                        originCoordinatesDisplay.textContent = '';
-                    }
-                }
             }
-            updateDistance();
         });
     }
 
@@ -239,66 +218,46 @@ function initBookingModal() {
 function calculateDistance() {
     const originSelect = document.getElementById('originSelect');
     const customOrigin = document.getElementById('customOrigin');
-    const destinationInputs = document.querySelectorAll('.destination-area-input'); // Get all destination inputs
+    const destination = document.getElementById('destination').value;
     const distanceBox = document.getElementById('distanceBox');
 
     // In a real implementation, this would use Google Maps API to calculate distance
     // For demo purposes, we'll use mock data
 
-    // Check if at least one destination is provided
-    let hasDestination = false;
-    destinationInputs.forEach(input => {
-        if (input.value.trim()) {
-            hasDestination = true;
-        }
-    });
-
-    if (!hasDestination) {
-        if (distanceBox) {
-            distanceBox.textContent = '0.0 km';
-        }
+    if (!destination.value) {
+        distanceBox.textContent = '0.0 km';
         return;
     }
 
     let origin = '';
-    if (originSelect && originSelect.value && originSelect.value !== '') {
+    if (originSelect.value && originSelect.value !== '') {
         origin = originSelect.options[originSelect.selectedIndex].text;
-    } else if (customOrigin && customOrigin.value) {
+    } else if (customOrigin.value) {
         origin = customOrigin.value;
     }
 
     if (!origin) {
-        if (distanceBox) {
-            distanceBox.textContent = '0.0 km';
-        }
+        distanceBox.textContent = '0.0 km';
         return;
     }
 
     // Mock distance calculation
-    let totalDistance = 0;
-    destinationInputs.forEach(input => {
-        if (input.value.trim()) {
-            let distance = 0;
-            if (origin.includes('Alabang')) {
-                if (input.value.includes('Makati')) distance = 12.5;
-                else if (input.value.includes('Laguna')) distance = 24.7;
-                else distance = 18.3;
-            } else if (origin.includes('Cebu')) {
-                if (input.value.includes('Cebu')) distance = 8.2;
-                else distance = 14.8;
-            } else if (origin.includes('Davao')) {
-                if (input.value.includes('Davao')) distance = 5.3;
-                else distance = 10.6;
-            } else {
-                distance = Math.floor(Math.random() * 50);
-            }
-            totalDistance += distance;
-        }
-    });
-
-    if (distanceBox) {
-        distanceBox.textContent = `${totalDistance.toFixed(1)} km`;
+    let distance = 0;
+    if (origin.includes('Alabang')) {
+        if (destination.value.includes('Makati')) distance = 12.5;
+        else if (destination.value.includes('Laguna')) distance = 24.7;
+        else distance = 18.3;
+    } else if (origin.includes('Cebu')) {
+        if (destination.value.includes('Cebu')) distance = 8.2;
+        else distance = 14.8;
+    } else if (origin.includes('Davao')) {
+        if (destination.value.includes('Davao')) distance = 5.3;
+        else distance = 10.6;
+    } else {
+        distance = Math.floor(Math.random() * 50);
     }
+
+    distanceBox.textContent = `${distance.toFixed(1)} km`;
 }
 
 // Save booking to Supabase
@@ -309,7 +268,7 @@ async function saveBooking() {
         const customerNumber = document.getElementById('customerNumber').value;
         const originSelect = document.getElementById('originSelect');
         const customOrigin = document.getElementById('customOrigin');
-        const destinationInputs = document.querySelectorAll('.destination-area-input'); // Get all destination inputs
+        const destination = document.getElementById('destination').value;
         const distanceBox = document.getElementById('distanceBox');
 
         // Validate form
@@ -328,26 +287,16 @@ async function saveBooking() {
             return;
         }
 
-        // Get destinations (at least one required)
-        let hasDestination = false;
-        let destinations = [];
-        destinationInputs.forEach(input => {
-            if (input.value.trim()) {
-                hasDestination = true;
-                destinations.push(input.value);
-            }
-        });
-
-        if (!hasDestination) {
-            showError('At least one destination is required');
+        if (!destination) {
+            showError('Destination is required');
             return;
         }
 
         // Get origin
         let origin = '';
-        if (originSelect && originSelect.value && originSelect.value !== '') {
+        if (originSelect.value && originSelect.value !== '') {
             origin = originSelect.options[originSelect.selectedIndex].text;
-        } else if (customOrigin && customOrigin.value) {
+        } else if (customOrigin.value) {
             origin = customOrigin.value;
         }
 
@@ -357,29 +306,21 @@ async function saveBooking() {
         }
 
         // Get distance
-        let distance = 0;
-        if (distanceBox) {
-            distance = parseFloat(distanceBox.textContent.replace(' km', '')) || 0;
-        }
+        const distance = parseFloat(distanceBox.textContent.replace(' km', ''));
 
         // Get additional costs
         const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
         const additionalCosts = [];
 
         costItems.forEach(item => {
-            const descriptionInput = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]');
-            const amountInput = item.querySelector('input[placeholder="Amount"]');
-            
-            if (descriptionInput && amountInput) {
-                const description = descriptionInput.value;
-                const amount = amountInput.value;
+            const description = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]').value;
+            const amount = item.querySelector('input[placeholder="Amount"]').value;
 
-                if (description && amount) {
-                    additionalCosts.push({
-                        description,
-                        amount: parseFloat(amount)
-                    });
-                }
+            if (description && amount) {
+                additionalCosts.push({
+                    description,
+                    amount: parseFloat(amount)
+                });
             }
         });
 
@@ -388,10 +329,10 @@ async function saveBooking() {
         console.log('About to call autoCreateCustomer with:', {
             customerName,
             customerNumber,
-            destinations
+            destination
         });
         
-        await autoCreateCustomer(customerName, customerNumber, destinations.join('; '));
+        await autoCreateCustomer(customerName, customerNumber, destination);
         
         console.log('autoCreateCustomer completed');
 
@@ -401,76 +342,23 @@ async function saveBooking() {
             customer_name: customerName,
             customer_number: customerNumber,
             origin,
-            destinations,
+            destination,
             distance,
             additional_costs: additionalCosts
         });
-
-        // Create delivery object
-        const newDelivery = {
-            id: 'DEL-' + Date.now(),
-            drNumber: drNumber,
-            customerName: customerName,
-            customerNumber: customerNumber,
-            origin: origin,
-            destination: destinations.join('; '),
-            distance: distance + ' km',
-            truckPlateNumber: '', // This will be added if we have truck information
-            status: 'On Schedule',
-            deliveryDate: new Date().toISOString(),
-            additionalCosts: additionalCosts.reduce((total, cost) => total + (cost.amount || 0), 0),
-            timestamp: new Date().toISOString()
-        };
-
-        // Add to active deliveries
-        if (typeof window.activeDeliveries !== 'undefined') {
-            window.activeDeliveries.push(newDelivery);
-            
-            // Save to localStorage
-            if (typeof window.saveToLocalStorage === 'function') {
-                window.saveToLocalStorage();
-            }
-            
-            // Refresh active deliveries display
-            if (typeof window.loadActiveDeliveries === 'function') {
-                window.loadActiveDeliveries();
-            }
-        }
 
         // Mock success
         showToast('Booking confirmed successfully!');
 
         // Reset form and close modal
         resetBookingForm();
-        const bookingModalElement = document.getElementById('bookingModal');
-        const bookingModal = bootstrap.Modal.getInstance(bookingModalElement);
-        if (bookingModal) {
-            bookingModal.hide();
-        }
-        
-        // Ensure modal backdrop is removed and body scrolling is re-enabled
-        setTimeout(() => {
-            const modalBackdrops = document.querySelectorAll('.modal-backdrop');
-            modalBackdrops.forEach(backdrop => {
-                backdrop.remove();
-            });
-            
-            // Remove modal-open class from body if it exists
-            if (document.body.classList.contains('modal-open')) {
-                document.body.classList.remove('modal-open');
-            }
-            
-            // Re-enable body scrolling
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }, 300);
+        const bookingModal = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+        bookingModal.hide();
 
         // Refresh calendar data
-        if (typeof loadBookingsData === 'function' && typeof updateCalendar === 'function') {
-            loadBookingsData().then(() => {
-                updateCalendar();
-            });
-        }
+        loadBookingsData().then(() => {
+            updateCalendar();
+        });
     } catch (error) {
         console.error('Error saving booking:', error);
         showError('Failed to save booking');
@@ -685,20 +573,9 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
 
 // Reset booking form
 function resetBookingForm() {
-    const bookingForm = document.getElementById('bookingForm');
-    if (bookingForm) {
-        bookingForm.reset();
-    }
-    
-    const distanceBox = document.getElementById('distanceBox');
-    if (distanceBox) {
-        distanceBox.textContent = '0.0 km';
-    }
-    
-    const customOriginContainer = document.getElementById('customOriginContainer');
-    if (customOriginContainer) {
-        customOriginContainer.classList.add('d-none');
-    }
+    document.getElementById('bookingForm').reset();
+    document.getElementById('distanceBox').textContent = '0.0 km';
+    document.getElementById('customOriginContainer').classList.add('d-none');
 
     // Remove all additional cost items except the first one
     const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
@@ -710,59 +587,30 @@ function resetBookingForm() {
 
     // Reset the first cost item
     const firstCostItem = document.querySelector('#costItemsContainer .cost-item');
-    if (firstCostItem) {
-        const descriptionInput = firstCostItem.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]');
-        if (descriptionInput) {
-            descriptionInput.value = '';
-        }
-        
-        const amountInput = firstCostItem.querySelector('input[placeholder="Amount"]');
-        if (amountInput) {
-            amountInput.value = '';
-        }
-        
-        const removeCostBtn = firstCostItem.querySelector('.remove-cost');
-        if (removeCostBtn) {
-            removeCostBtn.disabled = true;
-        }
-    }
-    
-    // Ensure any modal backdrops are removed
-    const modalBackdrops = document.querySelectorAll('.modal-backdrop');
-    modalBackdrops.forEach(backdrop => {
-        backdrop.remove();
-    });
-    
-    // Remove modal-open class from body if it exists
-    if (document.body.classList.contains('modal-open')) {
-        document.body.classList.remove('modal-open');
-    }
-    
-    // Re-enable body scrolling
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
+    firstCostItem.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]').value = '';
+    firstCostItem.querySelector('input[placeholder="Amount"]').value = '';
+    firstCostItem.querySelector('.remove-cost').disabled = true;
 }
 
-// Ensure warehouse manager is ready
-function ensureWarehouseManagerReady() {
-    console.log('=== ENSURING WAREHOUSE MANAGER READY ===');
-    
-    // Make sure warehouse manager is globally accessible
-    if (typeof window.warehouseManager === 'undefined' || window.warehouseManager === null) {
-        console.log('Initializing warehouse manager...');
-        // Check if WarehouseMapManager class is available
-        if (typeof window.WarehouseMapManager !== 'undefined') {
-            window.warehouseManager = new window.WarehouseMapManager();
-            console.log('Warehouse manager initialized');
-        } else {
-            console.error('WarehouseMapManager class not available');
-        }
-    } else {
-        console.log('Warehouse manager already initialized');
-    }
-    
-    console.log('Warehouse manager ready check completed');
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Update distance calculation
 function updateDistance() {
@@ -771,10 +619,6 @@ function updateDistance() {
     const destinationInputs = document.querySelectorAll('.destination-area-input');
     const distanceBox = document.getElementById('calculatedDistance');
     const distanceValue = document.getElementById('distanceValue');
-    
-    // Get origin coordinates display element
-    const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
-    const destinationCoordinatesDisplay = document.getElementById('destinationCoordinatesDisplay');
 
     // Get origin
     let origin = '';
@@ -800,22 +644,8 @@ function updateDistance() {
         }
     }
 
-    // Display origin coordinates
-    if (originLat && originLng) {
-        if (originCoordinatesDisplay) {
-            originCoordinatesDisplay.textContent = `(${originLat.toFixed(6)}, ${originLng.toFixed(6)})`;
-        }
-    } else {
-        if (originCoordinatesDisplay) {
-            originCoordinatesDisplay.textContent = '';
-        }
-    }
-
     if ((!origin || destinationInputs.length === 0) && !originLat) {
         distanceValue.textContent = '-- km';
-        if (destinationCoordinatesDisplay) {
-            destinationCoordinatesDisplay.innerHTML = '';
-        }
         return;
     }
 
@@ -823,10 +653,8 @@ function updateDistance() {
     let totalDistance = 0;
     let hasDestination = false;
     
-    // Process each destination and display coordinates
-    let destinationCoordinatesHtml = '';
-    
-    destinationInputs.forEach((input, index) => {
+    // Process each destination
+    destinationInputs.forEach(input => {
         if (input.value.trim()) {
             hasDestination = true;
             
@@ -834,12 +662,6 @@ function updateDistance() {
             if (input.hasAttribute('data-lat') && input.hasAttribute('data-lng')) {
                 const destLat = parseFloat(input.getAttribute('data-lat'));
                 const destLng = parseFloat(input.getAttribute('data-lng'));
-                
-                // Display destination coordinates
-                destinationCoordinatesHtml += `<div class="destination-coordinate-item">
-                    <small class="text-muted">Destination ${index + 1}:</small>
-                    <span class="fw-bold">(${destLat.toFixed(6)}, ${destLng.toFixed(6)})</span>
-                </div>`;
                 
                 // Calculate real distance if we have both origin and destination coordinates
                 if (originLat && originLng && destLat && destLng) {
@@ -864,12 +686,6 @@ function updateDistance() {
                     totalDistance += distance;
                 }
             } else {
-                // Display destination without coordinates
-                destinationCoordinatesHtml += `<div class="destination-coordinate-item">
-                    <small class="text-muted">Destination ${index + 1}:</small>
-                    <span class="fw-bold">Coordinates not available</span>
-                </div>`;
-                
                 // Fallback to mock calculation
                 let distance = 0;
                 if (origin.includes('Alabang')) {
@@ -889,11 +705,6 @@ function updateDistance() {
             }
         }
     });
-
-    // Display destination coordinates
-    if (destinationCoordinatesDisplay) {
-        destinationCoordinatesDisplay.innerHTML = destinationCoordinatesHtml;
-    }
 
     if (hasDestination) {
         distanceValue.textContent = `${totalDistance.toFixed(1)} km`;
@@ -944,9 +755,6 @@ function showMapPinDialog(type, index = 0) {
                                 <div class="mb-3">
                                     <label class="form-label">Search Location</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="bi bi-geo-alt"></i>
-                                        </span>
                                         <input type="text" class="form-control" id="mapSearchInput" placeholder="Search for a place...">
                                         <button class="btn btn-outline-secondary" type="button" id="mapSearchBtn">
                                             <i class="bi bi-search"></i>
@@ -965,6 +773,14 @@ function showMapPinDialog(type, index = 0) {
                                             <span id="selectedLng" class="fw-bold">--</span>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Location Name</label>
+                                    <input type="text" class="form-control" id="locationNameInput" placeholder="Enter location name">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Address</label>
+                                    <textarea class="form-control" id="locationAddressInput" rows="2" placeholder="Enter address"></textarea>
                                 </div>
                                 <div class="d-grid gap-2">
                                     <button class="btn btn-primary" id="confirmLocationBtn" disabled>
@@ -1008,41 +824,11 @@ function showMapPinDialog(type, index = 0) {
     const modal = new bootstrap.Modal(mapModal);
     modal.show();
 
-    // Remove any existing shown.bs.modal event listeners to prevent duplicates
-    // We use a flag to ensure initializeMapModal is only called once per modal show
-    if (mapModal._isInitializing) {
-        console.log('Map modal is already initializing, skipping duplicate initialization');
-        return;
-    }
-    mapModal._isInitializing = true;
-
     // Initialize map after modal is shown
     mapModal.addEventListener('shown.bs.modal', function() {
         initializeMapModal(type, index);
     }, {once: true});
-
-    // Clean up map when modal is hidden
-    mapModal.addEventListener('hidden.bs.modal', function() {
-        // Reset initialization flag
-        mapModal._isInitializing = false;
-        
-        // Remove the map instance if it exists
-        if (currentMapInstance) {
-            currentMapInstance.remove();
-            currentMapInstance = null;
-        }
-        // Remove the map modal from DOM to prevent initialization conflicts
-        if (mapModal.parentNode) {
-            mapModal.parentNode.removeChild(mapModal);
-        }
-    }, {once: true});
 }
-
-// Global variable to store the map instance
-let currentMapInstance = null;
-// Global variables to store the selected marker and coordinates
-let selectedMarker = null;
-let selectedCoordinates = { lat: null, lng: null };
 
 // Initialize the map in the modal
 function initializeMapModal(type, index) {
@@ -1058,34 +844,21 @@ function initializeMapModal(type, index) {
     // Clear loading indicator
     mapContainer.innerHTML = '';
 
-    // Initialize Leaflet map centered on Luzon (focus on major cities in Luzon)
-    // Default view centered on Metro Manila area
-    currentMapInstance = L.map('mapContainer').setView([14.6091, 121.0223], 10);
-    
-    // Set bounds to restrict view to Luzon area
-    const luzonBounds = L.latLngBounds(
-        L.latLng(13.0, 119.0), // Southwest corner
-        L.latLng(18.0, 122.0)  // Northeast corner
-    );
-    
-    // Restrict map view to Luzon bounds
-    currentMapInstance.setMaxBounds(luzonBounds);
-    currentMapInstance.on('drag', function() {
-        currentMapInstance.panInsideBounds(luzonBounds, { animate: false });
-    });
+    // Initialize Leaflet map centered on Philippines
+    const map = L.map('mapContainer').setView([12.8797, 121.7740], 6);
 
     // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
-    }).addTo(currentMapInstance);
+    }).addTo(map);
 
-    // Initialize selected marker and coordinates
-    selectedMarker = null;
-    selectedCoordinates = { lat: null, lng: null };
+    // Add a marker for the selected location (initially null)
+    let selectedMarker = null;
+    let selectedCoordinates = { lat: null, lng: null };
 
     // Add click event to the map
-    currentMapInstance.on('click', function(e) {
+    map.on('click', function(e) {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
         
@@ -1095,18 +868,11 @@ function initializeMapModal(type, index) {
         
         // Remove existing marker if any
         if (selectedMarker) {
-            currentMapInstance.removeLayer(selectedMarker);
+            map.removeLayer(selectedMarker);
         }
         
-        // Add new marker with pin icon
-        const pinIcon = L.divIcon({
-            className: 'custom-pin-icon',
-            html: '<i class="bi bi-geo-alt-fill" style="color: #d63384; font-size: 24px; transform: translate(-50%, -100%);"></i>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24]
-        });
-        
-        selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
+        // Add new marker
+        selectedMarker = L.marker([lat, lng]).addTo(map);
         
         // Update coordinates
         selectedCoordinates = { lat, lng };
@@ -1115,8 +881,58 @@ function initializeMapModal(type, index) {
         document.getElementById('confirmLocationBtn').disabled = false;
     });
 
-    // Set up enhanced search functionality
-    setupMapSearch();
+    // Set up search functionality
+    const searchInput = document.getElementById('mapSearchInput');
+    const searchBtn = document.getElementById('mapSearchBtn');
+    
+    if (searchInput && searchBtn) {
+        searchBtn.addEventListener('click', function() {
+            const query = searchInput.value.trim();
+            if (query) {
+                mockAddressSearch(query).then(results => {
+                    if (results.length > 0) {
+                        const result = results[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lng);
+                        
+                        // Center map on the result
+                        map.setView([lat, lng], 15);
+                        
+                        // Update selected coordinates display
+                        document.getElementById('selectedLat').textContent = lat.toFixed(6);
+                        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+                        
+                        // Remove existing marker if any
+                        if (selectedMarker) {
+                            map.removeLayer(selectedMarker);
+                        }
+                        
+                        // Add new marker
+                        selectedMarker = L.marker([lat, lng]).addTo(map);
+                        
+                        // Update coordinates
+                        selectedCoordinates = { lat, lng };
+                        
+                        // Enable confirm button
+                        document.getElementById('confirmLocationBtn').disabled = false;
+                        
+                        // Pre-fill location name and address if available
+                        if (result.display_name) {
+                            document.getElementById('locationNameInput').value = result.display_name.split(',')[0];
+                        }
+                        document.getElementById('locationAddressInput').value = result.display_name || '';
+                    }
+                });
+            }
+        });
+        
+        // Allow Enter key to trigger search
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+    }
 
     // Set up current location button
     const useCurrentLocationBtn = document.getElementById('useCurrentLocationBtn');
@@ -1129,7 +945,7 @@ function initializeMapModal(type, index) {
                         const lng = position.coords.longitude;
                         
                         // Center map on current location
-                        currentMapInstance.setView([lat, lng], 15);
+                        map.setView([lat, lng], 15);
                         
                         // Update selected coordinates display
                         document.getElementById('selectedLat').textContent = lat.toFixed(6);
@@ -1137,18 +953,11 @@ function initializeMapModal(type, index) {
                         
                         // Remove existing marker if any
                         if (selectedMarker) {
-                            currentMapInstance.removeLayer(selectedMarker);
+                            map.removeLayer(selectedMarker);
                         }
                         
-                        // Add new marker with pin icon
-                        const pinIcon = L.divIcon({
-                            className: 'custom-pin-icon',
-                            html: '<i class="bi bi-geo-alt-fill" style="color: #d63384; font-size: 24px; transform: translate(-50%, -100%);"></i>',
-                            iconSize: [24, 24],
-                            iconAnchor: [12, 24]
-                        });
-                        
-                        selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
+                        // Add new marker
+                        selectedMarker = L.marker([lat, lng]).addTo(map);
                         
                         // Update coordinates
                         selectedCoordinates = { lat, lng };
@@ -1156,8 +965,8 @@ function initializeMapModal(type, index) {
                         // Enable confirm button
                         document.getElementById('confirmLocationBtn').disabled = false;
                         
-                        // Update search input
-                        document.getElementById('mapSearchInput').value = 'Current Location';
+                        // Pre-fill location name
+                        document.getElementById('locationNameInput').value = 'Current Location';
                     },
                     function(error) {
                         console.error('Error getting current location:', error);
@@ -1176,7 +985,8 @@ function initializeMapModal(type, index) {
         confirmBtn.addEventListener('click', function() {
             if (selectedCoordinates.lat && selectedCoordinates.lng) {
                 // Get location details
-                const locationAddress = document.getElementById('mapSearchInput').value || 
+                const locationName = document.getElementById('locationNameInput').value || 'Selected Location';
+                const locationAddress = document.getElementById('locationAddressInput').value || 
                     `${selectedCoordinates.lat.toFixed(6)}, ${selectedCoordinates.lng.toFixed(6)}`;
                 
                 // Update the appropriate input field
@@ -1197,12 +1007,6 @@ function initializeMapModal(type, index) {
                         const originSelect = document.getElementById('originSelect');
                         if (originSelect) {
                             originSelect.value = '';
-                        }
-                        
-                        // Update coordinates display
-                        const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
-                        if (originCoordinatesDisplay) {
-                            originCoordinatesDisplay.textContent = `(${selectedCoordinates.lat.toFixed(6)}, ${selectedCoordinates.lng.toFixed(6)})`;
                         }
                     }
                 } else {
@@ -1226,219 +1030,51 @@ function initializeMapModal(type, index) {
                         modal.hide();
                     }
                 }
-            } else {
-                alert('Please select a location on the map or search for a location first.');
             }
         });
     }
 }
 
-// Real address search function using OpenStreetMap Nominatim API
-function searchAddress(query) {
-    return new Promise((resolve, reject) => {
-        // Encode the query for URL
-        const encodedQuery = encodeURIComponent(query);
-        
-        // Nominatim API endpoint with focus on Philippines (Luzon specifically)
-        // We'll use viewbox to focus on Luzon area (approximately)
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=PH&viewbox=119.0,13.0,122.0,18.0&bounded=1&limit=10`;
-        
-        // Make the API request
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Process the results
-                const results = data.map(item => ({
-                    lat: item.lat,
-                    lng: item.lon,
-                    display_name: item.display_name,
-                    type: item.type,
-                    class: item.class
-                }));
-                
-                resolve(results);
-            })
-            .catch(error => {
-                console.error('Error searching address:', error);
-                reject(error);
-            });
-    });
-}
-
-// Enhanced search with autocomplete functionality
-function setupMapSearch() {
-    const searchInput = document.getElementById('mapSearchInput');
-    const searchBtn = document.getElementById('mapSearchBtn');
-    const searchResultsDropdown = document.getElementById('searchResultsDropdown');
-    
-    if (!searchInput || !searchBtn) return;
-    
-    // Create search results dropdown if it doesn't exist
-    if (!searchResultsDropdown) {
-        const dropdown = document.createElement('div');
-        dropdown.id = 'searchResultsDropdown';
-        dropdown.className = 'dropdown-menu';
-        dropdown.style.cssText = 'position: absolute; z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%; display: none;';
-        searchInput.parentNode.appendChild(dropdown);
-    }
-    
-    let searchTimeout;
-    
-    // Handle search input with debouncing
-    searchInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const query = searchInput.value.trim();
-        
-        // Hide dropdown if query is too short
-        if (query.length < 3) {
-            document.getElementById('searchResultsDropdown').style.display = 'none';
-            return;
-        }
-        
-        searchTimeout = setTimeout(() => {
-            // Show loading indicator
-            document.getElementById('searchResultsDropdown').innerHTML = '<div class="dropdown-item disabled">Searching...</div>';
-            document.getElementById('searchResultsDropdown').style.display = 'block';
-            
-            searchAddress(query)
-                .then(results => {
-                    const dropdown = document.getElementById('searchResultsDropdown');
-                    if (results.length > 0) {
-                        // Clear previous results
-                        dropdown.innerHTML = '';
-                        
-                        // Add results to dropdown with pin icons
-                        results.forEach((result, index) => {
-                            const item = document.createElement('a');
-                            item.className = 'dropdown-item';
-                            item.href = '#';
-                            item.innerHTML = `<i class="bi bi-geo-alt me-2"></i>${result.display_name}`;
-                            item.addEventListener('click', function(e) {
-                                e.preventDefault();
-                                selectSearchResult(result);
-                            });
-                            dropdown.appendChild(item);
-                        });
-                        
-                        // Show dropdown
-                        dropdown.style.display = 'block';
-                    } else {
-                        dropdown.innerHTML = '<div class="dropdown-item disabled">No results found</div>';
-                        setTimeout(() => {
-                            dropdown.style.display = 'none';
-                        }, 3000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    const dropdown = document.getElementById('searchResultsDropdown');
-                    dropdown.innerHTML = '<div class="dropdown-item disabled text-danger">Error searching. Please try again.</div>';
-                    setTimeout(() => {
-                        dropdown.style.display = 'none';
-                    }, 3000);
-                });
-        }, 300); // 300ms debounce
-    });
-    
-    // Hide dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        // Ensure searchInput and searchResultsDropdown exist before checking contains
-        const searchResultsDropdown = document.getElementById('searchResultsDropdown');
-        if (searchInput && searchResultsDropdown && 
-            !searchInput.contains(e.target) && 
-            !searchResultsDropdown.contains(e.target)) {
-            searchResultsDropdown.style.display = 'none';
-        }
-    });
-    
-    // Handle search button click
-    searchBtn.addEventListener('click', function() {
-        const query = searchInput.value.trim();
-        if (query) {
-            // Show loading indicator
-            const originalBtnText = searchBtn.innerHTML;
-            searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-            searchBtn.disabled = true;
-            
-            searchAddress(query)
-                .then(results => {
-                    if (results.length > 0) {
-                        // Select the first result
-                        selectSearchResult(results[0]);
-                    } else {
-                        alert('No results found for "' + query + '". Please try a different search term.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    alert('Error searching for address. Please try again.');
-                })
-                .finally(() => {
-                    // Restore button state
-                    searchBtn.innerHTML = originalBtnText;
-                    searchBtn.disabled = false;
-                });
-        } else {
-            alert('Please enter a location to search for.');
-        }
-    });
-    
-    // Allow Enter key to trigger search
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            searchBtn.click();
-        }
-    });
-}
-
-// Function to handle selecting a search result
-function selectSearchResult(result) {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lng);
-    
-    // Center map on the result
-    if (currentMapInstance) {
-        currentMapInstance.setView([lat, lng], 15);
-        
-        // Update selected coordinates display
-        document.getElementById('selectedLat').textContent = lat.toFixed(6);
-        document.getElementById('selectedLng').textContent = lng.toFixed(6);
-        
-        // Remove existing marker if any
-        if (selectedMarker) {
-            currentMapInstance.removeLayer(selectedMarker);
-        }
-        
-        // Add new marker with pin icon
-        const pinIcon = L.divIcon({
-            className: 'custom-pin-icon',
-            html: '<i class="bi bi-geo-alt-fill" style="color: #d63384; font-size: 24px; transform: translate(-50%, -100%);"></i>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24]
-        });
-        
-        selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
-        
-        // Update coordinates
-        selectedCoordinates = { lat, lng };
-        
-        // Enable confirm button
-        document.getElementById('confirmLocationBtn').disabled = false;
-        
-        // Hide dropdown
-        document.getElementById('searchResultsDropdown').style.display = 'none';
-        
-        // Update search input
-        document.getElementById('mapSearchInput').value = result.display_name;
-    }
-}
-
-// Backward compatibility function
+// Mock address search function (in a real implementation, this would use a geocoding service)
 function mockAddressSearch(query) {
-    return searchAddress(query);
+    return new Promise((resolve) => {
+        // Simulate API delay
+        setTimeout(() => {
+            // Mock results based on query
+            const mockResults = [
+                {
+                    lat: '14.5995',
+                    lng: '120.9842',
+                    display_name: 'Manila, Metro Manila, Philippines'
+                },
+                {
+                    lat: '14.5547',
+                    lng: '121.0244',
+                    display_name: 'Makati, Metro Manila, Philippines'
+                },
+                {
+                    lat: '14.4441',
+                    lng: '121.0467',
+                    display_name: 'Alabang, Muntinlupa, Metro Manila, Philippines'
+                },
+                {
+                    lat: '10.3157',
+                    lng: '123.8854',
+                    display_name: 'Cebu City, Cebu, Philippines'
+                },
+                {
+                    lat: '12.8797',
+                    lng: '121.7740',
+                    display_name: 'Philippines'
+                }
+            ];
+            
+            // Filter results based on query
+            const filteredResults = mockResults.filter(result => 
+                result.display_name.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            resolve(filteredResults);
+        }, 500);
+    });
 }
