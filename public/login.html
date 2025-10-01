@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - MCI App</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- Bootstrap 5.3.0 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts - Roboto for Material Design -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <!-- Custom styles -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Roboto', sans-serif;
+        }
+        .login-card {
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: none;
+            overflow: hidden;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .login-body {
+            padding: 2rem;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        .logo-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .error-message {
+            display: none;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .signup-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card login-card">
+                    <div class="login-header">
+                        <div class="logo-icon">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                        <h2>MCI Delivery Tracker</h2>
+                        <p class="mb-0">Sign in to your account</p>
+                    </div>
+                    <div class="card-body login-body">
+                        <div id="errorMessage" class="error-message">
+                            <!-- Error messages will be displayed here -->
+                        </div>
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-login btn-primary">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                                </button>
+                            </div>
+                        </form>
+                        <div class="signup-link">
+                            <p class="mb-0">Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Signup Form (hidden by default) -->
+                <div id="signupCard" class="card login-card mt-3" style="display: none;">
+                    <div class="login-header">
+                        <div class="logo-icon">
+                            <i class="bi bi-person-plus"></i>
+                        </div>
+                        <h2>Create Account</h2>
+                        <p class="mb-0">Sign up for MCI Delivery Tracker</p>
+                    </div>
+                    <div class="card-body login-body">
+                        <div id="signupErrorMessage" class="error-message">
+                            <!-- Signup error messages will be displayed here -->
+                        </div>
+                        <form id="signupForm">
+                            <div class="mb-3">
+                                <label for="signupEmail" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="signupEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fullName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="fullName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="signupPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="signupPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-login btn-primary">
+                                    <i class="bi bi-person-plus me-2"></i>Create Account
+                                </button>
+                            </div>
+                        </form>
+                        <div class="signup-link">
+                            <p class="mb-0">Already have an account? <a href="#" id="showLogin">Sign in</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Supabase Configuration -->
+    <script>
+        // Set Supabase configuration from environment variables or defaults
+        window.SUPABASE_URL = window.SUPABASE_URL || 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'your-anon-key-here'; // Replace with your actual anon key
+    </script>
+    
+    <!-- Application JavaScript Files -->
+    <script src="assets/js/supabase.js"></script>
+    
+    <script>
+        // Initialize Supabase when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Supabase client
+            window.initSupabase();
+            
+            // Get form elements
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const showSignupLink = document.getElementById('showSignup');
+            const showLoginLink = document.getElementById('showLogin');
+            const loginCard = document.querySelector('.login-card');
+            const signupCard = document.getElementById('signupCard');
+            const errorMessage = document.getElementById('errorMessage');
+            const signupErrorMessage = document.getElementById('signupErrorMessage');
+            
+            // Toggle between login and signup forms
+            showSignupLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelector('.login-card').style.display = 'none';
+                signupCard.style.display = 'block';
+                hideErrorMessage();
+            });
+            
+            showLoginLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                signupCard.style.display = 'none';
+                document.querySelector('.login-card').style.display = 'block';
+                hideSignupErrorMessage();
+            });
+            
+            // Handle login form submission
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                hideErrorMessage();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                try {
+                    // Use Supabase login function
+                    const user = await window.login(email, password);
+                    console.log('Login successful:', user);
+                    
+                    // Redirect to main application
+                    window.location.href = '/index.html';
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showErrorMessage(error.message || 'Invalid email or password');
+                }
+            });
+            
+            // Handle signup form submission
+            signupForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                hideSignupErrorMessage();
+                
+                const email = document.getElementById('signupEmail').value;
+                const fullName = document.getElementById('fullName').value;
+                const password = document.getElementById('signupPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                // Validate password confirmation
+                if (password !== confirmPassword) {
+                    showSignupErrorMessage('Passwords do not match');
+                    return;
+                }
+                
+                try {
+                    // Use Supabase signup function
+                    const result = await window.signup(email, password, fullName);
+                    console.log('Signup successful:', result);
+                    
+                    // Show success message and redirect to login
+                    alert('Account created successfully! Please sign in.');
+                    signupCard.style.display = 'none';
+                    document.querySelector('.login-card').style.display = 'block';
+                    hideSignupErrorMessage();
+                    
+                    // Clear signup form
+                    signupForm.reset();
+                } catch (error) {
+                    console.error('Signup error:', error);
+                    showSignupErrorMessage(error.message || 'Failed to create account');
+                }
+            });
+            
+            // Helper functions for error messages
+            function showErrorMessage(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            function hideErrorMessage() {
+                errorMessage.style.display = 'none';
+            }
+            
+            function showSignupErrorMessage(message) {
+                signupErrorMessage.textContent = message;
+                signupErrorMessage.style.display = 'block';
+            }
+            
+            function hideSignupErrorMessage() {
+                signupErrorMessage.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

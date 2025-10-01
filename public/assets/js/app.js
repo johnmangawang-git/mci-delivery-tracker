@@ -49,8 +49,11 @@ console.log('app.js loaded');
                 deliveryHistory.unshift(completedDelivery);
                 activeDeliveries.splice(deliveryIndex, 1);
                 
-                // Save to localStorage
-                saveToLocalStorage();
+                // Save to database
+                saveToDatabase();
+            } else {
+                // Save to database
+                saveToDatabase();
             }
             
             loadActiveDeliveries();
@@ -88,18 +91,122 @@ console.log('app.js loaded');
         alert(`E-POD functionality for ${drNumber} would be implemented here`);
     }
 
-    // Save data to localStorage
+    // Save data to database
+    async function saveToDatabase() {
+        try {
+            // Save active deliveries
+            for (const delivery of activeDeliveries) {
+                await window.saveDelivery(delivery);
+            }
+            
+            // Save delivery history
+            for (const delivery of deliveryHistory) {
+                await window.saveDelivery(delivery);
+            }
+            
+            console.log('Data saved to database');
+        } catch (error) {
+            console.error('Error saving to database:', error);
+            // Fallback to localStorage
+            saveToLocalStorage();
+        }
+    }
+
+    // Save data to localStorage (fallback)
     function saveToLocalStorage() {
+        // Use dataService to save deliveries if available
+        if (typeof window.dataService !== 'undefined') {
+            // Save each active delivery
+            activeDeliveries.forEach(delivery => {
+                window.dataService.saveDelivery(delivery).catch(error => {
+                    console.error('Error saving delivery to dataService:', error);
+                    // Fallback to localStorage
+                    fallbackSaveToLocalStorage();
+                });
+            });
+            
+            // Save each delivery history item
+            deliveryHistory.forEach(delivery => {
+                window.dataService.saveDelivery(delivery).catch(error => {
+                    console.error('Error saving delivery history to dataService:', error);
+                    // Fallback to localStorage
+                    fallbackSaveToLocalStorage();
+                });
+            });
+            
+            console.log('Data saved using dataService');
+        } else {
+            // Fallback to localStorage
+            fallbackSaveToLocalStorage();
+        }
+    }
+
+    function fallbackSaveToLocalStorage() {
         try {
             localStorage.setItem('mci-activeDeliveries', JSON.stringify(activeDeliveries));
             localStorage.setItem('mci-deliveryHistory', JSON.stringify(deliveryHistory));
-            console.log('Data saved to localStorage');
+            console.log('Data saved to localStorage (fallback)');
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
     }
 
-    // Load data from localStorage
+    // Load data from database
+    async function loadFromDatabase() {
+        try {
+            // Use dataService to load deliveries if available
+            if (typeof window.dataService !== 'undefined') {
+                const deliveries = await window.dataService.getDeliveries();
+                activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
+                deliveryHistory = deliveries.filter(d => d.status === 'Completed');
+                
+                console.log('Active deliveries loaded from dataService:', activeDeliveries.length);
+                console.log('Delivery history loaded from dataService:', deliveryHistory.length);
+                
+                // Update global references
+                window.activeDeliveries = activeDeliveries;
+                window.deliveryHistory = deliveryHistory;
+                
+                return true;
+            } else {
+                // Fallback to current implementation
+                return await fallbackLoadFromDatabase();
+            }
+        } catch (error) {
+            console.error('Error loading from dataService:', error);
+            // Fallback to current implementation
+            return await fallbackLoadFromDatabase();
+        }
+    }
+
+    // Fallback implementation for loading from database
+    async function fallbackLoadFromDatabase() {
+        try {
+            // Load active deliveries
+            const getDeliveries = typeof window.getDeliveries === 'function' ? window.getDeliveries : null;
+            if (getDeliveries) {
+                const deliveries = await getDeliveries();
+                activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
+                deliveryHistory = deliveries.filter(d => d.status === 'Completed');
+                
+                console.log('Active deliveries loaded from database:', activeDeliveries.length);
+                console.log('Delivery history loaded from database:', deliveryHistory.length);
+                
+                // Update global references
+                window.activeDeliveries = activeDeliveries;
+                window.deliveryHistory = deliveryHistory;
+                
+                return true;
+            } else {
+                return false;
+            }
+        } catch (error) {
+            console.error('Error loading from database:', error);
+            return false;
+        }
+    }
+
+    // Load data from localStorage (fallback)
     function loadFromLocalStorage() {
         try {
             const savedActive = localStorage.getItem('mci-activeDeliveries');
@@ -289,12 +396,27 @@ console.log('app.js loaded');
 
     function loadActiveDeliveries() {
         console.log('loadActiveDeliveries called');
-        console.log('Current activeDeliveries:', activeDeliveries);
-        console.log('Window activeDeliveries:', window.activeDeliveries);
         
-        // Make sure we're using the correct activeDeliveries array
-        const deliveriesToUse = window.activeDeliveries;
-        console.log('Using deliveries array:', deliveriesToUse);
+        // Use dataService to fetch deliveries
+        if (typeof window.dataService !== 'undefined') {
+            window.dataService.getDeliveries().then(deliveries => {
+                // Update the global activeDeliveries array
+                window.activeDeliveries = deliveries;
+                console.log('Loaded deliveries from dataService:', deliveries);
+                renderActiveDeliveries(deliveries);
+            }).catch(error => {
+                console.error('Error loading deliveries from dataService:', error);
+                // Fallback to current implementation
+                renderActiveDeliveries(window.activeDeliveries);
+            });
+        } else {
+            console.log('dataService not available, using current activeDeliveries:', window.activeDeliveries);
+            renderActiveDeliveries(window.activeDeliveries);
+        }
+    }
+
+    function renderActiveDeliveries(deliveriesToUse) {
+        console.log('Rendering deliveries:', deliveriesToUse);
         
         const tableBody = document.getElementById('activeDeliveriesTableBody');
         if (!tableBody) {
@@ -625,13 +747,17 @@ console.log('app.js loaded');
         }
     }
 
-    function initDeliveryManagement() {
-        // Load data from localStorage
-        loadFromLocalStorage();
+    async function initDeliveryManagement() {
+        // Load data from database or fallback to localStorage
+        const loadedFromDatabase = await loadFromDatabase();
+        if (!loadedFromDatabase) {
+            console.log('Failed to load from database. Loading from localStorage.');
+            loadFromLocalStorage();
+        }
 
         // If no data, populate with mock data
         if (activeDeliveries.length === 0 && deliveryHistory.length === 0) {
-            console.log('No data found in localStorage. Populating with mock data.');
+            console.log('No data found. Populating with mock data.');
             activeDeliveries = [
                 {
                     id: 'DEL-001',
@@ -684,7 +810,7 @@ console.log('app.js loaded');
                     completedDate: 'Oct 22, 2023'
                 }
             ];
-            saveToLocalStorage(); // Save the mock data
+            saveToDatabase(); // Save the mock data
         }
 
         initDRSearch();
@@ -730,7 +856,7 @@ console.log('app.js loaded');
     }
 
     // New function to add test data for E-signature testing
-    function addTestData() {
+    async function addTestData() {
         // Add some additional fake deliveries for testing
         const testData = [
             {
@@ -762,8 +888,10 @@ console.log('app.js loaded');
         // Add test data to activeDeliveries
         activeDeliveries.push(...testData);
         
-        // Save to localStorage
-        saveToLocalStorage();
+        // Save to database
+        for (const delivery of testData) {
+            await window.saveDelivery(delivery);
+        }
         
         // Reload the view
         loadActiveDeliveries();

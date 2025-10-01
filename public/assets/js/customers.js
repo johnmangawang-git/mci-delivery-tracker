@@ -14,6 +14,9 @@ function loadCustomers() {
         if (savedCustomers) {
             window.customers = JSON.parse(savedCustomers);
             console.log('Loaded customers from localStorage:', window.customers.length);
+            
+            // Merge duplicate customers based on name and phone number
+            mergeDuplicateCustomers();
         } else {
             console.log('No saved customers found in localStorage');
             // Initialize with mock data if no data exists
@@ -87,6 +90,101 @@ function loadCustomers() {
         ];
         displayCustomers();
     }
+}
+
+// Function to merge duplicate customers based on name and phone number
+function mergeDuplicateCustomers() {
+    console.log('=== MERGE DUPLICATE CUSTOMERS FUNCTION CALLED ===');
+    console.log('Customers before merge:', window.customers.length);
+    
+    // Create a map to group customers by name and phone
+    const customerGroups = new Map();
+    
+    // Group customers by name and phone number
+    window.customers.forEach(customer => {
+        const key = `${customer.contactPerson.toLowerCase()}|${customer.phone}`;
+        if (!customerGroups.has(key)) {
+            customerGroups.set(key, []);
+        }
+        customerGroups.get(key).push(customer);
+    });
+    
+    // Process groups to merge duplicates
+    const mergedCustomers = [];
+    let mergeCount = 0;
+    
+    customerGroups.forEach((group, key) => {
+        if (group.length === 1) {
+            // No duplicates, just add the customer
+            mergedCustomers.push(group[0]);
+        } else {
+            // Merge duplicates
+            console.log(`Merging ${group.length} duplicate customers for: ${key}`);
+            mergeCount += group.length - 1;
+            
+            // Sort by createdAt to get the most recent one as the primary
+            group.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // Use the most recent customer as the base
+            const primaryCustomer = { ...group[0] };
+            
+            // Merge data from all duplicates
+            let totalBookings = 0;
+            let latestDeliveryDate = null;
+            
+            group.forEach(customer => {
+                totalBookings += customer.bookingsCount || 0;
+                
+                // Get the latest delivery date
+                if (customer.lastDelivery) {
+                    const customerDate = new Date(customer.lastDelivery);
+                    if (!latestDeliveryDate || customerDate > latestDeliveryDate) {
+                        latestDeliveryDate = customerDate;
+                    }
+                }
+                
+                // Merge notes
+                if (customer.notes && !primaryCustomer.notes.includes(customer.notes)) {
+                    primaryCustomer.notes = primaryCustomer.notes ? 
+                        `${primaryCustomer.notes}; ${customer.notes}` : 
+                        customer.notes;
+                }
+                
+                // Keep the most complete address if available
+                if (customer.address && customer.address.length > (primaryCustomer.address?.length || 0)) {
+                    primaryCustomer.address = customer.address;
+                }
+                
+                // Keep the most complete email if available
+                if (customer.email && customer.email.length > (primaryCustomer.email?.length || 0)) {
+                    primaryCustomer.email = customer.email;
+                }
+            });
+            
+            // Update the primary customer with merged data
+            primaryCustomer.bookingsCount = totalBookings;
+            if (latestDeliveryDate) {
+                primaryCustomer.lastDelivery = latestDeliveryDate.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            }
+            
+            mergedCustomers.push(primaryCustomer);
+        }
+    });
+    
+    // Update the global customers array
+    window.customers = mergedCustomers;
+    
+    // Save to localStorage
+    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    
+    console.log(`Merged ${mergeCount} duplicate customers`);
+    console.log('Customers after merge:', window.customers.length);
+    
+    return mergeCount;
 }
 
 // Display customers in the UI
@@ -405,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.editCustomer = editCustomer;
     window.saveEditedCustomer = saveEditedCustomer;
     window.deleteCustomer = deleteCustomer;
+    window.mergeDuplicateCustomers = mergeDuplicateCustomers;
     
     // Add event listeners for search and filter
     const searchInput = document.getElementById('customerSearchInput');

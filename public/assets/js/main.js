@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize customers data
     loadCustomers();
 
+    // Initialize Supabase authentication
+    initSupabaseAuth();
+
     // Initialize E-POD functionality (for initial load if E-POD view is active)
     if (document.getElementById('ePodView') && views['e-pod'].classList.contains('active')) {
         initEPod();
@@ -173,7 +176,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function () {
-            logout();
+            // Use Supabase logout if available
+            if (typeof window.logout === 'function') {
+                window.logout().then(() => {
+                    // Redirect to login page or refresh the page
+                    window.location.reload();
+                }).catch(error => {
+                    console.error('Logout error:', error);
+                    // Still redirect to login page or refresh the page
+                    window.location.reload();
+                });
+            } else {
+                // Fallback to current implementation
+                logout();
+            }
         });
     }
 });
@@ -757,8 +773,24 @@ function updateDeliveryStatus(drNumber, newStatus) {
 }
 
 function loadEPodDeliveries() {
-    // In a real app, this would fetch data from an API
-    const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+    // Use dataService to fetch E-POD records if available
+    if (typeof window.dataService !== 'undefined') {
+        window.dataService.getEPodRecords().then(records => {
+            renderEPodDeliveries(records);
+        }).catch(error => {
+            console.error('Error loading E-POD records from dataService:', error);
+            // Fallback to localStorage
+            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+            renderEPodDeliveries(ePodRecords);
+        });
+    } else {
+        // Fallback to localStorage
+        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+        renderEPodDeliveries(ePodRecords);
+    }
+}
+
+function renderEPodDeliveries(ePodRecords) {
     const container = document.getElementById('ePodCardsContainer');
     const paginationContainer = document.getElementById('ePodPagination');
     
@@ -1237,7 +1269,7 @@ function initAuth() {
 // Note: customers array is declared in HTML file
 
 // Load customers data
-function loadCustomers() {
+async function loadCustomers() {
     console.log('Loading customers...');
     
     // Use the existing customers array from HTML
@@ -1245,15 +1277,28 @@ function loadCustomers() {
         window.customers = [];
     }
     
-    // Load from localStorage or use existing data
-    const savedCustomers = localStorage.getItem('mci-customers');
-    if (savedCustomers) {
-        const parsedCustomers = JSON.parse(savedCustomers);
-        // Update the global customers array
-        window.customers.length = 0; // Clear existing
-        window.customers.push(...parsedCustomers);
-    } else if (window.customers.length === 0) {
-        // Create some mock customers for demo if none exist
+    // Use dataService to load customers if available
+    if (typeof window.dataService !== 'undefined') {
+        try {
+            const customers = await window.dataService.getCustomers();
+            // Update the global customers array
+            window.customers.length = 0; // Clear existing
+            window.customers.push(...customers);
+            
+            // Merge duplicate customers based on name and phone number
+            await mergeDuplicateCustomers();
+        } catch (error) {
+            console.error('Error loading customers from dataService:', error);
+            // Fallback to current implementation
+            await fallbackLoadCustomers();
+        }
+    } else {
+        // Fallback to current implementation
+        await fallbackLoadCustomers();
+    }
+    
+    // If no customers, create some mock customers for demo
+    if (window.customers.length === 0) {
         const mockCustomers = [
             {
                 id: 'CUST-001',
@@ -1283,11 +1328,24 @@ function loadCustomers() {
             }
         ];
         window.customers.push(...mockCustomers);
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        
+        // Save to dataService or localStorage
+        if (typeof window.dataService !== 'undefined') {
+            for (const customer of mockCustomers) {
+                await window.dataService.saveCustomer(customer);
+            }
+        } else if (typeof window.saveCustomer === 'function') {
+            for (const customer of mockCustomers) {
+                await window.saveCustomer(customer);
+            }
+        } else {
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
     }
     
     // Make loadCustomers globally accessible
     window.loadCustomers = loadCustomers;
+    window.mergeDuplicateCustomers = mergeDuplicateCustomers;
     
     // Call the existing displayCustomers function if it exists
     if (typeof displayCustomers === 'function') {
@@ -1295,6 +1353,155 @@ function loadCustomers() {
     } else if (typeof window.displayCustomers === 'function') {
         window.displayCustomers();
     }
+}
+
+// Fallback implementation for loading customers
+async function fallbackLoadCustomers() {
+    // Load from database or localStorage
+    if (typeof window.getCustomers === 'function') {
+        try {
+            const customers = await window.getCustomers();
+            // Update the global customers array
+            window.customers.length = 0; // Clear existing
+            window.customers.push(...customers);
+            
+            // Merge duplicate customers based on name and phone number
+            await mergeDuplicateCustomers();
+        } catch (error) {
+            console.error('Error loading customers:', error);
+            // Fallback to localStorage
+            const savedCustomers = localStorage.getItem('mci-customers');
+            if (savedCustomers) {
+                const parsedCustomers = JSON.parse(savedCustomers);
+                // Update the global customers array
+                window.customers.length = 0; // Clear existing
+                window.customers.push(...parsedCustomers);
+                
+                // Merge duplicate customers based on name and phone number
+                await mergeDuplicateCustomers();
+            }
+        }
+    } else {
+        // Fallback to localStorage
+        const savedCustomers = localStorage.getItem('mci-customers');
+        if (savedCustomers) {
+            const parsedCustomers = JSON.parse(savedCustomers);
+            // Update the global customers array
+            window.customers.length = 0; // Clear existing
+            window.customers.push(...parsedCustomers);
+            
+            // Merge duplicate customers based on name and phone number
+            await mergeDuplicateCustomers();
+        }
+    }
+}
+
+// Function to merge duplicate customers based on name and phone number
+async function mergeDuplicateCustomers() {
+    console.log('=== MERGE DUPLICATE CUSTOMERS FUNCTION CALLED ===');
+    console.log('Customers before merge:', window.customers.length);
+    
+    // Create a map to group customers by name and phone
+    const customerGroups = new Map();
+    
+    // Group customers by name and phone number
+    window.customers.forEach(customer => {
+        const key = `${customer.contactPerson.toLowerCase()}|${customer.phone}`;
+        if (!customerGroups.has(key)) {
+            customerGroups.set(key, []);
+        }
+        customerGroups.get(key).push(customer);
+    });
+    
+    // Process groups to merge duplicates
+    const mergedCustomers = [];
+    let mergeCount = 0;
+    
+    customerGroups.forEach((group, key) => {
+        if (group.length === 1) {
+            // No duplicates, just add the customer
+            mergedCustomers.push(group[0]);
+        } else {
+            // Merge duplicates
+            console.log(`Merging ${group.length} duplicate customers for: ${key}`);
+            mergeCount += group.length - 1;
+            
+            // Sort by createdAt to get the most recent one as the primary
+            group.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // Use the most recent customer as the base
+            const primaryCustomer = { ...group[0] };
+            
+            // Merge data from all duplicates
+            let totalBookings = 0;
+            let latestDeliveryDate = null;
+            
+            group.forEach(customer => {
+                totalBookings += customer.bookingsCount || 0;
+                
+                // Get the latest delivery date
+                if (customer.lastDelivery) {
+                    const customerDate = new Date(customer.lastDelivery);
+                    if (!latestDeliveryDate || customerDate > latestDeliveryDate) {
+                        latestDeliveryDate = customerDate;
+                    }
+                }
+                
+                // Merge notes
+                if (customer.notes && !primaryCustomer.notes.includes(customer.notes)) {
+                    primaryCustomer.notes = primaryCustomer.notes ? 
+                        `${primaryCustomer.notes}; ${customer.notes}` : 
+                        customer.notes;
+                }
+                
+                // Keep the most complete address if available
+                if (customer.address && customer.address.length > (primaryCustomer.address?.length || 0)) {
+                    primaryCustomer.address = customer.address;
+                }
+                
+                // Keep the most complete email if available
+                if (customer.email && customer.email.length > (primaryCustomer.email?.length || 0)) {
+                    primaryCustomer.email = customer.email;
+                }
+            });
+            
+            // Update the primary customer with merged data
+            primaryCustomer.bookingsCount = totalBookings;
+            if (latestDeliveryDate) {
+                primaryCustomer.lastDelivery = latestDeliveryDate.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+            }
+            
+            mergedCustomers.push(primaryCustomer);
+        }
+    });
+    
+    // Update the global customers array
+    window.customers = mergedCustomers;
+    
+    // Save to database or localStorage
+    if (typeof window.saveCustomer === 'function') {
+        try {
+            // Save all merged customers
+            for (const customer of mergedCustomers) {
+                await window.saveCustomer(customer);
+            }
+        } catch (error) {
+            console.error('Error saving merged customers:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else {
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    }
+    
+    console.log(`Merged ${mergeCount} duplicate customers`);
+    console.log('Customers after merge:', window.customers.length);
+    
+    return mergeCount;
 }
 
 // Display customers in the card layout
@@ -1366,7 +1573,7 @@ function displayCustomers() {
 }
 
 // Save new customer
-function saveCustomer() {
+async function saveCustomer() {
     const contactPerson = document.getElementById('contactPerson').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const address = document.getElementById('address').value.trim();
@@ -1394,7 +1601,27 @@ function saveCustomer() {
     };
 
     window.customers.push(newCustomer);
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    
+    // Save to dataService or localStorage
+    if (typeof window.dataService !== 'undefined') {
+        try {
+            await window.dataService.saveCustomer(newCustomer);
+        } catch (error) {
+            console.error('Error saving customer to dataService:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else if (typeof window.saveCustomer === 'function') {
+        try {
+            await window.saveCustomer(newCustomer);
+        } catch (error) {
+            console.error('Error saving customer:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else {
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    }
 
     // Clear form
     document.getElementById('addCustomerForm').reset();
@@ -1433,7 +1660,7 @@ function editCustomer(customerId) {
 }
 
 // Update customer
-function updateCustomer(customerId) {
+async function updateCustomer(customerId) {
     const customerIndex = window.customers.findIndex(c => c.id === customerId);
     if (customerIndex === -1) return;
 
@@ -1447,7 +1674,26 @@ function updateCustomer(customerId) {
         notes: document.getElementById('notes').value.trim()
     };
 
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    // Save to dataService or localStorage
+    if (typeof window.dataService !== 'undefined') {
+        try {
+            await window.dataService.saveCustomer(window.customers[customerIndex]);
+        } catch (error) {
+            console.error('Error updating customer in dataService:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else if (typeof window.saveCustomer === 'function') {
+        try {
+            await window.saveCustomer(window.customers[customerIndex]);
+        } catch (error) {
+            console.error('Error updating customer:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else {
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    }
 
     // Reset save button
     const saveBtn = document.getElementById('saveCustomerBtn');
@@ -1468,14 +1714,34 @@ function updateCustomer(customerId) {
 }
 
 // Delete customer
-function deleteCustomer(customerId) {
+async function deleteCustomer(customerId) {
     if (!confirm('Are you sure you want to delete this customer?')) return;
 
     const customerIndex = window.customers.findIndex(c => c.id === customerId);
     if (customerIndex === -1) return;
 
     window.customers.splice(customerIndex, 1);
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    
+    // Delete from dataService or localStorage
+    if (typeof window.dataService !== 'undefined') {
+        try {
+            await window.dataService.deleteCustomer(customerId);
+        } catch (error) {
+            console.error('Error deleting customer from dataService:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else if (typeof window.deleteCustomer === 'function') {
+        try {
+            await window.deleteCustomer(customerId);
+        } catch (error) {
+            console.error('Error deleting customer:', error);
+            // Fallback to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        }
+    } else {
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    }
 
     displayCustomers();
     showToast('Customer deleted successfully!');
@@ -1489,6 +1755,117 @@ function viewCustomerHistory(customerId) {
     showToast(`Viewing history for ${customer.contactPerson}`);
 }
 
+// Initialize Supabase authentication
+function initSupabaseAuth() {
+    // Check if Supabase is available
+    if (typeof window.initSupabase === 'function') {
+        window.initSupabase();
+        
+        // Set up auth state change listener
+        if (typeof window.onAuthStateChange === 'function') {
+            window.onAuthStateChange((event, session) => {
+                console.log('Auth state changed:', event);
+                if (event === 'SIGNED_OUT') {
+                    // Redirect to login or update UI
+                    console.log('User signed out');
+                    // Refresh the page to reset the UI
+                    window.location.reload();
+                } else if (event === 'SIGNED_IN') {
+                    // Update UI with user info
+                    console.log('User signed in');
+                    updateUserInfo();
+                }
+            });
+        }
+        
+        // Update user info on load
+        updateUserInfo();
+    } else {
+        console.log('Supabase not available, using mock authentication');
+    }
+}
+
+// Update user info in the UI
+async function updateUserInfo() {
+    if (typeof window.getCurrentUser === 'function') {
+        const user = await window.getCurrentUser();
+        if (user) {
+            // Update UI elements with user info
+            const userNameElements = document.querySelectorAll('#userName, #profileName');
+            userNameElements.forEach(el => {
+                if (el) el.textContent = user.name || 'User';
+            });
+            
+            const userRoleElements = document.querySelectorAll('#userRole, #profileRole');
+            userRoleElements.forEach(el => {
+                if (el) el.textContent = user.role || 'User';
+            });
+            
+            // Update avatar
+            const avatarElement = document.getElementById('userAvatar');
+            if (avatarElement) {
+                avatarElement.textContent = user.name ? user.name.charAt(0) : 'U';
+            }
+            
+            // Update profile settings form
+            const firstNameEl = document.getElementById('profileFirstName');
+            const lastNameEl = document.getElementById('profileLastName');
+            const emailEl = document.getElementById('profileEmail');
+            
+            if (firstNameEl && lastNameEl && emailEl) {
+                if (user.name) {
+                    const nameParts = user.name.split(' ');
+                    firstNameEl.value = nameParts[0] || '';
+                    lastNameEl.value = nameParts.slice(1).join(' ') || '';
+                }
+                if (user.email) {
+                    emailEl.value = user.email;
+                }
+            }
+        }
+    }
+}
+
+// Enhanced logout function
+async function logout() {
+    // Use Supabase logout if available
+    if (typeof window.logout === 'function') {
+        try {
+            await window.logout();
+            // Clear any local data
+            localStorage.removeItem('mci-user');
+            localStorage.removeItem('mci-activeDeliveries');
+            localStorage.removeItem('mci-deliveryHistory');
+            localStorage.removeItem('mci-customers');
+            localStorage.removeItem('ePodRecords');
+            
+            // Redirect to login page or refresh
+            window.location.reload();
+        } catch (error) {
+            console.error('Error during logout:', error);
+            // Still clear local data and redirect
+            localStorage.removeItem('mci-user');
+            localStorage.removeItem('mci-activeDeliveries');
+            localStorage.removeItem('mci-deliveryHistory');
+            localStorage.removeItem('mci-customers');
+            localStorage.removeItem('ePodRecords');
+            window.location.reload();
+        }
+    } else {
+        // Fallback to current implementation
+        localStorage.removeItem('mci-user');
+        localStorage.removeItem('mci-activeDeliveries');
+        localStorage.removeItem('mci-deliveryHistory');
+        localStorage.removeItem('mci-customers');
+        localStorage.removeItem('ePodRecords');
+        window.location.reload();
+    }
+}
+
 // Make export functions globally accessible
 window.exportEPodToExcel = exportEPodToExcel;
 window.exportEPodToPdf = exportEPodToPdf;
+
+// Make auth functions globally accessible
+window.initSupabaseAuth = initSupabaseAuth;
+window.updateUserInfo = updateUserInfo;

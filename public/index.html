@@ -19,8 +19,29 @@
 
     <!-- Leaflet JavaScript for interactive maps -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Supabase Configuration -->
+    <script>
+        // Set Supabase configuration from environment variables or defaults
+        window.SUPABASE_URL = window.SUPABASE_URL || 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'your-anon-key-here'; // Replace with your actual anon key
+    </script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
     <!-- Signature Pad Library -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    
+    <!-- Application JavaScript Files -->
+    <script src="assets/js/modal-utils.js"></script>
+    <script src="assets/js/calendar.js"></script>
+    <script src="assets/js/booking.js"></script>
+    <script src="assets/js/customers.js"></script>
+    <script src="assets/js/analytics.js"></script>
+    <script src="assets/js/warehouse.js"></script>
+    <script src="assets/js/supabase.js"></script>
+    <script src="assets/js/dataService.js"></script>
+    <script src="assets/js/app.js"></script>
     <link rel="stylesheet" href="assets/css/style.css">
     <!-- Custom styles for development -->
     <style>
@@ -36,6 +57,25 @@
     </style>
 </head>
 <body>
+    <script>
+        // Check if user is authenticated before loading the app
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Supabase
+            if (typeof window.initSupabase === 'function') {
+                window.initSupabase();
+                
+                // Check if user is authenticated
+                const isAuthenticated = await window.isAuthenticated();
+                if (!isAuthenticated) {
+                    // Redirect to login page
+                    window.location.href = '/login.html';
+                }
+            } else {
+                console.log('Supabase not available, using mock authentication');
+            }
+        });
+    </script>
+    
     <!-- Sidebar Navigation -->
     <div class="sidebar">
         <div class="sidebar-header">
@@ -650,6 +690,13 @@
                                 <a href="#" class="list-group-item list-group-item-action" data-setting="billing">
                                     <i class="bi bi-credit-card me-2"></i> Billing & Payments
                                 </a>
+                            </div>
+                            
+                            <!-- Logout Button -->
+                            <div class="mt-4">
+                                <button class="btn btn-danger w-100" id="logoutBtn">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                </button>
                             </div>
                         </div>
                         <div class="col-md-8">
