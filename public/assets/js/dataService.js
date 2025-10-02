@@ -9,6 +9,8 @@ class DataService {
     constructor() {
         this.supabase = null;
         this.initialized = false;
+        this.supabaseTested = false;
+        this.supabaseWorking = false;
     }
 
     // Initialize the data service
@@ -35,13 +37,64 @@ class DataService {
     }
 
     // Check if we're using Supabase or fallback to localStorage
-    isSupabaseAvailable() {
-        return this.initialized && this.supabase !== null;
+    async isSupabaseAvailable() {
+        // First check if Supabase is initialized
+        if (!this.initialized || this.supabase === null) {
+            console.log('Supabase not initialized, using localStorage');
+            return false;
+        }
+
+        // If we've already tested Supabase, return the cached result
+        if (this.supabaseTested) {
+            console.log('Supabase availability (cached):', this.supabaseWorking);
+            return this.supabaseWorking;
+        }
+
+        console.log('Testing Supabase connection...');
+
+        // Test multiple tables to ensure they all exist
+        const tablesToCheck = ['deliveries', 'customers', 'additional_costs', 'e_pod_records'];
+        
+        try {
+            // Try checking each table
+            for (const table of tablesToCheck) {
+                console.log(`Checking table: ${table}`);
+                const { data, error } = await this.supabase
+                    .from(table)
+                    .select('id')
+                    .limit(1);
+                
+                console.log(`Table ${table} check result:`, { data, error });
+                
+                // If there's an error about the table not existing, fallback to localStorage
+                if (error && (error.code === 'PGRST205' || 
+                             error.message.includes('Could not find the table') ||
+                             error.message.includes('The resource does not exist') ||
+                             error.hint?.includes('Perhaps you meant') ||
+                             error.status === 404)) {  // Add 404 status check
+                    console.warn(`Supabase table '${table}' not found, falling back to localStorage`);
+                    this.supabaseTested = true;
+                    this.supabaseWorking = false;
+                    return false;
+                }
+            }
+            
+            // All tables exist, we can use Supabase
+            console.log('All Supabase tables found, using Supabase');
+            this.supabaseTested = true;
+            this.supabaseWorking = true;
+            return true;
+        } catch (error) {
+            console.warn('Error testing Supabase connection, falling back to localStorage:', error);
+            this.supabaseTested = true;
+            this.supabaseWorking = false;
+            return false;
+        }
     }
 
     // Get current user ID
     async getCurrentUserId() {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             return null;
         }
 
@@ -56,13 +109,16 @@ class DataService {
 
     // Deliveries operations
     async getDeliveries() {
-        if (!this.isSupabaseAvailable()) {
+        console.log('Getting deliveries, checking Supabase availability...');
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for deliveries');
             // Fallback to localStorage
             const saved = localStorage.getItem('mci-activeDeliveries');
             return saved ? JSON.parse(saved) : [];
         }
 
         try {
+            console.log('Using Supabase for deliveries');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -74,7 +130,15 @@ class DataService {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, fallback to localStorage
+                if (error.status === 404) {
+                    console.warn('Deliveries table not found, falling back to localStorage');
+                    const saved = localStorage.getItem('mci-activeDeliveries');
+                    return saved ? JSON.parse(saved) : [];
+                }
+                throw error;
+            }
             return data || [];
         } catch (error) {
             console.error('Error fetching deliveries:', error);
@@ -85,7 +149,7 @@ class DataService {
     }
 
     async saveDelivery(delivery) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
             let deliveries = [];
             const saved = localStorage.getItem('mci-activeDeliveries');
@@ -128,7 +192,29 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('Deliveries table not found, falling back to localStorage');
+                        let deliveries = [];
+                        const saved = localStorage.getItem('mci-activeDeliveries');
+                        if (saved) {
+                            deliveries = JSON.parse(saved);
+                        }
+                        
+                        // Check if delivery already exists
+                        const existingIndex = deliveries.findIndex(d => d.id === delivery.id);
+                        if (existingIndex >= 0) {
+                            deliveries[existingIndex] = delivery;
+                        } else {
+                            deliveries.push(delivery);
+                        }
+                        
+                        localStorage.setItem('mci-activeDeliveries', JSON.stringify(deliveries));
+                        return delivery;
+                    }
+                    throw error;
+                }
                 result = data;
             } else {
                 // Insert new delivery
@@ -138,7 +224,24 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('Deliveries table not found, falling back to localStorage');
+                        let deliveries = [];
+                        const saved = localStorage.getItem('mci-activeDeliveries');
+                        if (saved) {
+                            deliveries = JSON.parse(saved);
+                        }
+                        
+                        // Add new delivery
+                        deliveries.push(delivery);
+                        
+                        localStorage.setItem('mci-activeDeliveries', JSON.stringify(deliveries));
+                        return delivery;
+                    }
+                    throw error;
+                }
                 result = data;
             }
 
@@ -166,7 +269,7 @@ class DataService {
     }
 
     async deleteDelivery(deliveryId) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
             let deliveries = [];
             const saved = localStorage.getItem('mci-activeDeliveries');
@@ -191,7 +294,22 @@ class DataService {
                 .eq('id', deliveryId)
                 .eq('user_id', userId);
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, fallback to localStorage
+                if (error.status === 404) {
+                    console.warn('Deliveries table not found, falling back to localStorage');
+                    let deliveries = [];
+                    const saved = localStorage.getItem('mci-activeDeliveries');
+                    if (saved) {
+                        deliveries = JSON.parse(saved);
+                    }
+                    
+                    deliveries = deliveries.filter(d => d.id !== deliveryId);
+                    localStorage.setItem('mci-activeDeliveries', JSON.stringify(deliveries));
+                    return true;
+                }
+                throw error;
+            }
             return true;
         } catch (error) {
             console.error('Error deleting delivery:', error);
@@ -210,13 +328,16 @@ class DataService {
 
     // Customers operations
     async getCustomers() {
-        if (!this.isSupabaseAvailable()) {
+        console.log('Getting customers, checking Supabase availability...');
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for customers');
             // Fallback to localStorage
             const saved = localStorage.getItem('mci-customers');
             return saved ? JSON.parse(saved) : [];
         }
 
         try {
+            console.log('Using Supabase for customers');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -228,7 +349,15 @@ class DataService {
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, fallback to localStorage
+                if (error.status === 404) {
+                    console.warn('Customers table not found, falling back to localStorage');
+                    const saved = localStorage.getItem('mci-customers');
+                    return saved ? JSON.parse(saved) : [];
+                }
+                throw error;
+            }
             return data || [];
         } catch (error) {
             console.error('Error fetching customers:', error);
@@ -239,7 +368,7 @@ class DataService {
     }
 
     async saveCustomer(customer) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
             let customers = [];
             const saved = localStorage.getItem('mci-customers');
@@ -282,7 +411,29 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('Customers table not found, falling back to localStorage');
+                        let customers = [];
+                        const saved = localStorage.getItem('mci-customers');
+                        if (saved) {
+                            customers = JSON.parse(saved);
+                        }
+                        
+                        // Check if customer already exists
+                        const existingIndex = customers.findIndex(c => c.id === customer.id);
+                        if (existingIndex >= 0) {
+                            customers[existingIndex] = customer;
+                        } else {
+                            customers.push(customer);
+                        }
+                        
+                        localStorage.setItem('mci-customers', JSON.stringify(customers));
+                        return customer;
+                    }
+                    throw error;
+                }
                 result = data;
             } else {
                 // Insert new customer
@@ -292,7 +443,24 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('Customers table not found, falling back to localStorage');
+                        let customers = [];
+                        const saved = localStorage.getItem('mci-customers');
+                        if (saved) {
+                            customers = JSON.parse(saved);
+                        }
+                        
+                        // Add new customer
+                        customers.push(customer);
+                        
+                        localStorage.setItem('mci-customers', JSON.stringify(customers));
+                        return customer;
+                    }
+                    throw error;
+                }
                 result = data;
             }
 
@@ -320,7 +488,7 @@ class DataService {
     }
 
     async deleteCustomer(customerId) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
             let customers = [];
             const saved = localStorage.getItem('mci-customers');
@@ -345,7 +513,22 @@ class DataService {
                 .eq('id', customerId)
                 .eq('user_id', userId);
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, fallback to localStorage
+                if (error.status === 404) {
+                    console.warn('Customers table not found, falling back to localStorage');
+                    let customers = [];
+                    const saved = localStorage.getItem('mci-customers');
+                    if (saved) {
+                        customers = JSON.parse(saved);
+                    }
+                    
+                    customers = customers.filter(c => c.id !== customerId);
+                    localStorage.setItem('mci-customers', JSON.stringify(customers));
+                    return true;
+                }
+                throw error;
+            }
             return true;
         } catch (error) {
             console.error('Error deleting customer:', error);
@@ -364,13 +547,16 @@ class DataService {
 
     // E-POD operations
     async getEPodRecords() {
-        if (!this.isSupabaseAvailable()) {
+        console.log('Getting E-POD records, checking Supabase availability...');
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for E-POD records');
             // Fallback to localStorage
             const saved = localStorage.getItem('ePodRecords');
             return saved ? JSON.parse(saved) : [];
         }
 
         try {
+            console.log('Using Supabase for E-POD records');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -382,7 +568,15 @@ class DataService {
                 .eq('user_id', userId)
                 .order('signed_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, fallback to localStorage
+                if (error.status === 404) {
+                    console.warn('E-POD records table not found, falling back to localStorage');
+                    const saved = localStorage.getItem('ePodRecords');
+                    return saved ? JSON.parse(saved) : [];
+                }
+                throw error;
+            }
             // Map database records to application format
             return data ? data.map(record => this.mapEPodRecordFromDB(record)) : [];
         } catch (error) {
@@ -394,7 +588,7 @@ class DataService {
     }
 
     async saveEPodRecord(record) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
             let records = [];
             const saved = localStorage.getItem('ePodRecords');
@@ -442,7 +636,29 @@ class DataService {
                 .eq('dr_number', record.drNumber)
                 .eq('user_id', userId);
 
-            if (fetchError) throw fetchError;
+            if (fetchError) {
+                // If it's a 404 error, fallback to localStorage
+                if (fetchError.status === 404) {
+                    console.warn('E-POD records table not found, falling back to localStorage');
+                    let records = [];
+                    const saved = localStorage.getItem('ePodRecords');
+                    if (saved) {
+                        records = JSON.parse(saved);
+                    }
+                    
+                    // Check if record already exists
+                    const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
+                    if (existingIndex >= 0) {
+                        records[existingIndex] = record;
+                    } else {
+                        records.push(record);
+                    }
+                    
+                    localStorage.setItem('ePodRecords', JSON.stringify(records));
+                    return record;
+                }
+                throw fetchError;
+            }
 
             if (existingRecords && existingRecords.length > 0) {
                 // Update existing record
@@ -454,7 +670,29 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('E-POD records table not found, falling back to localStorage');
+                        let records = [];
+                        const saved = localStorage.getItem('ePodRecords');
+                        if (saved) {
+                            records = JSON.parse(saved);
+                        }
+                        
+                        // Check if record already exists
+                        const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
+                        if (existingIndex >= 0) {
+                            records[existingIndex] = record;
+                        } else {
+                            records.push(record);
+                        }
+                        
+                        localStorage.setItem('ePodRecords', JSON.stringify(records));
+                        return record;
+                    }
+                    throw error;
+                }
                 result = this.mapEPodRecordFromDB(data);
             } else {
                 // Insert new record
@@ -464,7 +702,24 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, fallback to localStorage
+                    if (error.status === 404) {
+                        console.warn('E-POD records table not found, falling back to localStorage');
+                        let records = [];
+                        const saved = localStorage.getItem('ePodRecords');
+                        if (saved) {
+                            records = JSON.parse(saved);
+                        }
+                        
+                        // Add new record
+                        records.push(record);
+                        
+                        localStorage.setItem('ePodRecords', JSON.stringify(records));
+                        return record;
+                    }
+                    throw error;
+                }
                 result = this.mapEPodRecordFromDB(data);
             }
 
@@ -509,12 +764,15 @@ class DataService {
 
     // Additional costs operations
     async getAdditionalCosts(deliveryId) {
-        if (!this.isSupabaseAvailable()) {
+        console.log('Getting additional costs, checking Supabase availability...');
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for additional costs (empty array)');
             // No localStorage fallback for additional costs in the current implementation
             return [];
         }
 
         try {
+            console.log('Using Supabase for additional costs');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -526,7 +784,14 @@ class DataService {
                 .eq('delivery_id', deliveryId)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, return empty array
+                if (error.status === 404) {
+                    console.warn('Additional costs table not found, returning empty array');
+                    return [];
+                }
+                throw error;
+            }
             return data || [];
         } catch (error) {
             console.error('Error fetching additional costs:', error);
@@ -536,12 +801,14 @@ class DataService {
     }
 
     async saveAdditionalCost(cost) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for additional costs (returning cost as-is)');
             // No localStorage fallback for additional costs in the current implementation
             return cost;
         }
 
         try {
+            console.log('Using Supabase for additional costs');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -557,7 +824,14 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, return the original cost
+                    if (error.status === 404) {
+                        console.warn('Additional costs table not found, returning original cost');
+                        return cost;
+                    }
+                    throw error;
+                }
                 result = data;
             } else {
                 // Insert new cost
@@ -567,7 +841,14 @@ class DataService {
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // If it's a 404 error, return the original cost
+                    if (error.status === 404) {
+                        console.warn('Additional costs table not found, returning original cost');
+                        return cost;
+                    }
+                    throw error;
+                }
                 result = data;
             }
 
@@ -580,12 +861,14 @@ class DataService {
     }
 
     async deleteAdditionalCost(costId) {
-        if (!this.isSupabaseAvailable()) {
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Using localStorage for additional costs (returning true)');
             // No localStorage fallback for additional costs in the current implementation
             return true;
         }
 
         try {
+            console.log('Using Supabase for additional costs');
             const userId = await this.getCurrentUserId();
             if (!userId) {
                 throw new Error('User not authenticated');
@@ -596,7 +879,14 @@ class DataService {
                 .delete()
                 .eq('id', costId);
 
-            if (error) throw error;
+            if (error) {
+                // If it's a 404 error, return true
+                if (error.status === 404) {
+                    console.warn('Additional costs table not found, returning true');
+                    return true;
+                }
+                throw error;
+            }
             return true;
         } catch (error) {
             console.error('Error deleting additional cost:', error);
