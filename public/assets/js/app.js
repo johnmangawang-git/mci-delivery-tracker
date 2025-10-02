@@ -90,30 +90,31 @@ console.log('app.js loaded');
         }
     }
 
-    // Placeholder function for showing E-Signature modal
+    // Placeholder function for showing E-Signature modal - now using robust implementation
     function showESignatureModal(drNumber) {
         console.log(`Showing E-Signature modal for DR: ${drNumber}`);
         
-        // Ensure signature pad is initialized (handled by main.js)
-        // if (typeof ensureSignaturePadInitialized === 'function') {
-        //     ensureSignaturePadInitialized();
-        // }
-        
-        // Set delivery details in modal
-        document.getElementById('ePodDrNumber').value = drNumber;
-        // In a real app, you would fetch these details from your data
-        document.getElementById('ePodCustomerName').value = 'Customer Name';
-        document.getElementById('ePodCustomerContact').value = '09123456789';
-        document.getElementById('ePodTruckPlate').value = 'ABC123';
-        document.getElementById('ePodDeliveryRoute').value = 'Origin to Destination';
-        
-        // Show modal using our utility function if available
-        if (typeof window.showModal === 'function') {
-            window.showModal('eSignatureModal');
+        // Use the new robust E-Signature implementation if available
+        if (typeof window.openRobustSignaturePad === 'function') {
+            window.openRobustSignaturePad(drNumber, 'Customer Name', '09123456789', 'ABC123', 'Origin to Destination');
         } else {
-            // Fallback method
-            const eSignatureModal = new bootstrap.Modal(document.getElementById('eSignatureModal'));
-            eSignatureModal.show();
+            // Fallback to original implementation
+            // Set delivery details in modal
+            document.getElementById('ePodDrNumber').value = drNumber;
+            // In a real app, you would fetch these details from your data
+            document.getElementById('ePodCustomerName').value = 'Customer Name';
+            document.getElementById('ePodCustomerContact').value = '09123456789';
+            document.getElementById('ePodTruckPlate').value = 'ABC123';
+            document.getElementById('ePodDeliveryRoute').value = 'Origin to Destination';
+            
+            // Show modal using our utility function if available
+            if (typeof window.showModal === 'function') {
+                window.showModal('eSignatureModal');
+            } else {
+                // Fallback method
+                const eSignatureModal = new bootstrap.Modal(document.getElementById('eSignatureModal'));
+                eSignatureModal.show();
+            }
         }
     }
 

@@ -712,12 +712,13 @@ function initEPod() {
                 const truckPlate = deliveryDetails[0].truckPlate;
                 const deliveryRoute = `${deliveryDetails[0].origin} to ${deliveryDetails[0].destination}`;
                 
-                // Store the multiple DR numbers for saving
-                window.multipleDRNumbers = drNumbers;
-                window.deliveryDetails = deliveryDetails;
-                
-                // Open signature pad with delivery details
-                openSignaturePadMultiple(drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers);
+                // Use the new robust E-Signature implementation
+                if (typeof window.openRobustSignaturePad === 'function') {
+                    window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers);
+                } else {
+                    // Fallback to original implementation
+                    openSignaturePadMultiple(drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers);
+                }
             } else {
                 // For other views, use the original single DR functionality
                 let drNumber = '';
@@ -740,8 +741,13 @@ function initEPod() {
                     deliveryRoute = `${origin} to ${destination}`;
                 }
                 
-                // Open signature pad with delivery details
-                openSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                // Use the new robust E-Signature implementation
+                if (typeof window.openRobustSignaturePad === 'function') {
+                    window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                } else {
+                    // Fallback to original implementation
+                    openSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                }
             }
         });
     }

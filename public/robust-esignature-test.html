@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robust E-Signature Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Robust E-Signature Test</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Test Controls</h5>
+            </div>
+            <div class="card-body">
+                <button type="button" class="btn btn-primary me-2" onclick="testSingleSignature()">
+                    <i class="bi bi-pencil me-2"></i>Test Single Signature
+                </button>
+                <button type="button" class="btn btn-success me-2" onclick="testMultipleSignatures()">
+                    <i class="bi bi-collection me-2"></i>Test Multiple Signatures
+                </button>
+                <button type="button" class="btn btn-info" onclick="checkSignaturePadStatus()">
+                    <i class="bi bi-info-circle me-2"></i>Check Status
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Console Output</h5>
+            </div>
+            <div class="card-body">
+                <div id="consoleOutput" class="bg-dark text-light p-3" style="height: 200px; overflow-y: auto; font-family: monospace; font-size: 14px;">
+                    Console output will appear here...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-Signature Modal (same as in index.html) -->
+    <div class="modal fade" id="eSignatureModal" tabindex="-1" aria-labelledby="eSignatureModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eSignatureModalLabel"><i class="bi bi-pen me-2"></i>E-Signature</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card signature-card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Signature Pad</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="signature-pad-container"
+                                        style="position: relative; width: 100%; max-width: 600px; height: 300px; margin: 0 auto; overflow: hidden;">
+                                        <canvas id="signaturePad"
+                                            style="border: 2px dashed #3498db; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); user-select: none; -moz-user-select: none;"></canvas>
+                                    </div>
+                                    <div class="d-flex justify-content-center mt-3">
+                                        <button type="button" class="btn btn-outline-danger" id="clearSignatureBtn">
+                                            <i class="bi bi-eraser me-2"></i>Clear Signature
+                                        </button>
+                                    </div>
+                                    <div class="text-center text-muted mt-2">
+                                        <small>Draw your signature above</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Delivery Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">DR Number</label>
+                                        <!-- DR Number input with black text and bold font as per requirements -->
+                                        <input type="text" class="form-control" id="ePodDrNumber" readonly
+                                            style="color: #000000; font-weight: bold;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Customer Name</label>
+                                        <input type="text" class="form-control" id="ePodCustomerName" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Customer Contact</label>
+                                        <input type="text" class="form-control" id="ePodCustomerContact" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Truck Plate Number</label>
+                                        <input type="text" class="form-control" id="ePodTruckPlate" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Delivery Route</label>
+                                        <input type="text" class="form-control" id="ePodDeliveryRoute" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i
+                            class="bi bi-x-circle me-2"></i>Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSignatureBtn">
+                        <i class="bi bi-save me-2"></i>Save Signature
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/e-signature.js"></script>
+    
+    <script>
+        // Console output function
+        function logToConsole(message) {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            console.log(message);
+        }
+        
+        // Test single signature
+        function testSingleSignature() {
+            logToConsole('Testing single signature...');
+            
+            if (typeof window.openRobustSignaturePad === 'function') {
+                logToConsole('Opening robust signature pad for single DR');
+                window.openRobustSignaturePad(
+                    'DR-TEST-001',
+                    'Test Customer',
+                    '09123456789',
+                    'XYZ789',
+                    'Test Origin to Test Destination'
+                );
+            } else {
+                logToConsole('Robust E-Signature system not available');
+            }
+        }
+        
+        // Test multiple signatures
+        function testMultipleSignatures() {
+            logToConsole('Testing multiple signatures...');
+            
+            if (typeof window.openRobustSignaturePad === 'function') {
+                logToConsole('Opening robust signature pad for multiple DRs');
+                window.openRobustSignaturePad(
+                    'DR-TEST-001, DR-TEST-002, DR-TEST-003',
+                    'Test Customer',
+                    '09123456789',
+                    'XYZ789',
+                    'Test Origin to Test Destination',
+                    ['DR-TEST-001', 'DR-TEST-002', 'DR-TEST-003']
+                );
+            } else {
+                logToConsole('Robust E-Signature system not available');
+            }
+        }
+        
+        // Check signature pad status
+        function checkSignaturePadStatus() {
+            logToConsole('Checking signature pad status...');
+            
+            if (window.robustSignaturePad) {
+                logToConsole(`Signature pad initialized: ${window.signaturePadInitialized}`);
+                logToConsole(`Signature pad empty: ${window.robustSignaturePad.isEmpty()}`);
+            } else {
+                logToConsole('Signature pad not initialized');
+            }
+        }
+        
+        // Log when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            logToConsole('Robust E-Signature test page loaded');
+            logToConsole('Waiting for user interaction...');
+        });
+    </script>
+</body>
+</html>
