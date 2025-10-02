@@ -766,6 +766,11 @@ function updateDeliveryStatus(drNumber, newStatus) {
                         console.log('Loading delivery history');
                         window.loadDeliveryHistory();
                     }
+                    
+                    // Update dashboard metrics
+                    if (typeof window.updateDashboardMetrics === 'function') {
+                        window.updateDashboardMetrics();
+                    }
                 }
             }
         }

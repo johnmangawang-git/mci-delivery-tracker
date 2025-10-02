@@ -1,7 +1,7 @@
 // Analytics charts
 let bookingsChart, costsChart, originChart, costBreakdownChart;
 
-function initAnalyticsCharts() {
+async function initAnalyticsCharts() {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.error('Chart.js library is not loaded');
@@ -26,28 +26,14 @@ function initAnalyticsCharts() {
         costBreakdownChart = null;
     }
 
-    // Mock data for charts
-    const data = {
-        bookings: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-            values: [285, 302, 318, 327, 335, 342, 338, 341, 345, 347]
-        },
-        costs: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-            values: [3280, 3520, 3750, 3890, 4020, 4150, 4180, 4210, 4250, 4280]
-        },
-        origin: {
-            labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
-            values: [45, 28, 20, 7]
-        },
-        costBreakdown: {
-            labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
-            values: [45, 25, 15, 10, 5]
-        }
-    };
+    // Update dashboard metrics
+    updateDashboardMetrics();
+
+    // Load actual data
+    const data = await loadAnalyticsData();
 
     // Bookings Chart - Total bookings per month/week/day
-    const bookingsCtx = document.getElementById('bookingsOverTimeChart');
+    const bookingsCtx = document.getElementById('bookingsChart');
     if (bookingsCtx) {
         bookingsChart = new Chart(bookingsCtx, {
             type: 'bar',
@@ -88,6 +74,70 @@ function initAnalyticsCharts() {
                         },
                         ticks: {
                             stepSize: 50
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Additional Costs Chart
+    const costsCtx = document.getElementById('costsChart');
+    if (costsCtx) {
+        costsChart = new Chart(costsCtx, {
+            type: 'line',
+            data: {
+                labels: data.costs.labels,
+                datasets: [{
+                    label: 'Additional Costs (₱)',
+                    data: data.costs.values,
+                    backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                    borderColor: 'rgba(243, 156, 18, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                    pointRadius: 4,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return `₱${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return `₱${value.toLocaleString()}`;
+                            }
                         }
                     },
                     x: {
@@ -272,24 +322,23 @@ function initChartFilters() {
 // Mock function to load analytics data from Supabase
 async function loadAnalyticsData() {
     try {
-        // In a real implementation, this would fetch data from Supabase
-        // For demo purposes, we'll use mock data
+        // Return zero data instead of mock data
         return {
             bookings: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [285, 302, 318, 327, 335, 342, 338, 341, 345, 347]
+                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             costs: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [3280, 3520, 3750, 3890, 4020, 4150, 4180, 4210, 4250, 4280]
+                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             },
             origin: {
                 labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
-                values: [45, 28, 20, 7]
+                values: [0, 0, 0, 0]
             },
             costBreakdown: {
                 labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
-                values: [45, 25, 15, 10, 5]
+                values: [0, 0, 0, 0, 0]
             }
         };
     } catch (error) {
@@ -315,6 +364,46 @@ async function loadAnalyticsData() {
         };
     }
 }
+
+// Function to update the dashboard metrics
+function updateDashboardMetrics() {
+    try {
+        // Reset all metrics to zero
+        const totalBookings = 0;
+        const totalDistance = 0;
+        const totalAdditionalCost = 0;
+        const avgCostPerBooking = 0;
+        
+        // Update the UI elements
+        const totalBookingsElement = document.querySelector('.metric-card:nth-child(1) .metric-value');
+        const totalDistanceElement = document.querySelector('.metric-card:nth-child(2) .metric-value');
+        const totalAdditionalCostElement = document.querySelector('.metric-card:nth-child(3) .metric-value');
+        const avgCostPerBookingElement = document.querySelector('.metric-card:nth-child(4) .metric-value .crossed-out');
+        
+        if (totalBookingsElement) {
+            totalBookingsElement.textContent = totalBookings;
+        }
+        
+        if (totalDistanceElement) {
+            totalDistanceElement.textContent = `${totalDistance.toLocaleString()} km`;
+        }
+        
+        if (totalAdditionalCostElement) {
+            totalAdditionalCostElement.textContent = `₱${totalAdditionalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+        }
+        
+        if (avgCostPerBookingElement) {
+            avgCostPerBookingElement.textContent = `₱${avgCostPerBooking.toFixed(2)}`;
+        }
+        
+        console.log('Dashboard metrics reset to zero');
+    } catch (error) {
+        console.error('Error resetting dashboard metrics:', error);
+    }
+}
+
+// Expose function globally
+window.updateDashboardMetrics = updateDashboardMetrics;
 
 // Update chart functions (for demo purposes)
 function updateBookingsChart(period) {
