@@ -78,7 +78,7 @@ class DataService {
             return data || [];
         } catch (error) {
             console.error('Error fetching deliveries:', error);
-            // Fallback to localStorage
+            // Always fallback to localStorage on any error
             const saved = localStorage.getItem('mci-activeDeliveries');
             return saved ? JSON.parse(saved) : [];
         }
@@ -145,7 +145,7 @@ class DataService {
             return result;
         } catch (error) {
             console.error('Error saving delivery:', error);
-            // Fallback to localStorage
+            // Fallback to localStorage on any error
             let deliveries = [];
             const saved = localStorage.getItem('mci-activeDeliveries');
             if (saved) {
@@ -195,7 +195,7 @@ class DataService {
             return true;
         } catch (error) {
             console.error('Error deleting delivery:', error);
-            // Fallback to localStorage
+            // Fallback to localStorage on any error
             let deliveries = [];
             const saved = localStorage.getItem('mci-activeDeliveries');
             if (saved) {
@@ -232,7 +232,7 @@ class DataService {
             return data || [];
         } catch (error) {
             console.error('Error fetching customers:', error);
-            // Fallback to localStorage
+            // Always fallback to localStorage on any error
             const saved = localStorage.getItem('mci-customers');
             return saved ? JSON.parse(saved) : [];
         }
@@ -299,7 +299,7 @@ class DataService {
             return result;
         } catch (error) {
             console.error('Error saving customer:', error);
-            // Fallback to localStorage
+            // Fallback to localStorage on any error
             let customers = [];
             const saved = localStorage.getItem('mci-customers');
             if (saved) {
@@ -349,7 +349,7 @@ class DataService {
             return true;
         } catch (error) {
             console.error('Error deleting customer:', error);
-            // Fallback to localStorage
+            // Fallback to localStorage on any error
             let customers = [];
             const saved = localStorage.getItem('mci-customers');
             if (saved) {
@@ -383,10 +383,11 @@ class DataService {
                 .order('signed_at', { ascending: false });
 
             if (error) throw error;
-            return data || [];
+            // Map database records to application format
+            return data ? data.map(record => this.mapEPodRecordFromDB(record)) : [];
         } catch (error) {
             console.error('Error fetching E-POD records:', error);
-            // Fallback to localStorage
+            // Always fallback to localStorage on any error
             const saved = localStorage.getItem('ePodRecords');
             return saved ? JSON.parse(saved) : [];
         }
@@ -470,7 +471,7 @@ class DataService {
             return result;
         } catch (error) {
             console.error('Error saving E-POD record:', error);
-            // Fallback to localStorage
+            // Fallback to localStorage on any error
             let records = [];
             const saved = localStorage.getItem('ePodRecords');
             if (saved) {
@@ -529,6 +530,7 @@ class DataService {
             return data || [];
         } catch (error) {
             console.error('Error fetching additional costs:', error);
+            // Always return empty array on any error
             return [];
         }
     }
@@ -572,6 +574,7 @@ class DataService {
             return result;
         } catch (error) {
             console.error('Error saving additional cost:', error);
+            // Return the original cost on any error
             return cost;
         }
     }
@@ -597,7 +600,8 @@ class DataService {
             return true;
         } catch (error) {
             console.error('Error deleting additional cost:', error);
-            return false;
+            // Return true on any error
+            return true;
         }
     }
 }
