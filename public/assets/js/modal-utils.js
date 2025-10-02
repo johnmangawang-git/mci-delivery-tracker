@@ -119,10 +119,54 @@ function showModal(modalId) {
     }
 }
 
+// Test function to verify modal functionality
+function testBookingModal() {
+    console.log('=== TESTING BOOKING MODAL ===');
+    
+    // Check if Bootstrap is available
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+    
+    // Check if modal element exists
+    const bookingModal = document.getElementById('bookingModal');
+    console.log('Booking modal element exists:', !!bookingModal);
+    
+    // Try to show the modal
+    if (typeof window.showModal === 'function') {
+        console.log('Using showModal function');
+        try {
+            window.showModal('bookingModal');
+            console.log('Modal shown successfully using utility function');
+        } catch (error) {
+            console.error('Error showing modal with utility function:', error);
+        }
+    } else {
+        console.log('showModal utility function not available');
+        // Fallback method
+        if (bookingModal && typeof bootstrap !== 'undefined') {
+            let modalInstance = bootstrap.Modal.getInstance(bookingModal);
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(bookingModal, {
+                    backdrop: true,
+                    keyboard: true
+                });
+            }
+            try {
+                modalInstance.show();
+                console.log('Modal shown successfully with fallback method');
+            } catch (error) {
+                console.error('Error showing modal with fallback method:', error);
+            }
+        }
+    }
+}
+
 // Make functions globally accessible
 window.cleanupAllBackdrops = cleanupAllBackdrops;
 window.hideModal = hideModal;
 window.showModal = showModal;
+
+// Make test function globally accessible
+window.testBookingModal = testBookingModal;
 
 // Ensure the functions are properly exposed
 if (typeof window.showModal !== 'function') {

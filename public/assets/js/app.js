@@ -9,6 +9,34 @@ console.log('app.js loaded');
     let currentSearchTerm = '';
     let currentHistorySearchTerm = '';
 
+    // Test function to check if modals are working
+    function testModalFunctionality() {
+        console.log('=== TESTING MODAL FUNCTIONALITY ===');
+        
+        // Check if Bootstrap is available
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        
+        // Check if modal utility functions are available
+        console.log('showModal available:', typeof window.showModal === 'function');
+        console.log('hideModal available:', typeof window.hideModal === 'function');
+        console.log('cleanupAllBackdrops available:', typeof window.cleanupAllBackdrops === 'function');
+        
+        // Test each modal
+        const modals = ['bookingModal', 'addCustomerModal', 'editCustomerModal', 'eSignatureModal'];
+        modals.forEach(modalId => {
+            const modalElement = document.getElementById(modalId);
+            console.log(`${modalId} exists:`, !!modalElement);
+            if (modalElement) {
+                console.log(`${modalId} Bootstrap instance:`, bootstrap.Modal.getInstance(modalElement));
+            }
+        });
+        
+        console.log('=== MODAL TEST COMPLETE ===');
+    }
+
+    // Make test function globally available
+    window.testModalFunctionality = testModalFunctionality;
+
     // Functions
     function getStatusInfo(status) {
         switch (status) {
@@ -66,10 +94,10 @@ console.log('app.js loaded');
     function showESignatureModal(drNumber) {
         console.log(`Showing E-Signature modal for DR: ${drNumber}`);
         
-        // Ensure signature pad is initialized
-        if (typeof ensureSignaturePadInitialized === 'function') {
-            ensureSignaturePadInitialized();
-        }
+        // Ensure signature pad is initialized (handled by main.js)
+        // if (typeof ensureSignaturePadInitialized === 'function') {
+        //     ensureSignaturePadInitialized();
+        // }
         
         // Set delivery details in modal
         document.getElementById('ePodDrNumber').value = drNumber;
@@ -79,9 +107,14 @@ console.log('app.js loaded');
         document.getElementById('ePodTruckPlate').value = 'ABC123';
         document.getElementById('ePodDeliveryRoute').value = 'Origin to Destination';
         
-        // Show modal
-        const eSignatureModal = new bootstrap.Modal(document.getElementById('eSignatureModal'));
-        eSignatureModal.show();
+        // Show modal using our utility function if available
+        if (typeof window.showModal === 'function') {
+            window.showModal('eSignatureModal');
+        } else {
+            // Fallback method
+            const eSignatureModal = new bootstrap.Modal(document.getElementById('eSignatureModal'));
+            eSignatureModal.show();
+        }
     }
 
     // Placeholder function for showing E-POD modal
@@ -394,643 +427,344 @@ console.log('app.js loaded');
         }
     }
 
+    // Load active deliveries
     function loadActiveDeliveries() {
-        console.log('loadActiveDeliveries called');
+        console.log('=== LOAD ACTIVE DELIVERIES FUNCTION CALLED ===');
         
-        // Use dataService to fetch deliveries
-        if (typeof window.dataService !== 'undefined') {
-            window.dataService.getDeliveries().then(deliveries => {
-                // Update the global activeDeliveries array
-                window.activeDeliveries = deliveries;
-                console.log('Loaded deliveries from dataService:', deliveries);
-                renderActiveDeliveries(deliveries);
-            }).catch(error => {
-                console.error('Error loading deliveries from dataService:', error);
-                // Fallback to current implementation
-                renderActiveDeliveries(window.activeDeliveries);
-            });
-        } else {
-            console.log('dataService not available, using current activeDeliveries:', window.activeDeliveries);
-            renderActiveDeliveries(window.activeDeliveries);
-        }
-    }
-
-    function renderActiveDeliveries(deliveriesToUse) {
-        console.log('Rendering deliveries:', deliveriesToUse);
+        // Load from database or localStorage
+        loadFromDatabase().then(success => {
+            if (!success) {
+                loadFromLocalStorage();
+            }
+            
+            const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
+            if (!activeDeliveriesTableBody) {
+                console.error('Active deliveries table body not found');
+                return;
+            }
+            
+            // Apply search filter
+            filteredDeliveries = currentSearchTerm ? 
+                activeDeliveries.filter(delivery => 
+                    delivery.drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase())
+                ) : 
+                [...activeDeliveries];
         
-        const tableBody = document.getElementById('activeDeliveriesTableBody');
-        if (!tableBody) {
-            console.log('activeDeliveriesTableBody not found');
-            return;
+        // Update search results info
+        const searchResultsInfo = document.getElementById('searchResultsInfo');
+        if (searchResultsInfo) {
+            if (currentSearchTerm) {
+                searchResultsInfo.innerHTML = `
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Found ${filteredDeliveries.length} delivery${filteredDeliveries.length !== 1 ? 's' : ''} 
+                        matching "${currentSearchTerm}"
+                    </div>
+                `;
+                searchResultsInfo.style.display = 'block';
+            } else {
+                searchResultsInfo.style.display = 'none';
+            }
         }
-
-        const deliveriesToShow = currentSearchTerm ? filteredDeliveries : deliveriesToUse;
-
-        console.log('Deliveries to show:', deliveriesToShow);
-
-        if (deliveriesToShow.length === 0) {
-            const emptyMessage = currentSearchTerm ?
-                `No deliveries found matching "${currentSearchTerm}"` :
-                'No active deliveries at the moment';
-
-            tableBody.innerHTML = `
+        
+        // Display deliveries
+        if (filteredDeliveries.length === 0) {
+            activeDeliveriesTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center text-muted py-4">
-                        <i class="bi bi-${currentSearchTerm ? 'search' : 'truck'}"></i><br>
-                        ${emptyMessage}
-                        ${currentSearchTerm ? '<br><small>Try adjusting your search term</small>' : ''}
+                    <td colspan="10" class="text-center py-5">
+                        <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h4 class="mt-3">No active deliveries found</h4>
+                        <p class="text-muted">
+                            ${currentSearchTerm ? 'Try adjusting your search criteria' : 'All deliveries are completed or there are no deliveries yet'}
+                        </p>
                     </td>
                 </tr>
             `;
-            updateSearchResultsCount(0);
             return;
         }
-
-        tableBody.innerHTML = deliveriesToShow.map(delivery => {
+        
+        // Generate table rows
+        activeDeliveriesTableBody.innerHTML = filteredDeliveries.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
-
-            let bookedDate = 'N/A';
-            if (delivery.deliveryDate) {
-                try {
-                    const date = new Date(delivery.deliveryDate);
-                    bookedDate = date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                } catch (e) {
-                    console.error('Error formatting delivery date:', e);
-                    bookedDate = delivery.deliveryDate;
-                }
-            } else if (delivery.timestamp) {
-                try {
-                    const date = new Date(delivery.timestamp);
-                    bookedDate = date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                } catch (e) {
-                    console.error('Error formatting timestamp:', e);
-                }
-            }
-
             return `
-                <tr>
-                    <td><input type="checkbox" class="form-check-input delivery-checkbox" data-dr-number="${delivery.drNumber}"></td>
-                    <td><strong>${delivery.drNumber || 'N/A'}</strong></td>
-                    <td>${delivery.customerName || 'N/A'}</td>
-                    <td>${delivery.customerNumber || 'N/A'}</td>
-                    <td>${delivery.origin || 'N/A'}</td>
-                    <td>${delivery.destination || 'N/A'}</td>
-                    <td>${delivery.distance || 'N/A'}</td>
-                    <td>${delivery.truckPlateNumber || 'N/A'}</td>
+                <tr data-delivery-id="${delivery.id}">
+                    <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
+                    <td><strong>${delivery.drNumber}</strong></td>
+                    <td>${delivery.customerName}</td>
+                    <td>${delivery.customerNumber}</td>
+                    <td>${delivery.origin}</td>
+                    <td>${delivery.destination}</td>
+                    <td>${delivery.distance}</td>
+                    <td>${delivery.truckPlateNumber}</td>
                     <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge ${statusInfo.class}" style="min-width: 90px;">
-                                <i class="${statusInfo.icon} me-1"></i>
-                                ${delivery.status || 'Unknown'}
-                            </span>
-                        </div>
+                        <span class="badge ${statusInfo.class}">
+                            <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                        </span>
                     </td>
-                    <td>${bookedDate}</td>
+                    <td>${delivery.deliveryDate || delivery.timestamp || 'N/A'}</td>
                 </tr>
             `;
         }).join('');
+        
+        // Update booking view dashboard with real data
+        if (typeof window.updateBookingViewDashboard === 'function') {
+            setTimeout(() => {
+                window.updateBookingViewDashboard();
+            }, 100);
+        }
+        
+        console.log('Active deliveries loaded successfully');
+    }).catch(error => {
+        console.error('Error loading active deliveries:', error);
+    });
+}
 
-        // Add event listeners for checkboxes to enable/disable E-Signature button
-        document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const hasSelection = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked').length > 0;
-                const eSignatureBtn = document.getElementById('eSignatureBtn');
-                if (eSignatureBtn) {
-                    eSignatureBtn.disabled = !hasSelection;
-                }
-                
-                // Update select all checkbox state
-                const allCheckboxes = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox');
-                const checkedCheckboxes = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked');
-                const selectAllCheckbox = document.getElementById('selectAllActive');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
-                    selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
-                }
-            });
-        });
-
-        updateSearchResultsCount(deliveriesToShow.length);
-    }
-
-    function loadDeliveryHistory() {
-        const tableBody = document.getElementById('deliveryHistoryTableBody');
-        if (!tableBody) return;
-
-        const historyToShow = currentHistorySearchTerm ? filteredHistory : window.deliveryHistory;
-
-        if (historyToShow.length === 0) {
-            const emptyMessage = currentHistorySearchTerm ?
-                `No delivery history found matching "${currentHistorySearchTerm}"` :
-                'No delivery history available';
-
-            tableBody.innerHTML = `
+// Load delivery history
+function loadDeliveryHistory() {
+    console.log('=== LOAD DELIVERY HISTORY FUNCTION CALLED ===');
+    
+    // Load from database or localStorage
+    loadFromDatabase().then(success => {
+        if (!success) {
+            loadFromLocalStorage();
+        }
+        
+        const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
+        if (!deliveryHistoryTableBody) {
+            console.error('Delivery history table body not found');
+            return;
+        }
+        
+        // Apply search filter
+        filteredHistory = currentHistorySearchTerm ? 
+            deliveryHistory.filter(delivery => 
+                delivery.drNumber.toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
+            ) : 
+            [...deliveryHistory];
+        
+        // Update search results info
+        const historySearchResultsInfo = document.getElementById('historySearchResultsInfo');
+        if (historySearchResultsInfo) {
+            if (currentHistorySearchTerm) {
+                historySearchResultsInfo.innerHTML = `
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Found ${filteredHistory.length} delivery${filteredHistory.length !== 1 ? 's' : ''} 
+                        matching "${currentHistorySearchTerm}"
+                    </div>
+                `;
+                historySearchResultsInfo.style.display = 'block';
+            } else {
+                historySearchResultsInfo.style.display = 'none';
+            }
+        }
+        
+        // Display history
+        if (filteredHistory.length === 0) {
+            deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center text-muted py-4">
-                        <i class="bi bi-${currentHistorySearchTerm ? 'search' : 'clipboard-check'}"></i><br>
-                        ${emptyMessage}
-                        ${currentHistorySearchTerm ? '<br><small>Try adjusting your search term</small>' : ''}
+                    <td colspan="9" class="text-center py-5">
+                        <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
+                        <h4 class="mt-3">No delivery history found</h4>
+                        <p class="text-muted">
+                            ${currentHistorySearchTerm ? 'Try adjusting your search criteria' : 'No completed deliveries yet'}
+                        </p>
                     </td>
                 </tr>
             `;
-            updateHistorySearchResultsCount(0);
             return;
         }
-
-        tableBody.innerHTML = historyToShow.map(delivery => `
-            <tr>
-                <td>${delivery.completedDate || 'N/A'}</td>
-                <td><strong>${delivery.drNumber || 'N/A'}</strong></td>
-                <td>${delivery.customerName || 'N/A'}</td>
-                <td>${delivery.customerNumber || 'N/A'}</td>
-                <td>${delivery.origin || 'N/A'}</td>
-                <td>${delivery.destination || 'N/A'}</td>
-                <td>${delivery.distance || 'N/A'}</td>
-                <td>₱${delivery.additionalCosts ? delivery.additionalCosts.toFixed(2) : '0.00'}</td>
-                <td>
-                    <span class="badge bg-success">
-                        <i class="bi bi-check-circle"></i> Completed
-                    </span>
-                    <span class="badge bg-warning text-dark ms-1">
-                        <i class="bi bi-pen"></i> Signed
-                    </span>
-                </td>
-            </tr>
-        `).join('');
-
-        updateHistorySearchResultsCount(historyToShow.length);
-    }
-
-    function initDRSearch() {
-        const searchInput = document.getElementById('drSearchInput');
-        const clearBtn = document.getElementById('clearSearchBtn');
-
-        if (!searchInput || !clearBtn) return;
-
-        searchInput.addEventListener('input', function(e) {
-            const searchTerm = e.target.value.trim();
-            performDRSearch(searchTerm);
-        });
-
-        clearBtn.addEventListener('click', function() {
-            searchInput.value = '';
-            performDRSearch('');
-            searchInput.focus();
-        });
-
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const searchTerm = e.target.value.trim();
-                performDRSearch(searchTerm);
-            }
-        });
-    }
-
-    function performDRSearch(searchTerm) {
-        currentSearchTerm = searchTerm.toLowerCase();
-
-        if (!currentSearchTerm) {
-            filteredDeliveries = [];
-            loadActiveDeliveries();
-            return;
-        }
-
-        filteredDeliveries = activeDeliveries.filter(delivery => {
-            const drNumber = delivery.drNumber ? delivery.drNumber.toLowerCase() : '';
-            const id = delivery.id ? delivery.id.toString().toLowerCase() : '';
-            return drNumber.includes(currentSearchTerm) || id.includes(currentSearchTerm);
-        });
-
-        loadActiveDeliveries();
-        console.log(`DR Search: "${searchTerm}" - Found ${filteredDeliveries.length} results`);
-    }
-
-    function updateSearchResultsCount(count) {
-        const searchInput = document.getElementById('drSearchInput');
-        const clearBtn = document.getElementById('clearSearchBtn');
-        const searchResultsInfo = document.getElementById('searchResultsInfo');
-
-        if (!searchInput || !searchResultsInfo) return;
-
-        if (currentSearchTerm) {
-            searchResultsInfo.style.display = 'block';
-            searchResultsInfo.innerHTML = `
-                <i class="bi bi-search"></i>
-                <strong>${count}</strong> ${count === 1 ? 'delivery' : 'deliveries'} found for "<strong>${currentSearchTerm}</strong>"
-                ${count === 0 ? ' <span class="text-muted">- Try adjusting your search term</span>' : ''}
+        
+        // Generate table rows
+        deliveryHistoryTableBody.innerHTML = filteredHistory.map(delivery => {
+            const statusInfo = getStatusInfo(delivery.status);
+            return `
+                <tr>
+                    <td>${delivery.completedDate || 'N/A'}</td>
+                    <td><strong>${delivery.drNumber}</strong></td>
+                    <td>${delivery.customerName}</td>
+                    <td>${delivery.customerNumber}</td>
+                    <td>${delivery.origin}</td>
+                    <td>${delivery.destination}</td>
+                    <td>${delivery.distance}</td>
+                    <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
+                    <td>
+                        <span class="badge ${statusInfo.class}">
+                            <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                        </span>
+                    </td>
+                </tr>
             `;
-
-            searchInput.setAttribute('title', `Found ${count} deliveries matching "${currentSearchTerm}"`);
-
-            if (count === 0) {
-                searchInput.classList.add('is-invalid');
-                searchInput.classList.remove('is-valid');
-                if (clearBtn) {
-                    clearBtn.classList.add('search-no-results');
-                    clearBtn.classList.remove('search-has-results');
-                }
-                searchResultsInfo.className = 'search-results-info mb-3 text-warning';
-            } else {
-                searchInput.classList.add('is-valid');
-                searchInput.classList.remove('is-invalid');
-                if (clearBtn) {
-                    clearBtn.classList.add('search-has-results');
-                    clearBtn.classList.remove('search-no-results');
-                }
-                searchResultsInfo.className = 'search-results-info mb-3 text-success';
-            }
-        } else {
-            searchResultsInfo.style.display = 'none';
-            searchInput.classList.remove('is-valid', 'is-invalid');
-            if (clearBtn) {
-                clearBtn.classList.remove('search-has-results', 'search-no-results');
-            }
-            searchInput.removeAttribute('title');
+        }).join('');
+        
+        // Update booking view dashboard with real data
+        if (typeof window.updateBookingViewDashboard === 'function') {
+            setTimeout(() => {
+                window.updateBookingViewDashboard();
+            }, 100);
         }
-    }
+        
+        console.log('Delivery history loaded successfully');
+    }).catch(error => {
+        console.error('Error loading delivery history:', error);
+    });
+}
 
-    function initHistorySearch() {
-        const searchInput = document.getElementById('drSearchHistoryInput');
-        const clearBtn = document.getElementById('clearHistorySearchBtn');
-
-        if (!searchInput || !clearBtn) return;
-
-        searchInput.addEventListener('input', function(e) {
-            const searchTerm = e.target.value.trim();
-            performHistoryDRSearch(searchTerm);
-        });
-
-        clearBtn.addEventListener('click', function() {
-            searchInput.value = '';
-            performHistoryDRSearch('');
-            searchInput.focus();
-        });
-
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const searchTerm = e.target.value.trim();
-                performHistoryDRSearch(searchTerm);
-            }
-        });
-    }
-
-    function performHistoryDRSearch(searchTerm) {
-        currentHistorySearchTerm = searchTerm.toLowerCase();
-
-        if (!currentHistorySearchTerm) {
-            filteredHistory = [];
-            loadDeliveryHistory();
-            return;
-        }
-
-        filteredHistory = deliveryHistory.filter(delivery => {
-            const drNumber = delivery.drNumber ? delivery.drNumber.toLowerCase() : '';
-            const id = delivery.id ? delivery.id.toString().toLowerCase() : '';
-            return drNumber.includes(currentHistorySearchTerm) || id.includes(currentHistorySearchTerm);
-        });
-
-        loadDeliveryHistory();
-        console.log(`History DR Search: "${searchTerm}" - Found ${filteredHistory.length} results`);
-    }
-
-    function updateHistorySearchResultsCount(count) {
-        const searchInput = document.getElementById('drSearchHistoryInput');
-        const clearBtn = document.getElementById('clearHistorySearchBtn');
-        const searchResultsInfo = document.getElementById('historySearchResultsInfo');
-
-        if (!searchInput || !searchResultsInfo) return;
-
-        if (currentHistorySearchTerm) {
-            searchResultsInfo.style.display = 'block';
-            searchResultsInfo.innerHTML = `
-                <i class="bi bi-search"></i>
-                <strong>${count}</strong> ${count === 1 ? 'record' : 'records'} found for "<strong>${currentHistorySearchTerm}</strong>"
-                ${count === 0 ? ' <span class="text-muted">- Try adjusting your search term</span>' : ''}
-            `;
-
-            searchInput.setAttribute('title', `Found ${count} records matching "${currentHistorySearchTerm}"`);
-
-            if (count === 0) {
-                searchInput.classList.add('is-invalid');
-                searchInput.classList.remove('is-valid');
-                if (clearBtn) {
-                    clearBtn.classList.add('search-no-results');
-                    clearBtn.classList.remove('search-has-results');
-                }
-                searchResultsInfo.className = 'search-results-info mb-3 text-warning';
-            } else {
-                searchInput.classList.add('is-valid');
-                searchInput.classList.remove('is-invalid');
-                if (clearBtn) {
-                    clearBtn.classList.add('search-has-results');
-                    clearBtn.classList.remove('search-no-results');
-                }
-                searchResultsInfo.className = 'search-results-info mb-3 text-success';
-            }
-        } else {
-            searchResultsInfo.style.display = 'none';
-            searchInput.classList.remove('is-valid', 'is-invalid');
-            if (clearBtn) {
-                clearBtn.classList.remove('search-has-results', 'search-no-results');
-            }
-            searchInput.removeAttribute('title');
-        }
-    }
-
-    async function initDeliveryManagement() {
-        // Load data from database or fallback to localStorage
-        const loadedFromDatabase = await loadFromDatabase();
-        if (!loadedFromDatabase) {
-            console.log('Failed to load from database. Loading from localStorage.');
+// Initialize the application
+function initApp() {
+    console.log('=== INIT APP FUNCTION CALLED ===');
+    
+    // Load initial data
+    loadFromDatabase().then(success => {
+        if (!success) {
             loadFromLocalStorage();
         }
-
-        // If no data, populate with mock data
-        if (activeDeliveries.length === 0 && deliveryHistory.length === 0) {
-            console.log('No data found. Populating with mock data.');
-            activeDeliveries = [
-                {
-                    id: 'DEL-001',
-                    drNumber: 'DR-8842',
-                    customerName: 'John Doe',
-                    customerNumber: '09171234567',
-                    origin: 'SMEG Alabang warehouse',
-                    destination: 'Makati City',
-                    distance: '12.5 km',
-                    truckPlateNumber: 'ABC-1234',
-                    status: 'In Transit',
-                    deliveryDate: '2023-10-26'
-                },
-                {
-                    id: 'DEL-002',
-                    drNumber: 'DR-8850',
-                    customerName: 'Jane Smith',
-                    customerNumber: '09187654321',
-                    origin: 'SMEG Alabang warehouse',
-                    destination: 'Sta. Rosa, Laguna',
-                    distance: '24.7 km',
-                    truckPlateNumber: 'XYZ-5678',
-                    status: 'On Schedule',
-                    deliveryDate: '2023-10-26'
-                }
-            ];
-            deliveryHistory = [
-                {
-                    id: 'DEL-003',
-                    drNumber: 'DR-8862',
-                    customerName: 'MCI Davao',
-                    customerNumber: 'N/A',
-                    origin: 'SMEG Davao warehouse',
-                    destination: '101 Corporate Center, Davao',
-                    distance: '5.3 km',
-                    additionalCosts: 32.00,
-                    status: 'Completed',
-                    completedDate: 'Oct 23, 2023'
-                },
-                {
-                    id: 'DEL-004',
-                    drNumber: 'DR-8870',
-                    customerName: 'MCI Cebu',
-                    customerNumber: 'N/A',
-                    origin: 'SMEG Cebu warehouse',
-                    destination: '202- Mall, Cebu City',
-                    distance: '14.8 km',
-                    additionalCosts: 58.00,
-                    status: 'Completed',
-                    completedDate: 'Oct 22, 2023'
-                }
-            ];
-            saveToDatabase(); // Save the mock data
-        }
-
-        initDRSearch();
-        initHistorySearch();
+        
+        // Load initial views
         loadActiveDeliveries();
         loadDeliveryHistory();
         
-        // Initialize export button event listeners
-        initExportButtons();
+        // Update booking view dashboard with real data
+        if (typeof window.updateBookingViewDashboard === 'function') {
+            setTimeout(() => {
+                window.updateBookingViewDashboard();
+            }, 100);
+        }
+        
+        console.log('App initialized successfully');
+    }).catch(error => {
+        console.error('Error initializing app:', error);
+    });
+}
+
+// Make functions globally available
+window.loadActiveDeliveries = loadActiveDeliveries;
+window.loadDeliveryHistory = loadDeliveryHistory;
+window.saveToLocalStorage = saveToLocalStorage;
+window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
+window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
+window.showESignatureModal = showESignatureModal;
+window.showEPodModal = showEPodModal;
+window.handleStatusChange = handleStatusChange;
+window.testModalFunctionality = testModalFunctionality;
+
+// Add event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('App.js: DOMContentLoaded event fired');
+    
+    // Initialize the app
+    initApp();
+    
+    // Add event listeners for search inputs
+    const drSearchInput = document.getElementById('drSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const drSearchHistoryInput = document.getElementById('drSearchHistoryInput');
+    const clearHistorySearchBtn = document.getElementById('clearHistorySearchBtn');
+    const selectAllActive = document.getElementById('selectAllActive');
+    const eSignatureBtn = document.getElementById('eSignatureBtn');
+    const exportActiveDeliveriesBtn = document.getElementById('exportActiveDeliveriesBtn');
+    const exportDeliveryHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
+    
+    if (drSearchInput) {
+        drSearchInput.addEventListener('input', function() {
+            currentSearchTerm = this.value;
+            loadActiveDeliveries();
+        });
     }
-
-    // Initialize export button event listeners
-    function initExportButtons() {
-        // Active Deliveries Export Button
-        const exportActiveBtn = document.getElementById('exportActiveDeliveriesBtn');
-        if (exportActiveBtn) {
-            exportActiveBtn.addEventListener('click', exportActiveDeliveriesToExcel);
-        }
-
-        // Delivery History Export Button
-        const exportHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
-        if (exportHistoryBtn) {
-            exportHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
-        }
-
-        // E-POD Export Button - This should use the function from main.js
-        const exportEPodBtn = document.getElementById('exportEPodBtn');
-        if (exportEPodBtn) {
-            // Remove any existing event listeners to prevent conflicts
-            const newExportEPodBtn = exportEPodBtn.cloneNode(true);
-            exportEPodBtn.parentNode.replaceChild(newExportEPodBtn, exportEPodBtn);
-            
-            // Add the click event listener
-            newExportEPodBtn.addEventListener('click', function() {
-                // Check if the exportEPodToPdf function exists in main.js
-                if (typeof window.exportEPodToPdf === 'function') {
-                    window.exportEPodToPdf();
-                } else {
-                    showToast('Export functionality not available. Please try again.', 'error');
-                }
-            });
-        }
-    }
-
-    // New function to add test data for E-signature testing
-    async function addTestData() {
-        // Add some additional fake deliveries for testing
-        const testData = [
-            {
-                id: 'DEL-005',
-                drNumber: 'DR-9001',
-                customerName: 'Test Customer 1',
-                customerNumber: '09123456789',
-                origin: 'SMEG Alabang warehouse',
-                destination: 'Taguig City',
-                distance: '15.2 km',
-                truckPlateNumber: 'TEST-001',
-                status: 'In Transit',
-                deliveryDate: new Date().toISOString()
-            },
-            {
-                id: 'DEL-006',
-                drNumber: 'DR-9002',
-                customerName: 'Test Customer 2',
-                customerNumber: '09987654321',
-                origin: 'SMEG Alabang warehouse',
-                destination: 'Pasig City',
-                distance: '18.7 km',
-                truckPlateNumber: 'TEST-002',
-                status: 'On Schedule',
-                deliveryDate: new Date().toISOString()
+    
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (drSearchInput) {
+                drSearchInput.value = '';
+                currentSearchTerm = '';
+                loadActiveDeliveries();
             }
-        ];
-
-        // Add test data to activeDeliveries
-        activeDeliveries.push(...testData);
-        
-        // Save to database
-        for (const delivery of testData) {
-            await window.saveDelivery(delivery);
-        }
-        
-        // Reload the view
-        loadActiveDeliveries();
-        
-        console.log('Test data added successfully');
-        showToast('Test data added for E-signature testing');
-    }
-
-    // Function to handle profile settings save
-    function saveProfileSettings() {
-        // Get form values using ID selectors
-        const firstName = document.getElementById('profileFirstName').value;
-        const lastName = document.getElementById('profileLastName').value;
-        const email = document.getElementById('profileEmail').value;
-        const phone = document.getElementById('profilePhone').value;
-        const timeZone = document.getElementById('profileTimeZone').value;
-        const dateFormat = document.getElementById('profileDateFormat').value;
-        
-        // In a real app, you would save these values to a backend or localStorage
-        console.log('Profile settings saved:', { firstName, lastName, email, phone, timeZone, dateFormat });
-        
-        // Show success message
-        showToast('Profile settings saved successfully');
-        
-        // Close the settings view and return to the main dashboard
-        const settingsView = document.getElementById('settingsView');
-        const bookingView = document.getElementById('bookingView');
-        const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
-        
-        if (settingsView && bookingView) {
-            // Hide settings view
-            settingsView.classList.remove('active');
-            // Show booking view
-            bookingView.classList.add('active');
-            
-            // Update sidebar active state
-            sidebarLinks.forEach(link => {
-                if (link.dataset.view === 'settings') {
-                    link.classList.remove('active');
-                } else if (link.dataset.view === 'booking') {
-                    link.classList.add('active');
-                }
-            });
-        }
-    }
-
-    // Function to handle notification settings save
-    function saveNotificationSettings() {
-        // Get checkbox values with null checks
-        const newBooking = document.getElementById('newBooking');
-        const deliveryUpdates = document.getElementById('deliveryUpdates');
-        const etaChanges = document.getElementById('etaChanges');
-        const completion = document.getElementById('completion');
-        const systemUpdates = document.getElementById('systemUpdates');
-        const securityAlerts = document.getElementById('securityAlerts');
-        const billingUpdates = document.getElementById('billingUpdates');
-        
-        // In a real app, you would save these values to a backend or localStorage
-        console.log('Notification settings saved:', { 
-            newBooking: newBooking ? newBooking.checked : false,
-            deliveryUpdates: deliveryUpdates ? deliveryUpdates.checked : false,
-            etaChanges: etaChanges ? etaChanges.checked : false,
-            completion: completion ? completion.checked : false,
-            systemUpdates: systemUpdates ? systemUpdates.checked : false,
-            securityAlerts: securityAlerts ? securityAlerts.checked : false,
-            billingUpdates: billingUpdates ? billingUpdates.checked : false
-        });
-        
-        // Show success message
-        showToast('Notification preferences saved successfully');
-        
-        // Close the settings view and return to the main dashboard
-        const settingsView = document.getElementById('settingsView');
-        const bookingView = document.getElementById('bookingView');
-        const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
-        
-        if (settingsView && bookingView) {
-            // Hide settings view
-            settingsView.classList.remove('active');
-            // Show booking view
-            bookingView.classList.add('active');
-            
-            // Update sidebar active state
-            sidebarLinks.forEach(link => {
-                if (link.dataset.view === 'settings') {
-                    link.classList.remove('active');
-                } else if (link.dataset.view === 'booking') {
-                    link.classList.add('active');
-                }
-            });
-        }
-    }
-
-    // Make functions globally accessible
-    // Create getters to ensure we always access the current arrays
-    // Check if property already exists before defining it
-    if (!window.hasOwnProperty('activeDeliveries')) {
-        Object.defineProperty(window, 'activeDeliveries', {
-            get: function() { return activeDeliveries; },
-            set: function(value) { activeDeliveries = value; }
         });
     }
     
-    if (!window.hasOwnProperty('deliveryHistory')) {
-        Object.defineProperty(window, 'deliveryHistory', {
-            get: function() { return deliveryHistory; },
-            set: function(value) { deliveryHistory = value; }
+    if (drSearchHistoryInput) {
+        drSearchHistoryInput.addEventListener('input', function() {
+            currentHistorySearchTerm = this.value;
+            loadDeliveryHistory();
         });
     }
-    window.saveToLocalStorage = saveToLocalStorage;
-    window.loadActiveDeliveries = loadActiveDeliveries;
-    window.loadDeliveryHistory = loadDeliveryHistory;
-    window.initDeliveryManagement = initDeliveryManagement;
-    window.addTestData = addTestData; // Add the new function
-    window.showToast = showToast;
-    window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
-    window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
-    window.saveProfileSettings = saveProfileSettings;
-    window.saveNotificationSettings = saveNotificationSettings;
     
-    // Expose the internal functions that might be needed by other modules
-    window.getStatusInfo = getStatusInfo;
-    window.handleStatusChange = handleStatusChange;
-    window.saveProfileSettings = saveProfileSettings;
-    window.saveNotificationSettings = saveNotificationSettings;
-
-    // Initialize the application when DOM is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        initDeliveryManagement();
-        
-        // Add event listeners for settings save buttons
-        const saveProfileBtn = document.getElementById('saveProfileChangesBtn');
-        if (saveProfileBtn) {
-            saveProfileBtn.addEventListener('click', saveProfileSettings);
-        }
-        
-        const saveNotificationBtn = document.getElementById('saveNotificationChangesBtn');
-        if (saveNotificationBtn) {
-            saveNotificationBtn.addEventListener('click', saveNotificationSettings);
+    if (clearHistorySearchBtn) {
+        clearHistorySearchBtn.addEventListener('click', function() {
+            if (drSearchHistoryInput) {
+                drSearchHistoryInput.value = '';
+                currentHistorySearchTerm = '';
+                loadDeliveryHistory();
+            }
+        });
+    }
+    
+    if (selectAllActive) {
+        selectAllActive.addEventListener('change', function() {
+            document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            
+            // Enable/disable E-Signature button based on selection
+            if (eSignatureBtn) {
+                eSignatureBtn.disabled = !this.checked;
+            }
+        });
+    }
+    
+    // Add event delegation for delivery checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('delivery-checkbox')) {
+            // Update select all checkbox state
+            if (selectAllActive) {
+                const allCheckboxes = document.querySelectorAll('.delivery-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.delivery-checkbox:checked');
+                selectAllActive.checked = allCheckboxes.length === checkedCheckboxes.length;
+            }
+            
+            // Enable/disable E-Signature button based on selection
+            if (eSignatureBtn) {
+                const anyChecked = document.querySelectorAll('.delivery-checkbox:checked').length > 0;
+                eSignatureBtn.disabled = !anyChecked;
+            }
         }
     });
+    
+    if (eSignatureBtn) {
+        eSignatureBtn.addEventListener('click', function() {
+            // Get selected deliveries
+            const selectedDeliveries = Array.from(document.querySelectorAll('.delivery-checkbox:checked'))
+                .map(checkbox => checkbox.dataset.deliveryId);
+            
+            if (selectedDeliveries.length === 0) {
+                showToast('Please select at least one delivery', 'warning');
+                return;
+            }
+            
+            if (selectedDeliveries.length > 1) {
+                showToast('Please select only one delivery for E-Signature', 'warning');
+                return;
+            }
+            
+            // Show E-Signature modal for the first selected delivery
+            const deliveryId = selectedDeliveries[0];
+            const delivery = activeDeliveries.find(d => d.id === deliveryId);
+            if (delivery) {
+                showESignatureModal(delivery.drNumber);
+            }
+        });
+    }
+    
+    if (exportActiveDeliveriesBtn) {
+        exportActiveDeliveriesBtn.addEventListener('click', exportActiveDeliveriesToExcel);
+    }
+    
+    if (exportDeliveryHistoryBtn) {
+        exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
+    }
+    
+    console.log('App.js: Event listeners added');
+});
+
+console.log('=== APP.JS INITIALIZATION COMPLETE ===');
 })();

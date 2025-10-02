@@ -103,6 +103,6 @@ template = "Your code is {{ .Code }}"
 enabled = false
 port = 54327
 vector_port = 54328
-# Configure the postgres-cdn server
-[analytics.pooler]
-port = 54330
+# Remove the invalid pooler configuration
+# [analytics.pooler]
+# port = 54330

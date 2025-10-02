@@ -1,6 +1,47 @@
 // Customer Management System
 console.log('=== CUSTOMERS.JS LOADED ===');
 
+// Show toast notification
+function showToast(message, type = 'success') {
+    // Create toast element if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Show the toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+    toast.show();
+    
+    // Remove the toast after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+    });
+}
+
+// Show error notification
+function showError(message) {
+    showToast(message, 'danger');
+}
+
 // Global customers array
 window.customers = [];
 
@@ -525,6 +566,88 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveEditedCustomerBtn = document.getElementById('updateCustomerBtn');
     if (saveEditedCustomerBtn) {
         saveEditedCustomerBtn.addEventListener('click', saveEditedCustomer);
+    }
+    
+    // Add event listener for add customer button
+    const addCustomerBtn = document.getElementById('addCustomerBtn');
+    if (addCustomerBtn) {
+        addCustomerBtn.addEventListener('click', function() {
+            // Show add customer modal using our utility function if available
+            if (typeof window.showModal === 'function') {
+                window.showModal('addCustomerModal');
+            } else {
+                // Fallback to Bootstrap modal
+                const addCustomerModal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+                addCustomerModal.show();
+            }
+        });
+    }
+    
+    // Add event listener for save customer button
+    const saveCustomerBtn = document.getElementById('saveCustomerBtn');
+    if (saveCustomerBtn) {
+        saveCustomerBtn.addEventListener('click', function() {
+            // Get form data
+            const contactPerson = document.getElementById('contactPerson').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const address = document.getElementById('address').value;
+            const accountType = document.getElementById('accountType').value;
+            const status = document.getElementById('customerStatus').value;
+            const notes = document.getElementById('notes').value;
+            
+            // Validate required fields
+            if (!contactPerson || !phone || !address || !accountType) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            // Create new customer object
+            const newCustomer = {
+                id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
+                contactPerson: contactPerson,
+                phone: phone,
+                email: email,
+                address: address,
+                accountType: accountType,
+                status: status,
+                notes: notes,
+                bookingsCount: 0,
+                lastDelivery: '',
+                createdAt: new Date()
+            };
+            
+            // Add to customers array
+            if (!window.customers) {
+                window.customers = [];
+            }
+            window.customers.push(newCustomer);
+            
+            // Save to localStorage
+            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            
+            // Refresh display
+            displayCustomers();
+            
+            // Hide modal using our utility function if available
+            if (typeof window.hideModal === 'function') {
+                window.hideModal('addCustomerModal');
+            } else {
+                // Fallback to Bootstrap modal
+                const addCustomerModal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                if (addCustomerModal) {
+                    addCustomerModal.hide();
+                }
+            }
+            
+            // Show success message
+            if (typeof showToast === 'function') {
+                showToast('Customer added successfully!');
+            }
+            
+            // Reset form
+            document.getElementById('addCustomerForm').reset();
+        });
     }
     
     console.log('Customers.js: Event listeners added');

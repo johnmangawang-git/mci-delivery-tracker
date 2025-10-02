@@ -6,22 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCI App</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <!-- Bootstrap 5.3.0 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Bootstrap 5.3.0 with fallback -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" onload="this.onload=null;window.bootstrapLoaded=true;" onerror="this.onerror=null;window.bootstrapLoaded=false;loadLocalBootstrapCSS();">
+    <!-- Bootstrap Icons with fallback -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" onload="this.onload=null;window.bootstrapIconsLoaded=true;" onerror="this.onerror=null;window.bootstrapIconsLoaded=false;loadLocalBootstrapIcons();">
     <!-- Google Fonts - Roboto for Material Design -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" onload="this.onload=null;window.chartJsLoaded=true;" onerror="this.onerror=null;window.chartJsLoaded=false;loadLocalChartJs();"></script>
     <!-- Leaflet CSS for interactive maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" onload="this.onload=null;window.leafletCssLoaded=true;" onerror="this.onerror=null;window.leafletCssLoaded=false;loadLocalLeafletCss();"/>
 
     <!-- Leaflet JavaScript for interactive maps -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" onload="this.onload=null;window.leafletJsLoaded=true;" onerror="this.onerror=null;window.leafletJsLoaded=false;loadLocalLeafletJs();"></script>
 
     <!-- Supabase Configuration -->
     <script>
@@ -30,10 +29,10 @@
         window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
     </script>
 
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
-    <!-- Signature Pad Library -->
-    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <!-- Supabase CDN with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" onload="this.onload=null;window.supabaseLoaded=true;" onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
+    <!-- Signature Pad Library with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js" onload="this.onload=null;window.signaturePadLoaded=true;" onerror="this.onerror=null;window.signaturePadLoaded=false;loadLocalSignaturePad();"></script>
 
     <!-- Application JavaScript Files -->
     <script src="assets/js/modal-utils.js"></script>
@@ -44,6 +43,7 @@
     <script src="assets/js/warehouse.js"></script>
     <script src="assets/js/supabase.js"></script>
     <script src="assets/js/dataService.js"></script>
+    <script src="assets/js/main-fixed.js"></script>
     <script src="assets/js/app.js"></script>
     <link rel="stylesheet" href="assets/css/style.css">
     <!-- Custom styles for development -->
@@ -142,6 +142,7 @@
                         <span class="nav-text">Settings</span>
                     </a>
                 </li>
+
             </ul>
         </div>
     </div>
@@ -1347,11 +1348,37 @@
         </div>
     </div>
 
-    <!-- SheetJS for Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Calendar Modal -->
+    <div class="modal fade" id="calendarModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calendar me-2"></i>Select Date</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button class="btn btn-outline-primary" id="prevMonthModal">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <h5 class="mb-0" id="currentMonthModal">Month Year</h5>
+                        <button class="btn btn-outline-primary" id="nextMonthModal">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGridModal">
+                        <!-- Calendar will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onload="this.onload=null;window.xlsxLoaded=true;" onerror="this.onerror=null;window.xlsxLoaded=false;loadLocalXlsx();"></script>
+
+    <!-- Bootstrap JS with fallback -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" onload="this.onload=null;window.bootstrapJSLoaded=true;" onerror="this.onerror=null;window.bootstrapJSLoaded=false;loadLocalBootstrapJS();"></script>
 
     <!-- Initialize signature pad when modal is shown -->
     <script>
@@ -1368,6 +1395,153 @@
                 });
             }
         });
+    </script>
+
+    <!-- Fallback functions -->
+    <script>
+        // Function to load local Bootstrap CSS if CDN fails
+        function loadLocalBootstrapCSS() {
+            console.log('Loading local Bootstrap CSS fallback');
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/bootstrap.min.css';
+            link.type = 'text/css';
+            document.head.appendChild(link);
+        }
+        
+        // Function to load local Bootstrap Icons if CDN fails
+        function loadLocalBootstrapIcons() {
+            console.log('Loading local Bootstrap Icons fallback');
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/bootstrap-icons.css';
+            link.type = 'text/css';
+            document.head.appendChild(link);
+        }
+        
+        // Function to load local Supabase if CDN fails
+        function loadLocalSupabase() {
+            console.log('Loading local Supabase fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/supabase-local.js';
+            document.head.appendChild(script);
+        }
+        
+        // Function to load local Bootstrap JS if CDN fails
+        function loadLocalBootstrapJS() {
+            console.log('Loading local Bootstrap JS fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/bootstrap.bundle.min.js';
+            document.head.appendChild(script);
+        }
+        
+        // Function to load local Chart.js if CDN fails
+        function loadLocalChartJs() {
+            console.log('Loading local Chart.js fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/chart.min.js';
+            document.head.appendChild(script);
+        }
+        
+        // Function to load local Leaflet CSS if CDN fails
+        function loadLocalLeafletCss() {
+            console.log('Loading local Leaflet CSS fallback');
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/leaflet.css';
+            link.type = 'text/css';
+            document.head.appendChild(link);
+        }
+        
+        // Function to load local Leaflet JS if CDN fails
+        function loadLocalLeafletJs() {
+            console.log('Loading local Leaflet JS fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/leaflet.js';
+            document.head.appendChild(script);
+        }
+        
+        // Function to load local Signature Pad if CDN fails
+        function loadLocalSignaturePad() {
+            console.log('Loading local Signature Pad fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/signature_pad.min.js';
+            document.head.appendChild(script);
+        }
+        
+        // Function to load local XLSX if CDN fails
+        function loadLocalXlsx() {
+            console.log('Loading local XLSX fallback');
+            var script = document.createElement('script');
+            script.src = 'assets/js/xlsx.full.min.js';
+            document.head.appendChild(script);
+        }
+        
+        // Enhanced check with more detailed logging
+        setTimeout(function() {
+            if (window.bootstrapLoaded === false) {
+                console.warn('Bootstrap CSS failed to load from CDN');
+                loadLocalBootstrapCSS();
+            } else if (window.bootstrapLoaded === undefined) {
+                console.warn('Bootstrap CSS loading status unknown');
+            }
+            
+            if (window.bootstrapIconsLoaded === false) {
+                console.warn('Bootstrap Icons failed to load from CDN');
+                loadLocalBootstrapIcons();
+            } else if (window.bootstrapIconsLoaded === undefined) {
+                console.warn('Bootstrap Icons loading status unknown');
+            }
+            
+            if (window.supabaseLoaded === false) {
+                console.warn('Supabase JS failed to load from CDN');
+                loadLocalSupabase();
+            } else if (window.supabaseLoaded === undefined) {
+                console.warn('Supabase JS loading status unknown');
+            }
+            
+            if (window.bootstrapJSLoaded === false) {
+                console.warn('Bootstrap JS failed to load from CDN');
+                loadLocalBootstrapJS();
+            } else if (window.bootstrapJSLoaded === undefined) {
+                console.warn('Bootstrap JS loading status unknown');
+            }
+            
+            if (window.chartJsLoaded === false) {
+                console.warn('Chart.js failed to load from CDN');
+                loadLocalChartJs();
+            } else if (window.chartJsLoaded === undefined) {
+                console.warn('Chart.js loading status unknown');
+            }
+            
+            if (window.leafletCssLoaded === false) {
+                console.warn('Leaflet CSS failed to load from CDN');
+                loadLocalLeafletCss();
+            } else if (window.leafletCssLoaded === undefined) {
+                console.warn('Leaflet CSS loading status unknown');
+            }
+            
+            if (window.leafletJsLoaded === false) {
+                console.warn('Leaflet JS failed to load from CDN');
+                loadLocalLeafletJs();
+            } else if (window.leafletJsLoaded === undefined) {
+                console.warn('Leaflet JS loading status unknown');
+            }
+            
+            if (window.signaturePadLoaded === false) {
+                console.warn('Signature Pad failed to load from CDN');
+                loadLocalSignaturePad();
+            } else if (window.signaturePadLoaded === undefined) {
+                console.warn('Signature Pad loading status unknown');
+            }
+            
+            if (window.xlsxLoaded === false) {
+                console.warn('XLSX failed to load from CDN');
+                loadLocalXlsx();
+            } else if (window.xlsxLoaded === undefined) {
+                console.warn('XLSX loading status unknown');
+            }
+        }, 5000);
     </script>
 </body>
 

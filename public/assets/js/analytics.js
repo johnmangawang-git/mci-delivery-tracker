@@ -322,44 +322,110 @@ function initChartFilters() {
 // Mock function to load analytics data from Supabase
 async function loadAnalyticsData() {
     try {
-        // Return zero data instead of mock data
+        // Get the actual data from global variables
+        const activeDeliveries = window.activeDeliveries || [];
+        const deliveryHistory = window.deliveryHistory || [];
+        const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+        
+        // Process data for charts
+        // Bookings chart - group by month
+        const bookingsByMonth = {};
+        allDeliveries.forEach(delivery => {
+            const date = delivery.deliveryDate || delivery.timestamp;
+            if (date) {
+                const month = new Date(date).toLocaleString('default', { month: 'short' });
+                bookingsByMonth[month] = (bookingsByMonth[month] || 0) + 1;
+            }
+        });
+        
+        // Costs chart - group by month
+        const costsByMonth = {};
+        allDeliveries.forEach(delivery => {
+            const date = delivery.deliveryDate || delivery.timestamp;
+            if (date) {
+                const month = new Date(date).toLocaleString('default', { month: 'short' });
+                const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
+                costsByMonth[month] = (costsByMonth[month] || 0) + cost;
+            }
+        });
+        
+        // Origin chart - count by origin
+        const originCount = {};
+        allDeliveries.forEach(delivery => {
+            const origin = delivery.origin || 'Unknown';
+            originCount[origin] = (originCount[origin] || 0) + 1;
+        });
+        
+        // Cost breakdown - categorize additional costs
+        const costBreakdown = {
+            'Fuel Surcharge': 0,
+            'Toll Fees': 0,
+            'Urgent Delivery': 0,
+            'Special Handling': 0,
+            'Other': 0
+        };
+        
+        // For now, we'll put all additional costs in "Other" since we don't have cost descriptions
+        let totalAdditionalCosts = 0;
+        allDeliveries.forEach(delivery => {
+            if (typeof delivery.additionalCosts === 'number') {
+                totalAdditionalCosts += delivery.additionalCosts;
+            }
+        });
+        
+        if (totalAdditionalCosts > 0) {
+            costBreakdown['Other'] = totalAdditionalCosts;
+        }
+        
+        // Prepare data for charts
+        const months = Object.keys(bookingsByMonth);
+        const bookingValues = months.map(month => bookingsByMonth[month] || 0);
+        const costValues = months.map(month => costsByMonth[month] || 0);
+        
+        const originLabels = Object.keys(originCount);
+        const originValues = originLabels.map(label => originCount[label] || 0);
+        
+        const costBreakdownLabels = Object.keys(costBreakdown);
+        const costBreakdownValues = costBreakdownLabels.map(label => costBreakdown[label] || 0);
+        
         return {
             bookings: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                labels: months,
+                values: bookingValues
             },
             costs: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                labels: months,
+                values: costValues
             },
             origin: {
-                labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
-                values: [0, 0, 0, 0]
+                labels: originLabels,
+                values: originValues
             },
             costBreakdown: {
-                labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
-                values: [0, 0, 0, 0, 0]
+                labels: costBreakdownLabels,
+                values: costBreakdownValues
             }
         };
     } catch (error) {
         console.error('Error loading analytics data:', error);
         showError('Failed to load analytics data');
+        // Return empty data as fallback
         return {
             bookings: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                labels: [],
+                values: []
             },
             costs: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
-                values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                labels: [],
+                values: []
             },
             origin: {
-                labels: ['MCI Alabang', 'MCI Cebu', 'MCI Davao', 'Other'],
-                values: [0, 0, 0, 0]
+                labels: [],
+                values: []
             },
             costBreakdown: {
-                labels: ['Fuel Surcharge', 'Toll Fees', 'Urgent Delivery', 'Special Handling', 'Other'],
-                values: [0, 0, 0, 0, 0]
+                labels: [],
+                values: []
             }
         };
     }
@@ -368,11 +434,35 @@ async function loadAnalyticsData() {
 // Function to update the dashboard metrics
 function updateDashboardMetrics() {
     try {
-        // Reset all metrics to zero
-        const totalBookings = 0;
-        const totalDistance = 0;
-        const totalAdditionalCost = 0;
-        const avgCostPerBooking = 0;
+        // Get the actual data from global variables
+        const activeDeliveries = window.activeDeliveries || [];
+        const deliveryHistory = window.deliveryHistory || [];
+        
+        // Calculate metrics from actual data
+        const totalBookings = activeDeliveries.length + deliveryHistory.length;
+        
+        // Calculate total distance
+        let totalDistance = 0;
+        [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
+            if (delivery.distance) {
+                // Extract numeric value from distance string (e.g., "12.5 km" -> 12.5)
+                const distanceMatch = delivery.distance.match(/(\d+\.?\d*)/);
+                if (distanceMatch) {
+                    totalDistance += parseFloat(distanceMatch[1]) || 0;
+                }
+            }
+        });
+        
+        // Calculate total additional costs
+        let totalAdditionalCost = 0;
+        [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
+            if (typeof delivery.additionalCosts === 'number') {
+                totalAdditionalCost += delivery.additionalCosts;
+            }
+        });
+        
+        // Calculate average cost per booking
+        const avgCostPerBooking = totalBookings > 0 ? totalAdditionalCost / totalBookings : 0;
         
         // Update the UI elements
         const totalBookingsElement = document.querySelector('.metric-card:nth-child(1) .metric-value');
@@ -385,7 +475,7 @@ function updateDashboardMetrics() {
         }
         
         if (totalDistanceElement) {
-            totalDistanceElement.textContent = `${totalDistance.toLocaleString()} km`;
+            totalDistanceElement.textContent = `${totalDistance.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
         }
         
         if (totalAdditionalCostElement) {
@@ -396,9 +486,14 @@ function updateDashboardMetrics() {
             avgCostPerBookingElement.textContent = `₱${avgCostPerBooking.toFixed(2)}`;
         }
         
-        console.log('Dashboard metrics reset to zero');
+        console.log('Dashboard metrics updated:', {
+            totalBookings,
+            totalDistance,
+            totalAdditionalCost,
+            avgCostPerBooking
+        });
     } catch (error) {
-        console.error('Error resetting dashboard metrics:', error);
+        console.error('Error updating dashboard metrics:', error);
     }
 }
 

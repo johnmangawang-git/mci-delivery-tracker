@@ -32,13 +32,24 @@ function initSupabase() {
 
     // Initialize Supabase client
     try {
-        // Check if Supabase is available globally (from CDN)
+        // Check if Supabase is available globally (from CDN or local fallback)
+        // The library might be available as window.supabase or through module system
+        let supabaseLibrary = null;
+        
+        // Check for different possible locations of the Supabase library
         if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient !== 'undefined') {
-            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            supabaseLibrary = window.supabase;
+        } else if (typeof supabase !== 'undefined' && typeof supabase.createClient !== 'undefined') {
+            // In case it's loaded directly without attaching to window
+            supabaseLibrary = supabase;
+        }
+        
+        if (supabaseLibrary) {
+            supabaseClient = supabaseLibrary.createClient(supabaseUrl, supabaseKey);
             console.log('Supabase client initialized successfully');
             return supabaseClient;
         } else {
-            console.error('Supabase library not found. Please include the Supabase CDN script.');
+            console.error('Supabase library not found. Please include the Supabase CDN script or local fallback.');
             return null;
         }
     } catch (error) {

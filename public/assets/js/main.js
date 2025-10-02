@@ -210,110 +210,65 @@ let globalSignaturePad = null;
 // Function to ensure signature pad is initialized
 function ensureSignaturePadInitialized() {
     console.log('ensureSignaturePadInitialized called');
-    const canvas = document.getElementById('signaturePad');
-    console.log('Canvas element:', canvas);
     
-    // Destroy existing signature pad instance if it exists
-    if (globalSignaturePad) {
-        console.log('Destroying existing signature pad instance');
-        globalSignaturePad.off();
-        globalSignaturePad = null;
+    // Check if SignaturePad library is loaded
+    if (typeof SignaturePad === 'undefined') {
+        console.error('SignaturePad library is not loaded');
+        return null;
     }
     
-    // Initialize signature pad if canvas exists
-    if (canvas) {
-        console.log('Canvas found, initializing signature pad');
-        
-        // Ensure canvas is visible and has dimensions
-        canvas.style.display = 'block';
-        
-        // Set initial canvas dimensions
-        const container = canvas.parentElement;
-        const maxWidth = Math.min(container.offsetWidth, 600);
-        const height = 300;
-        
-        canvas.width = maxWidth;
-        canvas.height = height;
-        console.log('Canvas dimensions set:', maxWidth, 'x', height);
-        
-        // Small delay to ensure DOM is fully rendered
-        setTimeout(() => {
-            try {
-                // Initialize SignaturePad with proper options
-                globalSignaturePad = new SignaturePad(canvas, {
-                    minWidth: 1.5,
-                    maxWidth: 2.5,
-                    penColor: "rgb(0, 0, 0)",  // Black ink
-                    backgroundColor: "rgba(255, 255, 255, 0)",
-                    velocityFilterWeight: 0.7
-                });
-                
-                console.log('SignaturePad instance created:', globalSignaturePad);
-                
-                // Test if the signature pad is actually working
-                console.log('SignaturePad isEmpty:', globalSignaturePad.isEmpty());
-                
-                // Make signature pad responsive
-                function resizeCanvas() {
-                    const container = canvas.parentElement;
-                    const maxWidth = Math.min(container.offsetWidth, 600);
-                    const height = 300;
-                    
-                    // Only resize if dimensions have changed
-                    if (canvas.width !== maxWidth || canvas.height !== height) {
-                        // Save the current signature data
-                        let savedData = null;
-                        if (globalSignaturePad && !globalSignaturePad.isEmpty()) {
-                            savedData = globalSignaturePad.toData();
-                        }
-                        
-                        // Resize the canvas
-                        canvas.width = maxWidth;
-                        canvas.height = height;
-                        
-                        // Restore the signature data
-                        if (savedData) {
-                            globalSignaturePad.fromData(savedData);
-                        }
-                    }
-                }
-                
-                // Initial resize
-                resizeCanvas();
-                
-                // Resize when window is resized
-                window.addEventListener("resize", function() {
-                    if (globalSignaturePad) {
-                        resizeCanvas();
-                    }
-                });
-                
-                // Setup clear button
-                const clearSignatureBtn = document.getElementById('clearSignatureBtn');
-                if (clearSignatureBtn) {
-                    clearSignatureBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        if (globalSignaturePad) {
-                            globalSignaturePad.clear();
-                            console.log('Signature cleared');
-                        }
-                    });
-                }
-                
-                // Setup save button
-                setupSaveSignatureButton();
-                
-            } catch (error) {
-                console.error('Error initializing SignaturePad:', error);
+    // Small delay to ensure DOM is fully rendered
+    setTimeout(() => {
+        try {
+            // Get canvas element
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas) {
+                console.error('Canvas element not found');
+                return null;
             }
-        }, 150); // Increased delay to ensure DOM is ready
-        
-        return globalSignaturePad;
-    } else {
-        console.log('Canvas element not found');
-    }
+            
+            // Set proper canvas dimensions
+            const container = canvas.parentElement;
+            const width = Math.min(container.offsetWidth, 600);
+            const height = 300;
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Destroy existing instance if it exists
+            if (globalSignaturePad) {
+                globalSignaturePad.off();
+                globalSignaturePad = null;
+            }
+            
+            // Create new SignaturePad instance with basic configuration
+            globalSignaturePad = new SignaturePad(canvas);
+            
+            console.log('SignaturePad initialized successfully');
+            
+            // Setup clear button with fresh event listener
+            const clearBtn = document.getElementById('clearSignatureBtn');
+            if (clearBtn) {
+                // Remove all existing listeners by cloning
+                const freshClearBtn = clearBtn.cloneNode(true);
+                clearBtn.parentNode.replaceChild(freshClearBtn, clearBtn);
+                
+                freshClearBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (globalSignaturePad) {
+                        globalSignaturePad.clear();
+                    }
+                });
+            }
+            
+            // Setup save button
+            setupSaveSignatureButton();
+            
+        } catch (error) {
+            console.error('Failed to initialize SignaturePad:', error);
+        }
+    }, 500);
     
-    return null;
+    return globalSignaturePad;
 }
 
 // Function to setup the save signature button event listener
@@ -403,28 +358,22 @@ function setupSaveSignatureButton() {
                 // Save to local storage (in a real app, this would be an API call)
                 let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
                 ePodRecords.push(ePodRecord);
-                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
                 
                 // Update delivery status in active deliveries
                 updateDeliveryStatus(drNumber, 'Completed');
+                
+                // Save to local storage
+                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
                 
                 // Show success message
                 showToast('E-POD saved successfully', 'success');
             }
             
-            // Close modal
+            // Close the modal
             const eSignatureModal = bootstrap.Modal.getInstance(document.getElementById('eSignatureModal'));
             if (eSignatureModal) {
                 eSignatureModal.hide();
             }
-            
-            // Force remove modal backdrop if it remains
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => backdrop.remove());
-            
-            // Re-enable body scrolling
-            document.body.style.overflow = 'auto';
-            document.body.style.paddingRight = '0';
             
             // Refresh both views
             if (typeof loadActiveDeliveries === 'function') {
@@ -461,13 +410,11 @@ function openSignaturePad(drNumber = '', customerName = '', customerContact = ''
     
     // Initialize signature pad after modal is shown
     const modalElement = document.getElementById('eSignatureModal');
+    
     const handleModalShown = function() {
         console.log('Modal shown event triggered');
-        // Use a timeout to ensure the modal is fully rendered
-        setTimeout(() => {
-            ensureSignaturePadInitialized();
-        }, 300); // Increased delay to ensure modal is fully rendered
-        // Remove the event listener after it's been triggered once
+        ensureSignaturePadInitialized();
+        // Remove event listener to prevent duplicates
         modalElement.removeEventListener('shown.bs.modal', handleModalShown);
     };
     
@@ -495,13 +442,11 @@ function openSignaturePadMultiple(drNumber = '', customerName = '', customerCont
     
     // Initialize signature pad after modal is shown
     const modalElement = document.getElementById('eSignatureModal');
+    
     const handleModalShown = function() {
         console.log('Modal shown event triggered');
-        // Use a timeout to ensure the modal is fully rendered
-        setTimeout(() => {
-            ensureSignaturePadInitialized();
-        }, 300); // Increased delay to ensure modal is fully rendered
-        // Remove the event listener after it's been triggered once
+        ensureSignaturePadInitialized();
+        // Remove event listener to prevent duplicates
         modalElement.removeEventListener('shown.bs.modal', handleModalShown);
     };
     
@@ -537,16 +482,73 @@ window.clearSignature = clearSignature;
 window.hasSignature = hasSignature;
 window.ensureSignaturePadInitialized = ensureSignaturePadInitialized;
 
+// Function to update booking view dashboard cards with real data
+function updateBookingViewDashboard() {
+    try {
+        // Get the actual data from global variables
+        const activeDeliveries = window.activeDeliveries || [];
+        const deliveryHistory = window.deliveryHistory || [];
+        
+        // Calculate metrics from actual data
+        const totalBookings = activeDeliveries.length + deliveryHistory.length;
+        const activeDeliveriesCount = activeDeliveries.length;
+        
+        // Calculate total distance
+        let totalDistance = 0;
+        [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
+            if (delivery.distance) {
+                // Extract numeric value from distance string (e.g., "12.5 km" -> 12.5)
+                const distanceMatch = delivery.distance.match(/(\d+\.?\d*)/);
+                if (distanceMatch) {
+                    totalDistance += parseFloat(distanceMatch[1]) || 0;
+                }
+            }
+        });
+        
+        // Update the booking view dashboard cards
+        const bookingView = document.getElementById('bookingView');
+        if (bookingView) {
+            // Booked Deliveries card (total bookings)
+            const bookedDeliveriesCard = bookingView.querySelector('.dashboard-cards .card:nth-child(1) .stat-value');
+            if (bookedDeliveriesCard) {
+                bookedDeliveriesCard.textContent = totalBookings;
+            }
+            
+            // Active Deliveries card
+            const activeDeliveriesCard = bookingView.querySelector('.dashboard-cards .card:nth-child(2) .stat-value');
+            if (activeDeliveriesCard) {
+                activeDeliveriesCard.textContent = activeDeliveriesCount;
+            }
+            
+            // Total Distance card
+            const totalDistanceCard = bookingView.querySelector('.dashboard-cards .card:nth-child(3) .stat-value');
+            if (totalDistanceCard) {
+                totalDistanceCard.textContent = `${totalDistance.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
+            }
+        }
+        
+        console.log('Booking view dashboard updated:', {
+            totalBookings,
+            activeDeliveriesCount,
+            totalDistance
+        });
+    } catch (error) {
+        console.error('Error updating booking view dashboard:', error);
+    }
+}
+
+// Expose function globally
+window.updateBookingViewDashboard = updateBookingViewDashboard;
+
 // E-POD Module Functions
 function initEPod() {
-    // Initialize signature pad
-    ensureSignaturePadInitialized();
-    
     // Setup save button (this will be a no-op if already set up)
     setupSaveSignatureButton();
     
     // Initialize export button
     initEPodExportButton();
+    
+    // Note: Signature pad initialization is handled by modal events, not here
     
     // E-Signature button in Active Deliveries view
     const eSignatureBtn = document.getElementById('eSignatureBtn');

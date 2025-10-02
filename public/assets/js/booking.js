@@ -1,4 +1,47 @@
 // Booking modal functionality
+console.log('=== BOOKING.JS LOADED ===');
+
+// Show toast notification
+function showToast(message, type = 'success') {
+    // Create toast element if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type}" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Show the toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+    toast.show();
+    
+    // Remove the toast after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+    });
+}
+
+// Show error notification
+function showError(message) {
+    showToast(message, 'danger');
+}
+
 function initBookingModal() {
     // Ensure customer management is available
     ensureCustomerManagementReady();
@@ -15,6 +58,47 @@ function initBookingModal() {
     const bookingModal = new bootstrap.Modal(bookingModalElement);
     const bookingForm = document.getElementById('bookingForm');
     // Note: bookingForm is not used in the current implementation, so we can skip the null check
+
+    // Add DR number functionality
+    const addDrBtn = document.getElementById('addDrBtn');
+    const drNumbersContainer = document.getElementById('drNumbersContainer');
+
+    if (addDrBtn && drNumbersContainer) {
+        addDrBtn.addEventListener('click', function () {
+            const drNumberItem = document.createElement('div');
+            drNumberItem.className = 'dr-number-item mt-2';
+            // Generate a unique ID for each DR number input
+            const uniqueId = 'drNumber-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            drNumberItem.innerHTML = `
+                <div class="input-group">
+                    <input type="text" class="form-control dr-number-input" id="${uniqueId}" placeholder="Enter DR number (e.g., DR-XXXXX)" required>
+                    <button type="button" class="btn btn-outline-danger remove-dr-btn">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            `;
+
+            drNumbersContainer.appendChild(drNumberItem);
+
+            // Add event listener to the new remove button
+            const removeDrBtn = drNumberItem.querySelector('.remove-dr-btn');
+            if (removeDrBtn) {
+                removeDrBtn.addEventListener('click', function () {
+                    drNumberItem.remove();
+                });
+            }
+        });
+    }
+
+    // Add event listeners for remove DR number buttons
+    document.querySelectorAll('.remove-dr-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const drNumberItem = this.closest('.dr-number-item');
+            if (drNumberItem) {
+                drNumberItem.remove();
+            }
+        });
+    });
 
     // Origin selection toggle
     const originSelect = document.getElementById('originSelect');
@@ -304,20 +388,60 @@ function calculateDistance() {
 // Save booking to Supabase
 async function saveBooking() {
     try {
-        const drNumber = document.getElementById('drNumber').value;
+        console.log('=== SAVE BOOKING FUNCTION STARTED ===');
+        
+        // Get all DR numbers - improved detection logic to accept any DR number input
+        // Get all inputs with class "dr-number-input" (this includes both the main input and dynamically added ones)
+        const drNumberInputs = document.querySelectorAll('.dr-number-input');
+        
+        console.log('DR Number inputs found:', drNumberInputs.length);
+        
+        let drNumbers = [];
+        
+        // Collect all DR numbers from inputs with class "dr-number-input"
+        drNumberInputs.forEach((input, index) => {
+            console.log(`DR Input ${index} (ID: ${input.id}):`, input.value);
+            if (input.value.trim()) {
+                drNumbers.push(input.value.trim());
+            }
+        });
+        
+        console.log('Collected DR Numbers:', drNumbers);
+        
+        // Check if we have the booking form element
+        const bookingForm = document.getElementById('bookingForm');
+        console.log('Booking form element:', bookingForm);
+        if (bookingForm) {
+            console.log('Booking form reset state:', bookingForm.dataset.resetState || 'not set');
+        }
+
+        // Validate form - simplified logic since we're now correctly collecting all DR numbers
+        if (drNumbers.length === 0) {
+            console.error('No DR numbers found - showing error to user');
+            showError('At least one DR Number is required');
+            return;
+        }
+
         const customerName = document.getElementById('customerName').value;
         const customerNumber = document.getElementById('customerNumber').value;
         const originSelect = document.getElementById('originSelect');
         const customOrigin = document.getElementById('customOrigin');
         const destinationInputs = document.querySelectorAll('.destination-area-input'); // Get all destination inputs
-        const distanceBox = document.getElementById('distanceBox');
+        const distanceValue = document.getElementById('distanceValue'); // Changed from distanceBox
+        const deliveryDate = document.getElementById('deliveryDate').value;
+        const truckType = document.getElementById('truckType').value;
+        const truckPlateNumber = document.getElementById('truckPlateNumber').value;
+
+        console.log('Form data collected:', {
+            customerName,
+            customerNumber,
+            deliveryDate,
+            truckType,
+            truckPlateNumber,
+            drNumbersCount: drNumbers.length
+        });
 
         // Validate form
-        if (!drNumber) {
-            showError('DR Number is required');
-            return;
-        }
-
         if (!customerName) {
             showError('Customer Name is required');
             return;
@@ -325,6 +449,21 @@ async function saveBooking() {
 
         if (!customerNumber) {
             showError('Customer Number is required');
+            return;
+        }
+
+        if (!deliveryDate) {
+            showError('Delivery Date is required');
+            return;
+        }
+
+        if (!truckType) {
+            showError('Truck Type is required');
+            return;
+        }
+
+        if (!truckPlateNumber) {
+            showError('Truck Plate Number is required');
             return;
         }
 
@@ -358,82 +497,70 @@ async function saveBooking() {
 
         // Get distance
         let distance = 0;
-        if (distanceBox) {
-            distance = parseFloat(distanceBox.textContent.replace(' km', '')) || 0;
+        if (distanceValue) {
+            const distanceText = distanceValue.textContent.replace(' km', '');
+            distance = parseFloat(distanceText) || 0;
         }
 
         // Get additional costs
         const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
-        const additionalCosts = [];
+        let additionalCostsTotal = 0;
 
         costItems.forEach(item => {
-            const descriptionInput = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]');
             const amountInput = item.querySelector('input[placeholder="Amount"]');
             
-            if (descriptionInput && amountInput) {
-                const description = descriptionInput.value;
-                const amount = amountInput.value;
-
-                if (description && amount) {
-                    additionalCosts.push({
-                        description,
-                        amount: parseFloat(amount)
-                    });
+            if (amountInput && amountInput.value) {
+                const amount = parseFloat(amountInput.value);
+                if (!isNaN(amount)) {
+                    additionalCostsTotal += amount;
                 }
             }
         });
 
-        // Auto-create customer if not exists
-        console.log('=== SAVE BOOKING DEBUG ===');
-        console.log('About to call autoCreateCustomer with:', {
-            customerName,
-            customerNumber,
-            destinations
-        });
-        
-        await autoCreateCustomer(customerName, customerNumber, destinations.join('; '));
-        
-        console.log('autoCreateCustomer completed');
-
-        // In a real implementation, this would save to Supabase
-        console.log('Saving booking:', {
-            dr_number: drNumber,
-            customer_name: customerName,
-            customer_number: customerNumber,
-            origin,
-            destinations,
-            distance,
-            additional_costs: additionalCosts
-        });
-
-        // Create delivery object
-        const newDelivery = {
-            id: 'DEL-' + Date.now(),
-            drNumber: drNumber,
-            customerName: customerName,
-            customerNumber: customerNumber,
-            origin: origin,
-            destination: destinations.join('; '),
-            distance: distance + ' km',
-            truckPlateNumber: '', // This will be added if we have truck information
-            status: 'On Schedule',
-            deliveryDate: new Date().toISOString(),
-            additionalCosts: additionalCosts.reduce((total, cost) => total + (cost.amount || 0), 0),
-            timestamp: new Date().toISOString()
-        };
-
-        // Add to active deliveries
-        if (typeof window.activeDeliveries !== 'undefined') {
-            window.activeDeliveries.push(newDelivery);
+        // Process each DR number as a separate booking
+        for (const drNumber of drNumbers) {
+            // Auto-create customer if not exists
+            console.log('=== SAVE BOOKING DEBUG ===');
+            console.log('About to call autoCreateCustomer with:', {
+                customerName,
+                customerNumber,
+                destinations
+            });
             
-            // Save to localStorage
-            if (typeof window.saveToLocalStorage === 'function') {
-                window.saveToLocalStorage();
-            }
+            await autoCreateCustomer(customerName, customerNumber, destinations.join('; '));
             
-            // Refresh active deliveries display
-            if (typeof window.loadActiveDeliveries === 'function') {
-                window.loadActiveDeliveries();
+            console.log('autoCreateCustomer completed');
+
+            // Create delivery object
+            const newDelivery = {
+                id: 'DEL-' + Date.now() + '-' + drNumber,
+                drNumber: drNumber,
+                customerName: customerName,
+                customerNumber: customerNumber,
+                origin: origin,
+                destination: destinations.join('; '),
+                distance: distance + ' km',
+                truckType: truckType,
+                truckPlateNumber: truckPlateNumber,
+                status: 'On Schedule',
+                deliveryDate: deliveryDate,
+                additionalCosts: additionalCostsTotal,
+                timestamp: new Date().toISOString()
+            };
+
+            // Add to active deliveries
+            if (typeof window.activeDeliveries !== 'undefined') {
+                window.activeDeliveries.push(newDelivery);
+                
+                // Save to localStorage
+                if (typeof window.saveToLocalStorage === 'function') {
+                    window.saveToLocalStorage();
+                }
+                
+                // Refresh active deliveries display
+                if (typeof window.loadActiveDeliveries === 'function') {
+                    window.loadActiveDeliveries();
+                }
             }
         }
 
@@ -470,6 +597,13 @@ async function saveBooking() {
             loadBookingsData().then(() => {
                 updateCalendar();
             });
+        }
+        
+        // Update booking view dashboard with real data
+        if (typeof window.updateBookingViewDashboard === 'function') {
+            setTimeout(() => {
+                window.updateBookingViewDashboard();
+            }, 100);
         }
     } catch (error) {
         console.error('Error saving booking:', error);
@@ -698,6 +832,23 @@ function resetBookingForm() {
     const customOriginContainer = document.getElementById('customOriginContainer');
     if (customOriginContainer) {
         customOriginContainer.classList.add('d-none');
+    }
+
+    // Remove all additional DR number items except the first one
+    const drNumberItems = document.querySelectorAll('#drNumbersContainer .dr-number-item');
+    if (drNumberItems.length > 1) {
+        for (let i = 1; i < drNumberItems.length; i++) {
+            drNumberItems[i].remove();
+        }
+    }
+
+    // Reset the first DR number item
+    const firstDrNumberItem = document.querySelector('#drNumbersContainer .dr-number-item');
+    if (firstDrNumberItem) {
+        const drNumberInput = firstDrNumberItem.querySelector('.dr-number-input');
+        if (drNumberInput) {
+            drNumberInput.value = '';
+        }
     }
 
     // Remove all additional cost items except the first one
@@ -1274,17 +1425,20 @@ function searchAddress(query) {
 function setupMapSearch() {
     const searchInput = document.getElementById('mapSearchInput');
     const searchBtn = document.getElementById('mapSearchBtn');
-    const searchResultsDropdown = document.getElementById('searchResultsDropdown');
     
     if (!searchInput || !searchBtn) return;
     
     // Create search results dropdown if it doesn't exist
+    let searchResultsDropdown = document.getElementById('searchResultsDropdown');
     if (!searchResultsDropdown) {
         const dropdown = document.createElement('div');
         dropdown.id = 'searchResultsDropdown';
         dropdown.className = 'dropdown-menu';
         dropdown.style.cssText = 'position: absolute; z-index: 1000; max-height: 200px; overflow-y: auto; width: 100%; display: none;';
-        searchInput.parentNode.appendChild(dropdown);
+        if (searchInput.parentNode) {
+            searchInput.parentNode.appendChild(dropdown);
+            searchResultsDropdown = dropdown;
+        }
     }
     
     let searchTimeout;
@@ -1296,18 +1450,26 @@ function setupMapSearch() {
         
         // Hide dropdown if query is too short
         if (query.length < 3) {
-            document.getElementById('searchResultsDropdown').style.display = 'none';
+            const dropdown = document.getElementById('searchResultsDropdown');
+            if (dropdown) {
+                dropdown.style.display = 'none';
+            }
             return;
         }
         
         searchTimeout = setTimeout(() => {
             // Show loading indicator
-            document.getElementById('searchResultsDropdown').innerHTML = '<div class="dropdown-item disabled">Searching...</div>';
-            document.getElementById('searchResultsDropdown').style.display = 'block';
+            const dropdown = document.getElementById('searchResultsDropdown');
+            if (dropdown) {
+                dropdown.innerHTML = '<div class="dropdown-item disabled">Searching...</div>';
+                dropdown.style.display = 'block';
+            }
             
             searchAddress(query)
                 .then(results => {
                     const dropdown = document.getElementById('searchResultsDropdown');
+                    if (!dropdown) return;
+                    
                     if (results.length > 0) {
                         // Clear previous results
                         dropdown.innerHTML = '';
@@ -1337,10 +1499,12 @@ function setupMapSearch() {
                 .catch(error => {
                     console.error('Search error:', error);
                     const dropdown = document.getElementById('searchResultsDropdown');
-                    dropdown.innerHTML = '<div class="dropdown-item disabled text-danger">Error searching. Please try again.</div>';
-                    setTimeout(() => {
-                        dropdown.style.display = 'none';
-                    }, 3000);
+                    if (dropdown) {
+                        dropdown.innerHTML = '<div class="dropdown-item disabled text-danger">Error searching. Please try again.</div>';
+                        setTimeout(() => {
+                            dropdown.style.display = 'none';
+                        }, 3000);
+                    }
                 });
         }, 300); // 300ms debounce
     });

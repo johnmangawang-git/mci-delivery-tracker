@@ -182,6 +182,29 @@ function openBookingModal(dateStr) {
         }
     }
     
+    // Set the delivery date in the form AFTER the modal is shown
+    // This ensures it's not cleared by any form reset operations
+    setTimeout(() => {
+        const deliveryDateEl = document.getElementById('deliveryDate');
+        console.log('Delivery Date element found:', deliveryDateEl);
+        if (deliveryDateEl) {
+            deliveryDateEl.value = dateStr;
+            console.log('Delivery Date value set to:', deliveryDateEl.value);
+        } else {
+            console.error('Delivery Date element not found!');
+            // Try to find it in the modal
+            const bookingModalElement = document.getElementById('bookingModal');
+            if (bookingModalElement) {
+                const altDeliveryDateEl = bookingModalElement.querySelector('#deliveryDate');
+                console.log('Alternative Delivery Date element search:', altDeliveryDateEl);
+                if (altDeliveryDateEl) {
+                    altDeliveryDateEl.value = dateStr;
+                    console.log('Delivery Date value set to:', altDeliveryDateEl.value);
+                }
+            }
+        }
+    }, 100);
+    
     // Update the modal calendar when the modal is shown
     setTimeout(() => {
         updateCalendarModal();
@@ -338,9 +361,113 @@ function updateCalendar(month, year) {
 function updateCalendarModal() {
     console.log('=== UPDATE CALENDAR MODAL FUNCTION CALLED ===');
     
-    // Implementation would go here for the modal calendar
-    // This is a placeholder for now
-    console.log('Modal calendar update function executed');
+    const calendarGridModal = document.getElementById('calendarGridModal');
+    if (!calendarGridModal) {
+        console.error('Modal calendar grid element not found');
+        // Try to find it in the DOM
+        const allElements = document.querySelectorAll('*');
+        console.log('Total elements in DOM:', allElements.length);
+        
+        // Try to find elements with similar IDs
+        const possibleElements = document.querySelectorAll('[id*="calendar"], [id*="modal"]');
+        console.log('Possible calendar/modal elements:', possibleElements.length);
+        possibleElements.forEach((el, index) => {
+            console.log(`Element ${index}: ID="${el.id}", Tag="${el.tagName}"`);
+        });
+        
+        // Try to find the modal itself
+        const modalElement = document.getElementById('calendarModal');
+        if (modalElement) {
+            console.log('Calendar modal found, but calendarGridModal is missing');
+            // Try to create the grid element if it doesn't exist
+            const modalBody = modalElement.querySelector('.modal-body');
+            if (modalBody) {
+                console.log('Modal body found, creating calendar grid');
+                const gridElement = document.createElement('div');
+                gridElement.id = 'calendarGridModal';
+                gridElement.className = 'calendar-grid';
+                modalBody.appendChild(gridElement);
+                console.log('Created calendarGridModal element');
+                // Retry the function
+                setTimeout(updateCalendarModal, 100);
+                return;
+            }
+        }
+        return;
+    }
+    
+    // Clear existing calendar
+    calendarGridModal.innerHTML = '';
+    
+    // Add day headers
+    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayHeaders.forEach(day => {
+        const headerCell = document.createElement('div');
+        headerCell.className = 'calendar-day-header';
+        headerCell.textContent = day;
+        calendarGridModal.appendChild(headerCell);
+    });
+    
+    // Get first day of month and days in month
+    const firstDay = new Date(currentYearModal, currentMonthIndexModal, 1);
+    const daysInMonth = new Date(currentYearModal, currentMonthIndexModal + 1, 0).getDate();
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay.getDay(); i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-cell empty';
+        calendarGridModal.appendChild(emptyCell);
+    }
+    
+    // Add cells for each day of the month
+    const today = new Date();
+    for (let day = 1; day <= daysInMonth; day++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-cell';
+        
+        const dateStr = `${currentYearModal}-${(currentMonthIndexModal + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        cell.dataset.date = dateStr;
+        
+        const dateNumber = document.createElement('div');
+        dateNumber.className = 'date-number';
+        dateNumber.textContent = day;
+        cell.appendChild(dateNumber);
+        
+        // Check if this is today
+        if (currentYearModal === today.getFullYear() &&
+            currentMonthIndexModal === today.getMonth() &&
+            day === today.getDate()) {
+            cell.classList.add('today');
+        }
+        
+        // Check if there are bookings for this date
+        const hasBooking = checkDateHasBooking(dateStr);
+        if (hasBooking) {
+            cell.classList.add('booked');
+        }
+        
+        const indicator = document.createElement('div');
+        indicator.className = 'booking-indicator';
+        cell.appendChild(indicator);
+        
+        calendarGridModal.appendChild(cell);
+        
+        // Add visual indicator that cell was added
+        cell.style.border = '1px solid #ddd';
+    }
+    
+    // Update month display
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthDisplay = document.getElementById('currentMonthModal');
+    if (monthDisplay) {
+        monthDisplay.textContent = `${monthNames[currentMonthIndexModal]} ${currentYearModal}`;
+    }
+    
+    // Add event listeners to modal calendar cells
+    setTimeout(addModalCalendarCellEventListeners, 100);
+    
+    console.log('=== UPDATE CALENDAR MODAL FUNCTION COMPLETED ===');
 }
 
 // Add a DOMContentLoaded event to initialize the calendar
@@ -1568,7 +1695,7 @@ function updateCalendarModal() {
     
     const calendarGridModal = document.getElementById('calendarGridModal');
     if (!calendarGridModal) {
-        console.warn('Modal calendar grid element not found - calendar modal feature not implemented');
+        console.error('Modal calendar grid element not found');
         return;
     }
     
@@ -1666,7 +1793,7 @@ window.refreshCalendarData = function() {
         updateCalendar();
     }
     
-    // Also refresh modal calendar (if implemented)
+    // Also refresh modal calendar
     const calendarGridModal = document.getElementById('calendarGridModal');
     console.log('Modal calendar grid element for refresh:', calendarGridModal);
     if (calendarGridModal) {
@@ -1680,8 +1807,8 @@ window.refreshCalendarData = function() {
             calendarGridModal.style.pointerEvents = 'auto';
         }, 200);
     } else {
-        console.log('Modal calendar grid not found - calendar modal feature not implemented');
-        // Don't call updateCalendarModal() as it will just produce an error
+        console.log('Modal calendar grid not found, updating modal calendar directly');
+        updateCalendarModal();
     }
 };
 

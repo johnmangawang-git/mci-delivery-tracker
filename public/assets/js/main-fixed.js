@@ -24,8 +24,16 @@ document.addEventListener('DOMContentLoaded', function () {
     
     console.log('Views initialized:', views);
     
+    // Log all view elements to check if they exist
+    Object.keys(views).forEach(viewName => {
+        console.log(`View ${viewName} exists:`, !!views[viewName]);
+        if (views[viewName]) {
+            console.log(`View ${viewName} initial class list:`, views[viewName].classList);
+        }
+    });
+    
     // Ensure at least the booking view is active initially
-    if (views.booking && !document.querySelector('.view.active')) {
+    if (views.booking && !document.querySelector('.content-view.active')) {
         views.booking.classList.add('active');
         console.log('Booking view set to active');
     }
@@ -36,6 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const sidebar = document.querySelector('.sidebar');
 
     console.log('Sidebar elements:', { sidebarLinks, mobileToggle, sidebar });
+    
+    // Check if sidebar links were found
+    if (sidebarLinks.length === 0) {
+        console.error('No sidebar links found!');
+        return;
+    }
 
     // Mobile sidebar toggle
     if (mobileToggle) {
@@ -49,12 +63,17 @@ document.addEventListener('DOMContentLoaded', function () {
         link.addEventListener('click', function (e) {
             e.preventDefault();
             console.log('Sidebar link clicked:', this.dataset.view);
+            
+            // Log current state before changes
+            console.log('Current active sidebar link:', document.querySelector('.sidebar .nav-link.active'));
+            console.log('Current active view:', document.querySelector('.content-view.active'));
 
             // Update active state in sidebar
             sidebarLinks.forEach(l => {
                 l.classList.remove('active');
             });
             this.classList.add('active');
+            console.log('New active sidebar link:', this);
 
             // Hide all views
             Object.values(views).forEach(view => {
@@ -92,6 +111,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.log('View element computed display after:', computedStyleAfter.display);
                     console.log('View element computed visibility after:', computedStyleAfter.visibility);
                     console.log('View element class list after:', views[viewName].classList);
+                    
+                    // Log all content views to see their states
+                    document.querySelectorAll('.content-view').forEach(view => {
+                        console.log(`View ${view.id} active:`, view.classList.contains('active'));
+                    });
                 }, 10);
 
                 // Special handling for analytics view
@@ -153,6 +177,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 // Special handling for booking view - initialize calendar
                 if (viewName === 'booking') {
+                    // Update booking view dashboard with real data
+                    // Add a small delay to ensure DOM is fully loaded
+                    setTimeout(() => {
+                        updateBookingViewDashboard();
+                    }, 100);
+                    
                     // Ensure calendar is initialized when booking view is shown
                     console.log('Booking view activated, initializing calendar');
                     console.log('Checking if initCalendar function exists:', typeof initCalendar);
@@ -234,38 +264,87 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 console.log('initCalendar not available on page load');
             }
+            
+            // Update booking view dashboard on initial load
+            updateBookingViewDashboard();
         }, 100);
     }
     
-    // Add a test button for modal functionality
-    const testBtn = document.createElement('button');
-    testBtn.id = 'testModalBtn';
-    testBtn.textContent = 'Test Modal';
-    testBtn.style.position = 'fixed';
-    testBtn.style.top = '10px';
-    testBtn.style.right = '10px';
-    testBtn.style.zIndex = '9999';
-    testBtn.style.padding = '10px';
-    testBtn.style.backgroundColor = '#007bff';
-    testBtn.style.color = 'white';
-    testBtn.style.border = 'none';
-    testBtn.style.borderRadius = '4px';
-    testBtn.style.cursor = 'pointer';
-    testBtn.style.display = 'none'; // Hidden by default, only for debugging
-    
-    document.body.appendChild(testBtn);
-    
-    testBtn.addEventListener('click', function() {
-        console.log('Test modal button clicked');
-        if (typeof window.testBookingModal === 'function') {
-            window.testBookingModal();
-        } else {
-            console.error('testBookingModal function not available');
-        }
-    });
+    // Test button for modal functionality has been removed as requested
     
     console.log('Main.js initialization completed');
 });
+
+// Function to update booking view dashboard cards with real data
+function updateBookingViewDashboard() {
+    try {
+        // Get the actual data from global variables
+        const activeDeliveries = window.activeDeliveries || [];
+        const deliveryHistory = window.deliveryHistory || [];
+        
+        // Calculate metrics from actual data
+        const totalBookings = activeDeliveries.length + deliveryHistory.length;
+        const activeDeliveriesCount = activeDeliveries.length;
+        
+        // Calculate total distance
+        let totalDistance = 0;
+        [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
+            if (delivery.distance) {
+                // Extract numeric value from distance string (e.g., "12.5 km" -> 12.5)
+                const distanceMatch = delivery.distance.match(/(\d+\.?\d*)/);
+                if (distanceMatch) {
+                    totalDistance += parseFloat(distanceMatch[1]) || 0;
+                }
+            }
+        });
+        
+        // Update the booking view dashboard cards
+        const bookingView = document.getElementById('bookingView');
+        if (bookingView) {
+            // Booked Deliveries card (total bookings)
+            const bookedDeliveriesCard = bookingView.querySelector('.dashboard-cards .card:nth-child(1) .stat-value');
+            if (bookedDeliveriesCard) {
+                bookedDeliveriesCard.textContent = totalBookings;
+            }
+            
+            // Active Deliveries card
+            const activeDeliveriesCard = bookingView.querySelector('.dashboard-cards .card:nth-child(2) .stat-value');
+            if (activeDeliveriesCard) {
+                activeDeliveriesCard.textContent = activeDeliveriesCount;
+            }
+            
+            // Total Distance card
+            const totalDistanceCard = bookingView.querySelector('.dashboard-cards .card:nth-child(3) .stat-value');
+            if (totalDistanceCard) {
+                totalDistanceCard.textContent = `${totalDistance.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
+            }
+            
+            // Revenue card (optional - could be updated with cost data if needed)
+            // const revenueCard = bookingView.querySelector('.dashboard-cards .card:nth-child(4) .crossed-out');
+            // if (revenueCard) {
+            //     // Calculate total additional costs
+            //     let totalAdditionalCost = 0;
+            //     [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
+            //         if (typeof delivery.additionalCosts === 'number') {
+            //             totalAdditionalCost += delivery.additionalCosts;
+            //         }
+            //     });
+            //     revenueCard.textContent = `₱${totalAdditionalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+            // }
+        }
+        
+        console.log('Booking view dashboard updated:', {
+            totalBookings,
+            activeDeliveriesCount,
+            totalDistance
+        });
+    } catch (error) {
+        console.error('Error updating booking view dashboard:', error);
+    }
+}
+
+// Expose function globally
+window.updateBookingViewDashboard = updateBookingViewDashboard;
 
 // Ensure functions are properly exposed globally
 window.addEventListener('load', function() {

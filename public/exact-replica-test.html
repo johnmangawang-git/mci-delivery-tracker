@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exact Replica Signature Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Exact Replica Signature Test</h1>
+        <button type="button" class="btn btn-primary" onclick="openTestModal()">Open E-Signature Modal</button>
+    </div>
+
+    <!-- E-Signature Modal -->
+    <div class="modal fade" id="eSignatureModal" tabindex="-1" aria-labelledby="eSignatureModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eSignatureModalLabel"><i class="bi bi-pen me-2"></i>E-Signature</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card signature-card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Signature Pad</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="signature-pad-container"
+                                        style="position: relative; width: 100%; max-width: 600px; height: 300px; margin: 0 auto; overflow: hidden;">
+                                        <canvas id="signaturePad"
+                                            style="border: 2px dashed #3498db; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); user-select: none; -moz-user-select: none;"></canvas>
+                                    </div>
+                                    <div class="d-flex justify-content-center mt-3">
+                                        <button type="button" class="btn btn-outline-danger" id="clearSignatureBtn">
+                                            <i class="bi bi-eraser me-2"></i>Clear Signature
+                                        </button>
+                                    </div>
+                                    <div class="text-center text-muted mt-2">
+                                        <small>Draw your signature above</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Delivery Details</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">DR Number</label>
+                                        <input type="text" class="form-control" id="ePodDrNumber" readonly style="color: #000000; font-weight: bold;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Customer Name</label>
+                                        <input type="text" class="form-control" id="ePodCustomerName" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Customer Contact</label>
+                                        <input type="text" class="form-control" id="ePodCustomerContact" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Truck Plate Number</label>
+                                        <input type="text" class="form-control" id="ePodTruckPlate" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Delivery Route</label>
+                                        <input type="text" class="form-control" id="ePodDeliveryRoute" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSignatureBtn">
+                        <i class="bi bi-save me-2"></i>Save Signature
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let globalSignaturePad = null;
+        
+        function openTestModal() {
+            // Set test data
+            document.getElementById('ePodDrNumber').value = 'DR-TEST-001';
+            document.getElementById('ePodCustomerName').value = 'Test Customer';
+            document.getElementById('ePodCustomerContact').value = '09123456789';
+            document.getElementById('ePodTruckPlate').value = 'ABC123';
+            document.getElementById('ePodDeliveryRoute').value = 'Test Origin to Test Destination';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('eSignatureModal'));
+            modal.show();
+            
+            // Set up modal event listener
+            const modalElement = document.getElementById('eSignatureModal');
+            const handleModalShown = function() {
+                console.log('Modal shown event triggered');
+                initializeSignaturePad();
+                // Remove event listener to prevent duplicates
+                modalElement.removeEventListener('shown.bs.modal', handleModalShown);
+            };
+            
+            modalElement.addEventListener('shown.bs.modal', handleModalShown);
+        }
+        
+        function initializeSignaturePad() {
+            console.log('Initializing signature pad...');
+            
+            // Small delay to ensure DOM is fully rendered
+            setTimeout(() => {
+                try {
+                    const canvas = document.getElementById('signaturePad');
+                    console.log('Canvas element:', canvas);
+                    
+                    if (!canvas) {
+                        console.error('Canvas element not found');
+                        return;
+                    }
+                    
+                    // Set canvas dimensions
+                    const container = canvas.parentElement;
+                    const maxWidth = Math.min(container.offsetWidth, 600);
+                    const height = 300;
+                    canvas.width = maxWidth;
+                    canvas.height = height;
+                    
+                    // Destroy existing instance if it exists
+                    if (globalSignaturePad) {
+                        globalSignaturePad.off();
+                        globalSignaturePad = null;
+                    }
+                    
+                    // Initialize SignaturePad with minimal options
+                    globalSignaturePad = new SignaturePad(canvas, {
+                        penColor: "rgb(0, 0, 0)"
+                    });
+                    
+                    console.log('SignaturePad instance created:', globalSignaturePad);
+                    
+                    // Setup clear button
+                    const clearBtn = document.getElementById('clearSignatureBtn');
+                    if (clearBtn) {
+                        clearBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            if (globalSignaturePad) {
+                                globalSignaturePad.clear();
+                                console.log('Signature cleared');
+                            }
+                        });
+                    }
+                    
+                    // Setup save button
+                    const saveBtn = document.getElementById('saveSignatureBtn');
+                    if (saveBtn) {
+                        saveBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            if (globalSignaturePad && !globalSignaturePad.isEmpty()) {
+                                console.log('Signature has content');
+                                alert('Signature saved successfully!');
+                                // Close modal
+                                const modal = bootstrap.Modal.getInstance(document.getElementById('eSignatureModal'));
+                                modal.hide();
+                            } else {
+                                alert('Please provide a signature before saving');
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error('Error initializing SignaturePad:', error);
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>
