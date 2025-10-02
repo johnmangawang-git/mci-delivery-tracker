@@ -1011,6 +1011,8 @@ console.log('app.js loaded');
     // Expose the internal functions that might be needed by other modules
     window.getStatusInfo = getStatusInfo;
     window.handleStatusChange = handleStatusChange;
+    window.saveProfileSettings = saveProfileSettings;
+    window.saveNotificationSettings = saveNotificationSettings;
 
     // Initialize the application when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
