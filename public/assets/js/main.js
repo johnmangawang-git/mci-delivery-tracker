@@ -1583,7 +1583,7 @@ async function saveCustomer() {
     const phone = document.getElementById('phone').value.trim();
     const address = document.getElementById('address').value.trim();
     const accountType = document.getElementById('accountType').value;
-    const email = document.getElementById('email2').value.trim();
+    const email = document.getElementById('email').value.trim(); // Fixed: was 'email2'
     const notes = document.getElementById('notes').value.trim();
 
     if (!contactPerson || !phone || !address) {
@@ -1647,7 +1647,7 @@ function editCustomer(customerId) {
     document.getElementById('phone').value = customer.phone;
     document.getElementById('address').value = customer.address;
     document.getElementById('accountType').value = customer.accountType;
-    document.getElementById('email2').value = customer.email || '';
+    document.getElementById('email').value = customer.email || ''; // Fixed: was 'email2'
     document.getElementById('notes').value = customer.notes || '';
 
     // Show modal
@@ -1675,7 +1675,7 @@ async function updateCustomer(customerId) {
         phone: document.getElementById('phone').value.trim(),
         address: document.getElementById('address').value.trim(),
         accountType: document.getElementById('accountType').value,
-        email: document.getElementById('email2').value.trim(),
+        email: document.getElementById('email').value.trim(), // Fixed: was 'email2'
         notes: document.getElementById('notes').value.trim()
     };
 

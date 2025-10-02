@@ -987,15 +987,20 @@ console.log('app.js loaded');
 
     // Make functions globally accessible
     // Create getters to ensure we always access the current arrays
-    Object.defineProperty(window, 'activeDeliveries', {
-        get: function() { return activeDeliveries; },
-        set: function(value) { activeDeliveries = value; }
-    });
+    // Check if property already exists before defining it
+    if (!window.hasOwnProperty('activeDeliveries')) {
+        Object.defineProperty(window, 'activeDeliveries', {
+            get: function() { return activeDeliveries; },
+            set: function(value) { activeDeliveries = value; }
+        });
+    }
     
-    Object.defineProperty(window, 'deliveryHistory', {
-        get: function() { return deliveryHistory; },
-        set: function(value) { deliveryHistory = value; }
-    });
+    if (!window.hasOwnProperty('deliveryHistory')) {
+        Object.defineProperty(window, 'deliveryHistory', {
+            get: function() { return deliveryHistory; },
+            set: function(value) { deliveryHistory = value; }
+        });
+    }
     window.saveToLocalStorage = saveToLocalStorage;
     window.loadActiveDeliveries = loadActiveDeliveries;
     window.loadDeliveryHistory = loadDeliveryHistory;
@@ -1004,7 +1009,6 @@ console.log('app.js loaded');
     window.showToast = showToast;
     window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
     window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
-    window.exportEPodToPdf = exportEPodToPdf;
     window.saveProfileSettings = saveProfileSettings;
     window.saveNotificationSettings = saveNotificationSettings;
     
