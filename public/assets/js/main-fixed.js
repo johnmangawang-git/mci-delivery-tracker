@@ -10,16 +10,16 @@ document.addEventListener('DOMContentLoaded', function () {
     window.currentMonthIndexModal = new Date().getMonth();
     window.currentYearModal = new Date().getFullYear();
     
-    // Initialize all views
+    // Initialize all views - using correct IDs from HTML
     const views = {
-        booking: document.getElementById('booking-view'),
-        analytics: document.getElementById('analytics-view'),
-        'active-deliveries': document.getElementById('active-deliveries-view'),
-        'delivery-history': document.getElementById('delivery-history-view'),
-        customers: document.getElementById('customers-view'),
-        'warehouse-map': document.getElementById('warehouse-map-view'),
-        settings: document.getElementById('settings-view'),
-        'e-pod': document.getElementById('e-pod-view')
+        booking: document.getElementById('bookingView'),
+        analytics: document.getElementById('analyticsView'),
+        'active-deliveries': document.getElementById('activeDeliveriesView'),
+        'delivery-history': document.getElementById('deliveryHistoryView'),
+        customers: document.getElementById('customersView'),
+        'warehouse-map': document.getElementById('warehouseMapView'),
+        settings: document.getElementById('settingsView'),
+        'e-pod': document.getElementById('ePodView')
     };
     
     console.log('Views initialized:', views);
