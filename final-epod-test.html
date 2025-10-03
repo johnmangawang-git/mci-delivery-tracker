@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final EPOD Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Final EPOD Test</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Debug Information</h5>
+            </div>
+            <div class="card-body">
+                <div id="debugInfo" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Test Functions</h5>
+            </div>
+            <div class="card-body">
+                <button id="checkAvailability" class="btn btn-primary me-2">1. Check Function Availability</button>
+                <button id="initDataService" class="btn btn-secondary me-2">2. Initialize DataService</button>
+                <button id="createTestRecord" class="btn btn-success me-2">3. Create Test EPOD Record</button>
+                <button id="loadRecords" class="btn btn-info me-2">4. Load EPOD Records</button>
+                <button id="clearRecords" class="btn btn-danger">5. Clear EPOD Records</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>EPOD Records</h5>
+            </div>
+            <div class="card-body">
+                <div id="epodRecords"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the required scripts in the correct order -->
+    <script src="public/assets/js/supabase.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/epod-fix.js"></script>
+    <script src="public/assets/js/e-signature.js"></script>
+    
+    <script>
+        // Debug function to log information
+        function log(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            debugInfo.appendChild(logEntry);
+            console.log(`[${timestamp}] ${message}`);
+            
+            // Auto-scroll to bottom
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+        }
+        
+        // Check function availability
+        function checkFunctionAvailability() {
+            log('=== Checking Function Availability ===');
+            
+            // Check if dataService is available
+            log('dataService available: ' + (typeof window.dataService !== 'undefined'));
+            if (window.dataService) {
+                log('dataService initialized: ' + (window.dataService.initialized || false));
+                log('dataService supabase: ' + (window.dataService.supabase !== null));
+            }
+            
+            // Check if dataService functions are available
+            log('dataService.saveEPodRecord available: ' + (typeof window.dataService?.saveEPodRecord === 'function'));
+            log('dataService.getEPodRecords available: ' + (typeof window.dataService?.getEPodRecords === 'function'));
+            
+            // Check if fixed functions are available
+            log('saveEPodRecordFixed available: ' + (typeof window.saveEPodRecordFixed === 'function'));
+            log('getEPodRecordsFixed available: ' + (typeof window.getEPodRecordsFixed === 'function'));
+            
+            // Check if e-signature functions are available
+            log('saveSingleSignature available: ' + (typeof window.saveSingleSignature === 'function'));
+            log('saveMultipleSignatures available: ' + (typeof window.saveMultipleSignatures === 'function'));
+            
+            // Check localStorage
+            try {
+                const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                log('EPOD records in localStorage: ' + ePodRecords.length);
+            } catch (error) {
+                log('Error accessing localStorage: ' + error.message);
+            }
+        }
+        
+        // Initialize DataService
+        async function initDataService() {
+            log('=== Initializing DataService ===');
+            
+            try {
+                if (typeof window.dataService !== 'undefined') {
+                    log('Initializing dataService...');
+                    await window.dataService.init();
+                    log('dataService initialized: ' + window.dataService.initialized);
+                } else {
+                    log('dataService not available');
+                }
+            } catch (error) {
+                log('Error initializing dataService: ' + error.message);
+                console.error('DataService init error:', error);
+            }
+        }
+        
+        // Create test EPOD record
+        async function createTestRecord() {
+            log('=== Creating Test EPOD Record ===');
+            
+            const testRecord = {
+                drNumber: 'DR-TEST-' + Date.now(),
+                customerName: 'Test Customer',
+                customerContact: '09123456789',
+                truckPlate: 'ABC123',
+                origin: 'Test Origin',
+                destination: 'Test Destination',
+                signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+                status: 'Completed',
+                signedAt: new Date().toISOString(),
+                timestamp: new Date().toISOString()
+            };
+            
+            log('Test record created: ' + testRecord.drNumber);
+            
+            // Try different methods to save the record
+            log('Attempting to save via saveEPodRecordFixed...');
+            if (typeof window.saveEPodRecordFixed === 'function') {
+                try {
+                    const result = await window.saveEPodRecordFixed(testRecord);
+                    log('EPOD record saved via saveEPodRecordFixed: ' + result.drNumber);
+                } catch (error) {
+                    log('Error saving via saveEPodRecordFixed: ' + error.message);
+                    console.error('saveEPodRecordFixed error:', error);
+                }
+            } else {
+                log('saveEPodRecordFixed not available');
+                
+                // Try dataService
+                log('Attempting to save via dataService...');
+                if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveEPodRecord === 'function') {
+                    try {
+                        const result = await window.dataService.saveEPodRecord(testRecord);
+                        log('EPOD record saved via dataService: ' + result.drNumber);
+                    } catch (error) {
+                        log('Error saving via dataService: ' + error.message);
+                        console.error('DataService error:', error);
+                    }
+                } else {
+                    log('dataService.saveEPodRecord not available');
+                    
+                    // Try e-signature function directly
+                    log('Attempting to save via saveSingleSignature...');
+                    if (typeof window.saveSingleSignature === 'function') {
+                        try {
+                            window.saveSingleSignature({
+                                drNumber: testRecord.drNumber,
+                                customerName: testRecord.customerName,
+                                customerContact: testRecord.customerContact,
+                                truckPlate: testRecord.truckPlate,
+                                deliveryRoute: testRecord.origin + ' to ' + testRecord.destination,
+                                signatureData: testRecord.signature
+                            });
+                            log('EPOD record saved via saveSingleSignature');
+                        } catch (error) {
+                            log('Error saving via saveSingleSignature: ' + error.message);
+                            console.error('saveSingleSignature error:', error);
+                        }
+                    } else {
+                        log('saveSingleSignature not available');
+                        
+                        // Final fallback to localStorage
+                        log('Falling back to localStorage...');
+                        try {
+                            let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                            log('Current EPOD records in localStorage: ' + ePodRecords.length);
+                            ePodRecords.push(testRecord);
+                            localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                            log('EPOD record saved to localStorage. Total records now: ' + ePodRecords.length);
+                        } catch (error) {
+                            log('Error saving to localStorage: ' + error.message);
+                            console.error('LocalStorage error:', error);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Load EPOD records
+        async function loadRecords() {
+            log('=== Loading EPOD Records ===');
+            
+            // Try different methods to load records
+            log('Attempting to load via getEPodRecordsFixed...');
+            if (typeof window.getEPodRecordsFixed === 'function') {
+                try {
+                    const records = await window.getEPodRecordsFixed();
+                    log('EPOD records loaded via getEPodRecordsFixed: ' + records.length);
+                    displayRecords(records);
+                } catch (error) {
+                    log('Error loading via getEPodRecordsFixed: ' + error.message);
+                    console.error('getEPodRecordsFixed error:', error);
+                }
+            } else {
+                log('getEPodRecordsFixed not available');
+                
+                // Try dataService
+                log('Attempting to load via dataService...');
+                if (typeof window.dataService !== 'undefined' && typeof window.dataService.getEPodRecords === 'function') {
+                    try {
+                        const records = await window.dataService.getEPodRecords();
+                        log('EPOD records loaded via dataService: ' + records.length);
+                        displayRecords(records);
+                    } catch (error) {
+                        log('Error loading via dataService: ' + error.message);
+                        console.error('DataService error:', error);
+                    }
+                } else {
+                    log('dataService.getEPodRecords not available');
+                    
+                    // Fallback to localStorage
+                    log('Falling back to localStorage...');
+                    try {
+                        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                        log('EPOD records loaded from localStorage: ' + ePodRecords.length);
+                        displayRecords(ePodRecords);
+                    } catch (error) {
+                        log('Error loading from localStorage: ' + error.message);
+                        console.error('LocalStorage error:', error);
+                    }
+                }
+            }
+        }
+        
+        // Display records
+        function displayRecords(records) {
+            const container = document.getElementById('epodRecords');
+            if (records.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No EPOD records found</div>';
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>DR Number</th><th>Customer</th><th>Date</th><th>Method</th></tr></thead><tbody>';
+            records.forEach(record => {
+                const method = record.drNumber.includes('TEST') ? 'Test' : 'Production';
+                html += `<tr><td>${record.drNumber}</td><td>${record.customerName}</td><td>${new Date(record.signedAt).toLocaleDateString()}</td><td>${method}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+        
+        // Clear EPOD records
+        function clearRecords() {
+            log('=== Clearing EPOD Records ===');
+            try {
+                localStorage.removeItem('ePodRecords');
+                log('EPOD records cleared from localStorage');
+                document.getElementById('epodRecords').innerHTML = '<div class="alert alert-success">Records cleared</div>';
+            } catch (error) {
+                log('Error clearing localStorage: ' + error.message);
+            }
+        }
+        
+        // Set up event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM loaded, checking initial state...');
+            checkFunctionAvailability();
+            
+            document.getElementById('checkAvailability').addEventListener('click', checkFunctionAvailability);
+            document.getElementById('initDataService').addEventListener('click', initDataService);
+            document.getElementById('createTestRecord').addEventListener('click', createTestRecord);
+            document.getElementById('loadRecords').addEventListener('click', loadRecords);
+            document.getElementById('clearRecords').addEventListener('click', clearRecords);
+        });
+    </script>
+</body>
+</html>

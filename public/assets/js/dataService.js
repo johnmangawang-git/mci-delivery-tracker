@@ -15,7 +15,9 @@ class DataService {
 
     // Initialize the data service
     async init() {
+        console.log('Initializing DataService...');
         if (this.initialized) {
+            console.log('DataService already initialized');
             return true;
         }
 
@@ -24,14 +26,16 @@ class DataService {
             this.supabase = window.getSupabaseClient();
             if (!this.supabase) {
                 console.warn('Supabase client not available, falling back to localStorage');
-                return false;
+                this.initialized = true; // Still mark as initialized for localStorage usage
+                return true;
             }
 
             this.initialized = true;
-            console.log('Data service initialized with Supabase');
+            console.log('DataService initialized with Supabase');
             return true;
         } catch (error) {
-            console.error('Error initializing data service:', error);
+            console.error('Error initializing DataService:', error);
+            this.initialized = true; // Mark as initialized even on error to allow localStorage fallback
             return false;
         }
     }
@@ -552,7 +556,9 @@ class DataService {
             console.log('Using localStorage for E-POD records');
             // Fallback to localStorage
             const saved = localStorage.getItem('ePodRecords');
-            return saved ? JSON.parse(saved) : [];
+            const records = saved ? JSON.parse(saved) : [];
+            console.log('EPOD records loaded from localStorage:', records.length);
+            return records;
         }
 
         try {
@@ -573,23 +579,31 @@ class DataService {
                 if (error.status === 404) {
                     console.warn('E-POD records table not found, falling back to localStorage');
                     const saved = localStorage.getItem('ePodRecords');
-                    return saved ? JSON.parse(saved) : [];
+                    const records = saved ? JSON.parse(saved) : [];
+                    console.log('EPOD records loaded from localStorage (404 fallback):', records.length);
+                    return records;
                 }
                 throw error;
             }
             // Map database records to application format
-            return data ? data.map(record => this.mapEPodRecordFromDB(record)) : [];
+            const mappedRecords = data ? data.map(record => this.mapEPodRecordFromDB(record)) : [];
+            console.log('EPOD records loaded from Supabase:', mappedRecords.length);
+            return mappedRecords;
         } catch (error) {
             console.error('Error fetching E-POD records:', error);
             // Always fallback to localStorage on any error
             const saved = localStorage.getItem('ePodRecords');
-            return saved ? JSON.parse(saved) : [];
+            const records = saved ? JSON.parse(saved) : [];
+            console.log('EPOD records loaded from localStorage (error fallback):', records.length);
+            return records;
         }
     }
 
     async saveEPodRecord(record) {
-        if (!await this.isSupabaseAvailable()) {
-            // Fallback to localStorage
+        console.log('DataService.saveEPodRecord called with record:', record.drNumber);
+        
+        // Always try localStorage as backup, regardless of Supabase status
+        try {
             let records = [];
             const saved = localStorage.getItem('ePodRecords');
             if (saved) {
@@ -600,11 +614,21 @@ class DataService {
             const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
             if (existingIndex >= 0) {
                 records[existingIndex] = record;
+                console.log('Updated existing EPOD record in localStorage');
             } else {
                 records.push(record);
+                console.log('Added new EPOD record to localStorage');
             }
             
             localStorage.setItem('ePodRecords', JSON.stringify(records));
+            console.log('EPOD record saved to localStorage. Total records now:', records.length);
+        } catch (storageError) {
+            console.error('Error saving to localStorage:', storageError);
+        }
+        
+        // If Supabase is not available or not working, return early with localStorage result
+        if (!await this.isSupabaseAvailable()) {
+            console.log('Supabase not available, returning localStorage result');
             return record;
         }
 
@@ -637,26 +661,8 @@ class DataService {
                 .eq('user_id', userId);
 
             if (fetchError) {
-                // If it's a 404 error, fallback to localStorage
-                if (fetchError.status === 404) {
-                    console.warn('E-POD records table not found, falling back to localStorage');
-                    let records = [];
-                    const saved = localStorage.getItem('ePodRecords');
-                    if (saved) {
-                        records = JSON.parse(saved);
-                    }
-                    
-                    // Check if record already exists
-                    const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
-                    if (existingIndex >= 0) {
-                        records[existingIndex] = record;
-                    } else {
-                        records.push(record);
-                    }
-                    
-                    localStorage.setItem('ePodRecords', JSON.stringify(records));
-                    return record;
-                }
+                console.error('Error checking for existing EPOD record:', fetchError);
+                // Always fallback to localStorage on any error
                 throw fetchError;
             }
 
@@ -671,26 +677,8 @@ class DataService {
                     .single();
                 
                 if (error) {
-                    // If it's a 404 error, fallback to localStorage
-                    if (error.status === 404) {
-                        console.warn('E-POD records table not found, falling back to localStorage');
-                        let records = [];
-                        const saved = localStorage.getItem('ePodRecords');
-                        if (saved) {
-                            records = JSON.parse(saved);
-                        }
-                        
-                        // Check if record already exists
-                        const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
-                        if (existingIndex >= 0) {
-                            records[existingIndex] = record;
-                        } else {
-                            records.push(record);
-                        }
-                        
-                        localStorage.setItem('ePodRecords', JSON.stringify(records));
-                        return record;
-                    }
+                    console.error('Error updating EPOD record:', error);
+                    // Always fallback to localStorage on any error
                     throw error;
                 }
                 result = this.mapEPodRecordFromDB(data);
@@ -703,45 +691,18 @@ class DataService {
                     .single();
                 
                 if (error) {
-                    // If it's a 404 error, fallback to localStorage
-                    if (error.status === 404) {
-                        console.warn('E-POD records table not found, falling back to localStorage');
-                        let records = [];
-                        const saved = localStorage.getItem('ePodRecords');
-                        if (saved) {
-                            records = JSON.parse(saved);
-                        }
-                        
-                        // Add new record
-                        records.push(record);
-                        
-                        localStorage.setItem('ePodRecords', JSON.stringify(records));
-                        return record;
-                    }
+                    console.error('Error inserting EPOD record:', error);
+                    // Always fallback to localStorage on any error
                     throw error;
                 }
                 result = this.mapEPodRecordFromDB(data);
             }
 
+            console.log('EPOD record saved via Supabase:', result.drNumber);
             return result;
         } catch (error) {
-            console.error('Error saving E-POD record:', error);
-            // Fallback to localStorage on any error
-            let records = [];
-            const saved = localStorage.getItem('ePodRecords');
-            if (saved) {
-                records = JSON.parse(saved);
-            }
-            
-            // Check if record already exists
-            const existingIndex = records.findIndex(r => r.drNumber === record.drNumber);
-            if (existingIndex >= 0) {
-                records[existingIndex] = record;
-            } else {
-                records.push(record);
-            }
-            
-            localStorage.setItem('ePodRecords', JSON.stringify(records));
+            console.error('Error saving E-POD record via Supabase:', error);
+            // Always return the record (from localStorage) even on Supabase errors
             return record;
         }
     }

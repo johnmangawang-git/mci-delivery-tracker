@@ -1,7 +1,7 @@
 // Analytics charts
 let bookingsChart, costsChart, originChart, costBreakdownChart;
 
-async function initAnalyticsCharts() {
+async function initAnalyticsCharts(period = 'month') {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.error('Chart.js library is not loaded');
@@ -29,8 +29,11 @@ async function initAnalyticsCharts() {
     // Update dashboard metrics
     updateDashboardMetrics();
 
+    // Initialize chart filters
+    initChartFilters();
+
     // Load actual data
-    const data = await loadAnalyticsData();
+    const data = await loadAnalyticsData(period);
 
     // Bookings Chart - Total bookings per month/week/day
     const bookingsCtx = document.getElementById('bookingsChart');
@@ -249,162 +252,390 @@ async function initAnalyticsCharts() {
 // Expose function globally
 window.initAnalyticsCharts = initAnalyticsCharts;
 
+// Helper function to process data by day
+function processDataByDay(deliveries) {
+    // Group by day
+    const bookingsByDay = {};
+    const costsByDay = {};
+    const originCount = {};
+    
+    deliveries.forEach(delivery => {
+        const date = delivery.deliveryDate || delivery.timestamp;
+        if (date) {
+            // Format date as MM/DD
+            const dateObj = new Date(date);
+            const dayKey = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+            
+            bookingsByDay[dayKey] = (bookingsByDay[dayKey] || 0) + 1;
+            
+            const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
+            costsByDay[dayKey] = (costsByDay[dayKey] || 0) + cost;
+            
+            const origin = delivery.origin || 'Unknown';
+            originCount[origin] = (originCount[origin] || 0) + 1;
+        }
+    });
+    
+    // Cost breakdown - categorize additional costs
+    const costBreakdown = {
+        'Fuel Surcharge': 0,
+        'Toll Fees': 0,
+        'Helper': 0, // Changed from 'Urgent Delivery'
+        'Special Handling': 0,
+        'Other': 0
+    };
+    
+    // Process individual cost items if available
+    deliveries.forEach(delivery => {
+        if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+            delivery.additionalCostItems.forEach(item => {
+                const description = item.description.toLowerCase();
+                const amount = item.amount;
+                
+                // Map descriptions to categories
+                if (description.includes('gas') || description.includes('fuel')) {
+                    costBreakdown['Fuel Surcharge'] += amount;
+                } else if (description.includes('toll')) {
+                    costBreakdown['Toll Fees'] += amount;
+                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
+                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
+                } else if (description.includes('special') || description.includes('handling')) {
+                    costBreakdown['Special Handling'] += amount;
+                } else {
+                    costBreakdown['Other'] += amount;
+                }
+            });
+        } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
+            // Fallback to old method if individual items not available
+            costBreakdown['Other'] += delivery.additionalCosts;
+        }
+    });
+    
+    // Prepare data for charts
+    const days = Object.keys(bookingsByDay);
+    const bookingValues = days.map(day => bookingsByDay[day] || 0);
+    const costValues = days.map(day => costsByDay[day] || 0);
+    
+    const originLabels = Object.keys(originCount);
+    const originValues = originLabels.map(label => originCount[label] || 0);
+    
+    const costBreakdownLabels = Object.keys(costBreakdown);
+    const costBreakdownValues = costBreakdownLabels.map(label => costBreakdown[label] || 0);
+    
+    return {
+        bookingsData: {
+            labels: days,
+            values: bookingValues
+        },
+        costsData: {
+            labels: days,
+            values: costValues
+        },
+        originData: {
+            labels: originLabels,
+            values: originValues
+        },
+        costBreakdownData: {
+            labels: costBreakdownLabels,
+            values: costBreakdownValues
+        }
+    };
+}
+
+// Helper function to process data by week
+function processDataByWeek(deliveries) {
+    // Group by week
+    const bookingsByWeek = {};
+    const costsByWeek = {};
+    const originCount = {};
+    
+    deliveries.forEach(delivery => {
+        const date = delivery.deliveryDate || delivery.timestamp;
+        if (date) {
+            // Format week as "Week of MM/DD"
+            const dateObj = new Date(date);
+            const startOfWeek = new Date(dateObj);
+            startOfWeek.setDate(dateObj.getDate() - dateObj.getDay());
+            const weekKey = `Week of ${startOfWeek.getMonth() + 1}/${startOfWeek.getDate()}`;
+            
+            bookingsByWeek[weekKey] = (bookingsByWeek[weekKey] || 0) + 1;
+            
+            const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
+            costsByWeek[weekKey] = (costsByWeek[weekKey] || 0) + cost;
+            
+            const origin = delivery.origin || 'Unknown';
+            originCount[origin] = (originCount[origin] || 0) + 1;
+        }
+    });
+    
+    // Cost breakdown - categorize additional costs
+    const costBreakdown = {
+        'Fuel Surcharge': 0,
+        'Toll Fees': 0,
+        'Helper': 0, // Changed from 'Urgent Delivery'
+        'Special Handling': 0,
+        'Other': 0
+    };
+    
+    // Process individual cost items if available
+    deliveries.forEach(delivery => {
+        if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+            delivery.additionalCostItems.forEach(item => {
+                const description = item.description.toLowerCase();
+                const amount = item.amount;
+                
+                // Map descriptions to categories
+                if (description.includes('gas') || description.includes('fuel')) {
+                    costBreakdown['Fuel Surcharge'] += amount;
+                } else if (description.includes('toll')) {
+                    costBreakdown['Toll Fees'] += amount;
+                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
+                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
+                } else if (description.includes('special') || description.includes('handling')) {
+                    costBreakdown['Special Handling'] += amount;
+                } else {
+                    costBreakdown['Other'] += amount;
+                }
+            });
+        } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
+            // Fallback to old method if individual items not available
+            costBreakdown['Other'] += delivery.additionalCosts;
+        }
+    });
+    
+    // Prepare data for charts
+    const weeks = Object.keys(bookingsByWeek);
+    const bookingValues = weeks.map(week => bookingsByWeek[week] || 0);
+    const costValues = weeks.map(week => costsByWeek[week] || 0);
+    
+    const originLabels = Object.keys(originCount);
+    const originValues = originLabels.map(label => originCount[label] || 0);
+    
+    const costBreakdownLabels = Object.keys(costBreakdown);
+    const costBreakdownValues = costBreakdownLabels.map(label => costBreakdown[label] || 0);
+    
+    return {
+        bookingsData: {
+            labels: weeks,
+            values: bookingValues
+        },
+        costsData: {
+            labels: weeks,
+            values: costValues
+        },
+        originData: {
+            labels: originLabels,
+            values: originValues
+        },
+        costBreakdownData: {
+            labels: costBreakdownLabels,
+            values: costBreakdownValues
+        }
+    };
+}
+
+// Helper function to process data by month
+function processDataByMonth(deliveries) {
+    // Group by month
+    const bookingsByMonth = {};
+    const costsByMonth = {};
+    const originCount = {};
+    
+    deliveries.forEach(delivery => {
+        const date = delivery.deliveryDate || delivery.timestamp;
+        if (date) {
+            const month = new Date(date).toLocaleString('default', { month: 'short' });
+            bookingsByMonth[month] = (bookingsByMonth[month] || 0) + 1;
+            
+            const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
+            costsByMonth[month] = (costsByMonth[month] || 0) + cost;
+            
+            const origin = delivery.origin || 'Unknown';
+            originCount[origin] = (originCount[origin] || 0) + 1;
+        }
+    });
+    
+    // Cost breakdown - categorize additional costs
+    const costBreakdown = {
+        'Fuel Surcharge': 0,
+        'Toll Fees': 0,
+        'Helper': 0, // Changed from 'Urgent Delivery'
+        'Special Handling': 0,
+        'Other': 0
+    };
+    
+    // Process individual cost items if available
+    deliveries.forEach(delivery => {
+        if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+            delivery.additionalCostItems.forEach(item => {
+                const description = item.description.toLowerCase();
+                const amount = item.amount;
+                
+                // Map descriptions to categories
+                if (description.includes('gas') || description.includes('fuel')) {
+                    costBreakdown['Fuel Surcharge'] += amount;
+                } else if (description.includes('toll')) {
+                    costBreakdown['Toll Fees'] += amount;
+                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
+                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
+                } else if (description.includes('special') || description.includes('handling')) {
+                    costBreakdown['Special Handling'] += amount;
+                } else {
+                    costBreakdown['Other'] += amount;
+                }
+            });
+        } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
+            // Fallback to old method if individual items not available
+            costBreakdown['Other'] += delivery.additionalCosts;
+        }
+    });
+    
+    // Prepare data for charts
+    const months = Object.keys(bookingsByMonth);
+    const bookingValues = months.map(month => bookingsByMonth[month] || 0);
+    const costValues = months.map(month => costsByMonth[month] || 0);
+    
+    const originLabels = Object.keys(originCount);
+    const originValues = originLabels.map(label => originCount[label] || 0);
+    
+    const costBreakdownLabels = Object.keys(costBreakdown);
+    const costBreakdownValues = costBreakdownLabels.map(label => costBreakdown[label] || 0);
+    
+    return {
+        bookingsData: {
+            labels: months,
+            values: bookingValues
+        },
+        costsData: {
+            labels: months,
+            values: costValues
+        },
+        originData: {
+            labels: originLabels,
+            values: originValues
+        },
+        costBreakdownData: {
+            labels: costBreakdownLabels,
+            values: costBreakdownValues
+        }
+    };
+}
+
 function initChartFilters() {
     // Bookings chart period filters
-    document.querySelectorAll('#bookingsChart ~ .chart-filters .btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const period = this.dataset.period;
-            const container = this.closest('.chart-filters');
+    document.querySelectorAll('#bookingsChart').forEach(chart => {
+        const container = chart.closest('.card-body');
+        if (container) {
+            container.querySelectorAll('.chart-filters .btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const period = this.dataset.period;
+                    const filterContainer = this.closest('.chart-filters');
 
-            container.querySelectorAll('.btn').forEach(btn => {
-                btn.classList.remove('active');
+                    filterContainer.querySelectorAll('.btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    console.log(`Changed bookings chart period to: ${period}`);
+                    updateBookingsChart(period);
+                });
             });
-            this.classList.add('active');
-
-            // In a real implementation, this would update the chart data
-            console.log(`Changed bookings chart period to: ${period}`);
-            updateBookingsChart(period);
-        });
+        }
     });
 
     // Costs chart period filters
-    document.querySelectorAll('#costsChart ~ .chart-filters .btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const period = this.dataset.period;
-            const container = this.closest('.chart-filters');
+    document.querySelectorAll('#costsChart').forEach(chart => {
+        const container = chart.closest('.card-body');
+        if (container) {
+            container.querySelectorAll('.chart-filters .btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const period = this.dataset.period;
+                    const filterContainer = this.closest('.chart-filters');
 
-            container.querySelectorAll('.btn').forEach(btn => {
-                btn.classList.remove('active');
+                    filterContainer.querySelectorAll('.btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    console.log(`Changed costs chart period to: ${period}`);
+                    updateCostsChart(period);
+                });
             });
-            this.classList.add('active');
-
-            // In a real implementation, this would update the chart data
-            console.log(`Changed costs chart period to: ${period}`);
-            updateCostsChart(period);
-        });
+        }
     });
 
     // Origin chart period filters
-    document.querySelectorAll('#originChart ~ .chart-filters .btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const period = this.dataset.period;
-            const container = this.closest('.chart-filters');
+    document.querySelectorAll('#originChart').forEach(chart => {
+        const container = chart.closest('.card-body');
+        if (container) {
+            container.querySelectorAll('.chart-filters .btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const period = this.dataset.period;
+                    const filterContainer = this.closest('.chart-filters');
 
-            container.querySelectorAll('.btn').forEach(btn => {
-                btn.classList.remove('active');
+                    filterContainer.querySelectorAll('.btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    console.log(`Changed origin chart period to: ${period}`);
+                    updateOriginChart(period);
+                });
             });
-            this.classList.add('active');
-
-            // In a real implementation, this would update the chart data
-            console.log(`Changed origin chart period to: ${period}`);
-            updateOriginChart(period);
-        });
+        }
     });
 
     // Cost breakdown chart period filters
-    document.querySelectorAll('#costBreakdownChart ~ .chart-filters .btn').forEach(button => {
-        button.addEventListener('click', function () {
-            const period = this.dataset.period;
-            const container = this.closest('.chart-filters');
+    document.querySelectorAll('#costBreakdownChart').forEach(chart => {
+        const container = chart.closest('.card-body');
+        if (container) {
+            container.querySelectorAll('.chart-filters .btn').forEach(button => {
+                button.addEventListener('click', function () {
+                    const period = this.dataset.period;
+                    const filterContainer = this.closest('.chart-filters');
 
-            container.querySelectorAll('.btn').forEach(btn => {
-                btn.classList.remove('active');
+                    filterContainer.querySelectorAll('.btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    console.log(`Changed cost breakdown chart period to: ${period}`);
+                    updateCostBreakdownChart(period);
+                });
             });
-            this.classList.add('active');
-
-            // In a real implementation, this would update the chart data
-            console.log(`Changed cost breakdown chart period to: ${period}`);
-            updateCostBreakdownChart(period);
-        });
+        }
     });
 }
 
 // Mock function to load analytics data from Supabase
-async function loadAnalyticsData() {
+async function loadAnalyticsData(period = 'month') {
     try {
         // Get the actual data from global variables
         const activeDeliveries = window.activeDeliveries || [];
         const deliveryHistory = window.deliveryHistory || [];
         const allDeliveries = [...activeDeliveries, ...deliveryHistory];
         
-        // Process data for charts
-        // Bookings chart - group by month
-        const bookingsByMonth = {};
-        allDeliveries.forEach(delivery => {
-            const date = delivery.deliveryDate || delivery.timestamp;
-            if (date) {
-                const month = new Date(date).toLocaleString('default', { month: 'short' });
-                bookingsByMonth[month] = (bookingsByMonth[month] || 0) + 1;
-            }
-        });
+        // Process data for charts based on period
+        let bookingsData, costsData, originData, costBreakdownData;
         
-        // Costs chart - group by month
-        const costsByMonth = {};
-        allDeliveries.forEach(delivery => {
-            const date = delivery.deliveryDate || delivery.timestamp;
-            if (date) {
-                const month = new Date(date).toLocaleString('default', { month: 'short' });
-                const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
-                costsByMonth[month] = (costsByMonth[month] || 0) + cost;
-            }
-        });
-        
-        // Origin chart - count by origin
-        const originCount = {};
-        allDeliveries.forEach(delivery => {
-            const origin = delivery.origin || 'Unknown';
-            originCount[origin] = (originCount[origin] || 0) + 1;
-        });
-        
-        // Cost breakdown - categorize additional costs
-        const costBreakdown = {
-            'Fuel Surcharge': 0,
-            'Toll Fees': 0,
-            'Urgent Delivery': 0,
-            'Special Handling': 0,
-            'Other': 0
-        };
-        
-        // For now, we'll put all additional costs in "Other" since we don't have cost descriptions
-        let totalAdditionalCosts = 0;
-        allDeliveries.forEach(delivery => {
-            if (typeof delivery.additionalCosts === 'number') {
-                totalAdditionalCosts += delivery.additionalCosts;
-            }
-        });
-        
-        if (totalAdditionalCosts > 0) {
-            costBreakdown['Other'] = totalAdditionalCosts;
+        switch(period) {
+            case 'day':
+                ({ bookingsData, costsData, originData, costBreakdownData } = processDataByDay(allDeliveries));
+                break;
+            case 'week':
+                ({ bookingsData, costsData, originData, costBreakdownData } = processDataByWeek(allDeliveries));
+                break;
+            case 'month':
+            default:
+                ({ bookingsData, costsData, originData, costBreakdownData } = processDataByMonth(allDeliveries));
+                break;
         }
         
-        // Prepare data for charts
-        const months = Object.keys(bookingsByMonth);
-        const bookingValues = months.map(month => bookingsByMonth[month] || 0);
-        const costValues = months.map(month => costsByMonth[month] || 0);
-        
-        const originLabels = Object.keys(originCount);
-        const originValues = originLabels.map(label => originCount[label] || 0);
-        
-        const costBreakdownLabels = Object.keys(costBreakdown);
-        const costBreakdownValues = costBreakdownLabels.map(label => costBreakdown[label] || 0);
-        
         return {
-            bookings: {
-                labels: months,
-                values: bookingValues
-            },
-            costs: {
-                labels: months,
-                values: costValues
-            },
-            origin: {
-                labels: originLabels,
-                values: originValues
-            },
-            costBreakdown: {
-                labels: costBreakdownLabels,
-                values: costBreakdownValues
-            }
+            bookings: bookingsData,
+            costs: costsData,
+            origin: originData,
+            costBreakdown: costBreakdownData
         };
     } catch (error) {
         console.error('Error loading analytics data:', error);
@@ -504,21 +735,57 @@ window.updateDashboardMetrics = updateDashboardMetrics;
 function updateBookingsChart(period) {
     // In a real implementation, this would fetch new data based on period
     console.log(`Updating bookings chart for ${period}`);
+    
+    // Load new data for the selected period
+    loadAnalyticsData(period).then(data => {
+        if (bookingsChart) {
+            bookingsChart.data.labels = data.bookings.labels;
+            bookingsChart.data.datasets[0].data = data.bookings.values;
+            bookingsChart.update();
+        }
+    });
 }
 
 function updateCostsChart(period) {
     // In a real implementation, this would fetch new data based on period
     console.log(`Updating costs chart for ${period}`);
+    
+    // Load new data for the selected period
+    loadAnalyticsData(period).then(data => {
+        if (costsChart) {
+            costsChart.data.labels = data.costs.labels;
+            costsChart.data.datasets[0].data = data.costs.values;
+            costsChart.update();
+        }
+    });
 }
 
 function updateOriginChart(period) {
     // In a real implementation, this would fetch new data based on period
     console.log(`Updating origin chart for ${period}`);
+    
+    // Load new data for the selected period
+    loadAnalyticsData(period).then(data => {
+        if (originChart) {
+            originChart.data.labels = data.origin.labels;
+            originChart.data.datasets[0].data = data.origin.values;
+            originChart.update();
+        }
+    });
 }
 
 function updateCostBreakdownChart(period) {
     // In a real implementation, this would fetch new data based on period
     console.log(`Updating cost breakdown chart for ${period}`);
+    
+    // Load new data for the selected period
+    loadAnalyticsData(period).then(data => {
+        if (costBreakdownChart) {
+            costBreakdownChart.data.labels = data.costBreakdown.labels;
+            costBreakdownChart.data.datasets[0].data = data.costBreakdown.values;
+            costBreakdownChart.update();
+        }
+    });
 }
 
 // Expose function globally

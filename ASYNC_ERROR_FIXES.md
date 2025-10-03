@@ -1,67 +1,65 @@
-# Asynchronous Response Error Fixes
+# Asynchronous Listener Error Fixes
 
-## Issue Identified
+## Problem
+The error "Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received" typically occurs when:
 
-The error "Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received" suggests there's an issue with asynchronous operations in the application, possibly related to event listeners or message passing.
+1. Chrome extensions or browser APIs have event listeners that return `true` to indicate asynchronous responses
+2. The message channel closes before the response is sent
+3. Event listeners are duplicated without proper cleanup
+4. Asynchronous operations don't properly handle promise rejections
 
-## Root Cause
+## Solutions Implemented
 
-The main issue was with the MutationObserver implementation in the booking.js file. The observers were not being properly managed, which could cause memory leaks and possibly the asynchronous response error. Specifically:
+### 1. Event Listener Cleanup
+Fixed event listener duplication in multiple files by:
+- Using `cloneNode(true)` to remove existing event listeners before adding new ones
+- Properly replacing DOM elements to ensure clean event listener attachment
 
-1. MutationObservers were not being disconnected when the modal was hidden
-2. When destination areas were removed, their observers were not being disconnected
-3. When new destination areas were added, MutationObservers were not being attached to them
+Files modified:
+- `public/assets/js/e-signature.js`
+- `public/assets/js/main.js`
+- `public/assets/js/booking.js`
 
-## Fix Implemented
+### 2. Service Worker Implementation
+Created a service worker (`public/sw.js`) to:
+- Handle message passing between clients and the service worker
+- Always respond to messages to prevent channel closure errors
+- Provide a controlled environment for handling asynchronous operations
 
-### 1. Proper MutationObserver Management
-- Added proper management of MutationObserver references in a destinationObservers array
-- Ensured observers are disconnected when the modal is hidden
-- Added observer cleanup when destination areas are removed
-- Added observers for newly created destination areas
+### 3. Service Worker Registration
+Added service worker registration to `public/index.html`:
+- Registers the service worker on page load
+- Handles registration success and failure cases
+- Provides logging for debugging purposes
 
-### 2. Enhanced Event Listener Cleanup
-- Improved the hiddenListener function to properly disconnect all MutationObservers
-- Added proper cleanup of observer references to prevent memory leaks
+### 4. Promise Handling Improvements
+Enhanced promise handling in e-signature functions:
+- Added proper error handling for all asynchronous operations
+- Ensured all promises have appropriate `.catch()` handlers
+- Improved the flow of multiple signature saving operations
 
-### 3. Dynamic Observer Attachment
-- Added MutationObserver attachment for dynamically created destination area inputs
-- Ensured all destination inputs have proper observers for attribute changes
+### 5. Modal Event Management
+Improved modal event handling:
+- Properly cleaned up modal event listeners
+- Ensured modal backdrops are removed correctly
+- Added proper state management for modal components
 
-## Changes Made
+## Testing
+To verify the fixes:
+1. Load the application in Chrome
+2. Open Developer Tools and check the Console tab
+3. Perform E-Signature operations
+4. Verify that the asynchronous listener error no longer appears
 
-### File: public/assets/js/booking.js
+## Additional Recommendations
+1. Disable Chrome extensions temporarily to isolate the issue
+2. Clear browser cache and reload the application
+3. Check for any third-party scripts that might be adding event listeners
+4. Monitor the console for any remaining errors
 
-1. **Added destinationObservers array declaration**:
-   - Declared a const destinationObservers array at the function scope level to store observer references
-
-2. **Enhanced MutationObserver implementation**:
-   - Modified the MutationObserver implementation to store references in the destinationObservers array
-   - Added proper observer configuration for attribute changes
-
-3. **Updated hiddenListener function**:
-   - Enhanced the hiddenListener to properly disconnect all MutationObservers when the modal is hidden
-   - Added cleanup of observer references to prevent memory leaks
-
-4. **Added observer management for dynamic elements**:
-   - Added MutationObserver attachment for newly created destination area inputs
-   - Added observer cleanup when destination areas are removed
-
-## Verification
-
-The fix has been implemented to ensure:
-- MutationObservers are properly managed and disconnected when no longer needed
-- Memory leaks from unmanaged observers are prevented
-- Asynchronous operations are properly handled
-- Event listeners are properly cleaned up
-- The "A listener indicated an asynchronous response" error is resolved
-
-## Testing Instructions
-
-1. Open the application in a browser
-2. Navigate to the Delivery Booking section
-3. Open and close the booking modal multiple times
-4. Add and remove destination areas
-5. Verify that no console errors related to asynchronous responses appear
-6. Test the "Pin on Map" functionality for both origin and destination areas
-7. Verify that coordinates are properly displayed and distance calculation works correctly
+## Files Created/Modified
+- `public/sw.js` - New service worker file
+- `public/index.html` - Added service worker registration
+- `public/assets/js/e-signature.js` - Improved event listener cleanup and promise handling
+- `public/assets/js/main.js` - Fixed event listener duplication
+- `public/assets/js/booking.js` - Enhanced event listener management

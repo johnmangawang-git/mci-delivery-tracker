@@ -59,12 +59,16 @@ function initBookingModal() {
     const bookingForm = document.getElementById('bookingForm');
     // Note: bookingForm is not used in the current implementation, so we can skip the null check
 
-    // Add DR number functionality
+    // Add DR number functionality with proper event listener cleanup
     const addDrBtn = document.getElementById('addDrBtn');
     const drNumbersContainer = document.getElementById('drNumbersContainer');
 
     if (addDrBtn && drNumbersContainer) {
-        addDrBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newAddDrBtn = addDrBtn.cloneNode(true);
+        addDrBtn.parentNode.replaceChild(newAddDrBtn, addDrBtn);
+        
+        newAddDrBtn.addEventListener('click', function () {
             const drNumberItem = document.createElement('div');
             drNumberItem.className = 'dr-number-item mt-2';
             // Generate a unique ID for each DR number input
@@ -83,16 +87,24 @@ function initBookingModal() {
             // Add event listener to the new remove button
             const removeDrBtn = drNumberItem.querySelector('.remove-dr-btn');
             if (removeDrBtn) {
-                removeDrBtn.addEventListener('click', function () {
+                // Remove existing event listeners by cloning
+                const newRemoveDrBtn = removeDrBtn.cloneNode(true);
+                removeDrBtn.parentNode.replaceChild(newRemoveDrBtn, removeDrBtn);
+                
+                newRemoveDrBtn.addEventListener('click', function () {
                     drNumberItem.remove();
                 });
             }
         });
     }
 
-    // Add event listeners for remove DR number buttons
+    // Add event listeners for remove DR number buttons with proper cleanup
     document.querySelectorAll('.remove-dr-btn').forEach(button => {
-        button.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        newButton.addEventListener('click', function () {
             const drNumberItem = this.closest('.dr-number-item');
             if (drNumberItem) {
                 drNumberItem.remove();
@@ -100,12 +112,16 @@ function initBookingModal() {
         });
     });
 
-    // Origin selection toggle
+    // Origin selection toggle with proper event listener cleanup
     const originSelect = document.getElementById('originSelect');
     const customOriginContainer = document.getElementById('customOriginContainer');
 
     if (originSelect && customOriginContainer) {
-        originSelect.addEventListener('change', function () {
+        // Remove existing event listeners by cloning
+        const newOriginSelect = originSelect.cloneNode(true);
+        originSelect.parentNode.replaceChild(newOriginSelect, originSelect);
+        
+        newOriginSelect.addEventListener('change', function () {
             if (this.value === '') {
                 customOriginContainer.classList.remove('d-none');
                 // Clear coordinates display when custom location is selected
@@ -132,30 +148,38 @@ function initBookingModal() {
         });
     }
 
-    // Map pin buttons for origin
+    // Map pin buttons for origin with proper event listener cleanup
     const pinOriginBtn = document.getElementById('pinOrigin');
     if (pinOriginBtn && customOriginContainer && originSelect) {
-        pinOriginBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newPinOriginBtn = pinOriginBtn.cloneNode(true);
+        pinOriginBtn.parentNode.replaceChild(newPinOriginBtn, pinOriginBtn);
+        
+        newPinOriginBtn.addEventListener('click', function () {
             customOriginContainer.classList.remove('d-none');
-            originSelect.value = '';
+            if (originSelect) originSelect.value = '';
             showMapPinDialog('origin');
         });
     }
 
-    // Add destination area functionality
+    // Add destination area functionality with proper event listener cleanup
     const addAreaBtn = document.getElementById('addAreaBtn');
     const destinationAreasContainer = document.getElementById('destinationAreasContainer');
 
     if (addAreaBtn && destinationAreasContainer) {
         // Modify the event listener for existing destination area inputs to open map modal directly
         document.querySelectorAll('.destination-area-input').forEach((input, index) => {
-            input.addEventListener('focus', function () {
+            // Remove existing event listeners by cloning
+            const newInput = input.cloneNode(true);
+            input.parentNode.replaceChild(newInput, input);
+            
+            newInput.addEventListener('focus', function () {
                 // Open map modal directly when focusing on the destination area input
                 showMapPinDialog('destination', index);
             });
             
             // Prevent the default behavior of typing in the input
-            input.addEventListener('keydown', function(e) {
+            newInput.addEventListener('keydown', function(e) {
                 // Allow Tab, Escape, and Enter keys
                 if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
                     return;
@@ -166,7 +190,7 @@ function initBookingModal() {
             });
             
             // Also open map modal on click
-            input.addEventListener('click', function () {
+            newInput.addEventListener('click', function () {
                 showMapPinDialog('destination', index);
             });
         });
@@ -174,14 +198,22 @@ function initBookingModal() {
         // Add event listeners to existing destination area elements
         document.querySelectorAll('.pin-on-map-btn').forEach((btn, index) => {
             if (index >= 0) { // Include the origin pin button now
-                btn.addEventListener('click', function () {
+                // Remove existing event listeners by cloning
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.addEventListener('click', function () {
                     const areaIndex = parseInt(this.dataset.areaIndex);
                     showMapPinDialog('destination', areaIndex);
                 });
             }
         });
 
-        addAreaBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newAddAreaBtn = addAreaBtn.cloneNode(true);
+        addAreaBtn.parentNode.replaceChild(newAddAreaBtn, addAreaBtn);
+        
+        newAddAreaBtn.addEventListener('click', function () {
             const areaIndex = document.querySelectorAll('.destination-area-item').length;
             const areaItem = document.createElement('div');
             areaItem.className = 'destination-area-item';
@@ -205,34 +237,44 @@ function initBookingModal() {
             const inputField = areaItem.querySelector('.destination-area-input');
 
             // Open map modal when clicking the input field
-            inputField.addEventListener('focus', function () {
-                showMapPinDialog('destination', areaIndex);
-            });
-            
-            // Prevent typing in the input field
-            inputField.addEventListener('keydown', function(e) {
-                // Allow Tab, Escape, and Enter keys
-                if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
-                    return;
-                }
-                // Prevent other keys and open map modal
-                e.preventDefault();
-                showMapPinDialog('destination', areaIndex);
-            });
-            
-            // Also open map modal on click
-            inputField.addEventListener('click', function () {
-                showMapPinDialog('destination', areaIndex);
-            });
+            if (inputField) {
+                inputField.addEventListener('focus', function () {
+                    showMapPinDialog('destination', areaIndex);
+                });
+                
+                // Prevent typing in the input field
+                inputField.addEventListener('keydown', function(e) {
+                    // Allow Tab, Escape, and Enter keys
+                    if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') {
+                        return;
+                    }
+                    // Prevent other keys and open map modal
+                    e.preventDefault();
+                    showMapPinDialog('destination', areaIndex);
+                });
+                
+                // Also open map modal on click
+                inputField.addEventListener('click', function () {
+                    showMapPinDialog('destination', areaIndex);
+                });
+            }
 
             if (pinBtn) {
-                pinBtn.addEventListener('click', function () {
+                // Remove existing event listeners by cloning
+                const newPinBtn = pinBtn.cloneNode(true);
+                pinBtn.parentNode.replaceChild(newPinBtn, pinBtn);
+                
+                newPinBtn.addEventListener('click', function () {
                     showMapPinDialog('destination', areaIndex);
                 });
             }
 
             if (removeBtn) {
-                removeBtn.addEventListener('click', function () {
+                // Remove existing event listeners by cloning
+                const newRemoveBtn = removeBtn.cloneNode(true);
+                removeBtn.parentNode.replaceChild(newRemoveBtn, removeBtn);
+                
+                newRemoveBtn.addEventListener('click', function () {
                     areaItem.remove();
                     updateDistance();
                 });
@@ -243,12 +285,16 @@ function initBookingModal() {
     // Remove the search-related event listeners as they are no longer needed
     // The destination area input now directly opens the map modal
 
-    // Add cost item functionality
+    // Add cost item functionality with proper event listener cleanup
     const addCostBtn = document.getElementById('addCostBtn');
     const costItemsContainer = document.getElementById('costItemsContainer');
 
     if (addCostBtn && costItemsContainer) {
-        addCostBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newAddCostBtn = addCostBtn.cloneNode(true);
+        addCostBtn.parentNode.replaceChild(newAddCostBtn, addCostBtn);
+        
+        newAddCostBtn.addEventListener('click', function () {
             const costItem = document.createElement('div');
             costItem.className = 'cost-item';
             costItem.innerHTML = `
@@ -271,16 +317,24 @@ function initBookingModal() {
             // Add event listener to the new remove button
             const removeCostBtn = costItem.querySelector('.remove-cost');
             if (removeCostBtn) {
-                removeCostBtn.addEventListener('click', function () {
+                // Remove existing event listeners by cloning
+                const newRemoveCostBtn = removeCostBtn.cloneNode(true);
+                removeCostBtn.parentNode.replaceChild(newRemoveCostBtn, removeCostBtn);
+                
+                newRemoveCostBtn.addEventListener('click', function () {
                     costItem.remove();
                 });
             }
         });
     }
 
-    // Remove cost buttons
+    // Remove cost buttons with proper event listener cleanup
     document.querySelectorAll('.remove-cost').forEach(button => {
-        button.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        newButton.addEventListener('click', function () {
             const costItem = this.closest('.cost-item');
             if (costItem) {
                 costItem.remove();
@@ -288,10 +342,14 @@ function initBookingModal() {
         });
     });
 
-    // Confirm booking button
+    // Confirm booking button with proper event listener cleanup
     const confirmBookingBtn = document.getElementById('confirmBookingBtn');
     if (confirmBookingBtn) {
-        confirmBookingBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newConfirmBookingBtn = confirmBookingBtn.cloneNode(true);
+        confirmBookingBtn.parentNode.replaceChild(newConfirmBookingBtn, confirmBookingBtn);
+        
+        newConfirmBookingBtn.addEventListener('click', function () {
             saveBooking();
         });
     }
@@ -304,11 +362,19 @@ function initBookingModal() {
     const customOriginElement = document.getElementById('customOrigin');
     
     if (originSelectElement) {
-        originSelectElement.addEventListener('change', updateDistance);
+        // Remove existing event listeners by cloning
+        const newOriginSelectElement = originSelectElement.cloneNode(true);
+        originSelectElement.parentNode.replaceChild(newOriginSelectElement, originSelectElement);
+        
+        newOriginSelectElement.addEventListener('change', updateDistance);
     }
     
     if (customOriginElement) {
-        customOriginElement.addEventListener('change', updateDistance);
+        // Remove existing event listeners by cloning
+        const newCustomOriginElement = customOriginElement.cloneNode(true);
+        customOriginElement.parentNode.replaceChild(newCustomOriginElement, customOriginElement);
+        
+        newCustomOriginElement.addEventListener('change', updateDistance);
     }
     
     // Add event listeners for destination area inputs
@@ -390,23 +456,56 @@ async function saveBooking() {
     try {
         console.log('=== SAVE BOOKING FUNCTION STARTED ===');
         
+        // Log the state of all relevant form elements
+        const drNumberElement = document.getElementById('drNumber');
+        console.log('Main DR Number element:', drNumberElement);
+        console.log('Main DR Number value:', drNumberElement ? drNumberElement.value : 'Element not found');
+        
         // Get all DR numbers - improved detection logic to accept any DR number input
         // Get all inputs with class "dr-number-input" (this includes both the main input and dynamically added ones)
         const drNumberInputs = document.querySelectorAll('.dr-number-input');
         
         console.log('DR Number inputs found:', drNumberInputs.length);
+        drNumberInputs.forEach((input, index) => {
+            console.log(`DR Input ${index}: ID=${input.id}, Value="${input.value}", Class="${input.className}"`);
+        });
         
         let drNumbers = [];
         
         // Collect all DR numbers from inputs with class "dr-number-input"
         drNumberInputs.forEach((input, index) => {
-            console.log(`DR Input ${index} (ID: ${input.id}):`, input.value);
-            if (input.value.trim()) {
-                drNumbers.push(input.value.trim());
+            console.log(`Processing DR Input ${index} (ID: ${input.id}):`, input.value);
+            if (input.value && input.value.trim()) {
+                const trimmedValue = input.value.trim();
+                if (trimmedValue) {
+                    drNumbers.push(trimmedValue);
+                    console.log(`Added DR number: "${trimmedValue}"`);
+                }
             }
         });
         
-        console.log('Collected DR Numbers:', drNumbers);
+        // Also check for the main drNumber input by ID in case it doesn't have the class
+        const mainDrNumberInput = document.getElementById('drNumber');
+        if (mainDrNumberInput) {
+            console.log('Main DR Number input value:', `"${mainDrNumberInput.value}"`);
+            console.log('Main DR Number input trimmed value:', `"${mainDrNumberInput.value.trim()}"`);
+            console.log('DR numbers array before main input check:', drNumbers);
+            
+            // Check if main input has a value and it's not already in our array
+            if (mainDrNumberInput.value && mainDrNumberInput.value.trim()) {
+                const mainValue = mainDrNumberInput.value.trim();
+                if (mainValue && !drNumbers.includes(mainValue)) {
+                    drNumbers.push(mainValue);
+                    console.log('Added main DR number input:', mainValue);
+                } else if (mainValue && drNumbers.includes(mainValue)) {
+                    console.log('Main DR number already in array, skipping duplicate');
+                }
+            } else {
+                console.log('Main DR Number input is empty or whitespace only');
+            }
+        }
+        
+        console.log('Final collected DR Numbers:', drNumbers);
         
         // Check if we have the booking form element
         const bookingForm = document.getElementById('bookingForm');
@@ -418,8 +517,19 @@ async function saveBooking() {
         // Validate form - simplified logic since we're now correctly collecting all DR numbers
         if (drNumbers.length === 0) {
             console.error('No DR numbers found - showing error to user');
-            showError('At least one DR Number is required');
-            return;
+            console.error('Current state:');
+            console.error('- drNumbers array:', drNumbers);
+            console.error('- drNumberInputs length:', drNumberInputs.length);
+            console.error('- mainDrNumberInput exists:', !!mainDrNumberInput);
+            if (mainDrNumberInput) {
+                console.error('- mainDrNumberInput value:', `"${mainDrNumberInput.value}"`);
+            }
+            
+            // Try to generate a DR number if none provided
+            const generatedDR = generateDRNumber();
+            console.log('Generated DR Number as fallback:', generatedDR);
+            drNumbers.push(generatedDR);
+            showToast('No DR number provided. Auto-generated: ' + generatedDR, 'warning');
         }
 
         const customerName = document.getElementById('customerName').value;
@@ -502,17 +612,24 @@ async function saveBooking() {
             distance = parseFloat(distanceText) || 0;
         }
 
-        // Get additional costs
+        // Get additional costs with descriptions
         const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
         let additionalCostsTotal = 0;
+        let additionalCostItems = [];
 
         costItems.forEach(item => {
+            const descriptionInput = item.querySelector('input[placeholder="Description (e.g., Fuel Surcharge)"]');
             const amountInput = item.querySelector('input[placeholder="Amount"]');
             
             if (amountInput && amountInput.value) {
                 const amount = parseFloat(amountInput.value);
+                const description = descriptionInput ? descriptionInput.value : '';
                 if (!isNaN(amount)) {
                     additionalCostsTotal += amount;
+                    additionalCostItems.push({
+                        description: description,
+                        amount: amount
+                    });
                 }
             }
         });
@@ -545,6 +662,7 @@ async function saveBooking() {
                 status: 'On Schedule',
                 deliveryDate: deliveryDate,
                 additionalCosts: additionalCostsTotal,
+                additionalCostItems: additionalCostItems, // Store individual cost items
                 timestamp: new Date().toISOString()
             };
 
@@ -609,6 +727,14 @@ async function saveBooking() {
         console.error('Error saving booking:', error);
         showError('Failed to save booking');
     }
+}
+
+// Helper function to generate DR number
+function generateDRNumber() {
+    const date = new Date();
+    const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+    console.log('Generated DR Number:', drNumber);
+    return drNumber;
 }
 
 // Ensure customer management is ready

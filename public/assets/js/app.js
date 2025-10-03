@@ -96,16 +96,34 @@ console.log('app.js loaded');
         
         // Use the new robust E-Signature implementation if available
         if (typeof window.openRobustSignaturePad === 'function') {
-            window.openRobustSignaturePad(drNumber, 'Customer Name', '09123456789', 'ABC123', 'Origin to Destination');
+            // Try to get real delivery data from active deliveries
+            let customerName = '';
+            let customerContact = '';
+            let truckPlate = '';
+            let deliveryRoute = '';
+            
+            // Find the delivery in activeDeliveries array
+            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                const delivery = window.activeDeliveries.find(d => d.drNumber === drNumber);
+                if (delivery) {
+                    customerName = delivery.customerName || '';
+                    customerContact = delivery.customerNumber || '';
+                    truckPlate = delivery.truckPlateNumber || '';
+                    deliveryRoute = (delivery.origin && delivery.destination) ? 
+                        `${delivery.origin} to ${delivery.destination}` : '';
+                }
+            }
+            
+            window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
         } else {
             // Fallback to original implementation
             // Set delivery details in modal
             document.getElementById('ePodDrNumber').value = drNumber;
             // In a real app, you would fetch these details from your data
-            document.getElementById('ePodCustomerName').value = 'Customer Name';
-            document.getElementById('ePodCustomerContact').value = '09123456789';
-            document.getElementById('ePodTruckPlate').value = 'ABC123';
-            document.getElementById('ePodDeliveryRoute').value = 'Origin to Destination';
+            document.getElementById('ePodCustomerName').value = '';
+            document.getElementById('ePodCustomerContact').value = '';
+            document.getElementById('ePodTruckPlate').value = '';
+            document.getElementById('ePodDeliveryRoute').value = '';
             
             // Show modal using our utility function if available
             if (typeof window.showModal === 'function') {
@@ -576,9 +594,40 @@ function loadDeliveryHistory() {
             return;
         }
         
+        // Get EPOD records to check which deliveries are signed
+        let ePodRecords = [];
+        try {
+            const ePodData = localStorage.getItem('ePodRecords');
+            if (ePodData) {
+                ePodRecords = JSON.parse(ePodData);
+            }
+        } catch (error) {
+            console.error('Error loading EPOD records:', error);
+        }
+        
         // Generate table rows
         deliveryHistoryTableBody.innerHTML = filteredHistory.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
+            
+            // Check if this delivery has been signed
+            const isSigned = ePodRecords.some(record => record.drNumber === delivery.drNumber);
+            
+            // Build status display
+            let statusDisplay = `
+                <span class="badge ${statusInfo.class}">
+                    <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                </span>
+            `;
+            
+            // Add signed badge if delivery has been signed
+            if (isSigned) {
+                statusDisplay += `
+                    <span class="badge bg-warning text-dark ms-1">
+                        <i class="bi bi-pen"></i> Signed
+                    </span>
+                `;
+            }
+            
             return `
                 <tr>
                     <td>${delivery.completedDate || 'N/A'}</td>
@@ -590,9 +639,7 @@ function loadDeliveryHistory() {
                     <td>${delivery.distance}</td>
                     <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
-                        <span class="badge ${statusInfo.class}">
-                            <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
-                        </span>
+                        ${statusDisplay}
                     </td>
                 </tr>
             `;

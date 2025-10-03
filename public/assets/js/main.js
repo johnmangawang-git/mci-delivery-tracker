@@ -17,17 +17,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const mobileToggle = document.querySelector('.mobile-toggle');
     const sidebar = document.querySelector('.sidebar');
 
-    // Mobile sidebar toggle
-    if (mobileToggle) {
-        mobileToggle.addEventListener('click', function () {
+    // Remove any existing event listeners to prevent duplicates
+    const newMobileToggle = mobileToggle ? mobileToggle.cloneNode(true) : null;
+    if (newMobileToggle && mobileToggle) {
+        mobileToggle.parentNode.replaceChild(newMobileToggle, mobileToggle);
+        newMobileToggle.addEventListener('click', function () {
             sidebar.classList.toggle('show');
         });
     }
 
-    // Sidebar navigation
+    // Sidebar navigation with proper event listener cleanup
     sidebarLinks.forEach(link => {
-        link.addEventListener('click', function (e) {
+        // Remove existing event listeners by cloning
+        const newLink = link.cloneNode(true);
+        link.parentNode.replaceChild(newLink, link);
+        
+        newLink.addEventListener('click', function (e) {
             e.preventDefault();
+            e.stopPropagation();
 
             // Update active state in sidebar
             sidebarLinks.forEach(l => l.classList.remove('active'));
@@ -40,13 +47,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Show selected view
             const viewName = this.dataset.view;
+            console.log('Switching to view:', viewName);
             if (views[viewName]) {
+                console.log('View element found:', views[viewName]);
                 views[viewName].classList.add('active');
+                console.log('View is now active:', views[viewName].classList.contains('active'));
 
                 // Special handling for analytics view
                 if (viewName === 'analytics') {
                     // Initialize charts when analytics view is shown
-                    initAnalyticsCharts();
+                    initAnalyticsCharts('month');
                 }
 
                 // Special handling for active deliveries view
@@ -73,9 +83,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 
                 // Special handling for E-POD view
                 if (viewName === 'e-pod') {
-                    loadEPodDeliveries();
-                    initEPod(); // Initialize E-POD functionality when view is loaded
+                    console.log('EPOD tab clicked, loading EPOD deliveries');
+                    initEPod();
                 }
+                
+                
             }
 
             // Close sidebar on mobile after selection
@@ -97,8 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Initialize analytics charts (only if analytics view is visible initially)
-    if (views.analytics.classList.contains('active')) {
-        initAnalyticsCharts();
+    if (views.analytics && views.analytics.classList.contains('active')) {
+        initAnalyticsCharts('month');
     }
 
     // Initialize user session
@@ -110,19 +122,20 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize Supabase authentication
     initSupabaseAuth();
 
-    // Initialize E-POD functionality (for initial load if E-POD view is active)
-    if (document.getElementById('ePodView') && views['e-pod'].classList.contains('active')) {
-        initEPod();
-    }
+
     
     // Ensure signature pad is initialized for E-Signature functionality
     if (document.getElementById('signaturePad')) {
         ensureSignaturePadInitialized();
     }
 
-    // Calendar view toggle buttons
+    // Calendar view toggle buttons with proper event listener cleanup
     document.querySelectorAll('.calendar-controls .btn').forEach(button => {
-        button.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
+        
+        newButton.addEventListener('click', function () {
             document.querySelectorAll('.calendar-controls .btn').forEach(btn => {
                 btn.classList.remove('active');
             });
@@ -130,24 +143,40 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Add customer button
+    // Add customer button with proper event listener cleanup
     const addCustomerBtn = document.getElementById('addCustomerBtn');
     if (addCustomerBtn) {
-        addCustomerBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newAddCustomerBtn = addCustomerBtn.cloneNode(true);
+        addCustomerBtn.parentNode.replaceChild(newAddCustomerBtn, addCustomerBtn);
+        
+        newAddCustomerBtn.addEventListener('click', function () {
             const addCustomerModal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
             
             // Properly handle modal events
-            addCustomerModal._element.addEventListener('hidden.bs.modal', function () {
+            const modalElement = addCustomerModal._element;
+            // Remove any existing event listeners
+            const newModalElement = modalElement.cloneNode(true);
+            modalElement.parentNode.replaceChild(newModalElement, modalElement);
+            
+            newModalElement.addEventListener('hidden.bs.modal', function () {
                 // Reset form when modal is closed
-                document.getElementById('addCustomerForm').reset();
+                const form = document.getElementById('addCustomerForm');
+                if (form) form.reset();
                 
                 // Reset save button to default state
                 const saveBtn = document.getElementById('saveCustomerBtn');
-                saveBtn.textContent = 'Save Customer';
-                saveBtn.onclick = function() {
-                    saveCustomer();
-                    addCustomerModal.hide();
-                };
+                if (saveBtn) {
+                    saveBtn.textContent = 'Save Customer';
+                    // Remove existing event listeners by cloning
+                    const newSaveBtn = saveBtn.cloneNode(true);
+                    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+                    newSaveBtn.onclick = function() {
+                        saveCustomer();
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                        if (modal) modal.hide();
+                    };
+                }
                 
                 // Force remove modal backdrop if it remains
                 const backdrops = document.querySelectorAll('.modal-backdrop');
@@ -158,24 +187,33 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.body.style.paddingRight = '0';
             });
             
-            addCustomerModal.show();
+            const newModal = new bootstrap.Modal(newModalElement);
+            newModal.show();
         });
     }
 
-    // Save customer button
+    // Save customer button with proper event listener cleanup
     const saveCustomerBtn = document.getElementById('saveCustomerBtn');
     if (saveCustomerBtn) {
-        saveCustomerBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newSaveCustomerBtn = saveCustomerBtn.cloneNode(true);
+        saveCustomerBtn.parentNode.replaceChild(newSaveCustomerBtn, saveCustomerBtn);
+        
+        newSaveCustomerBtn.addEventListener('click', function () {
             saveCustomer();
             const addCustomerModal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
-            addCustomerModal.hide();
+            if (addCustomerModal) addCustomerModal.hide();
         });
     }
 
-    // Logout button
+    // Logout button with proper event listener cleanup
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', function () {
+        // Remove existing event listeners by cloning
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        
+        newLogoutBtn.addEventListener('click', function () {
             // Use Supabase logout if available
             if (typeof window.logout === 'function') {
                 window.logout().then(() => {
@@ -467,11 +505,25 @@ function openSignaturePad(drNumber = '', customerName = '', customerContact = ''
     console.log('openSignaturePad called with:', { drNumber, customerName, customerContact, truckPlate, deliveryRoute });
     
     // Set delivery details in modal
-    document.getElementById('ePodDrNumber').value = drNumber || '';
-    document.getElementById('ePodCustomerName').value = customerName || 'Customer Name';
-    document.getElementById('ePodCustomerContact').value = customerContact || '09123456789';
-    document.getElementById('ePodTruckPlate').value = truckPlate || 'ABC123';
-    document.getElementById('ePodDeliveryRoute').value = deliveryRoute || 'Origin to Destination';
+    const drNumberField = document.getElementById('ePodDrNumber');
+    const customerNameField = document.getElementById('ePodCustomerName');
+    const customerContactField = document.getElementById('ePodCustomerContact');
+    const truckPlateField = document.getElementById('ePodTruckPlate');
+    const deliveryRouteField = document.getElementById('ePodDeliveryRoute');
+    
+    console.log('Setting field values in original implementation:', {
+        drNumber: drNumber || '',
+        customerName: customerName || '',
+        customerContact: customerContact || '',
+        truckPlate: truckPlate || '',
+        deliveryRoute: deliveryRoute || ''
+    });
+    
+    if (drNumberField) drNumberField.value = drNumber || '';
+    if (customerNameField) customerNameField.value = customerName || '';
+    if (customerContactField) customerContactField.value = customerContact || '';
+    if (truckPlateField) truckPlateField.value = truckPlate || '';
+    if (deliveryRouteField) deliveryRouteField.value = deliveryRoute || '';
     
     // Clear any existing multiple DR data
     delete window.multipleDRNumbers;
@@ -506,11 +558,25 @@ function openSignaturePadMultiple(drNumber = '', customerName = '', customerCont
     console.log('openSignaturePadMultiple called with:', { drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers });
     
     // Set delivery details in modal
-    document.getElementById('ePodDrNumber').value = drNumber || '';
-    document.getElementById('ePodCustomerName').value = customerName || 'Customer Name';
-    document.getElementById('ePodCustomerContact').value = customerContact || '09123456789';
-    document.getElementById('ePodTruckPlate').value = truckPlate || 'ABC123';
-    document.getElementById('ePodDeliveryRoute').value = deliveryRoute || 'Origin to Destination';
+    const drNumberField = document.getElementById('ePodDrNumber');
+    const customerNameField = document.getElementById('ePodCustomerName');
+    const customerContactField = document.getElementById('ePodCustomerContact');
+    const truckPlateField = document.getElementById('ePodTruckPlate');
+    const deliveryRouteField = document.getElementById('ePodDeliveryRoute');
+    
+    console.log('Setting field values in original implementation for multiple DRs:', {
+        drNumber: drNumber || '',
+        customerName: customerName || '',
+        customerContact: customerContact || '',
+        truckPlate: truckPlate || '',
+        deliveryRoute: deliveryRoute || ''
+    });
+    
+    if (drNumberField) drNumberField.value = drNumber || '';
+    if (customerNameField) customerNameField.value = customerName || '';
+    if (customerContactField) customerContactField.value = customerContact || '';
+    if (truckPlateField) truckPlateField.value = truckPlate || '';
+    if (deliveryRouteField) deliveryRouteField.value = deliveryRoute || '';
     
     // Store the multiple DR numbers for saving
     window.multipleDRNumbers = drNumbers;
@@ -627,162 +693,42 @@ window.updateBookingViewDashboard = updateBookingViewDashboard;
 
 // E-POD Module Functions
 function initEPod() {
-    // Setup save button (this will be a no-op if already set up)
-    setupSaveSignatureButton();
+    // Load E-POD deliveries when view is active
+    loadEPodDeliveries();
     
     // Initialize export button
     initEPodExportButton();
+}
+
+function loadEPodDeliveries() {
+    console.log('Loading EPOD deliveries');
     
-    // Note: Signature pad initialization is handled by modal events, not here
-    
-    // E-Signature button in Active Deliveries view
-    const eSignatureBtn = document.getElementById('eSignatureBtn');
-    if (eSignatureBtn) {
-        eSignatureBtn.addEventListener('click', () => {
-            // Check if we're in Active Deliveries or E-POD view
-            const activeDeliveriesView = document.getElementById('activeDeliveriesView');
-            const ePodView = document.getElementById('ePodView');
-            
-            let selectedRows = [];
-            if (activeDeliveriesView && activeDeliveriesView.classList.contains('active')) {
-                // We're in Active Deliveries view
-                selectedRows = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked');
-            } else if (ePodView && ePodView.classList.contains('active')) {
-                // We're in E-POD view
-                selectedRows = document.querySelectorAll('#ePodTableBody tr.selected');
-            } else {
-                // Check active deliveries as fallback
-                selectedRows = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked');
-            }
-            
-            if (selectedRows.length === 0) {
-                showError('Please select a delivery first');
-                return;
-            }
-            
-            // For Active Deliveries view, check if all selected rows belong to the same customer
-            if (activeDeliveriesView && activeDeliveriesView.classList.contains('active')) {
-                // Get customer details from first selected row
-                const firstRow = selectedRows[0].closest('tr');
-                const firstCustomerName = firstRow.querySelector('td:nth-child(3)').textContent;
-                const firstCustomerContact = firstRow.querySelector('td:nth-child(4)').textContent;
-                
-                // Check if all selected rows belong to the same customer
-                let sameCustomer = true;
-                let drNumbers = [];
-                let deliveryDetails = [];
-                
-                selectedRows.forEach((rowElement, index) => {
-                    const row = rowElement.closest('tr');
-                    const customerName = row.querySelector('td:nth-child(3)').textContent;
-                    const customerContact = row.querySelector('td:nth-child(4)').textContent;
-                    const drNumber = row.querySelector('td:nth-child(2)').textContent;
-                    
-                    // Collect DR numbers
-                    drNumbers.push(drNumber);
-                    
-                    // Collect delivery details for display
-                    const origin = row.querySelector('td:nth-child(5)').textContent;
-                    const destination = row.querySelector('td:nth-child(6)').textContent;
-                    const truckPlate = row.querySelector('td:nth-child(8)').textContent;
-                    
-                    deliveryDetails.push({
-                        drNumber,
-                        origin,
-                        destination,
-                        truckPlate
-                    });
-                    
-                    // Check if customer details match
-                    if (customerName !== firstCustomerName || customerContact !== firstCustomerContact) {
-                        sameCustomer = false;
-                    }
-                });
-                
-                if (!sameCustomer) {
-                    showError('All selected deliveries must belong to the same customer');
-                    return;
-                }
-                
-                // If all selected rows belong to the same customer, open signature pad with multiple DR numbers
-                const drNumber = drNumbers.join(', '); // Display all DR numbers
-                const customerName = firstCustomerName;
-                const customerContact = firstCustomerContact;
-                // For truck plate and route, use the first one as a representative
-                const truckPlate = deliveryDetails[0].truckPlate;
-                const deliveryRoute = `${deliveryDetails[0].origin} to ${deliveryDetails[0].destination}`;
-                
-                // Use the new robust E-Signature implementation
-                if (typeof window.openRobustSignaturePad === 'function') {
-                    window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers);
-                } else {
-                    // Fallback to original implementation
-                    openSignaturePadMultiple(drNumber, customerName, customerContact, truckPlate, deliveryRoute, drNumbers);
-                }
-            } else {
-                // For other views, use the original single DR functionality
-                let drNumber = '';
-                let customerName = '';
-                let customerContact = '';
-                let truckPlate = '';
-                let deliveryRoute = '';
-                
-                const row = selectedRows[0].closest('tr');
-                drNumber = row.querySelector('td:nth-child(2)').textContent;
-                
-                if (activeDeliveriesView && activeDeliveriesView.classList.contains('active')) {
-                    customerName = row.querySelector('td:nth-child(3)').textContent;
-                    customerContact = row.querySelector('td:nth-child(4)').textContent;
-                    // Get truck plate from the appropriate column
-                    truckPlate = row.querySelector('td:nth-child(8)').textContent;
-                    // Get origin and destination for route
-                    const origin = row.querySelector('td:nth-child(5)').textContent;
-                    const destination = row.querySelector('td:nth-child(6)').textContent;
-                    deliveryRoute = `${origin} to ${destination}`;
-                }
-                
-                // Use the new robust E-Signature implementation
-                if (typeof window.openRobustSignaturePad === 'function') {
-                    window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
-                } else {
-                    // Fallback to original implementation
-                    openSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
-                }
-            }
-        });
+    // Check if we're in the EPOD view
+    const ePodView = document.getElementById('ePodView');
+    if (!ePodView) {
+        console.error('EPOD view element not found');
+        return;
     }
     
-    // Checkbox selection in Active Deliveries table
-    const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
-    if (activeDeliveriesTableBody) {
-        // Use event delegation for dynamically added rows
-        activeDeliveriesTableBody.addEventListener('change', (e) => {
-            if (e.target.classList.contains('delivery-checkbox')) {
-                // Enable/disable E-Signature button based on selection
-                const hasSelection = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked').length > 0;
-                const eSignatureBtn = document.getElementById('eSignatureBtn');
-                if (eSignatureBtn) {
-                    eSignatureBtn.disabled = !hasSelection;
-                }
-            }
+    // Use dataService to fetch E-POD records if available
+    if (typeof window.dataService !== 'undefined' && typeof window.dataService.getEPodRecords === 'function') {
+        console.log('Attempting to load EPOD records from dataService');
+        window.dataService.getEPodRecords().then(records => {
+            console.log('EPOD records loaded from dataService:', records.length);
+            renderEPodDeliveries(records);
+        }).catch(error => {
+            console.error('Error loading EPOD records from dataService:', error);
+            // Fallback to localStorage
+            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+            console.log('EPOD records loaded from localStorage (fallback):', ePodRecords.length);
+            renderEPodDeliveries(ePodRecords);
         });
-    }
-    
-    // Select all checkbox in Active Deliveries
-    const selectAllActive = document.getElementById('selectAllActive');
-    if (selectAllActive) {
-        selectAllActive.addEventListener('change', (e) => {
-            const checkboxes = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = e.target.checked;
-            });
-            
-            // Enable/disable E-Signature button based on selection
-            const eSignatureBtn = document.getElementById('eSignatureBtn');
-            if (eSignatureBtn) {
-                eSignatureBtn.disabled = !e.target.checked;
-            }
-        });
+    } else {
+        console.log('dataService not available, loading EPOD records from localStorage');
+        // Fallback to localStorage
+        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+        console.log('EPOD records loaded from localStorage:', ePodRecords.length);
+        renderEPodDeliveries(ePodRecords);
     }
 }
 
@@ -794,335 +740,293 @@ function initEPodExportButton() {
     }
 }
 
-function updateDeliveryStatus(drNumber, newStatus) {
-    // In a real app, this would update the backend
-    console.log(`Updating DR ${drNumber} to status: ${newStatus}`);
-    
-    // Update UI if the delivery is in the active deliveries view
-    const activeDeliveriesRows = document.querySelectorAll('#activeDeliveriesTableBody tr');
-    activeDeliveriesRows.forEach(row => {
-        const drCell = row.querySelector('td:nth-child(2)'); // DR Number is now in the second column (first is checkbox)
-        if (drCell && drCell.textContent.trim() === drNumber) {
-            const statusCell = row.querySelector('td:nth-child(9)'); // Status is now in the 9th column
-            if (statusCell) {
-                statusCell.innerHTML = `<span class="badge bg-success">
-                    <i class="bi bi-check-circle"></i> ${newStatus}
-                </span>`;
-            }
-            
-            // Mark the row as signed
-            row.classList.add('table-success');
-        }
-    });
-    
-    // Also update in the global activeDeliveries array if it exists
-    console.log('Window activeDeliveries:', window.activeDeliveries);
-    console.log('Window deliveryHistory:', window.deliveryHistory);
-    
-    if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-        const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
-        console.log('Delivery index found:', deliveryIndex);
-        if (deliveryIndex !== -1) {
-            const delivery = window.activeDeliveries[deliveryIndex];
-            delivery.status = newStatus;
-            delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-            
-            // Move to history if completed
-            if (newStatus === 'Completed') {
-                console.log('Moving delivery to history');
-                // Add to delivery history
-                if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
-                    // Add the completed delivery to history
-                    window.deliveryHistory.unshift(delivery);
-                    console.log('Added to history, new history length:', window.deliveryHistory.length);
-                    
-                    // Remove from active deliveries
-                    window.activeDeliveries.splice(deliveryIndex, 1);
-                    console.log('Removed from active, new active length:', window.activeDeliveries.length);
-                    
-                    // Save to localStorage
-                    if (window.saveToLocalStorage && typeof window.saveToLocalStorage === 'function') {
-                        console.log('Saving to localStorage');
-                        window.saveToLocalStorage();
-                    }
-                    
-                    // Refresh both views
-                    if (window.loadActiveDeliveries && typeof window.loadActiveDeliveries === 'function') {
-                        console.log('Loading active deliveries');
-                        window.loadActiveDeliveries();
-                    }
-                    if (window.loadDeliveryHistory && typeof window.loadDeliveryHistory === 'function') {
-                        console.log('Loading delivery history');
-                        window.loadDeliveryHistory();
-                    }
-                    
-                    // Update dashboard metrics
-                    if (typeof window.updateDashboardMetrics === 'function') {
-                        window.updateDashboardMetrics();
-                    }
-                }
-            }
-        }
-    }
-}
-
-function loadEPodDeliveries() {
-    // Use dataService to fetch E-POD records if available
-    if (typeof window.dataService !== 'undefined') {
-        window.dataService.getEPodRecords().then(records => {
-            renderEPodDeliveries(records);
-        }).catch(error => {
-            console.error('Error loading E-POD records from dataService:', error);
-            // Fallback to localStorage
-            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            renderEPodDeliveries(ePodRecords);
-        });
-    } else {
-        // Fallback to localStorage
-        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-        renderEPodDeliveries(ePodRecords);
-    }
-}
-
-function renderEPodDeliveries(ePodRecords) {
-    const container = document.getElementById('ePodCardsContainer');
-    const paginationContainer = document.getElementById('ePodPagination');
-    
-    if (!container || !paginationContainer) return;
-    
-    // Clear existing content
-    container.innerHTML = '';
-    paginationContainer.innerHTML = '';
-    
-    if (ePodRecords.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="bi bi-info-circle" style="font-size: 2rem;"></i>
-                <p class="mt-3">No signed deliveries found</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort by signed date (newest first)
-    const sortedRecords = [...ePodRecords].sort((a, b) => new Date(b.signedAt) - new Date(a.signedAt));
-    
-    // Pagination settings
-    const recordsPerPage = 10;
-    const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
-    const currentPage = 1; // In a real app, you would track this state
-    
-    // Get records for current page
-    const startIndex = (currentPage - 1) * recordsPerPage;
-    const endIndex = Math.min(startIndex + recordsPerPage, sortedRecords.length);
-    const recordsToShow = sortedRecords.slice(startIndex, endIndex);
-    
-    // Add "Select All" checkbox at the top
-    const selectAllContainer = document.createElement('div');
-    selectAllContainer.className = 'col-12 mb-3';
-    selectAllContainer.innerHTML = `
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="selectAllEPod">
-            <label class="form-check-label" for="selectAllEPod">
-                Select All E-POD Records
-            </label>
-        </div>
-    `;
-    container.appendChild(selectAllContainer);
-    
-    // Add event listener for select all checkbox
-    const selectAllCheckbox = document.getElementById('selectAllEPod');
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            const checkboxes = container.querySelectorAll('.e-pod-checkbox');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-        });
-    }
-    
-    // Add cards for each signed delivery
-    recordsToShow.forEach((record, index) => {
-        const card = document.createElement('div');
-        card.className = 'col-md-6 col-lg-4 mb-4';
-        card.innerHTML = `
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">${record.drNumber}</h6>
-                        <div class="form-check">
-                            <input class="form-check-input e-pod-checkbox" type="checkbox" id="ePodCheckbox${startIndex + index}" data-record-index="${startIndex + index}">
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">Customer</small>
-                        <p class="mb-1">${record.customerName}</p>
-                        <small class="text-muted">Contact</small>
-                        <p class="mb-1">${record.customerContact}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Route</small>
-                        <p class="mb-1">${record.origin} to ${record.destination}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Truck</small>
-                        <p class="mb-1">${record.truckPlate}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Signed Date</small>
-                        <p class="mb-1">${new Date(record.signedAt).toLocaleDateString()}</p>
-                    </div>
-                    <div class="text-center">
-                        <img src="${record.signature}" alt="Signature" class="img-fluid border" style="max-height: 100px; object-fit: contain;">
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-    
-    // Add event listeners for individual checkboxes to update select all state
-    const individualCheckboxes = container.querySelectorAll('.e-pod-checkbox');
-    individualCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            updateSelectAllCheckboxState();
-        });
-    });
-    
-    // Add pagination controls if needed
-    if (totalPages > 1) {
-        let paginationHtml = `
-            <nav>
-                <ul class="pagination">
-                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
-                    </li>
-        `;
-        
-        for (let i = 1; i <= totalPages; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
-                </li>
-            `;
-        }
-        
-        paginationHtml += `
-                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        `;
-        
-        paginationContainer.innerHTML = paginationHtml;
-        
-        // Add event listeners to pagination links
-        paginationContainer.querySelectorAll('.page-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = parseInt(e.target.dataset.page);
-                if (!isNaN(page)) {
-                    // In a real app, you would update the currentPage and reload the data
-                    console.log(`Loading page ${page}`);
-                }
-            });
-        });
-    }
-}
-
-// Helper function to update the state of the "Select All" checkbox
-function updateSelectAllCheckboxState() {
-    const container = document.getElementById('ePodCardsContainer');
-    if (!container) return;
-    
-    const selectAllCheckbox = document.getElementById('selectAllEPod');
-    const individualCheckboxes = container.querySelectorAll('.e-pod-checkbox');
-    const checkedCheckboxes = container.querySelectorAll('.e-pod-checkbox:checked');
-    
-    if (selectAllCheckbox) {
-        if (checkedCheckboxes.length === 0) {
-            // No checkboxes selected
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = false;
-        } else if (checkedCheckboxes.length === individualCheckboxes.length) {
-            // All checkboxes selected
-            selectAllCheckbox.checked = true;
-            selectAllCheckbox.indeterminate = false;
-        } else {
-            // Some but not all checkboxes selected
-            selectAllCheckbox.checked = false;
-            selectAllCheckbox.indeterminate = true;
-        }
-    }
-}
-
-// Export E-POD records to Excel
-function exportEPodToExcel() {
+// Export E-POD records as PDF
+function exportEPodToPdf() {
     try {
-        // Check if XLSX library is available
-        if (typeof XLSX === 'undefined') {
-            showToast('Excel export library not loaded. Please try again.', 'error');
-            return;
-        }
-
         // Get E-POD records from localStorage
-        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+        let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+        
+        // Check if any checkboxes are selected
+        const selectedCheckboxes = document.querySelectorAll('#ePodTableBody tr input.delivery-checkbox:checked');
+        
+        // If checkboxes are selected, filter records to only include selected ones
+        if (selectedCheckboxes.length > 0) {
+            const selectedDRNumbers = Array.from(selectedCheckboxes).map(cb => cb.dataset.drNumber);
+            ePodRecords = ePodRecords.filter(record => selectedDRNumbers.includes(record.drNumber));
+        }
         
         if (ePodRecords.length === 0) {
             showToast('No E-POD records to export', 'warning');
             return;
         }
 
-        // Prepare data for export
-        const exportData = ePodRecords.map(record => ({
-            'DR Number': record.drNumber || 'N/A',
-            'Customer Name': record.customerName || 'N/A',
-            'Customer Contact': record.customerContact || 'N/A',
-            'Truck Plate': record.truckPlate || 'N/A',
-            'Origin': record.origin || 'N/A',
-            'Destination': record.destination || 'N/A',
-            'Signed Date': record.signedAt ? new Date(record.signedAt).toLocaleDateString() : 'N/A',
-            'Status': record.status || 'N/A'
-        }));
-
-        // Create worksheet
-        const ws = XLSX.utils.json_to_sheet(exportData);
+        // Create a new window for the PDF content
+        const printWindow = window.open('', '_blank');
         
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 15 }, // DR Number
-            { wch: 25 }, // Customer Name
-            { wch: 20 }, // Customer Contact
-            { wch: 15 }, // Truck Plate
-            { wch: 25 }, // Origin
-            { wch: 25 }, // Destination
-            { wch: 15 }, // Signed Date
-            { wch: 15 }  // Status
-        ];
-
-        // Create workbook
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'E-POD Records');
+        // Generate HTML content for the PDF
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>E-POD Records</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    color: #333;
+                }
+                .record {
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 15px;
+                }
+                .record h2 {
+                    margin-top: 0;
+                }
+                .record p {
+                    margin: 5px 0;
+                }
+                .record .signature {
+                    margin-top: 20px;
+                    border-top: 1px solid #333;
+                    padding-top: 10px;
+                }
+                .record .signature img {
+                    max-width: 100%;
+                    height: auto;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>E-POD Records</h1>
+            </div>
+            <div class="records">
+                ${ePodRecords.map(record => `
+                    <div class="record">
+                        <h2>DR Number: ${record.drNumber}</h2>
+                        <p><strong>Customer Name:</strong> ${record.customerName}</p>
+                        <p><strong>Customer Contact:</strong> ${record.customerContact}</p>
+                        <p><strong>Origin:</strong> ${record.origin}</p>
+                        <p><strong>Destination:</strong> ${record.destination}</p>
+                        <p><strong>Truck Plate:</strong> ${record.truckPlate}</p>
+                        <p><strong>Signed At:</strong> ${new Date(record.signedAt).toLocaleString()}</p>
+                        <div class="signature">
+                            <img src="${record.signature}" alt="Signature">
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </body>
+        </html>
+        `;
         
-        // Generate filename with date
-        const date = new Date().toISOString().split('T')[0];
-        const filename = `E_POD_Records_${date}.xlsx`;
+        // Write the HTML content to the new window
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
         
-        // Export to file
-        XLSX.writeFile(wb, filename);
+        // Print the content
+        printWindow.print();
         
-        showToast(`Exported ${ePodRecords.length} E-POD records to ${filename}`, 'success');
+        // Close the window after printing
+        printWindow.close();
     } catch (error) {
-        console.error('Error exporting E-POD records:', error);
-        showToast('Error exporting E-POD data. Please try again.', 'error');
+        console.error('Error exporting E-POD records to PDF:', error);
+        showToast('Failed to export E-POD records to PDF', 'danger');
     }
+}
+
+// Add event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Main.js: DOMContentLoaded event fired');
+    
+    // Add event listeners for search inputs
+    const drSearchInput = document.getElementById('drSearchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const drSearchHistoryInput = document.getElementById('drSearchHistoryInput');
+    const clearHistorySearchBtn = document.getElementById('clearHistorySearchBtn');
+    const selectAllActive = document.getElementById('selectAllActive');
+    const eSignatureBtn = document.getElementById('eSignatureBtn');
+    const exportActiveDeliveriesBtn = document.getElementById('exportActiveDeliveriesBtn');
+    const exportDeliveryHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
+    
+    // E-POD search elements
+    const ePodSearchInput = document.getElementById('ePodSearchInput');
+    const clearEPodSearchBtn = document.getElementById('clearEPodSearchBtn');
+    const exportEPodBtn = document.getElementById('exportEPodBtn');
+    
+    if (drSearchInput) {
+        drSearchInput.addEventListener('input', function() {
+            currentSearchTerm = this.value;
+            loadActiveDeliveries();
+        });
+    }
+    
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', function() {
+            if (drSearchInput) {
+                drSearchInput.value = '';
+                currentSearchTerm = '';
+                loadActiveDeliveries();
+            }
+        });
+    }
+    
+    if (drSearchHistoryInput) {
+        drSearchHistoryInput.addEventListener('input', function() {
+            currentHistorySearchTerm = this.value;
+            loadDeliveryHistory();
+        });
+    }
+    
+    if (clearHistorySearchBtn) {
+        clearHistorySearchBtn.addEventListener('click', function() {
+            if (drSearchHistoryInput) {
+                drSearchHistoryInput.value = '';
+                currentHistorySearchTerm = '';
+                loadDeliveryHistory();
+            }
+        });
+    }
+    
+    if (selectAllActive) {
+        selectAllActive.addEventListener('change', function() {
+            document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            
+            // Enable/disable E-Signature button based on selection
+            if (eSignatureBtn) {
+                eSignatureBtn.disabled = !this.checked;
+            }
+        });
+    }
+    
+    // E-POD search functionality
+    if (ePodSearchInput) {
+        ePodSearchInput.addEventListener('input', function() {
+            filterEPodDeliveries(this.value);
+        });
+    }
+    
+    if (clearEPodSearchBtn) {
+        clearEPodSearchBtn.addEventListener('click', function() {
+            if (ePodSearchInput) {
+                ePodSearchInput.value = '';
+                filterEPodDeliveries('');
+            }
+        });
+    }
+    
+    // Add event delegation for delivery checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('delivery-checkbox')) {
+            // Update select all checkbox state for Active Deliveries
+            if (selectAllActive) {
+                const allCheckboxes = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked');
+                selectAllActive.checked = allCheckboxes.length === checkedCheckboxes.length;
+            }
+            
+            // Enable/disable E-Signature button based on selection for Active Deliveries
+            if (eSignatureBtn) {
+                const anyChecked = document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked').length > 0;
+                eSignatureBtn.disabled = !anyChecked;
+            }
+        }
+    });
+    
+    if (eSignatureBtn) {
+        eSignatureBtn.addEventListener('click', function() {
+            // Get selected deliveries
+            const selectedDeliveries = Array.from(document.querySelectorAll('#activeDeliveriesTableBody tr input.delivery-checkbox:checked'))
+                .map(checkbox => checkbox.dataset.deliveryId);
+            
+            if (selectedDeliveries.length === 0) {
+                showToast('Please select at least one delivery', 'warning');
+                return;
+            }
+            
+            if (selectedDeliveries.length > 1) {
+                showToast('Please select only one delivery for E-Signature', 'warning');
+                return;
+            }
+            
+            // Show E-Signature modal for the first selected delivery
+            const deliveryId = selectedDeliveries[0];
+            const delivery = activeDeliveries.find(d => d.id === deliveryId);
+            if (delivery) {
+                showESignatureModal(delivery.drNumber);
+            }
+        });
+    }
+    
+    if (exportActiveDeliveriesBtn) {
+        exportActiveDeliveriesBtn.addEventListener('click', exportActiveDeliveriesToExcel);
+    }
+    
+    if (exportDeliveryHistoryBtn) {
+        exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
+    }
+    
+    // Initialize E-POD export button
+    if (exportEPodBtn) {
+        exportEPodBtn.addEventListener('click', exportEPodToPdf);
+    }
+    
+    console.log('Main.js: Event listeners added');
+});
+
+// Filter E-POD deliveries based on search term
+function filterEPodDeliveries(searchTerm) {
+    // Get E-POD records from localStorage
+    let ePodRecords = [];
+    try {
+        const ePodData = localStorage.getItem('ePodRecords');
+        if (ePodData) {
+            ePodRecords = JSON.parse(ePodData);
+        }
+    } catch (error) {
+        console.error('Error loading EPOD records:', error);
+    }
+    
+    // Filter records based on search term
+    const filteredRecords = searchTerm ? 
+        ePodRecords.filter(record => 
+            record.drNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        ) : 
+        ePodRecords;
+    
+    // Update search results info
+    const searchResultsInfo = document.getElementById('ePodSearchResultsInfo');
+    if (searchResultsInfo) {
+        if (searchTerm) {
+            searchResultsInfo.innerHTML = `
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Found ${filteredRecords.length} E-POD record${filteredRecords.length !== 1 ? 's' : ''} 
+                    matching "${searchTerm}"
+                </div>
+            `;
+            searchResultsInfo.style.display = 'block';
+        } else {
+            searchResultsInfo.style.display = 'none';
+        }
+    }
+    
+    // Re-render the filtered records using the card layout
+    renderEPodDeliveries(filteredRecords);
 }
 
 // Export E-POD records as PDF
@@ -1132,19 +1036,12 @@ function exportEPodToPdf() {
         let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
         
         // Check if any checkboxes are selected
-        const selectedCheckboxes = document.querySelectorAll('.e-pod-checkbox:checked');
+        const selectedCheckboxes = document.querySelectorAll('#ePodTableBody tr input.delivery-checkbox:checked');
         
         // If checkboxes are selected, filter records to only include selected ones
         if (selectedCheckboxes.length > 0) {
-            const selectedIndices = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.recordIndex));
-            ePodRecords = ePodRecords.filter((record, index) => selectedIndices.includes(index));
-        } else if (document.getElementById('selectAllEPod') && document.getElementById('selectAllEPod').checked) {
-            // If "Select All" is checked, export all records (no filtering needed)
-            // This is already the default behavior
-        } else {
-            // If no checkboxes are selected and "Select All" is not checked, export all records by default
-            // Or show a message if you prefer to require selection
-            // For now, we'll export all records if none are specifically selected
+            const selectedDRNumbers = Array.from(selectedCheckboxes).map(cb => cb.dataset.drNumber);
+            ePodRecords = ePodRecords.filter(record => selectedDRNumbers.includes(record.drNumber));
         }
         
         if (ePodRecords.length === 0) {
@@ -1219,7 +1116,13 @@ function exportEPodToPdf() {
                 .status-completed {
                     color: #198754;
                     font-weight: bold;
+                    -webkit-animation: pulse 2s infinite;
                     animation: pulse 2s infinite;
+                }
+                @-webkit-keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.7; }
+                    100% { opacity: 1; }
                 }
                 @keyframes pulse {
                     0% { opacity: 1; }
@@ -1320,6 +1223,209 @@ function exportEPodToPdf() {
         showToast('Error exporting E-POD records to PDF. Please try again.', 'error');
     }
 }
+
+function renderEPodDeliveries(ePodRecords) {
+    console.log('Rendering EPOD deliveries:', ePodRecords.length);
+    const container = document.getElementById('ePodCardsContainer');
+    const paginationContainer = document.getElementById('ePodPagination');
+    
+    console.log('Container element:', container);
+    console.log('Pagination container element:', paginationContainer);
+    
+    if (!container || !paginationContainer) {
+        console.error('EPOD container elements not found');
+        return;
+    }
+    
+    // Clear existing content
+    container.innerHTML = '';
+    paginationContainer.innerHTML = '';
+    
+    if (ePodRecords.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="bi bi-info-circle" style="font-size: 2rem;"></i>
+                <p class="mt-3">No signed deliveries found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Sort by signed date (newest first)
+    const sortedRecords = [...ePodRecords].sort((a, b) => new Date(b.signedAt) - new Date(a.signedAt));
+    
+    // Pagination settings
+    const recordsPerPage = 10;
+    const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
+    const currentPage = 1; // In a real app, you would track this state
+    
+    // Get records for current page
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    const endIndex = Math.min(startIndex + recordsPerPage, sortedRecords.length);
+    const recordsToShow = sortedRecords.slice(startIndex, endIndex);
+    
+    // Add cards for each signed delivery
+    recordsToShow.forEach((record, index) => {
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4 mb-4';
+        card.innerHTML = `
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${record.drNumber}</h6>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Customer</small>
+                        <p class="mb-1">${record.customerName}</p>
+                        <small class="text-muted">Contact</small>
+                        <p class="mb-1">${record.customerContact}</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Route</small>
+                        <p class="mb-1">${record.origin} to ${record.destination}</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Truck</small>
+                        <p class="mb-1">${record.truckPlate}</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Signed Date</small>
+                        <p class="mb-1">${new Date(record.signedAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="text-center">
+                        <img src="${record.signature}" alt="Signature" class="img-fluid border" style="max-height: 100px; object-fit: contain;">
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    
+    // Add pagination controls if needed
+    if (totalPages > 1) {
+        let paginationHtml = `
+            <nav>
+                <ul class="pagination">
+                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
+                    </li>
+        `;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHtml += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `;
+        }
+        
+        paginationHtml += `
+                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        `;
+        
+        paginationContainer.innerHTML = paginationHtml;
+        
+        // Add event listeners to pagination links
+        paginationContainer.querySelectorAll('.page-link').forEach(link => {
+            // Remove existing event listeners by cloning
+            const newLink = link.cloneNode(true);
+            link.parentNode.replaceChild(newLink, link);
+            
+            newLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const page = parseInt(e.target.dataset.page);
+                if (!isNaN(page)) {
+                    // In a real app, you would update the currentPage and reload the data
+                    console.log(`Loading page ${page}`);
+                }
+            });
+        });
+    }
+}
+
+function updateDeliveryStatus(drNumber, newStatus) {
+    // In a real app, this would update the backend
+    console.log(`Updating DR ${drNumber} to status: ${newStatus}`);
+    
+    // Update UI if the delivery is in the active deliveries view
+    const activeDeliveriesRows = document.querySelectorAll('#activeDeliveriesTableBody tr');
+    activeDeliveriesRows.forEach(row => {
+        const drCell = row.querySelector('td:nth-child(2)'); // DR Number is now in the second column (first is checkbox)
+        if (drCell && drCell.textContent.trim() === drNumber) {
+            const statusCell = row.querySelector('td:nth-child(9)'); // Status is now in the 9th column
+            if (statusCell) {
+                statusCell.innerHTML = `<span class="badge bg-success">
+                    <i class="bi bi-check-circle"></i> ${newStatus}
+                </span>`;
+            }
+            
+            // Mark the row as signed
+            row.classList.add('table-success');
+        }
+    });
+    
+    // Also update in the global activeDeliveries array if it exists
+    console.log('Window activeDeliveries:', window.activeDeliveries);
+    console.log('Window deliveryHistory:', window.deliveryHistory);
+    
+    if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+        const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
+        console.log('Delivery index found:', deliveryIndex);
+        if (deliveryIndex !== -1) {
+            const delivery = window.activeDeliveries[deliveryIndex];
+            delivery.status = newStatus;
+            delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            // Move to history if completed
+            if (newStatus === 'Completed') {
+                console.log('Moving delivery to history');
+                // Add to delivery history
+                if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
+                    // Add the completed delivery to history
+                    window.deliveryHistory.unshift(delivery);
+                    console.log('Added to history, new history length:', window.deliveryHistory.length);
+                    
+                    // Remove from active deliveries
+                    window.activeDeliveries.splice(deliveryIndex, 1);
+                    console.log('Removed from active, new active length:', window.activeDeliveries.length);
+                    
+                    // Save to localStorage
+                    if (window.saveToLocalStorage && typeof window.saveToLocalStorage === 'function') {
+                        console.log('Saving to localStorage');
+                        window.saveToLocalStorage();
+                    }
+                    
+                    // Refresh both views
+                    if (window.loadActiveDeliveries && typeof window.loadActiveDeliveries === 'function') {
+                        console.log('Loading active deliveries');
+                        window.loadActiveDeliveries();
+                    }
+                    if (window.loadDeliveryHistory && typeof window.loadDeliveryHistory === 'function') {
+                        console.log('Loading delivery history');
+                        window.loadDeliveryHistory();
+                    }
+                    
+                    // Update dashboard metrics
+                    if (typeof window.updateDashboardMetrics === 'function') {
+                        window.updateDashboardMetrics();
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 
 // Initialize auth
 function initAuth() {
@@ -1961,7 +2067,6 @@ async function logout() {
 }
 
 // Make export functions globally accessible
-window.exportEPodToExcel = exportEPodToExcel;
 window.exportEPodToPdf = exportEPodToPdf;
 
 // Make auth functions globally accessible
