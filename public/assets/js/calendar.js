@@ -76,17 +76,15 @@ function openBookingModal(dateStr) {
     const date = new Date(dateStr);
     console.log('Date object created:', date);
     
-    const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
-    console.log('Generated DR Number:', drNumber);
-    
-    // Pre-fill the DR number and date
+    // Generate a DR number in DR-XXXX format (4 digits)
+    const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+    const drNumber = `DR-${randomNumber}`;
     const drNumberEl = document.getElementById('drNumber');
-    console.log('DR Number element found:', drNumberEl);
     if (drNumberEl) {
         drNumberEl.value = drNumber;
-        console.log('DR Number value set to:', drNumberEl.value);
+        console.log('DR number set to:', drNumber);
     } else {
-        console.error('DR Number element not found!');
+        console.error('DR number element not found');
         // Try to find it in the modal
         const bookingModalElement = document.getElementById('bookingModal');
         if (bookingModalElement) {
@@ -95,6 +93,14 @@ function openBookingModal(dateStr) {
             if (altDrNumberEl) {
                 altDrNumberEl.value = drNumber;
                 console.log('DR Number value set to:', altDrNumberEl.value);
+            } else {
+                // Try to find by class name as fallback
+                const classDrNumberEl = bookingModalElement.querySelector('.dr-number-input');
+                console.log('Class-based DR Number element search:', classDrNumberEl);
+                if (classDrNumberEl) {
+                    classDrNumberEl.value = drNumber;
+                    console.log('DR Number value set via class selector:', classDrNumberEl.value);
+                }
             }
         }
     }
@@ -1301,8 +1307,9 @@ function fallbackShowBookingModal(dateStr) {
             console.error('Delivery date element not found');
         }
         
-        // Generate a DR number
-        const drNumber = `DR-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+        // Generate a DR number in DR-XXXX format (4 digits)
+        const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+        const drNumber = `DR-${randomNumber}`;
         const drNumberEl = document.getElementById('drNumber');
         if (drNumberEl) {
             drNumberEl.value = drNumber;
@@ -1409,8 +1416,9 @@ function showDirectModal(dateStr) {
             console.log('Delivery date set to:', dateStr);
         }
         
-        // Generate a DR number
-        const drNumber = `DR-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+        // Generate a DR number in DR-XXXX format (4 digits)
+        const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+        const drNumber = `DR-${randomNumber}`;
         const drNumberEl = document.getElementById('drNumber');
         if (drNumberEl) {
             drNumberEl.value = drNumber;
