@@ -188,9 +188,10 @@ function openBookingModal(dateStr) {
         }
     }
     
-    // Set the delivery date in the form AFTER the modal is shown
+    // Set the delivery date and DR number in the form AFTER the modal is shown
     // This ensures it's not cleared by any form reset operations
     setTimeout(() => {
+        // Set delivery date
         const deliveryDateEl = document.getElementById('deliveryDate');
         console.log('Delivery Date element found:', deliveryDateEl);
         if (deliveryDateEl) {
@@ -206,6 +207,35 @@ function openBookingModal(dateStr) {
                 if (altDeliveryDateEl) {
                     altDeliveryDateEl.value = dateStr;
                     console.log('Delivery Date value set to:', altDeliveryDateEl.value);
+                }
+            }
+        }
+        
+        // Set DR number
+        const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+        const drNumber = `DR-${randomNumber}`;
+        const drNumberEl = document.getElementById('drNumber');
+        if (drNumberEl) {
+            drNumberEl.value = drNumber;
+            console.log('DR number set to:', drNumber);
+        } else {
+            console.error('DR number element not found');
+            // Try to find it in the modal
+            const bookingModalElement = document.getElementById('bookingModal');
+            if (bookingModalElement) {
+                const altDrNumberEl = bookingModalElement.querySelector('#drNumber');
+                console.log('Alternative DR Number element search:', altDrNumberEl);
+                if (altDrNumberEl) {
+                    altDrNumberEl.value = drNumber;
+                    console.log('DR Number value set to:', altDrNumberEl.value);
+                } else {
+                    // Try to find by class name as fallback
+                    const classDrNumberEl = bookingModalElement.querySelector('.dr-number-input');
+                    console.log('Class-based DR Number element search:', classDrNumberEl);
+                    if (classDrNumberEl) {
+                        classDrNumberEl.value = drNumber;
+                        console.log('DR Number value set via class selector:', classDrNumberEl.value);
+                    }
                 }
             }
         }
@@ -247,13 +277,15 @@ function initCalendar() {
     // Set global flag
     window.calendarInitialized = true;
     
+}
+
     // Get current date
     const today = new Date();
     const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
+    const initCurrentYear = today.getFullYear();
     
     // Update calendar display
-    updateCalendar(currentMonth, currentYear);
+    updateCalendar(currentMonth, initCurrentYear);
     
     // Add event listeners for navigation buttons
     const prevBtn = document.getElementById('prevMonth');
@@ -1326,6 +1358,46 @@ function fallbackShowBookingModal(dateStr) {
             });
             modal.show();
             console.log('Booking modal shown using fallback method');
+            
+            // Set the delivery date and DR number in the form AFTER the modal is shown
+            // This ensures it's not cleared by any form reset operations
+            setTimeout(() => {
+                // Set delivery date
+                const deliveryDateEl = document.getElementById('deliveryDate');
+                if (deliveryDateEl) {
+                    deliveryDateEl.value = dateStr;
+                    console.log('Delivery date set to:', dateStr);
+                }
+                
+                // Set DR number
+                const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+                const drNumber = `DR-${randomNumber}`;
+                const drNumberEl = document.getElementById('drNumber');
+                if (drNumberEl) {
+                    drNumberEl.value = drNumber;
+                    console.log('DR number set to:', drNumber);
+                } else {
+                    console.error('DR number element not found');
+                    // Try to find it in the modal
+                    const bookingModalElement = document.getElementById('bookingModal');
+                    if (bookingModalElement) {
+                        const altDrNumberEl = bookingModalElement.querySelector('#drNumber');
+                        console.log('Alternative DR Number element search:', altDrNumberEl);
+                        if (altDrNumberEl) {
+                            altDrNumberEl.value = drNumber;
+                            console.log('DR Number value set to:', altDrNumberEl.value);
+                        } else {
+                            // Try to find by class name as fallback
+                            const classDrNumberEl = bookingModalElement.querySelector('.dr-number-input');
+                            console.log('Class-based DR Number element search:', classDrNumberEl);
+                            if (classDrNumberEl) {
+                                classDrNumberEl.value = drNumber;
+                                console.log('DR Number value set via class selector:', classDrNumberEl.value);
+                            }
+                        }
+                    }
+                }
+            }, 100);
         } catch (error) {
             console.error('Error showing booking modal with fallback method:', error);
         }
@@ -1448,6 +1520,47 @@ function showDirectModal(dateStr) {
                 // Show the modal
                 modalInstance.show();
                 console.log('Booking modal shown successfully using Bootstrap');
+                
+                // Set the delivery date and DR number in the form AFTER the modal is shown
+                // This ensures it's not cleared by any form reset operations
+                setTimeout(() => {
+                    // Set delivery date
+                    const deliveryDateEl = document.getElementById('deliveryDate');
+                    if (deliveryDateEl) {
+                        deliveryDateEl.value = dateStr;
+                        console.log('Delivery date set to:', dateStr);
+                    }
+                    
+                    // Set DR number
+                    const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+                    const drNumber = `DR-${randomNumber}`;
+                    const drNumberEl = document.getElementById('drNumber');
+                    if (drNumberEl) {
+                        drNumberEl.value = drNumber;
+                        console.log('DR number set to:', drNumber);
+                    } else {
+                        console.error('DR number element not found');
+                        // Try to find it in the modal
+                        const bookingModalElement = document.getElementById('bookingModal');
+                        if (bookingModalElement) {
+                            const altDrNumberEl = bookingModalElement.querySelector('#drNumber');
+                            console.log('Alternative DR Number element search:', altDrNumberEl);
+                            if (altDrNumberEl) {
+                                altDrNumberEl.value = drNumber;
+                                console.log('DR Number value set to:', altDrNumberEl.value);
+                            } else {
+                                // Try to find by class name as fallback
+                                const classDrNumberEl = bookingModalElement.querySelector('.dr-number-input');
+                                console.log('Class-based DR Number element search:', classDrNumberEl);
+                                if (classDrNumberEl) {
+                                    classDrNumberEl.value = drNumber;
+                                    console.log('DR Number value set via class selector:', classDrNumberEl.value);
+                                }
+                            }
+                        }
+                    }
+                }, 100);
+                
                 return;
             } catch (bootstrapError) {
                 console.error('Error using Bootstrap modal:', bootstrapError);
@@ -1467,6 +1580,46 @@ function showDirectModal(dateStr) {
         document.body.appendChild(backdrop);
         
         console.log('Modal shown using direct method');
+        
+        // Set the delivery date and DR number in the form AFTER the modal is shown
+        // This ensures it's not cleared by any form reset operations
+        setTimeout(() => {
+            // Set delivery date
+            const deliveryDateEl = document.getElementById('deliveryDate');
+            if (deliveryDateEl) {
+                deliveryDateEl.value = dateStr;
+                console.log('Delivery date set to:', dateStr);
+            }
+            
+            // Set DR number
+            const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+            const drNumber = `DR-${randomNumber}`;
+            const drNumberEl = document.getElementById('drNumber');
+            if (drNumberEl) {
+                drNumberEl.value = drNumber;
+                console.log('DR number set to:', drNumber);
+            } else {
+                console.error('DR number element not found');
+                // Try to find it in the modal
+                const bookingModalElement = document.getElementById('bookingModal');
+                if (bookingModalElement) {
+                    const altDrNumberEl = bookingModalElement.querySelector('#drNumber');
+                    console.log('Alternative DR Number element search:', altDrNumberEl);
+                    if (altDrNumberEl) {
+                        altDrNumberEl.value = drNumber;
+                        console.log('DR Number value set to:', altDrNumberEl.value);
+                    } else {
+                        // Try to find by class name as fallback
+                        const classDrNumberEl = bookingModalElement.querySelector('.dr-number-input');
+                        console.log('Class-based DR Number element search:', classDrNumberEl);
+                        if (classDrNumberEl) {
+                            classDrNumberEl.value = drNumber;
+                            console.log('DR Number value set via class selector:', classDrNumberEl.value);
+                        }
+                    }
+                }
+            }
+        }, 100);
     } else {
         console.error('Booking modal not found for direct method');
         
