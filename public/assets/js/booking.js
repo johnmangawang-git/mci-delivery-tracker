@@ -1878,23 +1878,25 @@ function setupMapSearch() {
 }
 
 // Function to handle selecting a search result
+
+// Function to handle selecting a search result
 function selectSearchResult(result) {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lng);
-    
+
     // Center map on the result
     if (currentMapInstance) {
         currentMapInstance.setView([lat, lng], 15);
-        
+
         // Update selected coordinates display
         document.getElementById('selectedLat').textContent = lat.toFixed(6);
         document.getElementById('selectedLng').textContent = lng.toFixed(6);
-        
+
         // Remove existing marker if any
         if (selectedMarker) {
             currentMapInstance.removeLayer(selectedMarker);
         }
-        
+
         // Add new marker with pin icon
         const pinIcon = L.divIcon({
             className: 'custom-pin-icon',
@@ -1902,18 +1904,18 @@ function selectSearchResult(result) {
             iconSize: [24, 24],
             iconAnchor: [12, 24]
         });
-        
+
         selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
-        
+
         // Update coordinates
         selectedCoordinates = { lat, lng };
-        
+
         // Enable confirm button
         document.getElementById('confirmLocationBtn').disabled = false;
-        
+
         // Hide dropdown
         document.getElementById('searchResultsDropdown').style.display = 'none';
-        
+
         // Update search input
         document.getElementById('mapSearchInput').value = result.display_name;
     }
@@ -1923,3 +1925,16 @@ function selectSearchResult(result) {
 function mockAddressSearch(query) {
     return searchAddress(query);
 }
+
+// Make sure all required functions are globally available
+window.displayDestinationCoordinates = displayDestinationCoordinates;
+window.displayOriginCoordinates = displayOriginCoordinates;
+window.hideDestinationCoordinates = hideDestinationCoordinates;
+window.updateDistance = updateDistance;
+window.showMapPinDialog = showMapPinDialog;
+window.initBookingModal = initBookingModal;
+window.openBookingModal = openBookingModal;
+window.showBookingModal = showBookingModal;
+window.saveBooking = saveBooking;
+window.generateDRNumber = generateDRNumber;
+window.selectSearchResult = selectSearchResult;
