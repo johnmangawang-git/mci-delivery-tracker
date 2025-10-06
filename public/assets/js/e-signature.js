@@ -317,15 +317,23 @@ function saveRobustSignature() {
     console.log('Saving robust signature');
     
     try {
+        // Show loading state
+        const saveBtn = document.getElementById('saveSignatureBtn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+        saveBtn.disabled = true;
+        
         // Validate signature pad
         if (!robustSignaturePad || !signaturePadInitialized) {
             showError('Signature pad not initialized');
+            resetSaveButton(saveBtn, originalText);
             return;
         }
         
         // Check if signature is empty
         if (robustSignaturePad.isEmpty()) {
             showError('Please provide a signature before saving');
+            resetSaveButton(saveBtn, originalText);
             return;
         }
         
@@ -333,6 +341,7 @@ function saveRobustSignature() {
         const signatureData = getRobustSignatureData();
         if (!signatureData) {
             showError('Failed to capture signature. Please try again.');
+            resetSaveButton(saveBtn, originalText);
             return;
         }
         
@@ -353,7 +362,7 @@ function saveRobustSignature() {
                 truckPlate,
                 deliveryRoute,
                 signatureData
-            });
+            }, saveBtn, originalText);
         } else {
             // Save single signature
             saveSingleSignature({
@@ -363,22 +372,36 @@ function saveRobustSignature() {
                 truckPlate,
                 deliveryRoute,
                 signatureData
-            });
+            }, saveBtn, originalText);
         }
-        
-        // Note: Not closing modal or refreshing views here because that's handled in the individual save functions
-        // This prevents race conditions where views refresh before EPOD records are saved
         
     } catch (error) {
         console.error('Error saving signature:', error);
         showError('Failed to save signature. Please try again.');
+        
+        // Reset save button
+        const saveBtn = document.getElementById('saveSignatureBtn');
+        if (saveBtn) {
+            const originalText = '<i class="bi bi-save me-2"></i>Save Signature';
+            resetSaveButton(saveBtn, originalText);
+        }
+    }
+}
+
+/**
+ * Reset the save button to its original state
+ */
+function resetSaveButton(button, originalText) {
+    if (button) {
+        button.innerHTML = originalText;
+        button.disabled = false;
     }
 }
 
 /**
  * Save multiple signatures for multiple DR numbers
  */
-function saveMultipleSignatures(drNumbers, signatureInfo) {
+function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
     console.log('Saving multiple signatures for DR numbers:', drNumbers);
     
     try {
@@ -439,6 +462,8 @@ function saveMultipleSignatures(drNumbers, signatureInfo) {
             }).finally(() => {
                 // Always close modal
                 closeESignatureModal();
+                // Reset save button
+                resetSaveButton(saveBtn, originalText);
             });
         } else {
             // If no promises (using localStorage), show success and refresh immediately
@@ -448,6 +473,8 @@ function saveMultipleSignatures(drNumbers, signatureInfo) {
             refreshDeliveryViews();
             // Close modal
             closeESignatureModal();
+            // Reset save button
+            resetSaveButton(saveBtn, originalText);
         }
         
     } catch (error) {
@@ -455,6 +482,8 @@ function saveMultipleSignatures(drNumbers, signatureInfo) {
         showError('Failed to save signatures. Please try again.');
         // Even on error, close modal
         closeESignatureModal();
+        // Reset save button
+        resetSaveButton(saveBtn, originalText);
         throw error;
     }
 }
@@ -462,7 +491,7 @@ function saveMultipleSignatures(drNumbers, signatureInfo) {
 /**
  * Save a single signature
  */
-function saveSingleSignature(signatureInfo) {
+function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
     console.log('Saving single signature for DR:', signatureInfo.drNumber);
     
     try {
@@ -509,6 +538,8 @@ function saveSingleSignature(signatureInfo) {
                 .finally(() => {
                     // Always close modal
                     closeESignatureModal();
+                    // Reset save button
+                    resetSaveButton(saveBtn, originalText);
                 });
         } else {
             console.log('Saving EPOD record via localStorage - dataService not available');
@@ -545,6 +576,9 @@ function saveSingleSignature(signatureInfo) {
                 console.error('Error saving to localStorage:', storageError);
                 showError('Failed to save E-POD record. Please try again.');
                 closeESignatureModal();
+            } finally {
+                // Reset save button
+                resetSaveButton(saveBtn, originalText);
             }
         }
         
@@ -553,6 +587,8 @@ function saveSingleSignature(signatureInfo) {
         showError('Failed to save signature. Please try again.');
         // Even on error, close modal
         closeESignatureModal();
+        // Reset save button
+        resetSaveButton(saveBtn, originalText);
         throw error;
     }
 }

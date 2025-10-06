@@ -709,11 +709,11 @@ body {
     }
 
 /* Content Views */
-.content-view {
+.view {
     display: none;
 }
 
-    .content-view.active {
+    .view.active {
         display: block;
     }
 

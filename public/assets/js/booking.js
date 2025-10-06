@@ -42,6 +42,196 @@ function showError(message) {
     showToast(message, 'danger');
 }
 
+// Enhanced openBookingModal function for calendar integration
+function openBookingModal(dateStr) {
+    console.log('=== OPEN BOOKING MODAL FUNCTION CALLED ===');
+    console.log('Date string received:', dateStr);
+    
+    // Make sure this function is globally available
+    window.openBookingModal = openBookingModal;
+    
+    showBookingModal(dateStr);
+}
+
+// Enhanced showBookingModal function
+function showBookingModal(dateStr) {
+    console.log('=== SHOW BOOKING MODAL FUNCTION CALLED ===');
+    console.log('Date string received:', dateStr);
+    
+    // Make sure this function is globally available
+    window.showBookingModal = showBookingModal;
+    
+    // Check if booking modal exists
+    const bookingModal = document.getElementById('bookingModal');
+    console.log('Booking modal element:', bookingModal);
+    
+    if (bookingModal) {
+        // Check if Bootstrap is available
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        
+        // Try to show using Bootstrap
+        if (typeof bootstrap !== 'undefined') {
+            try {
+                let modal = bootstrap.Modal.getInstance(bookingModal);
+                console.log('Existing modal instance:', modal);
+                
+                if (!modal) {
+                    console.log('Creating new modal instance');
+                    modal = new bootstrap.Modal(bookingModal, {
+                        backdrop: true,
+                        keyboard: true
+                    });
+                }
+                
+                // Set the delivery date if provided
+                if (dateStr) {
+                    const deliveryDateInput = document.getElementById('deliveryDate');
+                    if (deliveryDateInput) {
+                        deliveryDateInput.value = dateStr;
+                    }
+                }
+                
+                console.log('Showing modal');
+                modal.show();
+                console.log('Booking modal shown successfully');
+            } catch (error) {
+                console.error('Error showing booking modal:', error);
+                
+                // Fallback to direct manipulation
+                console.log('Using fallback method to show modal');
+                bookingModal.style.display = 'block';
+                bookingModal.classList.add('show');
+                document.body.classList.add('modal-open');
+                
+                // Add backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                document.body.appendChild(backdrop);
+                console.log('Booking modal shown with fallback method');
+            }
+        } else {
+            // Fallback to direct manipulation
+            console.log('Bootstrap not available, using fallback method');
+            bookingModal.style.display = 'block';
+            bookingModal.classList.add('show');
+            document.body.classList.add('modal-open');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+            console.log('Booking modal shown with fallback method');
+        }
+    } else {
+        console.error('Booking modal element not found');
+    }
+}
+
+// Ensure the function is globally available
+window.openBookingModal = openBookingModal;
+window.showBookingModal = showBookingModal;
+
+// Test function to manually trigger the booking modal
+window.testShowBookingModal = function() {
+    console.log('=== TESTING BOOKING MODAL SHOW ===');
+    
+    // Check if booking modal exists
+    const bookingModal = document.getElementById('bookingModal');
+    console.log('Booking modal element:', bookingModal);
+    
+    if (bookingModal) {
+        // Check if Bootstrap is available
+        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+        
+        // Try to show using Bootstrap
+        if (typeof bootstrap !== 'undefined') {
+            try {
+                let modal = bootstrap.Modal.getInstance(bookingModal);
+                console.log('Existing modal instance:', modal);
+                
+                if (!modal) {
+                    console.log('Creating new modal instance');
+                    modal = new bootstrap.Modal(bookingModal, {
+                        backdrop: true,
+                        keyboard: true
+                    });
+                }
+                
+                console.log('Showing modal');
+                modal.show();
+                console.log('Booking modal shown successfully');
+            } catch (error) {
+                console.error('Error showing booking modal:', error);
+                
+                // Fallback to direct manipulation
+                console.log('Using fallback method to show modal');
+                bookingModal.style.display = 'block';
+                bookingModal.classList.add('show');
+                document.body.classList.add('modal-open');
+                
+                // Add backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                document.body.appendChild(backdrop);
+                console.log('Booking modal shown with fallback method');
+            }
+        } else {
+            // Fallback to direct manipulation
+            console.log('Bootstrap not available, using fallback method');
+            bookingModal.style.display = 'block';
+            bookingModal.classList.add('show');
+            document.body.classList.add('modal-open');
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+            console.log('Booking modal shown with fallback method');
+        }
+    } else {
+        console.error('Booking modal element not found');
+    }
+};
+
+// Test function to manually trigger the booking modal with a specific date
+window.testBookingModal = function(dateStr) {
+    console.log('=== TESTING BOOKING MODAL WITH DATE ===');
+    console.log('Date string received:', dateStr);
+    
+    // Use current date if no date provided
+    const dateToUse = dateStr || new Date().toISOString().split('T')[0];
+    console.log('Date to use:', dateToUse);
+    
+    // Call the main function
+    showBookingModal(dateToUse);
+};
+
+// Add a DOMContentLoaded event to ensure functions are properly exposed
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Booking.js: DOMContentLoaded event fired');
+    
+    // Double-check that functions are globally available
+    window.openBookingModal = openBookingModal;
+    window.showBookingModal = showBookingModal;
+    window.testShowBookingModal = window.testShowBookingModal;
+    window.testBookingModal = window.testBookingModal;
+    
+    console.log('Booking.js: Functions re-exposed globally');
+});
+
+// Ensure functions are available immediately
+if (document.readyState === 'loading') {
+    // Document is still loading, add event listener
+    document.addEventListener('DOMContentLoaded', function() {
+        window.openBookingModal = openBookingModal;
+        window.showBookingModal = showBookingModal;
+    });
+} else {
+    // Document is already loaded, expose functions immediately
+    window.openBookingModal = openBookingModal;
+    window.showBookingModal = showBookingModal;
+}
+
 function initBookingModal() {
     // Ensure customer management is available
     ensureCustomerManagementReady();
