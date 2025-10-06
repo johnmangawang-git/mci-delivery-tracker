@@ -32,6 +32,12 @@ class DataService {
 
             this.initialized = true;
             console.log('DataService initialized with Supabase');
+            
+            // Try to sync localStorage data to Supabase
+            setTimeout(() => {
+                this.syncLocalStorageToSupabase();
+            }, 2000); // Delay to allow authentication to complete
+            
             return true;
         } catch (error) {
             console.error('Error initializing DataService:', error);
@@ -80,6 +86,15 @@ class DataService {
                     this.supabaseTested = true;
                     this.supabaseWorking = false;
                     return false;
+                }
+                
+                // If there's an authentication error, we still might be able to use Supabase
+                // but the user needs to log in
+                if (error && error.status === 401) {
+                    console.log('Supabase available but user not authenticated');
+                    this.supabaseTested = true;
+                    this.supabaseWorking = true;
+                    return true;
                 }
             }
             
@@ -152,6 +167,7 @@ class DataService {
         }
     }
 
+    // Enhanced saveDelivery method with better sync handling
     async saveDelivery(delivery) {
         if (!await this.isSupabaseAvailable()) {
             // Fallback to localStorage
@@ -247,6 +263,27 @@ class DataService {
                     throw error;
                 }
                 result = data;
+            }
+
+            // Also save to localStorage as backup
+            try {
+                let deliveries = [];
+                const saved = localStorage.getItem('mci-activeDeliveries');
+                if (saved) {
+                    deliveries = JSON.parse(saved);
+                }
+                
+                // Check if delivery already exists
+                const existingIndex = deliveries.findIndex(d => d.id === result.id);
+                if (existingIndex >= 0) {
+                    deliveries[existingIndex] = result;
+                } else {
+                    deliveries.push(result);
+                }
+                
+                localStorage.setItem('mci-activeDeliveries', JSON.stringify(deliveries));
+            } catch (storageError) {
+                console.warn('Failed to save delivery to localStorage backup:', storageError);
             }
 
             return result;
@@ -853,6 +890,69 @@ class DataService {
             console.error('Error deleting additional cost:', error);
             // Return true on any error
             return true;
+        }
+    }
+
+    // Sync localStorage data to Supabase when connection is restored
+    async syncLocalStorageToSupabase() {
+        if (!await this.isSupabaseAvailable()) {
+            return;
+        }
+
+        console.log('Attempting to sync localStorage data to Supabase...');
+
+        try {
+            // Sync deliveries
+            const savedDeliveries = localStorage.getItem('mci-activeDeliveries');
+            if (savedDeliveries) {
+                const deliveries = JSON.parse(savedDeliveries);
+                console.log(`Found ${deliveries.length} deliveries in localStorage to sync`);
+                
+                for (const delivery of deliveries) {
+                    try {
+                        await this.saveDelivery(delivery);
+                        console.log(`Synced delivery ${delivery.id} to Supabase`);
+                    } catch (error) {
+                        console.error(`Failed to sync delivery ${delivery.id}:`, error);
+                    }
+                }
+            }
+
+            // Sync customers
+            const savedCustomers = localStorage.getItem('mci-customers');
+            if (savedCustomers) {
+                const customers = JSON.parse(savedCustomers);
+                console.log(`Found ${customers.length} customers in localStorage to sync`);
+                
+                for (const customer of customers) {
+                    try {
+                        await this.saveCustomer(customer);
+                        console.log(`Synced customer ${customer.id} to Supabase`);
+                    } catch (error) {
+                        console.error(`Failed to sync customer ${customer.id}:`, error);
+                    }
+                }
+            }
+
+            // Sync E-POD records
+            const savedEPodRecords = localStorage.getItem('ePodRecords');
+            if (savedEPodRecords) {
+                const ePodRecords = JSON.parse(savedEPodRecords);
+                console.log(`Found ${ePodRecords.length} E-POD records in localStorage to sync`);
+                
+                for (const record of ePodRecords) {
+                    try {
+                        await this.saveEPodRecord(record);
+                        console.log(`Synced E-POD record ${record.drNumber} to Supabase`);
+                    } catch (error) {
+                        console.error(`Failed to sync E-POD record ${record.drNumber}:`, error);
+                    }
+                }
+            }
+
+            console.log('Finished syncing localStorage data to Supabase');
+        } catch (error) {
+            console.error('Error during localStorage to Supabase sync:', error);
         }
     }
 }

@@ -22,10 +22,10 @@ function initSupabase() {
     const supabaseKey = window.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 
     // Validate configuration
-    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'YOUR_SUPABASE_URL' || supabaseKey === 'YOUR_SUPABASE_ANON_KEY' || supabaseKey === 'YOUR_ACTUAL_SUPABASE_ANON_KEY_HERE') {
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'YOUR_SUPABASE_URL' || supabaseKey === 'YOUR_SUPABASE_ANON_KEY') {
         console.warn('Supabase URL or Key not configured correctly.');
-        console.warn('You need to replace "YOUR_ACTUAL_SUPABASE_ANON_KEY_HERE" with your actual Supabase anon key from the dashboard.');
-        console.warn('Visit: https://supabase.com/dashboard/project/ntyvrezyhrmflswxefbk/settings/api');
+        console.warn('You need to set the Supabase configuration in your HTML files.');
+        console.warn('Visit: https://supabase.com/dashboard/project/_/settings/api');
         console.warn('Then update the Supabase configuration in your HTML files (login.html and index.html).');
         return null;
     }

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Tables Check</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Database Tables Verification</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="status" class="alert alert-info">
+                            Checking if database tables exist...
+                        </div>
+                        
+                        <div id="results" class="mt-4">
+                            <h5>Table Status:</h5>
+                            <ul id="tableResults" class="list-group">
+                                <!-- Results will be displayed here -->
+                            </ul>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button id="checkTables" class="btn btn-primary">Check Tables Again</button>
+                            <button id="clearResults" class="btn btn-secondary">Clear Results</button>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h5>Next Steps:</h5>
+                            <div id="nextSteps" class="alert alert-secondary">
+                                <!-- Next steps will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load environment variables -->
+    <script>
+        // In a real application, these would be loaded from .env file
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const statusEl = document.getElementById('status');
+            const tableResultsEl = document.getElementById('tableResults');
+            const nextStepsEl = document.getElementById('nextSteps');
+            
+            // Initialize Supabase
+            let supabase;
+            try {
+                supabase = supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+                statusEl.className = 'alert alert-success';
+                statusEl.textContent = 'Supabase client initialized successfully';
+            } catch (error) {
+                statusEl.className = 'alert alert-danger';
+                statusEl.textContent = 'Failed to initialize Supabase client: ' + error.message;
+                return;
+            }
+            
+            // Run check when button is clicked
+            document.getElementById('checkTables').addEventListener('click', checkTables);
+            document.getElementById('clearResults').addEventListener('click', clearResults);
+            
+            // Run initial check
+            checkTables();
+            
+            async function checkTables() {
+                clearResults();
+                statusEl.className = 'alert alert-info';
+                statusEl.textContent = 'Checking database tables...';
+                
+                // List of tables to check
+                const tables = [
+                    'profiles',
+                    'deliveries',
+                    'customers',
+                    'additional_costs',
+                    'e_pod_records',
+                    'warehouses'
+                ];
+                
+                let allTablesExist = true;
+                
+                for (const table of tables) {
+                    try {
+                        // Try to select from the table with a limit of 1
+                        const { data, error } = await supabase
+                            .from(table)
+                            .select('id')
+                            .limit(1);
+                        
+                        if (error) {
+                            if (error.code === 'PGRST205' || error.message.includes('Could not find the table')) {
+                                // Table doesn't exist
+                                addTableResult(`✗ ${table} - Table does not exist`, 'danger');
+                                allTablesExist = false;
+                            } else {
+                                // Other error (might exist but have permission issues)
+                                addTableResult(`? ${table} - Error checking table: ${error.message}`, 'warning');
+                            }
+                        } else {
+                            // Table exists
+                            addTableResult(`✓ ${table} - Table exists`, 'success');
+                        }
+                    } catch (error) {
+                        addTableResult(`✗ ${table} - Error: ${error.message}`, 'danger');
+                        allTablesExist = false;
+                    }
+                }
+                
+                // Update status
+                statusEl.className = 'alert alert-success';
+                statusEl.textContent = 'Table check completed';
+                
+                // Show next steps
+                showNextSteps(allTablesExist);
+            }
+            
+            function addTableResult(message, type) {
+                const li = document.createElement('li');
+                li.className = `list-group-item list-group-item-${type}`;
+                li.textContent = message;
+                tableResultsEl.appendChild(li);
+            }
+            
+            function clearResults() {
+                tableResultsEl.innerHTML = '';
+            }
+            
+            function showNextSteps(allTablesExist) {
+                if (allTablesExist) {
+                    nextStepsEl.className = 'alert alert-success';
+                    nextStepsEl.innerHTML = `
+                        <h6>All tables exist!</h6>
+                        <p>Your database is properly configured and ready to use. You can now:</p>
+                        <ol>
+                            <li>Create an account through the login page if you haven't already</li>
+                            <li>Start using the application normally</li>
+                            <li>All data will automatically sync across your devices</li>
+                        </ol>
+                    `;
+                } else {
+                    nextStepsEl.className = 'alert alert-warning';
+                    nextStepsEl.innerHTML = `
+                        <h6>Some tables are missing</h6>
+                        <p>You need to run the SQL migration files to create the missing tables:</p>
+                        <ol>
+                            <li>Go to your Supabase dashboard</li>
+                            <li>Navigate to the SQL Editor</li>
+                            <li>Run the SQL files from the <code>supabase/migrations</code> directory:
+                                <ul>
+                                    <li><code>20231001000000_init.sql</code></li>
+                                    <li><code>20231001000001_add_epod_table.sql</code></li>
+                                </ul>
+                            </li>
+                            <li>After running the migrations, check again</li>
+                        </ol>
+                    `;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
