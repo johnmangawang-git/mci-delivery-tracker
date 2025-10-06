@@ -921,8 +921,9 @@ async function saveBooking() {
 
 // Helper function to generate DR number
 function generateDRNumber() {
-    const date = new Date();
-    const drNumber = `DR-${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 9000) + 1000}`;
+    // Generate a 4-digit random number
+    const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+    const drNumber = `DR-${randomNumber}`;
     console.log('Generated DR Number:', drNumber);
     return drNumber;
 }

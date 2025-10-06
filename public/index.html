@@ -91,12 +91,25 @@
                 const isAuthenticated = await window.isAuthenticated();
                 if (!isAuthenticated) {
                     // Redirect to login page
+                    console.log('User not authenticated, redirecting to login page');
                     window.location.href = '/login.html';
+                } else {
+                    console.log('User is authenticated, loading main application');
+                    // User is authenticated, continue loading the app
+                    initializeApp();
                 }
             } else {
                 console.log('Supabase not available, using mock authentication');
+                // Fallback for when Supabase is not available
+                initializeApp();
             }
         });
+        
+        // Function to initialize the main application
+        function initializeApp() {
+            console.log('Initializing main application');
+            // Any additional initialization code can go here
+        }
     </script>
 
     <!-- Sidebar Navigation -->
