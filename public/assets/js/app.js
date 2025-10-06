@@ -582,7 +582,7 @@ function loadDeliveryHistory() {
         if (filteredHistory.length === 0) {
             deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="text-center py-5">
+                    <td colspan="10" class="text-center py-5">
                         <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No delivery history found</h4>
                         <p class="text-muted">
@@ -630,6 +630,9 @@ function loadDeliveryHistory() {
             
             return `
                 <tr>
+                    <td>
+                        <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${delivery.drNumber}">
+                    </td>
                     <td>${delivery.completedDate || 'N/A'}</td>
                     <td><strong>${delivery.drNumber}</strong></td>
                     <td>${delivery.customerName}</td>
@@ -811,8 +814,323 @@ document.addEventListener('DOMContentLoaded', function() {
         exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
     }
     
+    // Add event listener for Delivery History PDF export button
+    const exportDeliveryHistoryPdfBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+    if (exportDeliveryHistoryPdfBtn) {
+        exportDeliveryHistoryPdfBtn.addEventListener('click', exportDeliveryHistoryToPdf);
+    }
+    
+    // Add event listener for Delivery History select button
+    const selectDeliveryHistoryBtn = document.getElementById('selectDeliveryHistoryBtn');
+    if (selectDeliveryHistoryBtn) {
+        selectDeliveryHistoryBtn.addEventListener('click', toggleDeliveryHistorySelection);
+    }
+    
+    // Add event listener for select all history checkbox
+    const selectAllHistory = document.getElementById('selectAllHistory');
+    if (selectAllHistory) {
+        selectAllHistory.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.delivery-history-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+    
     console.log('App.js: Event listeners added');
 });
+
+// Add event delegation for delivery history checkboxes
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.classList.contains('delivery-history-checkbox')) {
+        // Update select all checkbox state
+        const selectAllHistory = document.getElementById('selectAllHistory');
+        const allCheckboxes = document.querySelectorAll('.delivery-history-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.delivery-history-checkbox:checked');
+        
+        if (selectAllHistory) {
+            selectAllHistory.checked = allCheckboxes.length === checkedCheckboxes.length;
+            selectAllHistory.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+        }
+    }
+});
+
+// Function to toggle selection mode in Delivery History
+function toggleDeliveryHistorySelection() {
+    const selectAllCheckbox = document.getElementById('selectAllHistory');
+    const checkboxes = document.querySelectorAll('.delivery-history-checkbox');
+    const selectBtn = document.getElementById('selectDeliveryHistoryBtn');
+    const exportPdfBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+    
+    // Check if we're currently in selection mode by checking if selectAllCheckbox is visible
+    const isSelectionMode = selectAllCheckbox.style.display === 'block';
+    
+    if (!isSelectionMode) {
+        // Enable selection mode
+        selectAllCheckbox.style.display = 'block';
+        checkboxes.forEach(checkbox => {
+            checkbox.style.display = 'block';
+        });
+        selectBtn.innerHTML = '<i class="bi bi-x-circle"></i> Cancel';
+        exportPdfBtn.style.display = 'inline-block';
+    } else {
+        // Disable selection mode
+        selectAllCheckbox.style.display = 'none';
+        checkboxes.forEach(checkbox => {
+            checkbox.style.display = 'none';
+            checkbox.checked = false;
+        });
+        selectBtn.innerHTML = '<i class="bi bi-printer"></i> Print';
+        exportPdfBtn.style.display = 'none';
+        
+        // Uncheck select all
+        selectAllCheckbox.checked = false;
+    }
+}
+
+// Export Delivery History to PDF with signatures
+function exportDeliveryHistoryToPdf() {
+    try {
+        // Show loading state
+        const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+        const originalText = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        exportBtn.disabled = true;
+
+        // Get EPOD records from localStorage to find signatures
+        let ePodRecords = [];
+        try {
+            const ePodData = localStorage.getItem('ePodRecords');
+            if (ePodData) {
+                ePodRecords = JSON.parse(ePodData);
+            }
+        } catch (error) {
+            console.error('Error loading EPOD records:', error);
+        }
+
+        // Get selected deliveries
+        const selectedCheckboxes = document.querySelectorAll('#deliveryHistoryTableBody tr input.delivery-history-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            showToast('Please select at least one delivery to export', 'warning');
+            resetExportButton(exportBtn, originalText);
+            return;
+        }
+
+        // Get the delivery data for selected records
+        const selectedDeliveries = [];
+        selectedCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const drNumber = row.querySelector('td:nth-child(3) strong').textContent;
+            
+            // Find the delivery in window.deliveryHistory
+            const delivery = window.deliveryHistory.find(d => d.drNumber === drNumber);
+            if (delivery) {
+                // Find signature if available
+                const ePodRecord = ePodRecords.find(record => record.drNumber === drNumber);
+                selectedDeliveries.push({
+                    ...delivery,
+                    signature: ePodRecord ? ePodRecord.signature : null
+                });
+            }
+        });
+
+        if (selectedDeliveries.length === 0) {
+            showToast('No delivery records found to export', 'warning');
+            resetExportButton(exportBtn, originalText);
+            return;
+        }
+
+        // Create a new window for the PDF content
+        const printWindow = window.open('', '_blank');
+        
+        // Generate HTML content for the PDF
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Delivery History Records</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    color: #333;
+                }
+                .record {
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    page-break-inside: avoid;
+                }
+                .record-title {
+                    background-color: #f5f5f5;
+                    padding: 10px;
+                    border-radius: 3px;
+                    margin: -15px -15px 15px -15px;
+                    font-weight: bold;
+                }
+                .field {
+                    margin-bottom: 10px;
+                }
+                .field-label {
+                    font-weight: bold;
+                    display: inline-block;
+                    width: 150px;
+                }
+                .signature-container {
+                    margin: 20px 0;
+                    text-align: center;
+                }
+                .signature-image {
+                    max-width: 300px;
+                    max-height: 100px;
+                    border: 1px solid #ccc;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 30px;
+                    padding-top: 10px;
+                    border-top: 1px solid #ccc;
+                    font-size: 12px;
+                    color: #666;
+                }
+                .status-completed {
+                    color: #198754;
+                    font-weight: bold;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Delivery History Records</h1>
+                <p>Generated on ${new Date().toLocaleDateString()}</p>
+            </div>
+        `;
+
+        // Add each selected record to the HTML content
+        for (let i = 0; i < selectedDeliveries.length; i++) {
+            const record = selectedDeliveries[i];
+            const completedDate = record.completedDate || 'N/A';
+            const signatureHtml = record.signature ? 
+                `<img src="${record.signature}" class="signature-image" alt="Signature">` : 
+                '<div>No signature available</div>';
+                
+            htmlContent += `
+            <div class="record">
+                <div class="record-title">Record #${i + 1}</div>
+                <div class="field">
+                    <span class="field-label">Date:</span>
+                    <span>${completedDate}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">DR Number:</span>
+                    <span>${record.drNumber || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Customer Name:</span>
+                    <span>${record.customerName || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Customer Number:</span>
+                    <span>${record.customerNumber || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Origin:</span>
+                    <span>${record.origin || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Destination:</span>
+                    <span>${record.destination || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Distance:</span>
+                    <span>${record.distance || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Additional Costs:</span>
+                    <span>${record.additionalCosts ? `₱${record.additionalCosts.toFixed(2)}` : '₱0.00'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Status:</span>
+                    <span>${record.status || 'N/A'}</span>
+                </div>
+                <div class="signature-container">
+                    <div><strong>Signature:</strong></div>
+                    ${signatureHtml}
+                </div>
+            </div>
+            `;
+        }
+
+        htmlContent += `
+            <div class="footer">
+                <p>Document generated by MCI Delivery Tracker System</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Write content to the new window
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        // Wait for content to load, then trigger print
+        printWindow.onload = function() {
+            // Give it a small delay to ensure everything is rendered
+            setTimeout(() => {
+                printWindow.print();
+                // Reset export button
+                resetExportButton(exportBtn, originalText);
+            }, 500);
+        };
+
+        showToast(`Exporting ${selectedDeliveries.length} delivery records to PDF. Please check your print dialog to save as PDF.`, 'success');
+    } catch (error) {
+        console.error('Error exporting Delivery History records to PDF:', error);
+        showToast('Error exporting delivery records to PDF. Please try again.', 'error');
+        
+        // Reset export button
+        const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+        if (exportBtn) {
+            const originalText = '<i class="bi bi-file-earmark-pdf"></i> Export PDF';
+            resetExportButton(exportBtn, originalText);
+        }
+    }
+}
+
+/**
+ * Reset the export button to its original state
+ */
+function resetExportButton(button, originalText) {
+    if (button) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
+// Make functions globally accessible
+window.loadActiveDeliveries = loadActiveDeliveries;
+window.loadDeliveryHistory = loadDeliveryHistory;
+window.saveToLocalStorage = saveToLocalStorage;
+window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
+window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
+window.exportDeliveryHistoryToPdf = exportDeliveryHistoryToPdf;
+window.toggleDeliveryHistorySelection = toggleDeliveryHistorySelection;
+window.showESignatureModal = showESignatureModal;
+window.showEPodModal = showEPodModal;
+window.handleStatusChange = handleStatusChange;
+window.testModalFunctionality = testModalFunctionality;
 
 console.log('=== APP.JS INITIALIZATION COMPLETE ===');
 })();

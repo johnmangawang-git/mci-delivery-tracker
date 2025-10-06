@@ -71,23 +71,21 @@ document.addEventListener('DOMContentLoaded', function () {
                     loadDeliveryHistory();
                 }
 
-                // Special handling for customers view
-                if (viewName === 'customers') {
-                    loadCustomers();
-                }
-
-                // Special handling for warehouse map view
-                if (viewName === 'warehouse-map') {
-                    loadWarehouses();
-                }
-                
                 // Special handling for E-POD view
                 if (viewName === 'e-pod') {
                     console.log('EPOD tab clicked, loading EPOD deliveries');
                     initEPod();
                 }
                 
-                
+                // Special handling for Customers view
+                if (viewName === 'customers') {
+                    loadCustomers();
+                }
+
+                // Special handling for Warehouse Map view
+                if (viewName === 'warehouse-map') {
+                    loadWarehouses();
+                }
             }
 
             // Close sidebar on mobile after selection
@@ -122,8 +120,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize Supabase authentication
     initSupabaseAuth();
 
-
-    
     // Ensure signature pad is initialized for E-Signature functionality
     if (document.getElementById('signaturePad')) {
         ensureSignaturePadInitialized();
@@ -437,7 +433,7 @@ function setupSaveSignatureButton() {
                     updateDeliveryStatus(drNum, 'Completed');
                 });
                 
-                // Save all records to local storage
+                // Save all EPOD records to local storage
                 localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
                 
                 // Show success message
@@ -465,7 +461,7 @@ function setupSaveSignatureButton() {
                     timestamp: new Date().toISOString()
                 };
                 
-                // Save to local storage (in a real app, this would be an API call)
+                // Save to local storage
                 let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
                 ePodRecords.push(ePodRecord);
                 
@@ -485,7 +481,7 @@ function setupSaveSignatureButton() {
                 eSignatureModal.hide();
             }
             
-            // Refresh both views
+            // Refresh all relevant views
             if (typeof loadActiveDeliveries === 'function') {
                 loadActiveDeliveries();
             }
@@ -691,162 +687,6 @@ function updateBookingViewDashboard() {
 // Expose function globally
 window.updateBookingViewDashboard = updateBookingViewDashboard;
 
-// E-POD Module Functions
-function initEPod() {
-    // Load E-POD deliveries when view is active
-    loadEPodDeliveries();
-    
-    // Initialize export button
-    initEPodExportButton();
-}
-
-function loadEPodDeliveries() {
-    console.log('Loading EPOD deliveries');
-    
-    // Check if we're in the EPOD view
-    const ePodView = document.getElementById('ePodView');
-    if (!ePodView) {
-        console.error('EPOD view element not found');
-        return;
-    }
-    
-    // Use dataService to fetch E-POD records if available
-    if (typeof window.dataService !== 'undefined' && typeof window.dataService.getEPodRecords === 'function') {
-        console.log('Attempting to load EPOD records from dataService');
-        window.dataService.getEPodRecords().then(records => {
-            console.log('EPOD records loaded from dataService:', records.length);
-            renderEPodDeliveries(records);
-        }).catch(error => {
-            console.error('Error loading EPOD records from dataService:', error);
-            // Fallback to localStorage
-            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            console.log('EPOD records loaded from localStorage (fallback):', ePodRecords.length);
-            renderEPodDeliveries(ePodRecords);
-        });
-    } else {
-        console.log('dataService not available, loading EPOD records from localStorage');
-        // Fallback to localStorage
-        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-        console.log('EPOD records loaded from localStorage:', ePodRecords.length);
-        renderEPodDeliveries(ePodRecords);
-    }
-}
-
-// Initialize E-POD export button
-function initEPodExportButton() {
-    const exportEPodBtn = document.getElementById('exportEPodBtn');
-    if (exportEPodBtn) {
-        exportEPodBtn.addEventListener('click', exportEPodToPdf);
-    }
-}
-
-// Export E-POD records as PDF
-function exportEPodToPdf() {
-    try {
-        // Get E-POD records from localStorage
-        let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-        
-        // Check if any checkboxes are selected
-        const selectedCheckboxes = document.querySelectorAll('#ePodTableBody tr input.delivery-checkbox:checked');
-        
-        // If checkboxes are selected, filter records to only include selected ones
-        if (selectedCheckboxes.length > 0) {
-            const selectedDRNumbers = Array.from(selectedCheckboxes).map(cb => cb.dataset.drNumber);
-            ePodRecords = ePodRecords.filter(record => selectedDRNumbers.includes(record.drNumber));
-        }
-        
-        if (ePodRecords.length === 0) {
-            showToast('No E-POD records to export', 'warning');
-            return;
-        }
-
-        // Create a new window for the PDF content
-        const printWindow = window.open('', '_blank');
-        
-        // Generate HTML content for the PDF
-        let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>E-POD Records</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                    color: #333;
-                }
-                .header {
-                    text-align: center;
-                    border-bottom: 2px solid #333;
-                    padding-bottom: 10px;
-                    margin-bottom: 20px;
-                }
-                .header h1 {
-                    margin: 0;
-                    color: #333;
-                }
-                .record {
-                    border: 1px solid #ccc;
-                    border-radius: 5px;
-                    padding: 15px;
-                }
-                .record h2 {
-                    margin-top: 0;
-                }
-                .record p {
-                    margin: 5px 0;
-                }
-                .record .signature {
-                    margin-top: 20px;
-                    border-top: 1px solid #333;
-                    padding-top: 10px;
-                }
-                .record .signature img {
-                    max-width: 100%;
-                    height: auto;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>E-POD Records</h1>
-            </div>
-            <div class="records">
-                ${ePodRecords.map(record => `
-                    <div class="record">
-                        <h2>DR Number: ${record.drNumber}</h2>
-                        <p><strong>Customer Name:</strong> ${record.customerName}</p>
-                        <p><strong>Customer Contact:</strong> ${record.customerContact}</p>
-                        <p><strong>Origin:</strong> ${record.origin}</p>
-                        <p><strong>Destination:</strong> ${record.destination}</p>
-                        <p><strong>Truck Plate:</strong> ${record.truckPlate}</p>
-                        <p><strong>Signed At:</strong> ${new Date(record.signedAt).toLocaleString()}</p>
-                        <div class="signature">
-                            <img src="${record.signature}" alt="Signature">
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </body>
-        </html>
-        `;
-        
-        // Write the HTML content to the new window
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        
-        // Print the content
-        printWindow.print();
-        
-        // Close the window after printing
-        printWindow.close();
-    } catch (error) {
-        console.error('Error exporting E-POD records to PDF:', error);
-        showToast('Failed to export E-POD records to PDF', 'danger');
-    }
-}
-
 // Add event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Main.js: DOMContentLoaded event fired');
@@ -860,11 +700,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const eSignatureBtn = document.getElementById('eSignatureBtn');
     const exportActiveDeliveriesBtn = document.getElementById('exportActiveDeliveriesBtn');
     const exportDeliveryHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
-    
-    // E-POD search elements
-    const ePodSearchInput = document.getElementById('ePodSearchInput');
-    const clearEPodSearchBtn = document.getElementById('clearEPodSearchBtn');
-    const exportEPodBtn = document.getElementById('exportEPodBtn');
     
     if (drSearchInput) {
         drSearchInput.addEventListener('input', function() {
@@ -909,22 +744,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Enable/disable E-Signature button based on selection
             if (eSignatureBtn) {
                 eSignatureBtn.disabled = !this.checked;
-            }
-        });
-    }
-    
-    // E-POD search functionality
-    if (ePodSearchInput) {
-        ePodSearchInput.addEventListener('input', function() {
-            filterEPodDeliveries(this.value);
-        });
-    }
-    
-    if (clearEPodSearchBtn) {
-        clearEPodSearchBtn.addEventListener('click', function() {
-            if (ePodSearchInput) {
-                ePodSearchInput.value = '';
-                filterEPodDeliveries('');
             }
         });
     }
@@ -978,11 +797,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (exportDeliveryHistoryBtn) {
         exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
-    }
-    
-    // Initialize E-POD export button
-    if (exportEPodBtn) {
-        exportEPodBtn.addEventListener('click', exportEPodToPdf);
     }
     
     console.log('Main.js: Event listeners added');
@@ -1224,131 +1038,6 @@ function exportEPodToPdf() {
     }
 }
 
-function renderEPodDeliveries(ePodRecords) {
-    console.log('Rendering EPOD deliveries:', ePodRecords.length);
-    const container = document.getElementById('ePodCardsContainer');
-    const paginationContainer = document.getElementById('ePodPagination');
-    
-    console.log('Container element:', container);
-    console.log('Pagination container element:', paginationContainer);
-    
-    if (!container || !paginationContainer) {
-        console.error('EPOD container elements not found');
-        return;
-    }
-    
-    // Clear existing content
-    container.innerHTML = '';
-    paginationContainer.innerHTML = '';
-    
-    if (ePodRecords.length === 0) {
-        container.innerHTML = `
-            <div class="col-12 text-center py-5">
-                <i class="bi bi-info-circle" style="font-size: 2rem;"></i>
-                <p class="mt-3">No signed deliveries found</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Sort by signed date (newest first)
-    const sortedRecords = [...ePodRecords].sort((a, b) => new Date(b.signedAt) - new Date(a.signedAt));
-    
-    // Pagination settings
-    const recordsPerPage = 10;
-    const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
-    const currentPage = 1; // In a real app, you would track this state
-    
-    // Get records for current page
-    const startIndex = (currentPage - 1) * recordsPerPage;
-    const endIndex = Math.min(startIndex + recordsPerPage, sortedRecords.length);
-    const recordsToShow = sortedRecords.slice(startIndex, endIndex);
-    
-    // Add cards for each signed delivery
-    recordsToShow.forEach((record, index) => {
-        const card = document.createElement('div');
-        card.className = 'col-md-6 col-lg-4 mb-4';
-        card.innerHTML = `
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">${record.drNumber}</h6>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">Customer</small>
-                        <p class="mb-1">${record.customerName}</p>
-                        <small class="text-muted">Contact</small>
-                        <p class="mb-1">${record.customerContact}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Route</small>
-                        <p class="mb-1">${record.origin} to ${record.destination}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Truck</small>
-                        <p class="mb-1">${record.truckPlate}</p>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Signed Date</small>
-                        <p class="mb-1">${new Date(record.signedAt).toLocaleDateString()}</p>
-                    </div>
-                    <div class="text-center">
-                        <img src="${record.signature}" alt="Signature" class="img-fluid border" style="max-height: 100px; object-fit: contain;">
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-    
-    // Add pagination controls if needed
-    if (totalPages > 1) {
-        let paginationHtml = `
-            <nav>
-                <ul class="pagination">
-                    <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a>
-                    </li>
-        `;
-        
-        for (let i = 1; i <= totalPages; i++) {
-            paginationHtml += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
-                </li>
-            `;
-        }
-        
-        paginationHtml += `
-                    <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="#" data-page="${currentPage + 1}">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        `;
-        
-        paginationContainer.innerHTML = paginationHtml;
-        
-        // Add event listeners to pagination links
-        paginationContainer.querySelectorAll('.page-link').forEach(link => {
-            // Remove existing event listeners by cloning
-            const newLink = link.cloneNode(true);
-            link.parentNode.replaceChild(newLink, link);
-            
-            newLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                const page = parseInt(e.target.dataset.page);
-                if (!isNaN(page)) {
-                    // In a real app, you would update the currentPage and reload the data
-                    console.log(`Loading page ${page}`);
-                }
-            });
-        });
-    }
-}
-
 function updateDeliveryStatus(drNumber, newStatus) {
     // In a real app, this would update the backend
     console.log(`Updating DR ${drNumber} to status: ${newStatus}`);
@@ -1391,8 +1080,14 @@ function updateDeliveryStatus(drNumber, newStatus) {
                 console.log('Moving delivery to history');
                 // Add to delivery history
                 if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
+                    // Create a clean copy for delivery history (without signature data)
+                    const deliveryCopy = { ...delivery };
+                    
+                    // Remove signature data if it exists
+                    delete deliveryCopy.signature;
+                    
                     // Add the completed delivery to history
-                    window.deliveryHistory.unshift(delivery);
+                    window.deliveryHistory.unshift(deliveryCopy);
                     console.log('Added to history, new history length:', window.deliveryHistory.length);
                     
                     // Remove from active deliveries
@@ -2069,6 +1764,314 @@ async function logout() {
 // Make export functions globally accessible
 window.exportEPodToPdf = exportEPodToPdf;
 
-// Make auth functions globally accessible
-window.initSupabaseAuth = initSupabaseAuth;
-window.updateUserInfo = updateUserInfo;
+// Export Delivery History to PDF with signatures
+function exportDeliveryHistoryToPdf() {
+    try {
+        // Show loading state
+        const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+        const originalText = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
+        exportBtn.disabled = true;
+
+        // Get EPOD records from localStorage to find signatures
+        let ePodRecords = [];
+        try {
+            const ePodData = localStorage.getItem('ePodRecords');
+            if (ePodData) {
+                ePodRecords = JSON.parse(ePodData);
+            }
+        } catch (error) {
+            console.error('Error loading EPOD records:', error);
+        }
+
+        // Get selected deliveries
+        const selectedCheckboxes = document.querySelectorAll('#deliveryHistoryTableBody tr input.delivery-history-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            showToast('Please select at least one delivery to export', 'warning');
+            resetExportButton(exportBtn, originalText);
+            return;
+        }
+
+        // Get the delivery data for selected records
+        const selectedDeliveries = [];
+        selectedCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            const drNumber = row.querySelector('td:nth-child(3) strong').textContent;
+            
+            // Find the delivery in window.deliveryHistory
+            const delivery = window.deliveryHistory.find(d => d.drNumber === drNumber);
+            if (delivery) {
+                // Find signature if available
+                const ePodRecord = ePodRecords.find(record => record.drNumber === drNumber);
+                selectedDeliveries.push({
+                    ...delivery,
+                    signature: ePodRecord ? ePodRecord.signature : null
+                });
+            }
+        });
+
+        if (selectedDeliveries.length === 0) {
+            showToast('No delivery records found to export', 'warning');
+            resetExportButton(exportBtn, originalText);
+            return;
+        }
+
+        // Create a new window for the PDF content
+        const printWindow = window.open('', '_blank');
+        
+        // Generate HTML content for the PDF
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Delivery History Records</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #333;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    color: #333;
+                }
+                .record {
+                    border: 1px solid #ccc;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    page-break-inside: avoid;
+                }
+                .record-title {
+                    background-color: #f5f5f5;
+                    padding: 10px;
+                    border-radius: 3px;
+                    margin: -15px -15px 15px -15px;
+                    font-weight: bold;
+                }
+                .field {
+                    margin-bottom: 10px;
+                }
+                .field-label {
+                    font-weight: bold;
+                    display: inline-block;
+                    width: 150px;
+                }
+                .signature-container {
+                    margin: 20px 0;
+                    text-align: center;
+                }
+                .signature-image {
+                    max-width: 300px;
+                    max-height: 100px;
+                    border: 1px solid #ccc;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 30px;
+                    padding-top: 10px;
+                    border-top: 1px solid #ccc;
+                    font-size: 12px;
+                    color: #666;
+                }
+                .status-completed {
+                    color: #198754;
+                    font-weight: bold;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Delivery History Records</h1>
+                <p>Generated on ${new Date().toLocaleDateString()}</p>
+            </div>
+        `;
+
+        // Add each selected record to the HTML content
+        for (let i = 0; i < selectedDeliveries.length; i++) {
+            const record = selectedDeliveries[i];
+            const completedDate = record.completedDate || 'N/A';
+            const signatureHtml = record.signature ? 
+                `<img src="${record.signature}" class="signature-image" alt="Signature">` : 
+                '<div>No signature available</div>';
+                
+            htmlContent += `
+            <div class="record">
+                <div class="record-title">Record #${i + 1}</div>
+                <div class="field">
+                    <span class="field-label">Date:</span>
+                    <span>${completedDate}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">DR Number:</span>
+                    <span>${record.drNumber || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Customer Name:</span>
+                    <span>${record.customerName || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Customer Number:</span>
+                    <span>${record.customerNumber || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Origin:</span>
+                    <span>${record.origin || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Destination:</span>
+                    <span>${record.destination || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Distance:</span>
+                    <span>${record.distance || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Additional Costs:</span>
+                    <span>${record.additionalCosts ? `₱${record.additionalCosts.toFixed(2)}` : '₱0.00'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Status:</span>
+                    <span>${record.status || 'N/A'}</span>
+                </div>
+                <div class="signature-container">
+                    <div><strong>Signature:</strong></div>
+                    ${signatureHtml}
+                </div>
+            </div>
+            `;
+        }
+
+        htmlContent += `
+            <div class="footer">
+                <p>Document generated by MCI Delivery Tracker System</p>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Write content to the new window
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+
+        // Wait for content to load, then trigger print
+        printWindow.onload = function() {
+            // Give it a small delay to ensure everything is rendered
+            setTimeout(() => {
+                printWindow.print();
+                // Reset export button
+                resetExportButton(exportBtn, originalText);
+            }, 500);
+        };
+
+        showToast(`Exporting ${selectedDeliveries.length} delivery records to PDF. Please check your print dialog to save as PDF.`, 'success');
+    } catch (error) {
+        console.error('Error exporting Delivery History records to PDF:', error);
+        showToast('Error exporting delivery records to PDF. Please try again.', 'error');
+        
+        // Reset export button
+        const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+        if (exportBtn) {
+            const originalText = '<i class="bi bi-file-earmark-pdf"></i> Export PDF';
+            resetExportButton(exportBtn, originalText);
+        }
+    }
+}
+
+// Function to toggle selection mode in Delivery History
+function toggleDeliveryHistorySelection() {
+    const selectAllCheckbox = document.getElementById('selectAllHistory');
+    const checkboxes = document.querySelectorAll('.delivery-history-checkbox');
+    const selectBtn = document.getElementById('selectDeliveryHistoryBtn');
+    const exportPdfBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+    
+    // Check if we're currently in selection mode by checking if selectAllCheckbox is visible
+    const isSelectionMode = selectAllCheckbox.style.display === 'block';
+    
+    if (!isSelectionMode) {
+        // Enable selection mode
+        selectAllCheckbox.style.display = 'block';
+        checkboxes.forEach(checkbox => {
+            checkbox.style.display = 'block';
+        });
+        selectBtn.innerHTML = '<i class="bi bi-x-circle"></i> Cancel';
+        exportPdfBtn.style.display = 'inline-block';
+    } else {
+        // Disable selection mode
+        selectAllCheckbox.style.display = 'none';
+        checkboxes.forEach(checkbox => {
+            checkbox.style.display = 'none';
+            checkbox.checked = false;
+        });
+        selectBtn.innerHTML = '<i class="bi bi-list-check"></i> Select';
+        exportPdfBtn.style.display = 'none';
+        
+        // Uncheck select all
+        selectAllCheckbox.checked = false;
+    }
+}
+
+// Initialize Delivery History view enhancements
+function initDeliveryHistoryView() {
+    // Add event listener for select button
+    const selectBtn = document.getElementById('selectDeliveryHistoryBtn');
+    if (selectBtn) {
+        selectBtn.addEventListener('click', toggleDeliveryHistorySelection);
+    }
+    
+    // Add event listener for PDF export button
+    const exportPdfBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', exportDeliveryHistoryToPdf);
+    }
+    
+    // Add event listener for select all checkbox
+    const selectAllCheckbox = document.getElementById('selectAllHistory');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.delivery-history-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+}
+
+// Modify the loadDeliveryHistory function to add checkboxes
+function enhanceDeliveryHistoryTable() {
+    // Add event listener to the table body to handle checkbox changes
+    const tableBody = document.getElementById('deliveryHistoryTableBody');
+    if (tableBody) {
+        // Add event delegation for checkbox changes
+        tableBody.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('delivery-history-checkbox')) {
+                // Update select all checkbox state
+                const selectAllCheckbox = document.getElementById('selectAllHistory');
+                const allCheckboxes = tableBody.querySelectorAll('.delivery-history-checkbox');
+                const checkedCheckboxes = tableBody.querySelectorAll('.delivery-history-checkbox:checked');
+                
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+                    selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+                }
+            }
+        });
+    }
+}
+
+// Call initialization when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initDeliveryHistoryView();
+    enhanceDeliveryHistoryTable();
+});
+
+// Make functions globally accessible
+window.exportDeliveryHistoryToPdf = exportDeliveryHistoryToPdf;
+window.toggleDeliveryHistorySelection = toggleDeliveryHistorySelection;
