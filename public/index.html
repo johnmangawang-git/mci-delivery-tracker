@@ -62,12 +62,6 @@
                 </li>
                 
                 <li class="nav-item">
-                    <a href="#" class="nav-link" data-view="e-pod">
-                        <i class="bi bi-clipboard-check"></i>
-                        <span class="nav-text">E-POD</span>
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a href="#" class="nav-link" data-view="active-deliveries">
                         <i class="bi bi-truck"></i>
                         <span class="nav-text">Active Deliveries</span>
@@ -349,40 +343,6 @@
             </div>
         </div>
 
-        <!-- E-POD View -->
-        <div id="ePodView" class="content-view">
-            <div class="card">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title"><i class="bi bi-pen"></i> E-POD</h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="btn-group" role="group">
-                                <span class="btn btn-outline-secondary search-icon-btn" style="pointer-events: none; border-right: none;">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" class="form-control search-input" id="ePodSearchInput" placeholder="Search by DR Number..." style="min-width: 180px;">
-                                <button class="btn btn-outline-secondary search-clear-btn" type="button" id="clearEPodSearchBtn" title="Clear search">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-                            <button class="btn btn-outline-secondary" id="exportEPodBtn"><i class="bi bi-download"></i> Export</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="ePodSearchResultsInfo" class="search-results-info mb-3" style="display: none;">
-                        <!-- Search results info will be displayed here -->
-                    </div>
-                    <div id="ePodCardsContainer" class="row">
-                        <!-- E-POD cards will be loaded here -->
-                    </div>
-                    <div id="ePodPagination" class="d-flex justify-content-center mt-4">
-                        <!-- Pagination controls will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Delivery History View -->
         <div id="deliveryHistoryView" class="content-view">
             <div class="card">
@@ -399,7 +359,24 @@
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
-                            <button class="btn btn-outline-secondary" id="exportDeliveryHistoryBtn"><i class="bi bi-download"></i> Export</button>
+                            <!-- Print button for selection mode -->
+                            <button class="btn btn-outline-secondary" id="printDeliveryHistoryBtn">
+                                <i class="bi bi-printer"></i> Print
+                            </button>
+                            <!-- Export PDF button (hidden by default) -->
+                            <button class="btn btn-outline-secondary" id="exportDeliveryHistoryPdfBtn" style="display: none;">
+                                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                            </button>
+                            <!-- Modified Export Button with Dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="exportDeliveryHistoryDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-download"></i> Export
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportDeliveryHistoryDropdown">
+                                    <li><a class="dropdown-item" href="#" id="exportDeliveryHistoryExcel"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Export via Excel</a></li>
+                                    <li><a class="dropdown-item" href="#" id="exportDeliveryHistoryPdfSelect"><i class="bi bi-file-earmark-pdf me-2"></i>Export via PDF</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -411,6 +388,9 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="selectAllHistory" style="display: none;">
+                                    </th>
                                     <th>Date</th>
                                     <th>DR Number</th>
                                     <th>Customer Name</th>
@@ -424,55 +404,6 @@
                             </thead>
                             <tbody id="deliveryHistoryTableBody">
                                 <!-- Dynamic content will be loaded here -->
-                                <tr>
-                                    <td>Oct 24, 2023</td>
-                                    <td><strong>DR-8848</strong></td>
-                                    <td>SMEG Alabang</td>
-                                    <td>123 Logistics Park, Alabang</td>
-                                    <td>Makati City</td>
-                                    <td>12.5 km</td>
-                                    <td>₱25.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Oct 23, 2023</td>
-                                    <td><strong>DR-8862</strong></td>
-                                    <td>MCI Davao</td>
-                                    <td>101 Corporate Center, Davao</td>
-                                    <td>5.3 km</td>
-                                    <td>₱32.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>Oct 22, 2023</td>
-                                    <td><strong>DR-8870</strong></td>
-                                    <td>MCI Cebu</td>
-                                    <td>202 Mall, Cebu City</td>
-                                    <td>14.8 km</td>
-                                    <td>₱58.00</td>
-                                    <td>
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle"></i> Completed
-                                        </span>
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            <i class="bi bi-pen"></i> Signed
-                                        </span>
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -825,79 +756,7 @@
         </div>
     </div>
 
-    <!-- E-Signature Modal -->
-<div class="modal fade" id="eSignatureModal" tabindex="-1" aria-labelledby="eSignatureModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="eSignatureModalLabel"><i class="bi bi-pen me-2"></i>E-Signature</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="card signature-card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Signature Pad</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="signature-pad-container" style="position: relative; width: 100%; max-width: 600px; height: 300px; margin: 0 auto; overflow: hidden;">
-                                    <canvas id="signaturePad" style="border: 2px dashed #3498db; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; height: 100%; touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); user-select: none; -moz-user-select: none;"></canvas>
-                                </div>
-                                <div class="d-flex justify-content-center mt-3">
-                                    <button type="button" class="btn btn-outline-danger" id="clearSignatureBtn">
-                                        <i class="bi bi-eraser me-2"></i>Clear Signature
-                                    </button>
-                                </div>
-                                <div class="text-center text-muted mt-2">
-                                    <small>Draw your signature above</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Delivery Details</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label">DR Number</label>
-                                    <!-- DR Number input with black text and bold font as per requirements -->
-                                    <input type="text" class="form-control" id="ePodDrNumber" readonly style="color: #000000; font-weight: bold;">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Customer Name</label>
-                                    <input type="text" class="form-control" id="ePodCustomerName" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Customer Contact</label>
-                                    <input type="text" class="form-control" id="ePodCustomerContact" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Truck Plate Number</label>
-                                    <input type="text" class="form-control" id="ePodTruckPlate" readonly>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Delivery Route</label>
-                                    <input type="text" class="form-control" id="ePodDeliveryRoute" readonly>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveSignatureBtn">
-                    <i class="bi bi-save me-2"></i>Save Signature
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Customer Modal -->
+    <!-- Add Customer Modal -->
 <div class="modal fade" id="addCustomerModal" tabindex="-1" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -1211,6 +1070,65 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="confirmBookingBtn"><i class="bi bi-check-circle me-2"></i>Confirm Booking</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-Signature Modal -->
+    <div class="modal fade" id="eSignatureModal" tabindex="-1" aria-labelledby="eSignatureModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eSignatureModalLabel">
+                        <i class="bi bi-pen me-2"></i>E-Signature
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="eSignatureForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="ePodDrNumber" class="form-label">DR Number</label>
+                                <input type="text" class="form-control" id="ePodDrNumber" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="ePodCustomerName" class="form-label">Customer Name</label>
+                                <input type="text" class="form-control" id="ePodCustomerName" readonly>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="ePodCustomerContact" class="form-label">Customer Contact</label>
+                                <input type="text" class="form-control" id="ePodCustomerContact" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="ePodTruckPlate" class="form-label">Truck Plate Number</label>
+                                <input type="text" class="form-control" id="ePodTruckPlate" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="ePodDeliveryRoute" class="form-label">Delivery Route</label>
+                            <input type="text" class="form-control" id="ePodDeliveryRoute" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Signature</label>
+                            <div class="signature-pad-container" style="position: relative; width: 100%; height: 300px; border: 2px dashed #3498db; background-color: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+                                <canvas id="signaturePad" style="touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); user-select: none; -moz-user-select: none; width: 100%; height: 100%;"></canvas>
+                            </div>
+                            <div class="d-flex justify-content-center mt-2">
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="clearSignatureBtn">
+                                    <i class="bi bi-eraser"></i> Clear Signature
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSignatureBtn">
+                        <i class="bi bi-save me-2"></i>Save Signature
+                    </button>
                 </div>
             </div>
         </div>
