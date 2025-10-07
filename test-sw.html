@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Worker Test</title>
+</head>
+<body>
+    <h1>Service Worker Test Page</h1>
+    <button id="testBtn">Test Service Worker</button>
+    <button id="clearBtn">Clear Service Worker</button>
+    <div id="output"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+        }
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    log('Service Worker registered with scope: ' + registration.scope);
+                    return registration.update();
+                })
+                .catch(function(error) {
+                    log('Service Worker registration failed: ' + error);
+                });
+        }
+        
+        // Test service worker messaging
+        document.getElementById('testBtn').addEventListener('click', function() {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                log('Testing service worker messaging...');
+                
+                const messageChannel = new MessageChannel();
+                messageChannel.port1.onmessage = function(event) {
+                    log('Received response from service worker: ' + JSON.stringify(event.data));
+                };
+                
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'TEST',
+                    timestamp: Date.now()
+                }, [messageChannel.port2]);
+            } else {
+                log('Service worker not available or not ready');
+            }
+        });
+        
+        // Clear service worker
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    return Promise.all(
+                        registrations.map(function(registration) {
+                            log('Unregistering service worker: ' + registration.scope);
+                            return registration.unregister();
+                        })
+                    );
+                }).then(function() {
+                    log('All service workers unregistered. Clearing caches...');
+                    if ('caches' in window) {
+                        caches.keys().then(function(cacheNames) {
+                            return Promise.all(
+                                cacheNames.map(function(cacheName) {
+                                    log('Deleting cache: ' + cacheName);
+                                    return caches.delete(cacheName);
+                                })
+                            );
+                        }).then(function() {
+                            log('All caches cleared. Reloading...');
+                            window.location.reload(true);
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
