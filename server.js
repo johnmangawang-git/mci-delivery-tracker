@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const app = express();
-const PORT = process.env.PORT || 8114; // Changed to port 8114 to avoid conflicts
+const PORT = process.env.PORT || 8088; // Changed to port 8088 as requested
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));

@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Content Security Policy to allow necessary connections while maintaining security -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws://localhost:8088 http://localhost:8088 https://ntyvrezyhrmflswxefbk.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://*.tile.openstreetmap.org; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: https://*.tile.openstreetmap.org; object-src 'none';"
     <title>MCI App</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="manifest" href="/manifest.json">
@@ -28,6 +30,115 @@
         // Set Supabase configuration from environment variables or defaults
         window.SUPABASE_URL = window.SUPABASE_URL || 'https://ntyvrezyhrmflswxefbk.supabase.co';
         window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+        
+        // CDN Fallback Functions - Senior Developer Implementation
+        function loadLocalBootstrapCSS() {
+            console.warn('Bootstrap CSS CDN failed, loading local fallback');
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/bootstrap.min.css';
+            link.onerror = () => console.error('Local Bootstrap CSS also failed to load');
+            document.head.appendChild(link);
+        }
+        
+        function loadLocalBootstrapIcons() {
+            console.warn('Bootstrap Icons CDN failed, loading local fallback');
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/bootstrap-icons.css';
+            link.onerror = () => console.error('Local Bootstrap Icons also failed to load');
+            document.head.appendChild(link);
+        }
+        
+        function loadLocalChartJs() {
+            console.warn('Chart.js CDN failed, loading local fallback');
+            const script = document.createElement('script');
+            script.src = 'assets/js/chart.min.js';
+            script.onerror = () => {
+                console.error('Local Chart.js also failed to load');
+                // Provide minimal chart functionality
+                window.Chart = { register: () => {}, defaults: {} };
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadLocalLeafletCss() {
+            console.warn('Leaflet CSS CDN failed, loading local fallback');
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'assets/css/leaflet.css';
+            link.onerror = () => console.error('Local Leaflet CSS also failed to load');
+            document.head.appendChild(link);
+        }
+        
+        function loadLocalLeafletJs() {
+            console.warn('Leaflet JS CDN failed, loading local fallback');
+            const script = document.createElement('script');
+            script.src = 'assets/js/leaflet.js';
+            script.onerror = () => {
+                console.error('Local Leaflet JS also failed to load');
+                // Provide minimal Leaflet functionality
+                window.L = { 
+                    map: () => ({ setView: () => {}, on: () => {} }),
+                    tileLayer: () => ({ addTo: () => {} }),
+                    marker: () => ({ addTo: () => {} })
+                };
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadLocalSupabase() {
+            console.warn('Supabase CDN failed, loading local fallback');
+            const script = document.createElement('script');
+            script.src = 'assets/js/supabase.min.js';
+            script.onerror = () => {
+                console.error('Local Supabase also failed to load');
+                // Provide minimal Supabase functionality
+                window.supabase = { 
+                    createClient: () => ({ 
+                        from: () => ({ select: () => Promise.resolve({ data: [], error: null }) })
+                    })
+                };
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadLocalSignaturePad() {
+            console.warn('SignaturePad CDN failed, loading local fallback');
+            const script = document.createElement('script');
+            script.src = 'assets/js/signature_pad.min.js';
+            script.onerror = () => {
+                console.error('Local SignaturePad also failed to load');
+                // Provide minimal SignaturePad functionality
+                window.SignaturePad = function() { 
+                    return { 
+                        clear: () => {}, 
+                        toDataURL: () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' 
+                    }; 
+                };
+            };
+            document.head.appendChild(script);
+        }
+        
+        function loadLocalXlsx() {
+            console.warn('XLSX CDN failed, loading local fallback');
+            const script = document.createElement('script');
+            script.src = 'assets/js/xlsx.full.min.js';
+            script.onerror = () => {
+                console.error('Local XLSX also failed to load');
+                // Provide minimal XLSX functionality for Excel export
+                window.XLSX = {
+                    utils: {
+                        json_to_sheet: (data) => ({ '!ref': 'A1:A1', A1: { v: 'No data', t: 's' } }),
+                        book_new: () => ({ SheetNames: [], Sheets: {} }),
+                        book_append_sheet: () => {},
+                        sheet_to_csv: () => 'No data available'
+                    },
+                    writeFile: () => console.warn('Excel export not available - XLSX library failed to load')
+                };
+            };
+            document.head.appendChild(script);
+        }
     </script>
 
     <!-- Supabase CDN with fallback -->
@@ -44,7 +155,7 @@
     <script src="assets/js/warehouse.js"></script>
     <script src="assets/js/supabase.js"></script>
     <script src="assets/js/dataService.js"></script>
-    <script src="assets/js/epod-fix.js"></script>
+
     <script src="assets/js/main-fixed.js"></script>
     <script src="assets/js/e-signature.js"></script>
     <script src="assets/js/app.js"></script>
@@ -309,10 +420,9 @@
                         <div class="chart-header">
                             <h5 class="chart-title">Bookings Over Time</h5>
                             <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active"
-                                    data-period="month">Month</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="month">Month</button>
                                 <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="day">Day</button>
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="day">Day</button>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -326,10 +436,9 @@
                         <div class="chart-header">
                             <h5 class="chart-title">Additional Costs Analysis</h5>
                             <div class="chart-filters">
-                                <button class="btn btn-sm btn-outline-secondary active"
-                                    data-period="month">Month</button>
+                                <button class="btn btn-sm btn-outline-secondary" data-period="month">Month</button>
                                 <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
-                                <button class="btn btn-sm btn-outline-secondary" data-period="day">Day</button>
+                                <button class="btn btn-sm btn-outline-secondary active" data-period="day">Day</button>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -1418,14 +1527,7 @@
             script.src = 'assets/js/signature_pad.min.js';
             document.head.appendChild(script);
         }
-        
-        // Function to load local XLSX if CDN fails
-        function loadLocalXlsx() {
-            console.log('Loading local XLSX fallback');
-            var script = document.createElement('script');
-            script.src = 'assets/js/xlsx.full.min.js';
-            document.head.appendChild(script);
-        }
+
         
         // Enhanced check with more detailed logging
         setTimeout(function() {

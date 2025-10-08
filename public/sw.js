@@ -14,7 +14,9 @@ self.addEventListener('message', function(event) {
   console.log('Service Worker received message:', event.data);
   
   // Always respond to prevent "message channel closed" errors
-  event.ports[0].postMessage({ status: 'received', data: event.data });
+  if (event.ports && event.ports[0]) {
+    event.ports[0].postMessage({ status: 'received', data: event.data });
+  }
 });
 
 // Handle fetch events

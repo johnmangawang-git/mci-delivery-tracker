@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Initialize charts when analytics view is shown
                     console.log('Initializing analytics charts');
                     if (typeof initAnalyticsCharts === 'function') {
-                        initAnalyticsCharts();
+                        initAnalyticsCharts('day');
                     }
                 }
 

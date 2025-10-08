@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Map Search Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { border: 1px solid #ccc; margin: 10px 0; padding: 15px; }
+        button { padding: 10px 15px; margin: 5px; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .result { background: #e2e3e5; padding: 8px; margin: 4px 0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Map Search Fix Verification</h1>
+    
+    <div class="section">
+        <h2>Test Mock Address Search</h2>
+        <input type="text" id="searchQuery" placeholder="Try: Makati, BGC, Cebu, Arayat" value="Makati">
+        <button onclick="testSearch()">Test Search</button>
+        <button onclick="testMultipleSearches()">Test Multiple Searches</button>
+    </div>
+    
+    <div class="section">
+        <h2>Search Results</h2>
+        <div id="searchResults"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Debug Log</h2>
+        <div id="debugLog" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <script>
+        let debugLog = document.getElementById('debugLog');
+        let searchResults = document.getElementById('searchResults');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\\n`;
+            debugLog.textContent += logEntry;
+            console.log(message);
+            
+            if (type === 'error') {
+                debugLog.className = 'log error';
+            } else if (type === 'success') {
+                debugLog.className = 'log success';
+            } else {
+                debugLog.className = 'log';
+            }
+        }
+        
+        function clearLog() {
+            debugLog.textContent = '';
+            debugLog.className = 'log';
+            searchResults.innerHTML = '';
+        }
+        
+        // Mock search function (same as in booking.js)
+        function mockAddressSearch(query) {
+            const mockLocations = [
+                // Metro Manila
+                { lat: "14.5995", lng: "120.9842", display_name: "Manila, Metro Manila, Philippines", type: "city", class: "place" },
+                { lat: "14.5547", lng: "121.0244", display_name: "Makati City, Metro Manila, Philippines", type: "city", class: "place" },
+                { lat: "14.5176", lng: "121.0509", display_name: "BGC, Taguig City, Metro Manila, Philippines", type: "district", class: "place" },
+                { lat: "14.6760", lng: "121.0437", display_name: "Quezon City, Metro Manila, Philippines", type: "city", class: "place" },
+                { lat: "14.4378", lng: "121.0199", display_name: "Alabang, Muntinlupa City, Metro Manila, Philippines", type: "district", class: "place" },
+                { lat: "14.5764", lng: "121.0851", display_name: "Ortigas Center, Pasig City, Metro Manila, Philippines", type: "district", class: "place" },
+                { lat: "14.6507", lng: "121.1029", display_name: "Marikina City, Metro Manila, Philippines", type: "city", class: "place" },
+                { lat: "14.5243", lng: "120.9947", display_name: "Ermita, Manila, Metro Manila, Philippines", type: "district", class: "place" },
+                
+                // Luzon
+                { lat: "15.4817", lng: "120.5979", display_name: "Arayat, Pampanga, Philippines", type: "municipality", class: "place" },
+                { lat: "15.0794", lng: "120.6200", display_name: "Angeles City, Pampanga, Philippines", type: "city", class: "place" },
+                { lat: "16.4023", lng: "120.5960", display_name: "Baguio City, Benguet, Philippines", type: "city", class: "place" },
+                { lat: "14.0860", lng: "121.1570", display_name: "Batangas City, Batangas, Philippines", type: "city", class: "place" },
+                { lat: "13.7565", lng: "121.0583", display_name: "Lipa City, Batangas, Philippines", type: "city", class: "place" },
+                
+                // Visayas
+                { lat: "10.3157", lng: "123.8854", display_name: "Cebu City, Cebu, Philippines", type: "city", class: "place" },
+                { lat: "10.7202", lng: "122.5621", display_name: "Iloilo City, Iloilo, Philippines", type: "city", class: "place" },
+                { lat: "11.2442", lng: "125.0048", display_name: "Tacloban City, Leyte, Philippines", type: "city", class: "place" },
+                
+                // Mindanao
+                { lat: "7.0731", lng: "125.6128", display_name: "Davao City, Davao del Sur, Philippines", type: "city", class: "place" },
+                { lat: "8.4542", lng: "124.6319", display_name: "Cagayan de Oro City, Misamis Oriental, Philippines", type: "city", class: "place" }
+            ];
+            
+            const searchTerm = query.toLowerCase();
+            const filteredResults = mockLocations.filter(location => 
+                location.display_name.toLowerCase().includes(searchTerm)
+            );
+            
+            return filteredResults.slice(0, 10);
+        }
+        
+        // Promise-based search function (same as in booking.js)
+        function searchAddress(query) {
+            return new Promise((resolve, reject) => {
+                try {
+                    log(`Searching for: "${query}"`);
+                    const results = mockAddressSearch(query);
+                    log(`Found ${results.length} results`, 'success');
+                    resolve(results);
+                } catch (error) {
+                    log(`Search error: ${error.message}`, 'error');
+                    reject(error);
+                }
+            });
+        }
+        
+        function displayResults(results) {
+            searchResults.innerHTML = '';
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="result">No results found</div>';
+                return;
+            }
+            
+            results.forEach((result, index) => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result';
+                resultDiv.innerHTML = `
+                    <strong>${index + 1}. ${result.display_name}</strong><br>
+                    <small>Coordinates: ${result.lat}, ${result.lng}</small><br>
+                    <small>Type: ${result.type} | Class: ${result.class}</small>
+                `;
+                searchResults.appendChild(resultDiv);
+            });
+        }
+        
+        function testSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                log('Please enter a search query', 'error');
+                return;
+            }
+            
+            log('=== TESTING SINGLE SEARCH ===');
+            
+            searchAddress(query)
+                .then(results => {
+                    displayResults(results);
+                    log(`Search completed successfully for "${query}"`, 'success');
+                })
+                .catch(error => {
+                    log(`Search failed: ${error.message}`, 'error');
+                });
+        }
+        
+        function testMultipleSearches() {
+            log('=== TESTING MULTIPLE SEARCHES ===');
+            
+            const testQueries = ['Makati', 'BGC', 'Cebu', 'Arayat', 'Manila', 'Quezon'];
+            let completedTests = 0;
+            
+            testQueries.forEach((query, index) => {
+                setTimeout(() => {
+                    log(`Testing search ${index + 1}/${testQueries.length}: "${query}"`);
+                    
+                    searchAddress(query)
+                        .then(results => {
+                            log(`✅ "${query}": ${results.length} results`);
+                            completedTests++;
+                            
+                            if (completedTests === testQueries.length) {
+                                log('=== ALL TESTS COMPLETED SUCCESSFULLY ===', 'success');
+                            }
+                        })
+                        .catch(error => {
+                            log(`❌ "${query}": ${error.message}`, 'error');
+                            completedTests++;
+                        });
+                }, index * 500); // Stagger the tests
+            });
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            log('Map Search Fix Test Page Loaded');
+            log('Ready to test mock address search functionality');
+            
+            // Test basic functionality
+            setTimeout(() => {
+                log('Running initial test...');
+                testSearch();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>"

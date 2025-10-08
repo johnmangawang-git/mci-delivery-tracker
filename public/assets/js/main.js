@@ -1,3 +1,34 @@
+// Initialize global data arrays for analytics and booking system
+if (typeof window.activeDeliveries === 'undefined') {
+    window.activeDeliveries = [];
+    console.log('✅ Initialized window.activeDeliveries array');
+}
+
+if (typeof window.deliveryHistory === 'undefined') {
+    window.deliveryHistory = [];
+    console.log('✅ Initialized window.deliveryHistory array');
+}
+
+// Load data from localStorage if available
+try {
+    const savedActiveDeliveries = localStorage.getItem('mci-active-deliveries');
+    const savedDeliveryHistory = localStorage.getItem('mci-delivery-history');
+    
+    if (savedActiveDeliveries) {
+        window.activeDeliveries = JSON.parse(savedActiveDeliveries);
+        console.log(`✅ Loaded ${window.activeDeliveries.length} active deliveries from localStorage`);
+    }
+    
+    if (savedDeliveryHistory) {
+        window.deliveryHistory = JSON.parse(savedDeliveryHistory);
+        console.log(`✅ Loaded ${window.deliveryHistory.length} delivery history from localStorage`);
+    }
+} catch (error) {
+    console.error('Error loading delivery data from localStorage:', error);
+    window.activeDeliveries = [];
+    window.deliveryHistory = [];
+}
+
 // Main application initialization
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize all views
@@ -56,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Special handling for analytics view
                 if (viewName === 'analytics') {
                     // Initialize charts when analytics view is shown
-                    initAnalyticsCharts('month');
+                    initAnalyticsCharts('day');
                 }
 
                 // Special handling for active deliveries view
@@ -108,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize analytics charts (only if analytics view is visible initially)
     if (views.analytics && views.analytics.classList.contains('active')) {
-        initAnalyticsCharts('month');
+        initAnalyticsCharts('day');
     }
 
     // Initialize user session

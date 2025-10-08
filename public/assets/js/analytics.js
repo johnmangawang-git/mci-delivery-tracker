@@ -1,7 +1,7 @@
 // Analytics charts
 let bookingsChart, costsChart, originChart, costBreakdownChart;
 
-async function initAnalyticsCharts(period = 'month') {
+async function initAnalyticsCharts(period = 'day') {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.error('Chart.js library is not loaded');
@@ -262,9 +262,10 @@ function processDataByDay(deliveries) {
     deliveries.forEach(delivery => {
         const date = delivery.deliveryDate || delivery.timestamp;
         if (date) {
-            // Format date as MM/DD
+            // Format date as "Mon 1/8" for better readability
             const dateObj = new Date(date);
-            const dayKey = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayKey = `${dayName} ${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
             
             bookingsByDay[dayKey] = (bookingsByDay[dayKey] || 0) + 1;
             
@@ -311,8 +312,18 @@ function processDataByDay(deliveries) {
         }
     });
     
-    // Prepare data for charts
-    const days = Object.keys(bookingsByDay);
+    // Generate last 7 days for better visualization
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const dayKey = `${dayName} ${date.getMonth() + 1}/${date.getDate()}`;
+        last7Days.push(dayKey);
+    }
+    
+    // Prepare data for charts using last 7 days
+    const days = last7Days;
     const bookingValues = days.map(day => bookingsByDay[day] || 0);
     const costValues = days.map(day => costsByDay[day] || 0);
     
@@ -619,15 +630,15 @@ async function loadAnalyticsData(period = 'month') {
         let bookingsData, costsData, originData, costBreakdownData;
         
         switch(period) {
-            case 'day':
-                ({ bookingsData, costsData, originData, costBreakdownData } = processDataByDay(allDeliveries));
-                break;
             case 'week':
                 ({ bookingsData, costsData, originData, costBreakdownData } = processDataByWeek(allDeliveries));
                 break;
             case 'month':
-            default:
                 ({ bookingsData, costsData, originData, costBreakdownData } = processDataByMonth(allDeliveries));
+                break;
+            case 'day':
+            default:
+                ({ bookingsData, costsData, originData, costBreakdownData } = processDataByDay(allDeliveries));
                 break;
         }
         
@@ -790,3 +801,107 @@ function updateCostBreakdownChart(period) {
 
 // Expose function globally
 window.initAnalyticsCharts = initAnalyticsCharts;
+
+// Enhanced cost categorization function with comprehensive keyword detection
+function categorizeCostDescription(description) {
+    const desc = description.toLowerCase().trim();
+    
+    // Fuel-related keywords (expanded)
+    if (desc.includes('gas') || desc.includes('fuel') || 
+        desc.includes('gasoline') || desc.includes('petrol') ||
+        desc.includes('diesel') || desc.includes('lng') || 
+        desc.includes('cng') || desc.includes('gasolina')) {
+        return 'Fuel Surcharge';
+    }
+    
+    // Toll-related keywords (Philippine-specific)
+    if (desc.includes('toll') || desc.includes('highway') ||
+        desc.includes('expressway') || desc.includes('bridge') ||
+        desc.includes('skyway') || desc.includes('slex') ||
+        desc.includes('nlex') || desc.includes('cavitex') ||
+        desc.includes('tplex') || desc.includes('star tollway')) {
+        return 'Toll Fees';
+    }
+    
+    // Helper/Labor-related keywords (expanded)
+    if (desc.includes('helper') || desc.includes('urgent') || 
+        desc.includes('delivery') || desc.includes('assist') ||
+        desc.includes('labor') || desc.includes('manpower') ||
+        desc.includes('overtime') || desc.includes('extra') ||
+        desc.includes('rush') || desc.includes('kasama') ||
+        desc.includes('tulong') || desc.includes('dagdag')) {
+        return 'Helper';
+    }
+    
+    // Special handling keywords (expanded)
+    if (desc.includes('special') || desc.includes('handling') ||
+        desc.includes('fragile') || desc.includes('careful') ||
+        desc.includes('delicate') || desc.includes('premium') ||
+        desc.includes('white glove') || desc.includes('sensitive') ||
+        desc.includes('priority')) {
+        return 'Special Handling';
+    }
+    
+    // Parking-related (separate category)
+    if (desc.includes('parking') || desc.includes('garage') ||
+        desc.includes('terminal') || desc.includes('loading')) {
+        return 'Other'; // Could be 'Parking' if you want separate category
+    }
+    
+    // Default category for unmatched descriptions
+    return 'Other';
+}
+
+// Test function to verify categorization
+function testCostCategorization() {
+    const testCases = [
+        'GAS money',
+        'gas for truck', 
+        'FUEL surcharge',
+        'Helper fee',
+        'helper payment',
+        'Toll fees',
+        'SLEX toll',
+        'Special handling',
+        'Parking fee',
+        'Overtime pay',
+        'Rush delivery',
+        'Fragile items'
+    ];
+    
+    console.log('Cost Categorization Test Results:');
+    testCases.forEach(testCase => {
+        const category = categorizeCostDescription(testCase);
+        console.log(`"${testCase}" → "${category}"`);
+    });
+}
+
+// Expose functions globally
+window.categorizeCostDescription = categorizeCostDescription;
+window.testCostCategorization = testCostCategorization;
+function testCostCategorization() {
+    const testCases = [
+        'GAS money',
+        'gas for truck', 
+        'FUEL surcharge',
+        'Helper fee',
+        'helper payment',
+        'Toll fees',
+        'SLEX toll',
+        'Special handling',
+        'Parking fee',
+        'Overtime pay',
+        'Rush delivery',
+        'Fragile items'
+    ];
+    
+    console.log('=== COST CATEGORIZATION TEST ===');
+    testCases.forEach(description => {
+        const category = categorizeCostDescription(description);
+        console.log(`"${description}" → ${category}`);
+    });
+}
+
+// Expose enhanced functions globally
+window.categorizeCostDescription = categorizeCostDescription;
+window.testCostCategorization = testCostCategorization;

@@ -277,6 +277,8 @@ function initCalendar() {
     // Set global flag
     window.calendarInitialized = true;
     
+}
+
     // Get current date
     const today = new Date();
     const currentMonth = today.getMonth();
@@ -314,7 +316,6 @@ function initCalendar() {
     }
     
     console.log('Calendar initialized successfully');
-}
 
 // Function to update the main calendar
 function updateCalendar(month, year) {
@@ -338,6 +339,7 @@ function updateCalendar(month, year) {
         dayHeader.textContent = day;
         calendarGrid.appendChild(dayHeader);
     });
+    
     // Get first day of month and number of days
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -1766,30 +1768,13 @@ function addModalCalendarCellEventListeners() {
     console.log('=== FINISHED ADDING MODAL CALENDAR CELL EVENT LISTENERS ===');
 }
 
-// Enhanced updateCalendar function with better error handling and retry logic
+// Modify the updateCalendar function to ensure event listeners are added
 function updateCalendar() {
     console.log('=== UPDATE CALENDAR FUNCTION CALLED ===');
     
-    // Check if booking view is active
-    const bookingView = document.getElementById('bookingView');
-    if (!bookingView || !bookingView.classList.contains('active')) {
-        console.log('Booking view is not active, skipping calendar update');
-        return;
-    }
-    
     const calendarGrid = document.getElementById('calendarGrid');
     if (!calendarGrid) {
-        console.warn('Calendar grid element not found, retrying in 100ms...');
-        // Retry after a short delay to allow DOM to be ready
-        setTimeout(() => {
-            const retryCalendarGrid = document.getElementById('calendarGrid');
-            if (retryCalendarGrid) {
-                console.log('Calendar grid found on retry, updating calendar');
-                updateCalendar();
-            } else {
-                console.error('Calendar grid element still not found after retry');
-            }
-        }, 100);
+        console.error('Calendar grid element not found');
         return;
     }
     
@@ -1856,10 +1841,7 @@ function updateCalendar() {
     // Update month display
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'];
-    const currentMonthElement = document.getElementById('currentMonth');
-    if (currentMonthElement) {
-        currentMonthElement.textContent = `${monthNames[currentMonthIndex]} ${currentYear}`;
-    }
+    document.getElementById('currentMonth').textContent = `${monthNames[currentMonthIndex]} ${currentYear}`;
     
     // Add event listeners to calendar cells
     setTimeout(addCalendarCellEventListeners, 100);
@@ -1952,48 +1934,40 @@ function updateCalendarModal() {
 window.refreshCalendarData = function() {
     console.log('Calendar: Refreshing calendar data...');
     
-    try {
-        // Show loading indicator
-        const calendarGrid = document.getElementById('calendarGrid');
-        console.log('Calendar grid element for refresh:', calendarGrid);
+    // Show loading indicator
+    const calendarGrid = document.getElementById('calendarGrid');
+    console.log('Calendar grid element for refresh:', calendarGrid);
+    if (calendarGrid) {
+        calendarGrid.style.opacity = '0.6';
+        calendarGrid.style.pointerEvents = 'none';
         
-        if (calendarGrid) {
-            calendarGrid.style.opacity = '0.6';
-            calendarGrid.style.pointerEvents = 'none';
-            
-            // Add a subtle loading animation
-            setTimeout(() => {
-                console.log('Updating main calendar');
-                updateCalendar();
-                calendarGrid.style.opacity = '1';
-                calendarGrid.style.pointerEvents = 'auto';
-            }, 200);
-        } else {
-            console.log('Calendar grid not found, updating calendar directly');
+        // Add a subtle loading animation
+        setTimeout(() => {
+            console.log('Updating main calendar');
             updateCalendar();
-        }
-        
-        // Also refresh modal calendar
-        const calendarGridModal = document.getElementById('calendarGridModal');
-        console.log('Modal calendar grid element for refresh:', calendarGridModal);
-        if (calendarGridModal) {
-            calendarGridModal.style.opacity = '0.6';
-            calendarGridModal.style.pointerEvents = 'none';
-            
-            setTimeout(() => {
-                console.log('Updating modal calendar');
-                updateCalendarModal();
-                calendarGridModal.style.opacity = '1';
-                calendarGridModal.style.pointerEvents = 'auto';
-            }, 200);
-        } else {
-            console.log('Modal calendar grid not found, updating modal calendar directly');
-            updateCalendarModal();
-        }
-    } catch (error) {
-        console.error('Error in refreshCalendarData:', error);
-        // Fallback to direct updates
+            calendarGrid.style.opacity = '1';
+            calendarGrid.style.pointerEvents = 'auto';
+        }, 200);
+    } else {
+        console.log('Calendar grid not found, updating calendar directly');
         updateCalendar();
+    }
+    
+    // Also refresh modal calendar
+    const calendarGridModal = document.getElementById('calendarGridModal');
+    console.log('Modal calendar grid element for refresh:', calendarGridModal);
+    if (calendarGridModal) {
+        calendarGridModal.style.opacity = '0.6';
+        calendarGridModal.style.pointerEvents = 'none';
+        
+        setTimeout(() => {
+            console.log('Updating modal calendar');
+            updateCalendarModal();
+            calendarGridModal.style.opacity = '1';
+            calendarGridModal.style.pointerEvents = 'auto';
+        }, 200);
+    } else {
+        console.log('Modal calendar grid not found, updating modal calendar directly');
         updateCalendarModal();
     }
 };
@@ -2209,17 +2183,18 @@ window.testCalendarFull = function() {
             console.error('No calendar cells found');
         }
     }, 500);
-};
 
 // Ensure event listeners are added when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== DOM CONTENT LOADED - ADDING CALENDAR EVENT LISTENERS ===');
     
     // Add event listeners after a delay to ensure DOM is fully ready
-    setTimeout(() => {
+    setTimeout(function() {
         addCalendarCellEventListeners();
         addModalCalendarCellEventListeners();
     }, 500);
     
     console.log('=== DOM CONTENT LOADED - CALENDAR EVENT LISTENERS ADDED ===');
 });
+
+

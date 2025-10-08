@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Daily Analytics Setup</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+        .test-section { background: white; border: 1px solid #ddd; margin: 10px 0; padding: 20px; border-radius: 8px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+        .log { background: #f5f5f5; padding: 15px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; border-radius: 4px; }
+        .chart-container { width: 100%; height: 300px; margin: 20px 0; }
+        .chart-filters { margin: 10px 0; }
+        .chart-filters .btn { margin: 2px; }
+        .chart-filters .btn.active { background: #007bff; color: white; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <h1>📊 Daily Analytics Setup Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="testDailyDataProcessing()" class="btn-primary">Test Daily Data Processing</button>
+        <button onclick="testChartInitialization()" class="btn-success">Test Chart Initialization</button>
+        <button onclick="simulateDailyBookings()" class="btn-warning">Simulate Daily Bookings</button>
+        <button onclick="clearLog()" class="btn btn-secondary">Clear Log</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Bookings Over Time (Daily)</h2>
+        <div class="chart-filters">
+            <button class="btn btn-sm btn-outline-secondary" data-period="month">Month</button>
+            <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
+            <button class="btn btn-sm btn-outline-secondary active" data-period="day">Day</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="testBookingsChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Additional Costs Analysis (Daily)</h2>
+        <div class="chart-filters">
+            <button class="btn btn-sm btn-outline-secondary" data-period="month">Month</button>
+            <button class="btn btn-sm btn-outline-secondary" data-period="week">Week</button>
+            <button class="btn btn-sm btn-outline-secondary active" data-period="day">Day</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="testCostsChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Debug Log</h2>
+        <div id="debugLog" class="log"></div>
+    </div>
+    
+    <script>
+        let debugLog = document.getElementById('debugLog');
+        let testBookingsChart, testCostsChart;
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\\n`;
+            debugLog.textContent += logEntry;
+            console.log(message);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+        
+        function clearLog() {
+            debugLog.textContent = '';
+        }
+        
+        // Mock daily data processing function
+        function processDataByDay(deliveries) {
+            log('=== PROCESSING DATA BY DAY ===');
+            
+            const bookingsByDay = {};
+            const costsByDay = {};
+            
+            deliveries.forEach(delivery => {
+                const date = delivery.deliveryDate || delivery.timestamp;
+                if (date) {
+                    // Format date as "Mon 1/8" for better readability
+                    const dateObj = new Date(date);
+                    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                    const dayKey = `${dayName} ${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                    
+                    bookingsByDay[dayKey] = (bookingsByDay[dayKey] || 0) + 1;
+                    
+                    const cost = typeof delivery.additionalCosts === 'number' ? delivery.additionalCosts : 0;
+                    costsByDay[dayKey] = (costsByDay[dayKey] || 0) + cost;
+                }
+            });
+            
+            // Generate last 7 days for better visualization
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayKey = `${dayName} ${date.getMonth() + 1}/${date.getDate()}`;
+                last7Days.push(dayKey);
+            }
+            
+            log(`Generated last 7 days: ${last7Days.join(', ')}`);
+            
+            // Prepare data for charts using last 7 days
+            const days = last7Days;
+            const bookingValues = days.map(day => bookingsByDay[day] || 0);
+            const costValues = days.map(day => costsByDay[day] || 0);
+            
+            log(`Booking values: [${bookingValues.join(', ')}]`);
+            log(`Cost values: [${costValues.join(', ')}]`);
+            
+            return {
+                bookingsData: {
+                    labels: days,
+                    values: bookingValues
+                },
+                costsData: {
+                    labels: days,
+                    values: costValues
+                }
+            };
+        }
+        
+        function testDailyDataProcessing() {
+            log('=== TESTING DAILY DATA PROCESSING ===');
+            
+            // Create sample delivery data
+            const sampleDeliveries = [
+                {
+                    deliveryDate: new Date().toISOString(),
+                    additionalCosts: 500
+                },
+                {
+                    deliveryDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+                    additionalCosts: 300
+                },
+                {
+                    deliveryDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+                    additionalCosts: 750
+                }
+            ];
+            
+            log(`Created ${sampleDeliveries.length} sample deliveries`);
+            
+            const processedData = processDataByDay(sampleDeliveries);
+            
+            log('✅ Daily data processing completed successfully');
+            return processedData;
+        }
+        
+        function testChartInitialization() {
+            log('=== TESTING CHART INITIALIZATION ===');
+            
+            const processedData = testDailyDataProcessing();
+            
+            // Destroy existing charts
+            if (testBookingsChart) {
+                testBookingsChart.destroy();
+                testBookingsChart = null;
+            }
+            if (testCostsChart) {
+                testCostsChart.destroy();
+                testCostsChart = null;
+            }
+            
+            // Initialize Bookings Chart
+            const bookingsCtx = document.getElementById('testBookingsChart');
+            if (bookingsCtx) {
+                testBookingsChart = new Chart(bookingsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: processedData.bookingsData.labels,
+                        datasets: [{
+                            label: 'Daily Bookings',
+                            data: processedData.bookingsData.values,
+                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Daily Bookings (Last 7 Days)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+                log('✅ Bookings chart initialized successfully');
+            }
+            
+            // Initialize Costs Chart
+            const costsCtx = document.getElementById('testCostsChart');
+            if (costsCtx) {
+                testCostsChart = new Chart(costsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: processedData.costsData.labels,
+                        datasets: [{
+                            label: 'Daily Additional Costs (₱)',
+                            data: processedData.costsData.values,
+                            backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                            borderColor: 'rgba(243, 156, 18, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(243, 156, 18, 1)',
+                            pointRadius: 4,
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Daily Additional Costs (Last 7 Days)'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₱' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                log('✅ Costs chart initialized successfully');
+            }
+            
+            log('✅ Chart initialization completed');
+        }
+        
+        function simulateDailyBookings() {
+            log('=== SIMULATING DAILY BOOKINGS ===');
+            
+            // Create more realistic daily booking data
+            const dailyBookings = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                
+                // Random number of bookings per day (0-5)
+                const bookingCount = Math.floor(Math.random() * 6);
+                
+                for (let j = 0; j < bookingCount; j++) {
+                    dailyBookings.push({
+                        deliveryDate: date.toISOString(),
+                        additionalCosts: Math.floor(Math.random() * 1000) + 100 // ₱100-₱1100
+                    });
+                }
+            }
+            
+            log(`Generated ${dailyBookings.length} bookings across 7 days`);
+            
+            const processedData = processDataByDay(dailyBookings);
+            
+            // Update charts with new data
+            if (testBookingsChart) {
+                testBookingsChart.data.labels = processedData.bookingsData.labels;
+                testBookingsChart.data.datasets[0].data = processedData.bookingsData.values;
+                testBookingsChart.update();
+                log('✅ Bookings chart updated with simulated data');
+            }
+            
+            if (testCostsChart) {
+                testCostsChart.data.labels = processedData.costsData.labels;
+                testCostsChart.data.datasets[0].data = processedData.costsData.values;
+                testCostsChart.update();
+                log('✅ Costs chart updated with simulated data');
+            }
+            
+            log('✅ Daily booking simulation completed');
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            log('📊 Daily Analytics Test Page Loaded');
+            log('Default period set to: DAY');
+            log('Charts will show last 7 days by default');
+            
+            setTimeout(() => {
+                log('🚀 Ready for testing!');
+                testChartInitialization();
+            }, 500);
+        });
+    </script>
+</body>
+</html>"

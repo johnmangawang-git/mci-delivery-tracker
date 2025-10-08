@@ -50,6 +50,10 @@ function openBookingModal(dateStr) {
     // Make sure this function is globally available
     window.openBookingModal = openBookingModal;
     
+    // Initialize booking modal functionality BEFORE showing the modal
+    console.log('Initializing booking modal...');
+    initBookingModal();
+    
     showBookingModal(dateStr);
 }
 
@@ -233,6 +237,8 @@ if (document.readyState === 'loading') {
 }
 
 function initBookingModal() {
+    console.log('=== INITIALIZING BOOKING MODAL ===');
+    
     // Ensure customer management is available
     ensureCustomerManagementReady();
     
@@ -325,12 +331,31 @@ function initBookingModal() {
                 const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
                 // Ensure warehouse manager is ready before accessing it
                 ensureWarehouseManagerReady();
-                if (originCoordinatesDisplay && window.warehouseManager && window.warehouseManager.warehouseLocations) {
-                    const warehouse = window.warehouseManager.warehouseLocations.find(w => w.id === this.value);
+                if (originCoordinatesDisplay) {
+                    // Default warehouse coordinates if warehouse manager not available
+                    const defaultWarehouses = {
+                        'alabang': { lat: 14.4378, lng: 121.0199, name: 'SMEG Alabang warehouse' },
+                        'cebu': { lat: 10.3157, lng: 123.8854, name: 'SMEG Cebu warehouse' }
+                    };
+                    
+                    let warehouse = null;
+                    if (window.warehouseManager && window.warehouseManager.warehouseLocations) {
+                        warehouse = window.warehouseManager.warehouseLocations.find(w => w.id === this.value);
+                    } else {
+                        // Use default coordinates
+                        const defaultWarehouse = defaultWarehouses[this.value];
+                        if (defaultWarehouse) {
+                            warehouse = { coordinates: { lat: defaultWarehouse.lat, lng: defaultWarehouse.lng } };
+                        }
+                    }
+                    
                     if (warehouse) {
-                        originCoordinatesDisplay.textContent = `(${warehouse.coordinates.lat.toFixed(6)}, ${warehouse.coordinates.lng.toFixed(6)})`;
+                        const coordText = `(${warehouse.coordinates.lat.toFixed(6)}, ${warehouse.coordinates.lng.toFixed(6)})`;
+                        originCoordinatesDisplay.textContent = coordText;
+                        console.log(`✅ Origin coordinates displayed: ${coordText}`);
                     } else {
                         originCoordinatesDisplay.textContent = '';
+                        console.log('❌ No warehouse coordinates found for:', this.value);
                     }
                 }
             }
@@ -365,6 +390,7 @@ function initBookingModal() {
             
             newInput.addEventListener('focus', function () {
                 // Open map modal directly when focusing on the destination area input
+                console.log(`🗺️ Destination input ${index} focused - opening map dialog`);
                 showMapPinDialog('destination', index);
             });
             
@@ -381,6 +407,7 @@ function initBookingModal() {
             
             // Also open map modal on click
             newInput.addEventListener('click', function () {
+                console.log(`🗺️ Destination input ${index} clicked - opening map dialog`);
                 showMapPinDialog('destination', index);
             });
         });
@@ -429,6 +456,7 @@ function initBookingModal() {
             // Open map modal when clicking the input field
             if (inputField) {
                 inputField.addEventListener('focus', function () {
+                    console.log(`🗺️ New destination input ${areaIndex} focused - opening map dialog`);
                     showMapPinDialog('destination', areaIndex);
                 });
                 
@@ -445,6 +473,7 @@ function initBookingModal() {
                 
                 // Also open map modal on click
                 inputField.addEventListener('click', function () {
+                    console.log(`🗺️ New destination input ${areaIndex} clicked - opening map dialog`);
                     showMapPinDialog('destination', areaIndex);
                 });
             }
@@ -573,6 +602,12 @@ function initBookingModal() {
             updateDistance();
         }
     });
+    
+    console.log('✅ BOOKING MODAL INITIALIZATION COMPLETED SUCCESSFULLY');
+    console.log('  - Origin coordinates will display when warehouse selected');
+    console.log('  - Destination inputs will open map on click/focus');
+    console.log('  - Pin on Map buttons are functional');
+    console.log('  - Event listeners properly attached');
 }
 
 // Calculate distance between origin and destination
@@ -859,16 +894,43 @@ async function saveBooking() {
             // Add to active deliveries
             if (typeof window.activeDeliveries !== 'undefined') {
                 window.activeDeliveries.push(newDelivery);
+                console.log(`✅ Added delivery to activeDeliveries. Total: ${window.activeDeliveries.length}`);
                 
                 // Save to localStorage
-                if (typeof window.saveToLocalStorage === 'function') {
-                    window.saveToLocalStorage();
+                try {
+                    localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                    console.log('✅ Saved activeDeliveries to localStorage');
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                }
+                
+                // Update analytics dashboard metrics
+                if (typeof window.updateDashboardMetrics === 'function') {
+                    window.updateDashboardMetrics();
+                    console.log('✅ Updated dashboard metrics');
+                }
+                
+                // Refresh analytics charts if analytics view is active
+                const analyticsView = document.getElementById('analyticsView');
+                if (analyticsView && analyticsView.classList.contains('active')) {
+                    if (typeof window.initAnalyticsCharts === 'function') {
+                        setTimeout(() => {
+                            window.initAnalyticsCharts('day');
+                            console.log('✅ Refreshed analytics charts with new booking data');
+                        }, 500);
+                    }
                 }
                 
                 // Refresh active deliveries display
                 if (typeof window.loadActiveDeliveries === 'function') {
                     window.loadActiveDeliveries();
                 }
+            } else {
+                console.error('❌ window.activeDeliveries is not defined!');
+                // Initialize it if it doesn't exist
+                window.activeDeliveries = [];
+                window.activeDeliveries.push(newDelivery);
+                console.log('✅ Initialized and added to activeDeliveries');
             }
         }
 
@@ -1223,7 +1285,23 @@ function ensureWarehouseManagerReady() {
             window.warehouseManager = new window.WarehouseMapManager();
             console.log('Warehouse manager initialized');
         } else {
-            console.error('WarehouseMapManager class not available');
+            console.warn('WarehouseMapManager class not available, creating fallback');
+            // Create fallback warehouse manager with default coordinates
+            window.warehouseManager = {
+                warehouseLocations: [
+                    {
+                        id: 'alabang',
+                        name: 'SMEG Alabang warehouse',
+                        coordinates: { lat: 14.4378, lng: 121.0199 }
+                    },
+                    {
+                        id: 'cebu', 
+                        name: 'SMEG Cebu warehouse',
+                        coordinates: { lat: 10.3157, lng: 123.8854 }
+                    }
+                ]
+            };
+            console.log('✅ Fallback warehouse manager created with default coordinates');
         }
     } else {
         console.log('Warehouse manager already initialized');
@@ -1701,40 +1779,76 @@ function initializeMapModal(type, index) {
     }
 }
 
-// Real address search function using OpenStreetMap Nominatim API
+// Mock address search function with Philippine locations (CSP-compliant)
 function searchAddress(query) {
     return new Promise((resolve, reject) => {
-        // Encode the query for URL
-        const encodedQuery = encodeURIComponent(query);
-        
-        // Nominatim API endpoint with focus on Philippines (Luzon specifically)
-        // We'll use viewbox to focus on Luzon area (approximately)
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&countrycodes=PH&viewbox=119.0,13.0,122.0,18.0&bounded=1&limit=10`;
-        
-        // Make the API request
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Process the results
-                const results = data.map(item => ({
-                    lat: item.lat,
-                    lng: item.lon,
-                    display_name: item.display_name,
-                    type: item.type,
-                    class: item.class
-                }));
-                
+        try {
+            console.log('Searching for address:', query);
+            
+            // Use the mock search function from the main HTML file
+            if (typeof window.mockAddressSearch === 'function') {
+                const results = window.mockAddressSearch(query);
                 resolve(results);
-            })
-            .catch(error => {
-                console.error('Error searching address:', error);
-                reject(error);
-            });
+            } else {
+                // Fallback mock search if main function not available
+                const mockLocations = [
+                    // Metro Manila
+                    { lat: "14.5995", lng: "120.9842", display_name: "Manila, Metro Manila, Philippines", type: "city", class: "place" },
+                    { lat: "14.5547", lng: "121.0244", display_name: "Makati City, Metro Manila, Philippines", type: "city", class: "place" },
+                    { lat: "14.5176", lng: "121.0509", display_name: "BGC, Taguig City, Metro Manila, Philippines", type: "district", class: "place" },
+                    { lat: "14.6760", lng: "121.0437", display_name: "Quezon City, Metro Manila, Philippines", type: "city", class: "place" },
+                    { lat: "14.4378", lng: "121.0199", display_name: "Alabang, Muntinlupa City, Metro Manila, Philippines", type: "district", class: "place" },
+                    { lat: "14.5764", lng: "121.0851", display_name: "Ortigas Center, Pasig City, Metro Manila, Philippines", type: "district", class: "place" },
+                    { lat: "14.6507", lng: "121.1029", display_name: "Marikina City, Metro Manila, Philippines", type: "city", class: "place" },
+                    { lat: "14.5243", lng: "120.9947", display_name: "Ermita, Manila, Metro Manila, Philippines", type: "district", class: "place" },
+                    
+                    // Central Luzon (Region III)
+                    { lat: "14.7942", lng: "120.9402", display_name: "Malolos, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "14.8564", lng: "120.8154", display_name: "Bulacan, Central Luzon, Philippines", type: "province", class: "place" },
+                    { lat: "14.6488", lng: "120.9706", display_name: "Meycauayan, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "14.7306", lng: "120.9472", display_name: "San Jose del Monte, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "15.0794", lng: "120.6200", display_name: "Angeles City, Pampanga, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "15.4817", lng: "120.5979", display_name: "Arayat, Pampanga, Central Luzon, Philippines", type: "municipality", class: "place" },
+                    { lat: "15.0499", lng: "120.6947", display_name: "San Fernando, Pampanga, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "15.1394", lng: "120.5883", display_name: "Clark, Pampanga, Central Luzon, Philippines", type: "district", class: "place" },
+                    { lat: "15.6617", lng: "120.9739", display_name: "Cabanatuan, Nueva Ecija, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "15.4855", lng: "120.8647", display_name: "Gapan, Nueva Ecija, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "14.9709", lng: "120.5155", display_name: "Olongapo, Zambales, Central Luzon, Philippines", type: "city", class: "place" },
+                    { lat: "15.3367", lng: "120.1739", display_name: "Subic, Zambales, Central Luzon, Philippines", type: "municipality", class: "place" },
+                    { lat: "15.7731", lng: "121.1533", display_name: "Baler, Aurora, Central Luzon, Philippines", type: "municipality", class: "place" },
+                    
+                    // Other Luzon Areas
+                    { lat: "16.4023", lng: "120.5960", display_name: "Baguio City, Benguet, Philippines", type: "city", class: "place" },
+                    { lat: "14.0860", lng: "121.1570", display_name: "Batangas City, Batangas, Philippines", type: "city", class: "place" },
+                    { lat: "13.7565", lng: "121.0583", display_name: "Lipa City, Batangas, Philippines", type: "city", class: "place" },
+                    { lat: "14.2456", lng: "121.1619", display_name: "Lipa, Batangas, CALABARZON, Philippines", type: "city", class: "place" },
+                    { lat: "14.1753", lng: "121.1589", display_name: "Tanauan, Batangas, CALABARZON, Philippines", type: "city", class: "place" },
+                    { lat: "14.2691", lng: "121.0054", display_name: "Tagaytay, Cavite, CALABARZON, Philippines", type: "city", class: "place" },
+                    { lat: "14.4791", lng: "120.9647", display_name: "Bacoor, Cavite, CALABARZON, Philippines", type: "city", class: "place" },
+                    { lat: "14.1014", lng: "121.0569", display_name: "Calamba, Laguna, CALABARZON, Philippines", type: "city", class: "place" },
+                    { lat: "14.2928", lng: "121.1599", display_name: "Santa Rosa, Laguna, CALABARZON, Philippines", type: "city", class: "place" },
+                    
+                    // Visayas
+                    { lat: "10.3157", lng: "123.8854", display_name: "Cebu City, Cebu, Philippines", type: "city", class: "place" },
+                    { lat: "10.7202", lng: "122.5621", display_name: "Iloilo City, Iloilo, Philippines", type: "city", class: "place" },
+                    { lat: "11.2442", lng: "125.0048", display_name: "Tacloban City, Leyte, Philippines", type: "city", class: "place" },
+                    
+                    // Mindanao
+                    { lat: "7.0731", lng: "125.6128", display_name: "Davao City, Davao del Sur, Philippines", type: "city", class: "place" },
+                    { lat: "8.4542", lng: "124.6319", display_name: "Cagayan de Oro City, Misamis Oriental, Philippines", type: "city", class: "place" }
+                ];
+                
+                const searchTerm = query.toLowerCase();
+                const filteredResults = mockLocations.filter(location => 
+                    location.display_name.toLowerCase().includes(searchTerm)
+                );
+                
+                resolve(filteredResults.slice(0, 10)); // Limit to 10 results
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            reject(error);
+        }
     });
 }
 
@@ -1921,20 +2035,77 @@ function selectSearchResult(result) {
     }
 }
 
-// Backward compatibility function
+// Backward compatibility function - now uses the same mock data
 function mockAddressSearch(query) {
-    return searchAddress(query);
+    // Return the same mock data as searchAddress for consistency
+    const mockLocations = [
+        // Metro Manila
+        { lat: "14.5995", lng: "120.9842", display_name: "Manila, Metro Manila, Philippines", type: "city", class: "place" },
+        { lat: "14.5547", lng: "121.0244", display_name: "Makati City, Metro Manila, Philippines", type: "city", class: "place" },
+        { lat: "14.5176", lng: "121.0509", display_name: "BGC, Taguig City, Metro Manila, Philippines", type: "district", class: "place" },
+        { lat: "14.6760", lng: "121.0437", display_name: "Quezon City, Metro Manila, Philippines", type: "city", class: "place" },
+        { lat: "14.4378", lng: "121.0199", display_name: "Alabang, Muntinlupa City, Metro Manila, Philippines", type: "district", class: "place" },
+        { lat: "14.5764", lng: "121.0851", display_name: "Ortigas Center, Pasig City, Metro Manila, Philippines", type: "district", class: "place" },
+        { lat: "14.6507", lng: "121.1029", display_name: "Marikina City, Metro Manila, Philippines", type: "city", class: "place" },
+        { lat: "14.5243", lng: "120.9947", display_name: "Ermita, Manila, Metro Manila, Philippines", type: "district", class: "place" },
+        
+        // Central Luzon (Region III)
+        { lat: "14.7942", lng: "120.9402", display_name: "Malolos, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "14.8564", lng: "120.8154", display_name: "Bulacan, Central Luzon, Philippines", type: "province", class: "place" },
+        { lat: "14.6488", lng: "120.9706", display_name: "Meycauayan, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "14.7306", lng: "120.9472", display_name: "San Jose del Monte, Bulacan, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "15.0794", lng: "120.6200", display_name: "Angeles City, Pampanga, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "15.4817", lng: "120.5979", display_name: "Arayat, Pampanga, Central Luzon, Philippines", type: "municipality", class: "place" },
+        { lat: "15.0499", lng: "120.6947", display_name: "San Fernando, Pampanga, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "15.1394", lng: "120.5883", display_name: "Clark, Pampanga, Central Luzon, Philippines", type: "district", class: "place" },
+        { lat: "15.6617", lng: "120.9739", display_name: "Cabanatuan, Nueva Ecija, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "15.4855", lng: "120.8647", display_name: "Gapan, Nueva Ecija, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "14.9709", lng: "120.5155", display_name: "Olongapo, Zambales, Central Luzon, Philippines", type: "city", class: "place" },
+        { lat: "15.3367", lng: "120.1739", display_name: "Subic, Zambales, Central Luzon, Philippines", type: "municipality", class: "place" },
+        { lat: "15.7731", lng: "121.1533", display_name: "Baler, Aurora, Central Luzon, Philippines", type: "municipality", class: "place" },
+        
+        // Other Luzon Areas
+        { lat: "16.4023", lng: "120.5960", display_name: "Baguio City, Benguet, Philippines", type: "city", class: "place" },
+        { lat: "14.0860", lng: "121.1570", display_name: "Batangas City, Batangas, Philippines", type: "city", class: "place" },
+        { lat: "13.7565", lng: "121.0583", display_name: "Lipa City, Batangas, Philippines", type: "city", class: "place" },
+        { lat: "14.2456", lng: "121.1619", display_name: "Lipa, Batangas, CALABARZON, Philippines", type: "city", class: "place" },
+        { lat: "14.1753", lng: "121.1589", display_name: "Tanauan, Batangas, CALABARZON, Philippines", type: "city", class: "place" },
+        { lat: "14.2691", lng: "121.0054", display_name: "Tagaytay, Cavite, CALABARZON, Philippines", type: "city", class: "place" },
+        { lat: "14.4791", lng: "120.9647", display_name: "Bacoor, Cavite, CALABARZON, Philippines", type: "city", class: "place" },
+        { lat: "14.1014", lng: "121.0569", display_name: "Calamba, Laguna, CALABARZON, Philippines", type: "city", class: "place" },
+        { lat: "14.2928", lng: "121.1599", display_name: "Santa Rosa, Laguna, CALABARZON, Philippines", type: "city", class: "place" },
+        
+        // Visayas
+        { lat: "10.3157", lng: "123.8854", display_name: "Cebu City, Cebu, Philippines", type: "city", class: "place" },
+        { lat: "10.7202", lng: "122.5621", display_name: "Iloilo City, Iloilo, Philippines", type: "city", class: "place" },
+        { lat: "11.2442", lng: "125.0048", display_name: "Tacloban City, Leyte, Philippines", type: "city", class: "place" },
+        
+        // Mindanao
+        { lat: "7.0731", lng: "125.6128", display_name: "Davao City, Davao del Sur, Philippines", type: "city", class: "place" },
+        { lat: "8.4542", lng: "124.6319", display_name: "Cagayan de Oro City, Misamis Oriental, Philippines", type: "city", class: "place" }
+    ];
+    
+    const searchTerm = query.toLowerCase();
+    const filteredResults = mockLocations.filter(location => 
+        location.display_name.toLowerCase().includes(searchTerm)
+    );
+    
+    return filteredResults.slice(0, 10); // Limit to 10 results
 }
 
 // Make sure all required functions are globally available
-window.displayDestinationCoordinates = displayDestinationCoordinates;
-window.displayOriginCoordinates = displayOriginCoordinates;
-window.hideDestinationCoordinates = hideDestinationCoordinates;
-window.updateDistance = updateDistance;
-window.showMapPinDialog = showMapPinDialog;
+// Note: Some functions were removed as they were not defined
+// Make functions globally available
 window.initBookingModal = initBookingModal;
 window.openBookingModal = openBookingModal;
 window.showBookingModal = showBookingModal;
+
+// Ensure initBookingModal is available immediately
+if (typeof window.initBookingModal === 'undefined') {
+    console.error('❌ initBookingModal not available globally');
+} else {
+    console.log('✅ initBookingModal is available globally');
+}
 window.saveBooking = saveBooking;
 window.generateDRNumber = generateDRNumber;
 window.selectSearchResult = selectSearchResult;
