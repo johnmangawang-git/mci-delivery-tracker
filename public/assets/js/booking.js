@@ -2106,16 +2106,23 @@ function initDRUpload() {
 // Process DR Excel file
 async function processDRFile(file) {
     try {
-        console.log('Processing DR file:', file.name);
+        console.log('🔄 Processing DR file:', file.name);
         
         const data = await readExcelFile(file);
+        console.log('📊 Raw Excel data received:', data);
+        console.log('📊 Data rows count:', data.length);
+        
         const mappedData = mapDRData(data);
+        console.log('🗺️ Mapped data result:', mappedData);
+        console.log('🗺️ Mapped data count:', mappedData.length);
         
         if (mappedData.length === 0) {
+            console.error('❌ No valid DR data found in the file');
             showError('No valid DR data found in the file');
             return;
         }
         
+        console.log('✅ Setting pendingDRBookings and showing preview');
         pendingDRBookings = mappedData;
         showDRPreview(mappedData);
         
@@ -2153,12 +2160,23 @@ function readExcelFile(file) {
 
 // Map DR data from Excel columns - Complete Version 2 of Manual Booking Process
 function mapDRData(data) {
+    console.log('🗺️ === STARTING mapDRData FUNCTION ===');
     const mappedData = [];
     
     console.log('🔍 DEBUG: mapDRData received data:', data);
     console.log('🔍 DEBUG: Data length:', data.length);
     console.log('🔍 DEBUG: First row (header):', data[0]);
     console.log('🔍 DEBUG: Second row (first data):', data[1]);
+    
+    if (!data || data.length === 0) {
+        console.error('❌ No data received in mapDRData');
+        return mappedData;
+    }
+    
+    if (data.length < 2) {
+        console.error('❌ Data has less than 2 rows (need header + data)');
+        return mappedData;
+    }
     
     // Skip header row (index 0)
     for (let i = 1; i < data.length; i++) {
@@ -2251,23 +2269,44 @@ function mapDRData(data) {
             lastModified: new Date().toISOString()
         };
         
+        console.log(`🗺️ Created booking object for row ${i + 1}:`, booking);
         mappedData.push(booking);
+        console.log(`📝 Added to mappedData. Current count: ${mappedData.length}`);
     }
     
-    console.log(`Mapped ${mappedData.length} valid bookings from ${data.length - 1} rows`);
-    console.log('Sample booking structure:', mappedData[0]);
+    console.log(`🗺️ === MAPDRDATA COMPLETED ===`);
+    console.log(`📊 Mapped ${mappedData.length} valid bookings from ${data.length - 1} rows`);
+    console.log('📋 Sample booking structure:', mappedData[0]);
+    console.log('📋 All mapped bookings:', mappedData);
+    
     return mappedData;
 }
 
 // Show DR preview with enhanced details
 function showDRPreview(bookings) {
+    console.log('🖼️ showDRPreview called with bookings:', bookings);
+    console.log('🖼️ Bookings count:', bookings.length);
+    
+    // Log each booking object in detail
+    bookings.forEach((booking, index) => {
+        console.log(`🖼️ Booking ${index + 1}:`, {
+            drNumber: booking.drNumber,
+            customerName: booking.customerName,
+            vendorNumber: booking.vendorNumber,
+            origin: booking.origin,
+            destination: booking.destination,
+            deliveryDate: booking.deliveryDate,
+            status: booking.status
+        });
+    });
+    
     const drUploadContent = document.getElementById('drUploadContent');
     const drPreviewContent = document.getElementById('drPreviewContent');
     const drPreviewTableBody = document.getElementById('drPreviewTableBody');
     const drPreviewSummary = document.getElementById('drPreviewSummary');
     
     if (!drUploadContent || !drPreviewContent || !drPreviewTableBody || !drPreviewSummary) {
-        console.error('DR preview elements not found');
+        console.error('❌ DR preview elements not found');
         return;
     }
     
@@ -2278,18 +2317,22 @@ function showDRPreview(bookings) {
     // Populate preview table with enhanced details
     drPreviewTableBody.innerHTML = '';
     
-    bookings.forEach(booking => {
+    bookings.forEach((booking, index) => {
+        console.log(`🖼️ Creating preview row ${index + 1} for:`, booking);
+        
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td><strong>${booking.drNumber}</strong></td>
-            <td>${booking.customerName}</td>
+            <td><strong>${booking.drNumber || 'MISSING DR'}</strong></td>
+            <td>${booking.customerName || 'MISSING CUSTOMER'}</td>
             <td>${booking.vendorNumber || 'N/A'}</td>
-            <td><span class="badge bg-info">${booking.origin}</span></td>
-            <td>${booking.destination}</td>
-            <td><span class="badge bg-secondary">${booking.deliveryDate}</span></td>
+            <td><span class="badge bg-info">${booking.origin || 'MISSING ORIGIN'}</span></td>
+            <td>${booking.destination || 'MISSING DESTINATION'}</td>
+            <td><span class="badge bg-secondary">${booking.deliveryDate || 'MISSING DATE'}</span></td>
             <td><span class="badge bg-warning">Ready to Create</span></td>
         `;
         drPreviewTableBody.appendChild(row);
+        
+        console.log(`✅ Preview row ${index + 1} created successfully`);
     });
     
     // Update summary
