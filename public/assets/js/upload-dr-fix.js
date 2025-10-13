@@ -297,6 +297,28 @@ function showDataPreview(data) {
     console.log('📊 Sample data:', data[0]);
     console.log('📊 Available columns:', data.length > 0 ? Object.keys(data[0]) : []);
     
+    // EMERGENCY DEBUG: Show raw data in alert
+    if (data.length === 0) {
+        alert('DEBUG: No data found in Excel file. The file might be empty or in an unsupported format.');
+        return;
+    }
+    
+    // Show first row data for debugging
+    const firstRow = data[0];
+    const debugInfo = `
+DEBUG INFO:
+- Total rows: ${data.length}
+- First row keys: ${Object.keys(firstRow).join(', ')}
+- First row values: ${Object.values(firstRow).join(', ')}
+- Sample data: ${JSON.stringify(firstRow, null, 2)}
+    `;
+    console.log(debugInfo);
+    
+    // Show debug alert
+    if (confirm('DEBUG: Data was read successfully. Click OK to see debug info, Cancel to continue.')) {
+        alert(debugInfo);
+    }
+    
     // Hide upload content and show preview
     const uploadContent = document.getElementById('drUploadContent');
     const previewContent = document.getElementById('drPreviewContent');
@@ -312,9 +334,17 @@ function showDataPreview(data) {
     
     // Populate preview table
     const previewTable = document.getElementById('drPreviewTable');
+    console.log('🔍 Preview table element:', previewTable);
+    
     if (previewTable) {
         console.log('📋 Populating preview table...');
         previewTable.innerHTML = '';
+        
+        // Add a test row first
+        const testRow = document.createElement('tr');
+        testRow.innerHTML = '<td colspan="5" style="background: yellow; color: black;">TEST: If you see this, the table is working</td>';
+        previewTable.appendChild(testRow);
+        console.log('✅ Test row added');
         
         // Show first 5 rows as preview
         const previewData = data.slice(0, 5);
@@ -546,3 +576,30 @@ function fixModalButtons() {
 setTimeout(initCompleteUploadWorkflow, 1000);
 setTimeout(initCompleteUploadWorkflow, 3000);
 setTimeout(initCompleteUploadWorkflow, 5000);
+// EMERGE
+NCY TEST FUNCTION - Call this from console to test preview
+window.testPreview = function() {
+    console.log('🧪 Testing preview with sample data...');
+    
+    const sampleData = [
+        {
+            'DR Number': 'DR-001',
+            'Customer': 'Test Customer 1',
+            'Origin': 'Manila',
+            'Destination': 'Cebu'
+        },
+        {
+            'DR Number': 'DR-002', 
+            'Customer': 'Test Customer 2',
+            'Origin': 'Quezon City',
+            'Destination': 'Davao'
+        }
+    ];
+    
+    showDataPreview(sampleData);
+};
+
+// Auto-run test after 3 seconds
+setTimeout(() => {
+    console.log('🧪 Auto-test available. Type "testPreview()" in console to test preview functionality.');
+}, 3000);
