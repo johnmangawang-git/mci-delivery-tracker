@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Fix</title>
+    <!-- Bootstrap 5.3.0 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Verify Active Deliveries Fix</h1>
+        <div class="row">
+            <div class="col-md-6">
+                <button class="btn btn-primary" onclick="addTestData()">Add Test Delivery</button>
+                <button class="btn btn-secondary" onclick="loadActiveDeliveries()">Load Active Deliveries</button>
+                <button class="btn btn-info" onclick="showLocalStorage()">Show LocalStorage</button>
+                <button class="btn btn-danger" onclick="clearLocalStorage()">Clear LocalStorage</button>
+            </div>
+            <div class="col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="autoLoad" checked>
+                    <label class="form-check-label" for="autoLoad">
+                        Auto-load deliveries on page load
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title">Active Deliveries Table</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAllActive"></th>
+                                <th>DR Number</th>
+                                <th>Customer Name</th>
+                                <th>Customer Number</th>
+                                <th>Origin</th>
+                                <th>Destination</th>
+                                <th>Distance</th>
+                                <th>Truck</th>
+                                <th>Status</th>
+                                <th>Booked Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeDeliveriesTableBody">
+                            <!-- Dynamic content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div id="output" class="mt-3"></div>
+    </div>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Load the app.js file -->
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/dataService.js"></script>
+    
+    <script>
+        // Initialize global variables if they don't exist
+        if (typeof window.activeDeliveries === 'undefined') {
+            window.activeDeliveries = [];
+        }
+        
+        if (typeof window.deliveryHistory === 'undefined') {
+            window.deliveryHistory = [];
+        }
+        
+        function addTestData() {
+            const testDelivery = {
+                id: 'DEL-' + Date.now(),
+                drNumber: 'DR-' + Math.floor(Math.random() * 9000 + 1000),
+                customerName: 'Test Customer',
+                customerNumber: '+639123456789',
+                origin: 'Alabang Warehouse',
+                destination: 'Makati City',
+                distance: '12.5 km',
+                truckType: 'L300',
+                truckPlateNumber: 'ABC-1234',
+                status: 'On Schedule',
+                deliveryDate: new Date().toISOString().split('T')[0],
+                additionalCosts: 0,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Add to active deliveries
+            window.activeDeliveries.push(testDelivery);
+            
+            // Save to localStorage with correct key
+            try {
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                document.getElementById('output').innerHTML = '<div class="alert alert-success">Test delivery added and saved to localStorage</div>';
+                console.log('Test delivery added:', testDelivery);
+                
+                // Reload the display
+                loadActiveDeliveries();
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<div class="alert alert-danger">Error saving to localStorage: ' + error.message + '</div>';
+                console.error('Error saving to localStorage:', error);
+            }
+        }
+        
+        function loadActiveDeliveries() {
+            console.log('Loading active deliveries...');
+            
+            // Try to load from localStorage with correct key
+            try {
+                const savedActive = localStorage.getItem('mci-active-deliveries');
+                if (savedActive) {
+                    window.activeDeliveries = JSON.parse(savedActive);
+                    console.log('Active deliveries loaded from localStorage:', window.activeDeliveries.length);
+                }
+                
+                const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
+                if (!activeDeliveriesTableBody) {
+                    console.error('Active deliveries table body not found');
+                    document.getElementById('output').innerHTML = '<div class="alert alert-danger">Active deliveries table body not found</div>';
+                    return;
+                }
+                
+                // Display deliveries
+                if (window.activeDeliveries.length === 0) {
+                    activeDeliveriesTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.3;"></i>
+                                <h4 class="mt-3">No active deliveries found</h4>
+                                <p class="text-muted">All deliveries are completed or there are no deliveries yet</p>
+                            </td>
+                        </tr>
+                    `;
+                    document.getElementById('output').innerHTML = '<div class="alert alert-info">No active deliveries found</div>';
+                    return;
+                }
+                
+                // Generate table rows
+                activeDeliveriesTableBody.innerHTML = window.activeDeliveries.map(delivery => {
+                    return `
+                        <tr data-delivery-id="${delivery.id}">
+                            <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
+                            <td><strong>${delivery.drNumber}</strong></td>
+                            <td>${delivery.customerName}</td>
+                            <td>${delivery.customerNumber}</td>
+                            <td>${delivery.origin}</td>
+                            <td>${delivery.destination}</td>
+                            <td>${delivery.distance}</td>
+                            <td>${delivery.truckPlateNumber}</td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> ${delivery.status}
+                                </span>
+                            </td>
+                            <td>${delivery.deliveryDate || delivery.timestamp || 'N/A'}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                document.getElementById('output').innerHTML = '<div class="alert alert-success">Loaded ' + window.activeDeliveries.length + ' active deliveries</div>';
+                console.log('Active deliveries displayed successfully');
+            } catch (error) {
+                console.error('Error loading active deliveries:', error);
+                document.getElementById('output').innerHTML = '<div class="alert alert-danger">Error loading active deliveries: ' + error.message + '</div>';
+            }
+        }
+        
+        function showLocalStorage() {
+            try {
+                const activeDeliveries = localStorage.getItem('mci-active-deliveries');
+                const deliveryHistory = localStorage.getItem('mci-deliveryHistory');
+                
+                let output = '<h4>LocalStorage Contents:</h4>';
+                
+                if (activeDeliveries) {
+                    const parsed = JSON.parse(activeDeliveries);
+                    output += '<h5>Active Deliveries (' + parsed.length + '):</h5>';
+                    output += '<pre>' + JSON.stringify(parsed, null, 2) + '</pre>';
+                } else {
+                    output += '<p>No active deliveries in localStorage</p>';
+                }
+                
+                if (deliveryHistory) {
+                    const parsed = JSON.parse(deliveryHistory);
+                    output += '<h5>Delivery History (' + parsed.length + '):</h5>';
+                    output += '<pre>' + JSON.stringify(parsed, null, 2) + '</pre>';
+                } else {
+                    output += '<p>No delivery history in localStorage</p>';
+                }
+                
+                document.getElementById('output').innerHTML = output;
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<div class="alert alert-danger">Error reading localStorage: ' + error.message + '</div>';
+            }
+        }
+        
+        function clearLocalStorage() {
+            try {
+                localStorage.removeItem('mci-active-deliveries');
+                localStorage.removeItem('mci-deliveryHistory');
+                window.activeDeliveries = [];
+                document.getElementById('output').innerHTML = '<div class="alert alert-info">LocalStorage cleared</div>';
+                
+                // Reload the display
+                loadActiveDeliveries();
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<div class="alert alert-danger">Error clearing localStorage: ' + error.message + '</div>';
+            }
+        }
+        
+        // Auto-load deliveries on page load if checkbox is checked
+        window.onload = function() {
+            if (document.getElementById('autoLoad').checked) {
+                loadActiveDeliveries();
+            }
+        };
+    </script>
+</body>
+</html>
