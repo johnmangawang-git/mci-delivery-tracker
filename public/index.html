@@ -195,6 +195,48 @@
             }
         };
         
+        // Backup function to fix buttons after modal is shown
+        window.fixModalButtons = function() {
+            console.log('🔧 BACKUP: Fixing modal buttons...');
+            
+            const selectBtn = document.getElementById('selectDrFileBtn');
+            const fileInput = document.getElementById('drFileInput');
+            
+            if (selectBtn && !selectBtn.hasAttribute('data-fixed')) {
+                console.log('🔧 BACKUP: Adding event listener to select button');
+                
+                selectBtn.addEventListener('click', function(e) {
+                    console.log('🚀 BACKUP: Select button clicked via event listener');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (fileInput) {
+                        fileInput.click();
+                        console.log('✅ BACKUP: File input triggered');
+                    } else {
+                        console.error('❌ BACKUP: File input not found');
+                    }
+                });
+                
+                selectBtn.setAttribute('data-fixed', 'true');
+                console.log('✅ BACKUP: Select button fixed');
+            }
+            
+            if (fileInput && !fileInput.hasAttribute('data-fixed')) {
+                console.log('🔧 BACKUP: Adding event listener to file input');
+                
+                fileInput.addEventListener('change', function(e) {
+                    console.log('📁 BACKUP: File input changed via event listener');
+                    if (e.target.files[0]) {
+                        handleFileSelection(e.target.files[0]);
+                    }
+                });
+                
+                fileInput.setAttribute('data-fixed', 'true');
+                console.log('✅ BACKUP: File input fixed');
+            }
+        };
+        
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 const btn = document.getElementById('uploadDrFileBtn');
@@ -204,10 +246,20 @@
                         const modal = document.getElementById('drUploadModal');
                         if (modal) {
                             if (typeof bootstrap !== 'undefined') {
-                                new bootstrap.Modal(modal).show();
+                                const bsModal = new bootstrap.Modal(modal);
+                                bsModal.show();
+                                
+                                // Fix buttons after modal is shown
+                                modal.addEventListener('shown.bs.modal', function() {
+                                    console.log('🔧 Modal shown, fixing buttons...');
+                                    setTimeout(fixModalButtons, 100);
+                                }, { once: true });
                             } else {
                                 modal.style.display = 'block';
                                 modal.classList.add('show');
+                                
+                                // Fix buttons after manual modal show
+                                setTimeout(fixModalButtons, 100);
                             }
                         } else {
                             alert('Please select an Excel file to upload');
@@ -1919,10 +1971,58 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg" id="selectDrFileBtn" onclick="document.getElementById('drFileInput').click(); console.log('Direct onclick: File input triggered');">
+                            <button class="btn btn-primary btn-lg" id="selectDrFileBtn" 
+                                onclick="
+                                    console.log('🚀 DIRECT: Select Excel File clicked');
+                                    try {
+                                        const fileInput = document.getElementById('drFileInput');
+                                        if (fileInput) {
+                                            fileInput.click();
+                                            console.log('✅ DIRECT: File input triggered');
+                                        } else {
+                                            console.error('❌ DIRECT: File input not found');
+                                            const tempInput = document.createElement('input');
+                                            tempInput.type = 'file';
+                                            tempInput.accept = '.xlsx,.xls';
+                                            tempInput.onchange = function(e) {
+                                                if (e.target.files[0]) {
+                                                    console.log('📁 TEMP: File selected:', e.target.files[0].name);
+                                                    if (typeof handleFileSelection === 'function') {
+                                                        handleFileSelection(e.target.files[0]);
+                                                    } else {
+                                                        alert('File selected: ' + e.target.files[0].name);
+                                                    }
+                                                }
+                                            };
+                                            tempInput.click();
+                                            console.log('✅ DIRECT: Temporary file input created and triggered');
+                                        }
+                                    } catch (error) {
+                                        console.error('❌ DIRECT: Error in onclick:', error);
+                                        alert('Error opening file picker: ' + error.message);
+                                    }
+                                ">
                                 <i class="bi bi-file-earmark-plus"></i> Select Excel File
                             </button>
-                            <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelection(this.files[0]); console.log('File selected:', this.files[0]?.name);">
+                            <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;" 
+                                onchange="
+                                    console.log('📁 DIRECT: File input changed');
+                                    if (this.files[0]) {
+                                        console.log('📁 DIRECT: File selected:', this.files[0].name);
+                                        try {
+                                            if (typeof handleFileSelection === 'function') {
+                                                handleFileSelection(this.files[0]);
+                                            } else if (typeof window.processSelectedFile === 'function') {
+                                                window.processSelectedFile(this.files[0]);
+                                            } else {
+                                                alert('File selected: ' + this.files[0].name + '\\nProcessing function not available.');
+                                            }
+                                        } catch (error) {
+                                            console.error('❌ DIRECT: Error processing file:', error);
+                                            alert('Error processing file: ' + error.message);
+                                        }
+                                    }
+                                ">
                         </div>
                         
                         <div class="mt-4">
