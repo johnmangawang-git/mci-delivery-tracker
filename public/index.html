@@ -220,12 +220,16 @@
                                 return;
                             }
                             
-                            // Show simple preview
-                            alert('SUCCESS!\\n\\nFile processed: ' + file.name + '\\nRows found: ' + jsonData.length + '\\nSample data: ' + JSON.stringify(jsonData[0], null, 2));
+                            // Show preview window instead of alert
+                            console.log('📋 INLINE: Showing data preview...');
                             
                             // Try to show preview if function exists
                             if (typeof window.showDataPreview === 'function') {
+                                console.log('✅ INLINE: Using showDataPreview function');
                                 window.showDataPreview(jsonData);
+                            } else {
+                                console.log('⚠️ INLINE: showDataPreview not available, creating inline preview');
+                                showInlinePreview(jsonData, file.name);
                             }
                             
                         } catch (error) {
@@ -245,6 +249,208 @@
                     console.error('❌ INLINE: Error in backup processing:', error);
                     alert('Error in backup processing: ' + error.message);
                 }
+            }
+        };
+        
+        // Inline preview function
+        window.showInlinePreview = function(data, filename) {
+            console.log('📋 INLINE PREVIEW: Creating preview for', data.length, 'records');
+            
+            // Hide upload content and show preview
+            const uploadContent = document.getElementById('drUploadContent');
+            const previewContent = document.getElementById('drPreviewContent');
+            
+            if (uploadContent) {
+                uploadContent.style.display = 'none';
+                console.log('✅ INLINE PREVIEW: Upload content hidden');
+            }
+            
+            if (previewContent) {
+                previewContent.style.display = 'block';
+                console.log('✅ INLINE PREVIEW: Preview content shown');
+                
+                // Populate preview table
+                const previewTable = document.getElementById('drPreviewTable');
+                if (previewTable) {
+                    console.log('📋 INLINE PREVIEW: Populating table...');
+                    previewTable.innerHTML = '';
+                    
+                    // Helper function to get column value with multiple possible names
+                    const getColumnValue = (row, possibleNames) => {
+                        for (const name of possibleNames) {
+                            if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+                                return row[name];
+                            }
+                        }
+                        return 'N/A';
+                    };
+                    
+                    // Show first 10 rows as preview
+                    const previewData = data.slice(0, 10);
+                    
+                    previewData.forEach((row, index) => {
+                        const tr = document.createElement('tr');
+                        
+                        const drNumber = getColumnValue(row, [
+                            'DR Number', 'dr_number', 'DR_Number', 'drNumber', 'DR', 'dr',
+                            'Delivery Receipt', 'Receipt Number', 'Document Number'
+                        ]);
+                        
+                        const customer = getColumnValue(row, [
+                            'Customer', 'customer_name', 'Customer Name', 'Client', 'client_name',
+                            'Company', 'Customer Company', 'Consignee'
+                        ]);
+                        
+                        const origin = getColumnValue(row, [
+                            'Origin', 'origin', 'From', 'Source', 'Pickup', 'Start',
+                            'Origin Address', 'Pickup Location'
+                        ]);
+                        
+                        const destination = getColumnValue(row, [
+                            'Destination', 'destination', 'To', 'Delivery', 'End', 'Drop',
+                            'Destination Address', 'Delivery Location', 'Drop Location'
+                        ]);
+                        
+                        tr.innerHTML = `
+                            <td>${drNumber}</td>
+                            <td>${customer}</td>
+                            <td>${origin}</td>
+                            <td>${destination}</td>
+                            <td>Active</td>
+                        `;
+                        previewTable.appendChild(tr);
+                        
+                        console.log(`✅ INLINE PREVIEW: Added row ${index + 1}: ${drNumber}`);
+                    });
+                    
+                    console.log('✅ INLINE PREVIEW: Table populated with', previewData.length, 'rows');
+                    
+                    // Add summary info
+                    const summaryDiv = document.createElement('div');
+                    summaryDiv.className = 'alert alert-success mt-3';
+                    summaryDiv.innerHTML = `
+                        <h6><i class="bi bi-check-circle"></i> File Processed Successfully!</h6>
+                        <strong>File:</strong> ${filename}<br>
+                        <strong>Total Records:</strong> ${data.length}<br>
+                        <strong>Preview:</strong> Showing first ${Math.min(10, data.length)} records<br>
+                        <strong>Available Columns:</strong> ${Object.keys(data[0] || {}).join(', ')}
+                    `;
+                    
+                    // Remove existing summary
+                    const existingSummary = previewContent.querySelector('.alert-success');
+                    if (existingSummary) existingSummary.remove();
+                    
+                    previewContent.appendChild(summaryDiv);
+                    
+                    // Store data for confirmation
+                    window.pendingDRData = data;
+                    console.log('💾 INLINE PREVIEW: Data stored for confirmation');
+                    
+                    // Enable confirm button
+                    const confirmBtn = document.getElementById('confirmDrUploadBtn');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.onclick = function() {
+                            console.log('🚀 INLINE: Confirm button clicked');
+                            if (window.pendingDRData) {
+                                processInlineUpload(window.pendingDRData);
+                            }
+                        };
+                        console.log('✅ INLINE PREVIEW: Confirm button enabled');
+                    }
+                    
+                } else {
+                    console.error('❌ INLINE PREVIEW: Preview table not found');
+                    alert('Preview table not found. Data processed successfully but cannot show preview.');
+                }
+            } else {
+                console.error('❌ INLINE PREVIEW: Preview content not found');
+                alert('Preview area not found. Data processed successfully:\\n\\nFile: ' + filename + '\\nRecords: ' + data.length);
+            }
+        };
+        
+        // Inline upload processing function
+        window.processInlineUpload = function(data) {
+            console.log('⚡ INLINE UPLOAD: Processing', data.length, 'records for upload');
+            
+            try {
+                // Convert data to delivery format
+                const deliveries = data.map((row, index) => {
+                    const getColumnValue = (possibleNames) => {
+                        for (const name of possibleNames) {
+                            if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+                                return row[name];
+                            }
+                        }
+                        return '';
+                    };
+                    
+                    return {
+                        id: 'DEL-' + Date.now() + '-' + index,
+                        dr_number: getColumnValue(['DR Number', 'dr_number', 'DR_Number', 'drNumber', 'DR']) || 'DR-' + Date.now() + '-' + index,
+                        customer_name: getColumnValue(['Customer', 'customer_name', 'Customer Name', 'Client']) || 'Unknown Customer',
+                        vendor_number: getColumnValue(['Vendor', 'vendor_number', 'Vendor Number']) || '',
+                        origin: getColumnValue(['Origin', 'origin', 'From', 'Source']) || '',
+                        destination: getColumnValue(['Destination', 'destination', 'To', 'Delivery']) || '',
+                        truck_type: getColumnValue(['Truck Type', 'truck_type']) || '',
+                        truck_plate_number: getColumnValue(['Truck Plate', 'truck_plate', 'Plate Number']) || '',
+                        status: 'Active',
+                        created_date: new Date().toLocaleDateString(),
+                        created_by: 'Excel Upload',
+                        created_at: new Date().toISOString()
+                    };
+                });
+                
+                console.log('✅ INLINE UPLOAD: Data converted to delivery format');
+                
+                // Save deliveries
+                let savedCount = 0;
+                const savePromises = deliveries.map(async (delivery) => {
+                    try {
+                        if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
+                            await window.dataService.saveDelivery(delivery);
+                            console.log('✅ INLINE UPLOAD: Saved to Supabase:', delivery.dr_number);
+                        } else {
+                            // Fallback to localStorage
+                            window.activeDeliveries = window.activeDeliveries || [];
+                            window.activeDeliveries.push(delivery);
+                            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                            console.log('✅ INLINE UPLOAD: Saved to localStorage:', delivery.dr_number);
+                        }
+                        savedCount++;
+                    } catch (error) {
+                        console.error('❌ INLINE UPLOAD: Error saving:', delivery.dr_number, error);
+                    }
+                });
+                
+                Promise.all(savePromises).then(() => {
+                    console.log(`🎉 INLINE UPLOAD: Complete! ${savedCount}/${deliveries.length} deliveries saved`);
+                    
+                    // Close modal
+                    const modal = document.getElementById('drUploadModal');
+                    if (modal) {
+                        if (typeof bootstrap !== 'undefined') {
+                            const bsModal = bootstrap.Modal.getInstance(modal);
+                            if (bsModal) bsModal.hide();
+                        } else {
+                            modal.style.display = 'none';
+                            modal.classList.remove('show');
+                            document.body.classList.remove('modal-open');
+                        }
+                    }
+                    
+                    // Show success message
+                    alert(`🎉 Upload Successful!\\n\\nSaved ${savedCount} deliveries to the system.\\n\\nThe page will refresh to show your new data.`);
+                    
+                    // Refresh the page to show new data
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                });
+                
+            } catch (error) {
+                console.error('❌ INLINE UPLOAD: Error processing upload:', error);
+                alert('Error processing upload: ' + error.message);
             }
         };
         
