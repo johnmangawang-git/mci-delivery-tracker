@@ -2005,7 +2005,7 @@ let pendingDRBookings = [];
 
 // Initialize DR upload functionality
 function initDRUpload() {
-    console.log('Initializing DR upload functionality...');
+    console.log('🔧 Initializing DR upload functionality...');
     
     const uploadDrFileBtn = document.getElementById('uploadDrFileBtn');
     const drFileInput = document.getElementById('drFileInput');
@@ -2015,11 +2015,30 @@ function initDRUpload() {
     const addDrCostBtn = document.getElementById('addDrCostBtn');
     const previewDrSummaryBtn = document.getElementById('previewDrSummaryBtn');
     
+    console.log('🔍 Button elements found:', {
+        uploadDrFileBtn: !!uploadDrFileBtn,
+        drFileInput: !!drFileInput,
+        selectDrFileBtn: !!selectDrFileBtn,
+        confirmDrUploadBtn: !!confirmDrUploadBtn
+    });
+    
     if (uploadDrFileBtn) {
-        uploadDrFileBtn.addEventListener('click', function() {
-            const drUploadModal = new bootstrap.Modal(document.getElementById('drUploadModal'));
-            drUploadModal.show();
+        console.log('✅ Adding click listener to Upload DR File button');
+        uploadDrFileBtn.addEventListener('click', function(e) {
+            console.log('🎯 Upload DR File button clicked!');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            try {
+                const drUploadModal = new bootstrap.Modal(document.getElementById('drUploadModal'));
+                drUploadModal.show();
+                console.log('✅ DR Upload modal opened successfully');
+            } catch (error) {
+                console.error('❌ Error opening DR upload modal:', error);
+            }
         });
+    } else {
+        console.error('❌ Upload DR File button not found!');
     }
     
     if (selectDrFileBtn) {
@@ -2445,9 +2464,43 @@ function generateBookingId() {
     return `DR_${timestamp}_${random}`;
 }
 
-// Initialize DR upload when DOM is ready
+// Initialize DR upload when DOM is ready - Enhanced version
 document.addEventListener('DOMContentLoaded', function() {
-    initDRUpload();
+    console.log('DOM loaded, initializing DR upload...');
+    
+    // Wait a bit for all scripts to load
+    setTimeout(() => {
+        initDRUpload();
+        
+        // Double-check the button exists and add backup event listener
+        const uploadBtn = document.getElementById('uploadDrFileBtn');
+        if (uploadBtn) {
+            console.log('✅ Upload DR File button found');
+            
+            // Remove any existing listeners and add fresh one
+            const newBtn = uploadBtn.cloneNode(true);
+            uploadBtn.parentNode.replaceChild(newBtn, uploadBtn);
+            
+            newBtn.addEventListener('click', function(e) {
+                console.log('Upload DR File button clicked!');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                try {
+                    const drUploadModal = new bootstrap.Modal(document.getElementById('drUploadModal'));
+                    drUploadModal.show();
+                    console.log('✅ DR Upload modal should be showing');
+                } catch (error) {
+                    console.error('❌ Error showing DR upload modal:', error);
+                    alert('Error opening upload dialog. Please refresh the page and try again.');
+                }
+            });
+            
+            console.log('✅ DR upload button event listener added');
+        } else {
+            console.error('❌ Upload DR File button not found!');
+        }
+    }, 1000);
 });
 
 // Make functions globally available
@@ -3042,3 +3095,61 @@ window.validateBookingJsSyntax = validateBookingJsSyntax;
 
 // Auto-run validation
 validateBookingJsSyntax();
+
+// EMERGENCY FIX: Ensure Upload DR File button works on live site
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚨 Emergency DR Upload button fix loading...');
+    
+    function fixUploadButton() {
+        const uploadBtn = document.getElementById('uploadDrFileBtn');
+        if (uploadBtn) {
+            console.log('✅ Found Upload DR File button, adding emergency event listener');
+            
+            // Remove existing listeners
+            uploadBtn.replaceWith(uploadBtn.cloneNode(true));
+            const newBtn = document.getElementById('uploadDrFileBtn');
+            
+            newBtn.addEventListener('click', function(e) {
+                console.log('🚀 EMERGENCY: Upload DR File button clicked!');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                try {
+                    const modalElement = document.getElementById('drUploadModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                        console.log('✅ EMERGENCY: DR Upload modal opened');
+                    } else {
+                        console.error('❌ EMERGENCY: Modal element not found');
+                        alert('Upload dialog not available. Please refresh the page.');
+                    }
+                } catch (error) {
+                    console.error('❌ EMERGENCY: Error opening modal:', error);
+                    alert('Error opening upload dialog: ' + error.message);
+                }
+            });
+            
+            console.log('✅ EMERGENCY: Upload button fixed');
+            return true;
+        }
+        return false;
+    }
+    
+    // Try immediately
+    if (!fixUploadButton()) {
+        // Retry every 1 second for 10 seconds
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            console.log(`🔄 EMERGENCY: Retry ${attempts}/10 for Upload button`);
+            
+            if (fixUploadButton() || attempts >= 10) {
+                clearInterval(interval);
+                if (attempts >= 10) {
+                    console.error('❌ EMERGENCY: Failed to fix Upload button after 10 attempts');
+                }
+            }
+        }, 1000);
+    }
+});
