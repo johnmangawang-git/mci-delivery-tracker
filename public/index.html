@@ -273,7 +273,7 @@
                 console.log('✅ INLINE PREVIEW: Preview content shown');
                 
                 // Populate preview table
-                const previewTable = document.getElementById('drPreviewTable');
+                const previewTable = document.getElementById('drPreviewTableBody');
                 if (previewTable) {
                     console.log('📋 INLINE PREVIEW: Populating table...');
                     previewTable.innerHTML = '';
@@ -2360,11 +2360,11 @@
                                     <i class="bi bi-plus"></i> Add Cost
                                 </button>
                             </div>
-                            <div id="drCostItems">
-                                <!-- Cost items will be added here -->
+                            <div id="drAdditionalCostsContainer">
+                                <!-- Cost items will be added here by resetDRConfiguration -->
                             </div>
                             <div class="mt-2">
-                                <strong>Total Additional Cost: ₱<span id="drTotalCost">0.00</span></strong>
+                                <strong>Total Additional Cost: ₱<span id="drTotalAdditionalCost">0.00</span></strong>
                             </div>
                         </div>
                         
@@ -2374,16 +2374,23 @@
                                 <thead>
                                     <tr>
                                         <th>DR Number</th>
-                                        <th>Customer</th>
+                                        <th>Customer Name</th>
+                                        <th>Vendor Number</th>
                                         <th>Origin</th>
                                         <th>Destination</th>
+                                        <th>Delivery Date</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="drPreviewTable">
+                                <tbody id="drPreviewTableBody">
                                     <!-- Preview data will be populated here -->
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Preview Summary -->
+                        <div class="alert alert-info">
+                            <strong>Summary:</strong> <span id="drPreviewSummary">No data loaded</span>
                         </div>
                         
                         <div class="d-flex gap-2 mt-3">
