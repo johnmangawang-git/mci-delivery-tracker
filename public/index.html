@@ -172,6 +172,39 @@
     <!-- GitHub Pages compatibility fix - ensures data persistence works -->
     <script src="assets/js/github-pages-fix.js"></script>
     
+    <!-- Direct fix for Upload DR File button -->
+    <script src="assets/js/upload-dr-fix.js"></script>
+    
+    <!-- INLINE BACKUP: Upload DR File button fix -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                const btn = document.getElementById('uploadDrFileBtn');
+                if (btn) {
+                    btn.onclick = function() {
+                        console.log('INLINE: Upload button clicked');
+                        const modal = document.getElementById('drUploadModal');
+                        if (modal) {
+                            if (typeof bootstrap !== 'undefined') {
+                                new bootstrap.Modal(modal).show();
+                            } else {
+                                modal.style.display = 'block';
+                                modal.classList.add('show');
+                            }
+                        } else {
+                            alert('Please select an Excel file to upload');
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = '.xlsx,.xls';
+                            input.click();
+                        }
+                    };
+                    console.log('INLINE: Upload button fixed');
+                }
+            }, 1000);
+        });
+    </script>
+    
     <!-- Emergency fix for disappearing bookings -->
     <script>
         console.log('🚨 Emergency booking fix loading...');
