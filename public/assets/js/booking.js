@@ -2205,24 +2205,39 @@ function mapDRData(data) {
         if (i <= 3) {
             console.log('🚨 EMERGENCY DEBUG Row', i);
             console.log('  Row length:', row.length);
+            console.log('  ALL COLUMNS:');
+            for (let j = 0; j < row.length; j++) {
+                console.log(`    [${j}]: "${row[j]}" (${typeof row[j]})`);
+            }
+            console.log('  CURRENT MAPPING:');
             console.log('  Column D (index 3) - DR Number:', row[3], typeof row[3]);
             console.log('  Column G (index 6) - Vendor Number:', row[6], typeof row[6]);
             console.log('  Column H (index 7) - Customer Name:', row[7], typeof row[7]);
             console.log('  Column I (index 8) - Destination:', row[8], typeof row[8]);
+            console.log('  PROCESSED VALUES:');
             console.log('  Processed DR Number:', drNumber);
             console.log('  Processed Customer Name:', customerName);
             console.log('  Processed Vendor Number:', vendorNumber);
             console.log('  Processed Destination:', destination);
         }
         
-        // Validate required fields with detailed logging
-        if (!drNumber || !customerName || !destination) {
-            console.warn(`❌ Skipping row ${i + 1}: Missing required data`);
+        // Validate required fields with detailed logging - Only require DR Number for now
+        if (!drNumber) {
+            console.warn(`❌ Skipping row ${i + 1}: Missing DR Number`);
             console.warn(`  DR Number: "${drNumber}" (${drNumber ? 'OK' : 'MISSING'})`);
-            console.warn(`  Customer Name: "${customerName}" (${customerName ? 'OK' : 'MISSING'})`);
-            console.warn(`  Destination: "${destination}" (${destination ? 'OK' : 'MISSING'})`);
             continue;
         }
+        
+        // Log validation status for other fields
+        console.log(`📋 Field validation for row ${i + 1}:`);
+        console.log(`  DR Number: "${drNumber}" (${drNumber ? 'OK' : 'MISSING'})`);
+        console.log(`  Customer Name: "${customerName}" (${customerName ? 'OK' : 'MISSING - will use placeholder'})`);
+        console.log(`  Destination: "${destination}" (${destination ? 'OK' : 'MISSING - will use placeholder'})`);
+        console.log(`  Vendor Number: "${vendorNumber}" (${vendorNumber ? 'OK' : 'EMPTY - will show N/A'})`);
+        
+        // Use placeholders for missing data
+        const finalCustomerName = customerName || 'Customer Name Missing';
+        const finalDestination = destination || 'Destination Missing';
         
         console.log(`✅ Row ${i + 1}: Valid data found`);
         
