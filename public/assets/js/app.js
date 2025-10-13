@@ -875,9 +875,6 @@ function loadDeliveryHistory() {
         }
         
         console.log('Delivery history loaded successfully');
-    }).catch(error => {
-        console.error('Error loading delivery history:', error);
-    });
 }
 
 // Initialize the application
