@@ -2168,6 +2168,17 @@ function mapDRData(data) {
     console.log('🔍 DEBUG: First row (header):', data[0]);
     console.log('🔍 DEBUG: Second row (first data):', data[1]);
     
+    // CRITICAL DEBUG: Show first 3 rows completely
+    for (let debugRow = 0; debugRow < Math.min(3, data.length); debugRow++) {
+        console.log(`🔍 CRITICAL DEBUG Row ${debugRow}:`, data[debugRow]);
+        if (data[debugRow]) {
+            console.log(`  Length: ${data[debugRow].length}`);
+            data[debugRow].forEach((cell, index) => {
+                console.log(`  [${index}]: "${cell}" (type: ${typeof cell})`);
+            });
+        }
+    }
+    
     if (!data || data.length === 0) {
         console.error('❌ No data received in mapDRData');
         return mappedData;
@@ -2197,6 +2208,17 @@ function mapDRData(data) {
         
         console.log(`🔍 DEBUG: Raw values - D[3]: "${row[3]}", G[6]: "${row[6]}", H[7]: "${row[7]}", I[8]: "${row[8]}"`);
         console.log(`🔍 DEBUG: Processed values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
+        
+        // EMERGENCY ALERT for first row to ensure you see the data
+        if (i === 1) {
+            const alertMsg = `FIRST DATA ROW DEBUG:\n` +
+                           `Row length: ${row.length}\n` +
+                           `D[3] (DR): "${row[3]}"\n` +
+                           `G[6] (Vendor): "${row[6]}"\n` +
+                           `H[7] (Customer): "${row[7]}"\n` +
+                           `I[8] (Destination): "${row[8]}"`;
+            alert(alertMsg);
+        }
         
         // Show all row values for debugging
         console.log(`🔍 DEBUG: All row values:`, row.map((val, idx) => `[${idx}]: "${val}" (${typeof val})`).join(', '));
