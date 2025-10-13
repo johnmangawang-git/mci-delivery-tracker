@@ -1842,6 +1842,111 @@
             }
         }, 5000);
     </script>
+
+    <!-- DR Upload Modal -->
+    <div class="modal fade" id="drUploadModal" tabindex="-1" aria-labelledby="drUploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="drUploadModalLabel">
+                        <i class="bi bi-upload"></i> Upload DR File
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Upload Section -->
+                    <div id="drUploadContent">
+                        <div class="text-center mb-4">
+                            <i class="bi bi-file-earmark-excel display-1 text-success"></i>
+                            <h4 class="mt-3">Upload Excel File</h4>
+                            <p class="text-muted">Select an Excel file containing delivery receipt data</p>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary btn-lg" id="selectDrFileBtn">
+                                <i class="bi bi-file-earmark-plus"></i> Select Excel File
+                            </button>
+                            <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;">
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6>Supported formats:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success"></i> Excel (.xlsx, .xls)</li>
+                                <li><i class="bi bi-info-circle text-info"></i> File should contain DR numbers, customer names, and destinations</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Section -->
+                    <div id="drPreviewContent" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5><i class="bi bi-eye"></i> Preview Data</h5>
+                            <button class="btn btn-outline-secondary btn-sm" id="backToDrUploadBtn">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </button>
+                        </div>
+                        
+                        <!-- Truck Reference -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="drTruckType" class="form-label">Truck Type</label>
+                                <input type="text" class="form-control" id="drTruckType" placeholder="e.g., 10-Wheeler">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="drTruckPlate" class="form-label">Truck Plate Number</label>
+                                <input type="text" class="form-control" id="drTruckPlate" placeholder="e.g., ABC-1234">
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Costs -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6>Additional Costs</h6>
+                                <button class="btn btn-outline-primary btn-sm" id="addDrCostBtn">
+                                    <i class="bi bi-plus"></i> Add Cost
+                                </button>
+                            </div>
+                            <div id="drCostItems">
+                                <!-- Cost items will be added here -->
+                            </div>
+                            <div class="mt-2">
+                                <strong>Total Additional Cost: ₱<span id="drTotalCost">0.00</span></strong>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview Table -->
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>DR Number</th>
+                                        <th>Customer</th>
+                                        <th>Origin</th>
+                                        <th>Destination</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drPreviewTable">
+                                    <!-- Preview data will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-3">
+                            <button class="btn btn-outline-info" id="previewDrSummaryBtn">
+                                <i class="bi bi-eye"></i> Preview Summary
+                            </button>
+                            <button class="btn btn-success flex-fill" id="confirmDrUploadBtn">
+                                <i class="bi bi-check-circle"></i> Confirm Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
