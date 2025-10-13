@@ -177,6 +177,24 @@
     
     <!-- INLINE BACKUP: Upload DR File button fix -->
     <script>
+        // Global function to handle file selection
+        window.handleFileSelection = function(file) {
+            console.log('🚀 GLOBAL: File selected:', file?.name);
+            
+            if (!file) {
+                console.error('❌ No file selected');
+                return;
+            }
+            
+            // Simple file processing
+            if (typeof window.processSelectedFile === 'function') {
+                window.processSelectedFile(file);
+            } else {
+                // Fallback: Simple alert
+                alert('File selected: ' + file.name + '\nSize: ' + (file.size / 1024).toFixed(2) + ' KB\n\nProcessing function not available. Please refresh the page.');
+            }
+        };
+        
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
                 const btn = document.getElementById('uploadDrFileBtn');
@@ -196,6 +214,11 @@
                             const input = document.createElement('input');
                             input.type = 'file';
                             input.accept = '.xlsx,.xls';
+                            input.onchange = function(e) {
+                                if (e.target.files[0]) {
+                                    handleFileSelection(e.target.files[0]);
+                                }
+                            };
                             input.click();
                         }
                     };
@@ -1896,10 +1919,10 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg" id="selectDrFileBtn">
+                            <button class="btn btn-primary btn-lg" id="selectDrFileBtn" onclick="document.getElementById('drFileInput').click(); console.log('Direct onclick: File input triggered');">
                                 <i class="bi bi-file-earmark-plus"></i> Select Excel File
                             </button>
-                            <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;">
+                            <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelection(this.files[0]); console.log('File selected:', this.files[0]?.name);">
                         </div>
                         
                         <div class="mt-4">
