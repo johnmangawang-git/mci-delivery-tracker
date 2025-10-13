@@ -131,13 +131,36 @@ function fixFileInputHandler() {
 }
 
 function processSelectedFile(file) {
-    console.log('🔄 Processing selected file:', file.name);
+    console.log('🔄 Processing selected file:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    // Show processing indicator
+    const selectBtn = document.getElementById('selectDrFileBtn');
+    if (selectBtn) {
+        selectBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+        selectBtn.disabled = true;
+    }
     
     try {
-        // Check if XLSX library is available
+        // Enhanced XLSX library check
+        console.log('🔍 Checking XLSX library availability...');
+        console.log('XLSX available:', typeof XLSX !== 'undefined');
+        console.log('XLSX object:', XLSX);
+        
         if (typeof XLSX === 'undefined') {
             console.error('❌ XLSX library not loaded');
-            alert('Excel processing library not available. Please refresh the page and try again.');
+            
+            // Try to load XLSX library dynamically
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+            script.onload = function() {
+                console.log('✅ XLSX library loaded dynamically');
+                processSelectedFile(file); // Retry
+            };
+            script.onerror = function() {
+                alert('Excel processing library failed to load. Please refresh the page and try again.');
+                resetSelectButton();
+            };
+            document.head.appendChild(script);
             return;
         }
         
@@ -145,81 +168,249 @@ function processSelectedFile(file) {
         
         reader.onload = function(e) {
             try {
-                console.log('📖 Reading Excel file...');
+                console.log('📖 Reading Excel file... Buffer size:', e.target.result.byteLength);
                 
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                // Try multiple reading methods
+                let workbook;
+                let jsonData;
+                
+                try {
+                    // Method 1: ArrayBuffer
+                    const data = new Uint8Array(e.target.result);
+                    workbook = XLSX.read(data, { type: 'array' });
+                    console.log('✅ Method 1 (ArrayBuffer) successful');
+                } catch (error1) {
+                    console.warn('⚠️ Method 1 failed:', error1.message);
+                    
+                    try {
+                        // Method 2: Binary string
+                        workbook = XLSX.read(e.target.result, { type: 'binary' });
+                        console.log('✅ Method 2 (Binary) successful');
+                    } catch (error2) {
+                        console.warn('⚠️ Method 2 failed:', error2.message);
+                        
+                        try {
+                            // Method 3: Base64
+                            const base64 = btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
+                            workbook = XLSX.read(base64, { type: 'base64' });
+                            console.log('✅ Method 3 (Base64) successful');
+                        } catch (error3) {
+                            throw new Error('All reading methods failed: ' + error3.message);
+                        }
+                    }
+                }
+                
+                console.log('📊 Workbook info:', {
+                    sheetNames: workbook.SheetNames,
+                    sheetCount: workbook.SheetNames.length
+                });
+                
+                if (workbook.SheetNames.length === 0) {
+                    throw new Error('No sheets found in the Excel file');
+                }
+                
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
                 
-                console.log('✅ Excel file processed:', jsonData.length, 'rows');
+                console.log('📋 Processing sheet:', firstSheetName);
+                console.log('📋 Worksheet range:', worksheet['!ref']);
+                
+                // Try different JSON conversion options
+                try {
+                    jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    console.log('✅ Standard JSON conversion successful');
+                } catch (jsonError) {
+                    console.warn('⚠️ Standard conversion failed, trying with headers:', jsonError.message);
+                    jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    // Convert array format to object format
+                    if (jsonData.length > 1) {
+                        const headers = jsonData[0];
+                        const rows = jsonData.slice(1);
+                        jsonData = rows.map(row => {
+                            const obj = {};
+                            headers.forEach((header, index) => {
+                                obj[header] = row[index];
+                            });
+                            return obj;
+                        });
+                    }
+                    console.log('✅ Header-based conversion successful');
+                }
+                
+                console.log('📊 Processed data:', {
+                    rows: jsonData.length,
+                    firstRow: jsonData[0],
+                    columns: jsonData.length > 0 ? Object.keys(jsonData[0]) : []
+                });
                 
                 if (jsonData.length === 0) {
-                    alert('No data found in the Excel file. Please check the file and try again.');
+                    alert('No data found in the Excel file. Please check that the file contains data and try again.');
+                    resetSelectButton();
                     return;
                 }
                 
-                // Process the data and show preview
+                // Show success and process data
+                console.log('✅ Excel file processed successfully:', jsonData.length, 'rows');
                 showDataPreview(jsonData);
                 
             } catch (error) {
                 console.error('❌ Error processing Excel file:', error);
-                alert('Error processing Excel file: ' + error.message);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    fileSize: file.size,
+                    fileType: file.type
+                });
+                alert('Error processing Excel file: ' + error.message + '\n\nPlease check that the file is a valid Excel file (.xlsx or .xls) and try again.');
+                resetSelectButton();
             }
         };
         
         reader.onerror = function(error) {
             console.error('❌ Error reading file:', error);
             alert('Error reading file. Please try again.');
+            resetSelectButton();
         };
         
+        // Read as ArrayBuffer for better compatibility
+        console.log('📖 Starting file read...');
         reader.readAsArrayBuffer(file);
         
     } catch (error) {
         console.error('❌ Error in processSelectedFile:', error);
         alert('Error processing file: ' + error.message);
+        resetSelectButton();
+    }
+}
+
+function resetSelectButton() {
+    const selectBtn = document.getElementById('selectDrFileBtn');
+    if (selectBtn) {
+        selectBtn.innerHTML = '<i class="bi bi-file-earmark-plus"></i> Select Excel File';
+        selectBtn.disabled = false;
     }
 }
 
 function showDataPreview(data) {
-    console.log('👁️ Showing data preview...');
+    console.log('👁️ Showing data preview for', data.length, 'records...');
+    console.log('📊 Sample data:', data[0]);
+    console.log('📊 Available columns:', data.length > 0 ? Object.keys(data[0]) : []);
     
     // Hide upload content and show preview
     const uploadContent = document.getElementById('drUploadContent');
     const previewContent = document.getElementById('drPreviewContent');
     
-    if (uploadContent) uploadContent.style.display = 'none';
-    if (previewContent) previewContent.style.display = 'block';
+    if (uploadContent) {
+        uploadContent.style.display = 'none';
+        console.log('✅ Upload content hidden');
+    }
+    if (previewContent) {
+        previewContent.style.display = 'block';
+        console.log('✅ Preview content shown');
+    }
     
     // Populate preview table
     const previewTable = document.getElementById('drPreviewTable');
     if (previewTable) {
+        console.log('📋 Populating preview table...');
         previewTable.innerHTML = '';
         
         // Show first 5 rows as preview
         const previewData = data.slice(0, 5);
         
-        previewData.forEach(row => {
+        // Try different column name variations
+        const getColumnValue = (row, possibleNames) => {
+            for (const name of possibleNames) {
+                if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+                    return row[name];
+                }
+            }
+            return 'N/A';
+        };
+        
+        previewData.forEach((row, index) => {
+            console.log(`📋 Processing preview row ${index}:`, row);
+            
             const tr = document.createElement('tr');
+            
+            const drNumber = getColumnValue(row, [
+                'DR Number', 'dr_number', 'DR_Number', 'drNumber', 'DR', 'dr',
+                'Delivery Receipt', 'Receipt Number', 'Document Number'
+            ]);
+            
+            const customer = getColumnValue(row, [
+                'Customer', 'customer_name', 'Customer Name', 'Client', 'client_name',
+                'Company', 'Customer Company', 'Consignee'
+            ]);
+            
+            const origin = getColumnValue(row, [
+                'Origin', 'origin', 'From', 'Source', 'Pickup', 'Start',
+                'Origin Address', 'Pickup Location'
+            ]);
+            
+            const destination = getColumnValue(row, [
+                'Destination', 'destination', 'To', 'Delivery', 'End', 'Drop',
+                'Destination Address', 'Delivery Location', 'Drop Location'
+            ]);
+            
             tr.innerHTML = `
-                <td>${row['DR Number'] || row['dr_number'] || 'N/A'}</td>
-                <td>${row['Customer'] || row['customer_name'] || 'N/A'}</td>
-                <td>${row['Origin'] || row['origin'] || 'N/A'}</td>
-                <td>${row['Destination'] || row['destination'] || 'N/A'}</td>
+                <td>${drNumber}</td>
+                <td>${customer}</td>
+                <td>${origin}</td>
+                <td>${destination}</td>
                 <td>Active</td>
             `;
             previewTable.appendChild(tr);
+            
+            console.log(`✅ Added preview row: DR=${drNumber}, Customer=${customer}`);
         });
         
-        console.log('✅ Preview table populated');
+        console.log('✅ Preview table populated with', previewData.length, 'rows');
+        
+        // Show data summary
+        const totalRows = data.length;
+        const validRows = data.filter(row => {
+            const hasData = Object.values(row).some(value => 
+                value !== undefined && value !== null && value !== ''
+            );
+            return hasData;
+        }).length;
+        
+        console.log(`📊 Data summary: ${totalRows} total rows, ${validRows} valid rows`);
+        
+        // Add summary info to the preview
+        const summaryElement = document.createElement('div');
+        summaryElement.className = 'alert alert-info mt-3';
+        summaryElement.innerHTML = `
+            <strong>Data Summary:</strong><br>
+            • Total rows: ${totalRows}<br>
+            • Valid rows: ${validRows}<br>
+            • Available columns: ${Object.keys(data[0] || {}).join(', ')}
+        `;
+        
+        const previewContainer = previewTable.parentElement;
+        if (previewContainer) {
+            // Remove existing summary
+            const existingSummary = previewContainer.querySelector('.alert-info');
+            if (existingSummary) existingSummary.remove();
+            
+            previewContainer.appendChild(summaryElement);
+        }
+        
+    } else {
+        console.error('❌ Preview table element not found');
     }
     
     // Store data for confirmation
     window.pendingDRData = data;
+    console.log('💾 Data stored for confirmation:', data.length, 'records');
     
     // Fix confirm button
     fixConfirmButton();
+    
+    // Reset the select button
+    resetSelectButton();
 }
 
 function fixConfirmButton() {
