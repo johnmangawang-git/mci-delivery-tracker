@@ -804,33 +804,52 @@ async function saveBooking() {
             
             console.log('autoCreateCustomer completed');
 
-            // Create delivery object
+            // Create delivery object with Supabase-compatible field names
             const newDelivery = {
-                id: 'DEL-' + Date.now() + '-' + drNumber,
-                drNumber: drNumber,
-                customerName: customerName,
-                vendorNumber: vendorNumber,
+                // Remove custom ID - let Supabase generate UUID
+                dr_number: drNumber,
+                customer_name: customerName,
+                vendor_number: vendorNumber || '',
                 origin: origin,
                 destination: destinations.join('; '),
-                truckType: truckType,
-                truckPlateNumber: truckPlateNumber,
-                status: 'On Schedule',
-                deliveryDate: deliveryDate,
-                additionalCosts: additionalCostsTotal,
-                additionalCostItems: additionalCostItems, // Store individual cost items
-                timestamp: new Date().toISOString()
+                truck_type: truckType || '',
+                truck_plate_number: truckPlateNumber || '',
+                status: 'Active', // Changed from 'On Schedule' to match schema
+                distance: '', // Add distance field
+                additional_costs: parseFloat(additionalCostsTotal) || 0.00,
+                created_date: deliveryDate || new Date().toISOString().split('T')[0],
+                created_by: 'Manual',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             };
+
+            console.log('🔧 Converted delivery data for Supabase:', newDelivery);
 
             // Save to Supabase using dataService
             if (window.dataService) {
                 try {
-                    await window.dataService.saveDelivery(newDelivery);
-                    console.log('✅ Delivery saved to Supabase successfully');
+                    const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+                    console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
                 } catch (error) {
                     console.error('❌ Failed to save to Supabase:', error);
-                    // Fallback to localStorage
+                    // Fallback to localStorage with original format for compatibility
+                    const localDelivery = {
+                        id: 'DEL-' + Date.now() + '-' + drNumber,
+                        drNumber: drNumber,
+                        customerName: customerName,
+                        vendorNumber: vendorNumber,
+                        origin: origin,
+                        destination: destinations.join('; '),
+                        truckType: truckType,
+                        truckPlateNumber: truckPlateNumber,
+                        status: 'On Schedule',
+                        deliveryDate: deliveryDate,
+                        additionalCosts: additionalCostsTotal,
+                        additionalCostItems: additionalCostItems,
+                        timestamp: new Date().toISOString()
+                    };
                     if (typeof window.activeDeliveries !== 'undefined') {
-                        window.activeDeliveries.push(newDelivery);
+                        window.activeDeliveries.push(localDelivery);
                         localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
                         console.log('✅ Saved to localStorage as fallback');
                     }
@@ -2175,13 +2194,12 @@ function mapDRData(data) {
             continue;
         }
         
-        // Create complete booking object matching manual booking modal structure
+        // Create complete booking object with proper field names for Supabase compatibility
         const booking = {
-            // Core identification
-            id: generateBookingId(),
+            // Core identification - will be converted to dr_number for Supabase
             drNumber: String(drNumber).trim(),
             
-            // Customer details (matching manual booking modal)
+            // Customer details - will be converted to customer_name, vendor_number for Supabase
             customerName: String(customerName).trim(),
             vendorNumber: vendorNumber ? String(vendorNumber).trim() : '',
             
@@ -2194,20 +2212,20 @@ function mapDRData(data) {
             bookedDate: new Date().toISOString().split('T')[0],
             timestamp: new Date().toISOString(),
             
-            // Truck reference (will be filled from form inputs)
+            // Truck reference (will be filled from form inputs) - will be converted to truck_type, truck_plate_number
             truckType: '',
             truckPlateNumber: '',
             truck: '', // Combined truck info for display
             
             // Status and tracking
-            status: 'On Schedule',
+            status: 'Active', // Changed from 'On Schedule' to match Supabase schema
             source: 'DR_UPLOAD',
             
-            // Cost information
+            // Cost information - will be converted to additional_costs for Supabase
             additionalCosts: 0,
             additionalCostBreakdown: [],
             
-            // Distance (removed as requested)
+            // Distance
             distance: '',
             
             // Additional fields for complete data mapping
@@ -2215,7 +2233,7 @@ function mapDRData(data) {
             signedAt: null,
             signature: null,
             
-            // Metadata for tracking
+            // Metadata for tracking - will be converted to created_by for Supabase
             createdBy: 'Excel Upload',
             lastModified: new Date().toISOString()
         };
@@ -2414,25 +2432,29 @@ async function createBookingFromDR(bookingData) {
         // Save to Supabase using dataService
         if (window.dataService) {
             try {
-                // Prepare data for Supabase format
+                // Prepare data for Supabase format - convert all field names to match schema
                 const deliveryData = {
-                    id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
+                    // Remove custom ID - let Supabase generate UUID
                     dr_number: bookingData.drNumber,
                     customer_name: bookingData.customerName,
-                    vendor_number: bookingData.vendorNumber,
+                    vendor_number: bookingData.vendorNumber || '',
                     origin: bookingData.origin,
                     destination: bookingData.destination,
-                    truck_type: bookingData.truckType,
-                    truck_plate_number: bookingData.truckPlateNumber,
+                    truck_type: bookingData.truckType || '',
+                    truck_plate_number: bookingData.truckPlateNumber || '',
                     status: bookingData.status || 'Active',
-                    additional_costs: bookingData.additionalCosts || 0,
-                    created_date: bookingData.bookedDate,
+                    distance: bookingData.distance || '',
+                    additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
+                    created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
                     created_by: 'Excel Upload',
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 };
                 
-                await window.dataService.saveDelivery(deliveryData);
-                console.log('✅ Booking saved to Supabase successfully:', bookingData.drNumber);
+                console.log('🔧 Converted booking data for Supabase:', deliveryData);
+                
+                const savedDelivery = await window.dataService.saveDelivery(deliveryData);
+                console.log('✅ Booking saved to Supabase successfully:', bookingData.drNumber, savedDelivery);
                 
                 // Also update local arrays for immediate UI update
                 window.activeDeliveries = window.activeDeliveries || [];
