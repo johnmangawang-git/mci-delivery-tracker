@@ -2161,6 +2161,14 @@ function mapDRData(data) {
         // Also try different column indices in case the mapping is wrong
         console.log(`🔍 DEBUG: All row values:`, row.map((val, idx) => `[${idx}]: "${val}"`).join(', '));
         
+        // EMERGENCY: Show alert with row data for first few rows
+        if (i <= 3) {
+            const alertMsg = `DEBUG Row ${i}:\n` + 
+                           `Length: ${row.length}\n` +
+                           `Values: ${row.map((val, idx) => `[${idx}]: "${val}"`).join('\n')}`;
+            console.log('🚨 EMERGENCY DEBUG:', alertMsg);
+        }
+        
         // Validate required fields
         if (!drNumber || !customerName || !destination) {
             console.warn(`Skipping row ${i + 1}: Missing required data`);

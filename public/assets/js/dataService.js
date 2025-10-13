@@ -44,12 +44,22 @@ class DataService {
     async saveDelivery(delivery) {
         const supabaseOp = async () => {
             const client = window.supabaseClient();
+            
+            // Prepare data for Supabase - remove custom ID to let Supabase generate UUID
+            const supabaseData = {
+                ...delivery,
+                updated_at: new Date().toISOString()
+            };
+            
+            // Remove custom ID if it's not a valid UUID format
+            if (supabaseData.id && !supabaseData.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                console.log('🔧 Removing custom ID for Supabase UUID generation:', supabaseData.id);
+                delete supabaseData.id;
+            }
+            
             const { data, error } = await client
                 .from('deliveries')
-                .upsert({
-                    ...delivery,
-                    updated_at: new Date().toISOString()
-                })
+                .upsert(supabaseData)
                 .select();
             
             if (error) throw error;
