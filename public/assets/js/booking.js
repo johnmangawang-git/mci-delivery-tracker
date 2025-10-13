@@ -2136,6 +2136,11 @@ function readExcelFile(file) {
 function mapDRData(data) {
     const mappedData = [];
     
+    console.log('🔍 DEBUG: mapDRData received data:', data);
+    console.log('🔍 DEBUG: Data length:', data.length);
+    console.log('🔍 DEBUG: First row (header):', data[0]);
+    console.log('🔍 DEBUG: Second row (first data):', data[1]);
+    
     // Skip header row (index 0)
     for (let i = 1; i < data.length; i++) {
         const row = data[i];
@@ -2143,10 +2148,18 @@ function mapDRData(data) {
         // Skip empty rows
         if (!row || row.length === 0) continue;
         
+        console.log(`🔍 DEBUG: Processing row ${i}:`, row);
+        console.log(`🔍 DEBUG: Row length: ${row.length}`);
+        
         const drNumber = row[3]; // Column D
         const vendorNumber = row[6]; // Column G
         const customerName = row[7]; // Column H
         const destination = row[8]; // Column I
+        
+        console.log(`🔍 DEBUG: Extracted values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
+        
+        // Also try different column indices in case the mapping is wrong
+        console.log(`🔍 DEBUG: All row values:`, row.map((val, idx) => `[${idx}]: "${val}"`).join(', '));
         
         // Validate required fields
         if (!drNumber || !customerName || !destination) {
