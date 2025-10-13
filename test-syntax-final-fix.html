@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Syntax Fix Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2><i class="bi bi-check-circle text-success"></i> Final Syntax Fix Test</h2>
+        <p>Testing that all syntax errors are fixed and the improved geocoding works.</p>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Distance Test</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="testImprovedGeocoding()">
+                    <i class="bi bi-geo-alt"></i> Test Improved Geocoding
+                </button>
+                <div id="testResults" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Console Output</h5>
+            </div>
+            <div class="card-body">
+                <div id="consoleOutput" class="bg-dark text-light p-3" style="font-family: monospace; height: 300px; overflow-y: auto;">
+                    <!-- Console output will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            let color = type === 'error' ? 'text-danger' : 'text-success';
+            consoleOutput.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        async function testImprovedGeocoding() {
+            const resultDiv = document.getElementById('testResults');
+            resultDiv.innerHTML = '<div class="alert alert-info">Testing improved geocoding...</div>';
+            
+            try {
+                console.log('=== TESTING IMPROVED GEOCODING ===');
+                
+                const testAddresses = [
+                    'Makati City',
+                    'Quezon City',
+                    'Las Pinas City',
+                    'BGC, Taguig',
+                    'Pasig City'
+                ];
+                
+                let html = '<div class="table-responsive"><table class="table table-striped">';
+                html += '<thead><tr><th>Address</th><th>Coordinates</th><th>Distance</th><th>Unique?</th></tr></thead><tbody>';
+                
+                const results = [];
+                
+                for (const address of testAddresses) {
+                    try {
+                        const booking = {
+                            drNumber: `TEST-${address}`,
+                            originWarehouse: 'SMEG Alabang warehouse',
+                            destinationArea: address
+                        };
+                        
+                        const distance = await calculateDistanceForBooking(booking);
+                        const coords = await geocodeAddressImproved(address);
+                        
+                        results.push({ address, coords, distance });
+                        
+                        const isUnique = !results.slice(0, -1).some(r => Math.abs(r.distance - distance) < 0.5);
+                        
+                        html += `
+                            <tr>
+                                <td><strong>${address}</strong></td>
+                                <td><code>${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}</code></td>
+                                <td><span class="badge bg-primary">${distance.toFixed(2)} km</span></td>
+                                <td>${isUnique ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-exclamation-triangle text-warning"></i>'}</td>
+                            </tr>
+                        `;
+                        
+                        console.log(`✅ ${address}: ${distance.toFixed(2)} km`);
+                        
+                    } catch (error) {
+                        console.error(`❌ Error testing ${address}:`, error);
+                        html += `
+                            <tr>
+                                <td><strong>${address}</strong></td>
+                                <td colspan="3"><span class="text-danger">Error: ${error.message}</span></td>
+                            </tr>
+                        `;
+                    }
+                }
+                
+                html += '</tbody></table></div>';
+                
+                // Check for unique distances
+                const distances = results.map(r => r.distance);
+                const uniqueDistances = [...new Set(distances.map(d => Math.round(d * 10) / 10))];
+                
+                if (uniqueDistances.length === distances.length) {
+                    html += '<div class="alert alert-success">✅ All distances are unique! The fix is working!</div>';
+                } else if (uniqueDistances.length === 1) {
+                    html += '<div class="alert alert-danger">❌ All distances are the same. Issue not fixed.</div>';
+                } else {
+                    html += `<div class="alert alert-warning">⚠️ Some distances are similar (${uniqueDistances.length}/${distances.length} unique)</div>`;
+                }
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Test failed:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Load booking.js
+        const script = document.createElement('script');
+        script.src = 'public/assets/js/booking.js';
+        script.onload = function() {
+            console.log('✅ booking.js loaded successfully');
+            addToConsole('✅ All syntax errors fixed! Ready to test.', 'success');
+        };
+        script.onerror = function() {
+            console.error('❌ Failed to load booking.js');
+            addToConsole('❌ Failed to load booking.js', 'error');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

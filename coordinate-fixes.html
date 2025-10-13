@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinate Fixes Needed</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .issue-card { border-left: 4px solid #dc3545; }
+        .fix-card { border-left: 4px solid #28a745; }
+        .coord-mono { font-family: monospace; background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🔧 Philippine Location Coordinate Fixes</h1>
+        <p>Issues found in the coordinate database and recommended fixes</p>
+
+        <!-- Issue 1: Las Piñas using Alabang coordinates -->
+        <div class="card issue-card mb-4">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="bi bi-exclamation-triangle"></i> Issue #1: Las Piñas using Alabang coordinates</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Problem:</strong> Las Piñas City is using the same coordinates as Alabang district</p>
+                <p><strong>Current (Incorrect):</strong> <span class="coord-mono">14.4378, 121.0199</span></p>
+                <p><strong>Should be:</strong> <span class="coord-mono">14.4642, 120.9822</span> (Las Piñas City Hall area)</p>
+                <p><strong>Distance Error:</strong> ~2.8 km difference</p>
+            </div>
+        </div>
+
+        <!-- Issue 2: Potential duplicate coordinates -->
+        <div class="card issue-card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="bi bi-exclamation-triangle"></i> Issue #2: Multiple locations sharing coordinates</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Locations sharing 14.4378, 121.0199:</strong></p>
+                <ul>
+                    <li>SMEG Alabang warehouse ✅ (Correct)</li>
+                    <li>Alabang district ✅ (Correct)</li>
+                    <li>Alabang Hills ✅ (Acceptable - same area)</li>
+                    <li>Alabang Town Center ✅ (Acceptable - same area)</li>
+                    <li>Las Piñas City ❌ (Should be different)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Recommended Fixes -->
+        <div class="card fix-card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5><i class="bi bi-tools"></i> Recommended Coordinate Updates</h5>
+            </div>
+            <div class="card-body">
+                <h6>1. Las Piñas City Coordinates</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Current (Wrong):</strong><br>
+                        <code>'Las Pinas': { lat: 14.4378, lng: 121.0199, type: 'city' }</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Fixed:</strong><br>
+                        <code>'Las Pinas': { lat: 14.4642, lng: 120.9822, type: 'city' }</code>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h6>2. Additional Coordinate Improvements</h6>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>Current</th>
+                            <th>Improved</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SMEG Alabang warehouse</td>
+                            <td class="coord-mono">14.4378, 121.0199</td>
+                            <td class="coord-mono">14.444208, 121.046787</td>
+                            <td>More precise warehouse location</td>
+                        </tr>
+                        <tr>
+                            <td>Muntinlupa City</td>
+                            <td class="coord-mono">14.3754, 121.0392</td>
+                            <td class="coord-mono">14.3754, 121.0392</td>
+                            <td>✅ Accurate</td>
+                        </tr>
+                        <tr>
+                            <td>Parañaque City</td>
+                            <td class="coord-mono">14.4793, 121.0198</td>
+                            <td class="coord-mono">14.4793, 121.0198</td>
+                            <td>✅ Accurate</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Code to Apply Fixes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-code-slash"></i> Code Changes Required</h5>
+            </div>
+            <div class="card-body">
+                <p>The following coordinate entries need to be updated in <code>booking.js</code>:</p>
+                
+                <h6>In COMPREHENSIVE_PHILIPPINE_LOCATIONS object:</h6>
+                <pre><code>// CHANGE FROM:
+'Las Pinas': { lat: 14.4378, lng: 121.0199, type: 'city' },
+'Las Pinas City': { lat: 14.4378, lng: 121.0199, type: 'city' },
+'Las Piñas': { lat: 14.4378, lng: 121.0199, type: 'city' },
+'Las Piñas City': { lat: 14.4378, lng: 121.0199, type: 'city' },
+
+// CHANGE TO:
+'Las Pinas': { lat: 14.4642, lng: 120.9822, type: 'city' },
+'Las Pinas City': { lat: 14.4642, lng: 120.9822, type: 'city' },
+'Las Piñas': { lat: 14.4642, lng: 120.9822, type: 'city' },
+'Las Piñas City': { lat: 14.4642, lng: 120.9822, type: 'city' },</code></pre>
+
+                <h6>In mockLocations arrays (multiple instances):</h6>
+                <pre><code>// CHANGE FROM:
+{ lat: "14.4378", lng: "121.0199", display_name: "Las Pinas City, Metro Manila, Philippines", type: "city", class: "place" },
+
+// CHANGE TO:
+{ lat: "14.4642", lng: "120.9822", display_name: "Las Pinas City, Metro Manila, Philippines", type: "city", class: "place" },</code></pre>
+
+                <h6>In location lookup arrays:</h6>
+                <pre><code>// CHANGE FROM:
+{ name: 'las pinas', coords: { lat: 14.4378, lng: 121.0199 }, keywords: ['las pinas', 'las piñas'] },
+
+// CHANGE TO:
+{ name: 'las pinas', coords: { lat: 14.4642, lng: 120.9822 }, keywords: ['las pinas', 'las piñas'] },</code></pre>
+            </div>
+        </div>
+
+        <!-- Verification -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-check-circle"></i> Verification</h5>
+            </div>
+            <div class="card-body">
+                <p>After applying fixes, verify:</p>
+                <ul>
+                    <li>Las Piñas City shows correct coordinates (14.4642, 120.9822)</li>
+                    <li>Alabang district keeps its coordinates (14.4378, 121.0199)</li>
+                    <li>Distance calculations between Las Piñas and Alabang are accurate (~2.8 km)</li>
+                    <li>DR file processing correctly identifies Las Piñas addresses</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

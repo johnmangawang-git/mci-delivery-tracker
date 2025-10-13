@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disappearing Bookings Monitor - MCI Delivery System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background: #f8f9fa; font-size: 12px; }
+        .monitor-container { max-width: 1600px; margin: 0 auto; }
+        .monitor-section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .live-log { background: #000; color: #00ff00; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 10px; max-height: 400px; overflow-y: auto; }
+        .data-snapshot { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 10px; max-height: 200px; overflow-y: auto; }
+        .alert-danger { animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="monitor-container">
+        <div class="monitor-section">
+            <h2><i class="bi bi-eye text-danger"></i> Disappearing Bookings Monitor</h2>
+            <p class="text-muted">Real-time monitoring to catch what's removing bookings from Active Deliveries</p>
+            
+            <div class="alert alert-warning">
+                <h6><i class="bi bi-exclamation-triangle"></i> Issue:</h6>
+                <p>Bookings appear briefly with "On Schedule" status, then disappear from Active Deliveries.</p>
+                <p><strong>This monitor will catch what's removing them!</strong></p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="monitor-section">
+                    <h6>📊 Array Size Monitor</h6>
+                    <div class="data-snapshot" id="arraySizeMonitor">
+                        <div>window.activeDeliveries: <span id="currentSize">-</span></div>
+                        <div>Previous size: <span id="previousSize">-</span></div>
+                        <div>Change: <span id="sizeChange">-</span></div>
+                        <div>Last change: <span id="lastChange">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="monitor-section">
+                    <h6>🔄 Function Calls</h6>
+                    <div class="data-snapshot" id="functionCalls">
+                        <div>loadActiveDeliveries: <span id="loadCalls">0</span></div>
+                        <div>Array modifications: <span id="arrayCalls">0</span></div>
+                        <div>localStorage writes: <span id="storageCalls">0</span></div>
+                        <div>Last function: <span id="lastFunction">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="monitor-section">
+                    <h6>⚠️ Disappearance Alert</h6>
+                    <div id="disappearanceAlert" class="alert alert-secondary">
+                        <div>Status: Monitoring...</div>
+                        <div>Bookings lost: <span id="bookingsLost">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="monitor-section">
+            <h5>📝 Real-Time Activity Log</h5>
+            <div id="activityLog" class="live-log">
+                <div>[SYSTEM] Disappearing bookings monitor initialized</div>
+                <div>[SYSTEM] Monitoring array changes and function calls...</div>
+            </div>
+            <div class="mt-2">
+                <button id="clearLog" class="btn btn-sm btn-outline-secondary">Clear Log</button>
+                <button id="captureSnapshot" class="btn btn-sm btn-info">Capture Data Snapshot</button>
+                <button id="forceRefresh" class="btn btn-sm btn-warning">Force Refresh</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="monitor-section">
+                    <h6>📋 Current Data Snapshot</h6>
+                    <div id="currentDataSnapshot" class="data-snapshot">Loading...</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="monitor-section">
+                    <h6>💾 localStorage Snapshot</h6>
+                    <div id="localStorageSnapshot" class="data-snapshot">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="monitor-section">
+            <h5>🧪 Test Controls</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button id="addTestBooking" class="btn btn-primary btn-sm">Add Test Booking</button>
+                        <button id="triggerLoadActiveDeliveries" class="btn btn-secondary btn-sm">Trigger loadActiveDeliveries</button>
+                        <button id="checkDataIntegrity" class="btn btn-info btn-sm">Check Data Integrity</button>
+                        <button id="simulateDisappearance" class="btn btn-danger btn-sm">Simulate Issue</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="pauseMonitoring">
+                        <label class="form-check-label" for="pauseMonitoring">Pause Monitoring</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let previousArraySize = 0;
+        let loadCallCount = 0;
+        let arrayCallCount = 0;
+        let storageCallCount = 0;
+        let bookingsLostCount = 0;
+        let monitoringPaused = false;
+
+        // Activity logging
+        function log(message, type = 'info') {
+            if (monitoringPaused) return;
+            
+            const logArea = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff4444' : type === 'success' ? '#44ff44' : type === 'warning' ? '#ffff44' : type === 'danger' ? '#ff0000' : '#00ff00';
+            
+            logArea.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Monitor array size changes
+        function monitorArraySize() {
+            if (monitoringPaused) return;
+            
+            const currentSize = typeof window.activeDeliveries !== 'undefined' ? window.activeDeliveries.length : 0;
+            const sizeChange = currentSize - previousArraySize;
+            
+            document.getElementById('currentSize').textContent = currentSize;
+            document.getElementById('previousSize').textContent = previousArraySize;
+            document.getElementById('lastChange').textContent = new Date().toLocaleTimeString();
+            
+            if (sizeChange !== 0) {
+                document.getElementById('sizeChange').textContent = sizeChange > 0 ? `+${sizeChange}` : sizeChange;
+                document.getElementById('sizeChange').style.color = sizeChange > 0 ? '#28a745' : '#dc3545';
+                
+                if (sizeChange > 0) {
+                    log(`📈 Array size increased: ${previousArraySize} → ${currentSize} (+${sizeChange})`, 'success');
+                } else {
+                    log(`📉 Array size decreased: ${previousArraySize} → ${currentSize} (${sizeChange})`, 'danger');
+                    bookingsLostCount += Math.abs(sizeChange);
+                    document.getElementById('bookingsLost').textContent = bookingsLostCount;
+                    
+                    // Alert for disappearance
+                    const alert = document.getElementById('disappearanceAlert');
+                    alert.className = 'alert alert-danger';
+                    alert.innerHTML = `
+                        <div><strong>⚠️ BOOKINGS DISAPPEARED!</strong></div>
+                        <div>Lost ${Math.abs(sizeChange)} booking(s)</div>
+                        <div>Time: ${new Date().toLocaleTimeString()}</div>
+                    `;
+                }
+                
+                previousArraySize = currentSize;
+            }
+        }
+
+        // Setup monitoring
+        function setupMonitoring() {
+            log('🔧 Setting up comprehensive monitoring...', 'success');
+            
+            // Initialize array if needed
+            if (typeof window.activeDeliveries === 'undefined') {
+                window.activeDeliveries = [];
+                log('🔧 Initialized window.activeDeliveries for monitoring');
+            }
+            
+            previousArraySize = window.activeDeliveries.length;
+            log(`📊 Initial array size: ${previousArraySize}`);
+
+            // Monitor loadActiveDeliveries calls
+            if (typeof window.loadActiveDeliveries === 'function') {
+                const originalLoadActiveDeliveries = window.loadActiveDeliveries;
+                window.loadActiveDeliveries = function(...args) {
+                    loadCallCount++;
+                    document.getElementById('loadCalls').textContent = loadCallCount;
+                    document.getElementById('lastFunction').textContent = 'loadActiveDeliveries';
+                    
+                    log(`🔄 loadActiveDeliveries called (${loadCallCount})`, 'warning');
+                    
+                    const sizeBefore = window.activeDeliveries.length;
+                    const result = originalLoadActiveDeliveries.apply(this, args);
+                    
+                    setTimeout(() => {
+                        const sizeAfter = window.activeDeliveries.length;
+                        if (sizeAfter !== sizeBefore) {
+                            log(`📊 loadActiveDeliveries changed array: ${sizeBefore} → ${sizeAfter}`, 'warning');
+                        }
+                        monitorArraySize();
+                    }, 100);
+                    
+                    return result;
+                };
+                log('✅ loadActiveDeliveries monitoring active');
+            }
+
+            // Monitor array modifications
+            if (window.activeDeliveries) {
+                const originalPush = window.activeDeliveries.push;
+                window.activeDeliveries.push = function(...items) {
+                    arrayCallCount++;
+                    document.getElementById('arrayCalls').textContent = arrayCallCount;
+                    document.getElementById('lastFunction').textContent = 'array.push';
+                    
+                    log(`📝 Array.push called with ${items.length} item(s)`, 'success');
+                    const result = originalPush.apply(this, items);
+                    monitorArraySize();
+                    return result;
+                };
+
+                const originalSplice = window.activeDeliveries.splice;
+                window.activeDeliveries.splice = function(...args) {
+                    arrayCallCount++;
+                    document.getElementById('arrayCalls').textContent = arrayCallCount;
+                    document.getElementById('lastFunction').textContent = 'array.splice';
+                    
+                    log(`✂️ Array.splice called with args: ${JSON.stringify(args)}`, 'danger');
+                    const result = originalSplice.apply(this, args);
+                    monitorArraySize();
+                    return result;
+                };
+
+                log('✅ Array modification monitoring active');
+            }
+
+            // Monitor localStorage
+            const originalSetItem = localStorage.setItem;
+            localStorage.setItem = function(key, value) {
+                if (key === 'mci-active-deliveries') {
+                    storageCallCount++;
+                    document.getElementById('storageCalls').textContent = storageCallCount;
+                    document.getElementById('lastFunction').textContent = 'localStorage.setItem';
+                    
+                    try {
+                        const data = JSON.parse(value);
+                        log(`💾 localStorage updated with ${data.length} items`, 'info');
+                    } catch (error) {
+                        log(`💾 localStorage updated (parse error: ${error.message})`, 'error');
+                    }
+                }
+                return originalSetItem.apply(this, arguments);
+            };
+
+            log('✅ localStorage monitoring active');
+        }
+
+        // Update data snapshots
+        function updateDataSnapshots() {
+            if (monitoringPaused) return;
+            
+            // Current data snapshot
+            const currentSnapshot = document.getElementById('currentDataSnapshot');
+            if (typeof window.activeDeliveries !== 'undefined') {
+                if (window.activeDeliveries.length === 0) {
+                    currentSnapshot.textContent = 'window.activeDeliveries: [] (empty)';
+                } else {
+                    currentSnapshot.innerHTML = window.activeDeliveries.map((delivery, index) => 
+                        `[${index}] ${delivery.drNumber} - ${delivery.customerName} (${delivery.status})`
+                    ).join('\n');
+                }
+            } else {
+                currentSnapshot.textContent = 'window.activeDeliveries: undefined';
+            }
+
+            // localStorage snapshot
+            const localSnapshot = document.getElementById('localStorageSnapshot');
+            try {
+                const saved = localStorage.getItem('mci-active-deliveries');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.length === 0) {
+                        localSnapshot.textContent = 'localStorage: [] (empty)';
+                    } else {
+                        localSnapshot.innerHTML = parsed.map((delivery, index) => 
+                            `[${index}] ${delivery.drNumber} - ${delivery.customerName} (${delivery.status})`
+                        ).join('\n');
+                    }
+                } else {
+                    localSnapshot.textContent = 'localStorage: null (no data)';
+                }
+            } catch (error) {
+                localSnapshot.textContent = `localStorage: error (${error.message})`;
+            }
+        }
+
+        // Test functions
+        function addTestBooking() {
+            log('🧪 Adding test booking...', 'warning');
+            
+            if (typeof window.activeDeliveries === 'undefined') {
+                window.activeDeliveries = [];
+            }
+
+            const testBooking = {
+                id: 'DEL-' + Date.now() + '-MONITOR',
+                drNumber: 'DR-MONITOR-' + Date.now(),
+                customerName: 'Monitor Test Customer',
+                vendorNumber: 'VN-MONITOR',
+                origin: 'Test Origin',
+                destination: 'Test Destination',
+                truckType: '10-Wheeler',
+                truckPlateNumber: 'MONITOR-123',
+                status: 'On Schedule',
+                deliveryDate: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString(),
+                source: 'MONITOR_TEST'
+            };
+
+            window.activeDeliveries.push(testBooking);
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+            
+            log(`✅ Test booking added: ${testBooking.drNumber}`, 'success');
+            updateDataSnapshots();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Disappearing bookings monitor started', 'success');
+            
+            setupMonitoring();
+            
+            // Periodic monitoring
+            setInterval(() => {
+                monitorArraySize();
+                updateDataSnapshots();
+            }, 1000);
+
+            // Event listeners
+            document.getElementById('clearLog').addEventListener('click', function() {
+                document.getElementById('activityLog').innerHTML = '<div>[SYSTEM] Log cleared</div>';
+            });
+
+            document.getElementById('captureSnapshot').addEventListener('click', function() {
+                log('📸 Capturing data snapshot...', 'info');
+                updateDataSnapshots();
+            });
+
+            document.getElementById('forceRefresh').addEventListener('click', function() {
+                if (typeof window.loadActiveDeliveries === 'function') {
+                    log('🔄 Force refreshing Active Deliveries...', 'warning');
+                    window.loadActiveDeliveries();
+                } else {
+                    log('❌ loadActiveDeliveries function not available', 'error');
+                }
+            });
+
+            document.getElementById('addTestBooking').addEventListener('click', addTestBooking);
+
+            document.getElementById('triggerLoadActiveDeliveries').addEventListener('click', function() {
+                if (typeof window.loadActiveDeliveries === 'function') {
+                    window.loadActiveDeliveries();
+                } else {
+                    log('❌ loadActiveDeliveries function not available', 'error');
+                }
+            });
+
+            document.getElementById('checkDataIntegrity').addEventListener('click', function() {
+                log('🔍 Checking data integrity...', 'info');
+                updateDataSnapshots();
+                monitorArraySize();
+            });
+
+            document.getElementById('pauseMonitoring').addEventListener('change', function() {
+                monitoringPaused = this.checked;
+                log(monitoringPaused ? '⏸️ Monitoring paused' : '▶️ Monitoring resumed', 'warning');
+            });
+
+            updateDataSnapshots();
+            log('✅ All monitoring systems active', 'success');
+        });
+    </script>
+</body>
+</html>

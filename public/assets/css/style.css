@@ -964,3 +964,102 @@ body {
 .card-body {
     padding: 20px;
 }
+
+/* Status Dropdown Styles */
+.status-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.status-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.status-clickable:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.status-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 140px;
+    margin-top: 4px;
+}
+
+.status-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #333;
+}
+
+.status-option:hover {
+    background-color: #f8f9fa;
+}
+
+.status-option.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+}
+
+.status-option.disabled {
+    color: #999;
+    cursor: not-allowed;
+    font-style: italic;
+}
+
+.status-option.disabled:hover {
+    background-color: transparent;
+}
+
+.status-option:first-child {
+    border-radius: 6px 6px 0 0;
+}
+
+.status-option:last-child {
+    border-radius: 0 0 6px 6px;
+}
+
+/* Status badge improvements */
+.badge.status-clickable {
+    position: relative;
+    padding-right: 24px;
+}
+
+.badge.status-clickable .bi-chevron-down {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease;
+}
+
+.status-dropdown-container.open .bi-chevron-down {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .status-dropdown {
+        position: fixed;
+        top: auto;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 20px;
+        min-width: 200px;
+    }
+}

@@ -42,34 +42,38 @@ function openBookingModal(dateStr) {
         return;
     }
     
-    // Ensure initBookingModal has been called
-    console.log('Checking if initBookingModal has been called:', typeof window.bookingModalInitialized !== 'undefined');
+    // Ensure initBookingModal is called if available
     if (typeof window.bookingModalInitialized === 'undefined') {
-        console.log('initBookingModal has not been called yet, calling it now');
-        if (typeof initBookingModal === 'function') {
-            try {
-                initBookingModal();
-                window.bookingModalInitialized = true;
-                console.log('initBookingModal executed successfully');
-            } catch (error) {
-                console.error('Error calling initBookingModal:', error);
-                // Try to call it from window object
-                if (typeof window.initBookingModal === 'function') {
-                    try {
-                        window.initBookingModal();
-                        window.bookingModalInitialized = true;
-                        console.log('initBookingModal from window object executed successfully');
-                    } catch (error2) {
-                        console.error('Error calling initBookingModal from window object:', error2);
-                    }
+        console.log('⏳ Checking for initBookingModal availability...');
+        
+        // Try multiple times with delays to handle loading order
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        const tryInitBookingModal = () => {
+            attempts++;
+            
+            if (typeof window.initBookingModal === 'function') {
+                try {
+                    window.initBookingModal();
+                    window.bookingModalInitialized = true;
+                    console.log('✅ initBookingModal executed successfully on attempt', attempts);
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error calling initBookingModal:', error);
+                    return false;
                 }
+            } else if (attempts < maxAttempts) {
+                console.log(`⏳ initBookingModal not available yet, attempt ${attempts}/${maxAttempts}`);
+                setTimeout(tryInitBookingModal, 50);
+                return false;
+            } else {
+                console.warn('⚠️ initBookingModal not available after', maxAttempts, 'attempts');
+                return false;
             }
-        } else {
-            console.error('initBookingModal function is not available');
-            // Try to find it in window object
-            console.log('initBookingModal in window:', window.initBookingModal);
-            console.log('typeof window.initBookingModal:', typeof window.initBookingModal);
-        }
+        };
+        
+        tryInitBookingModal();
     }
     
     // Pre-fill the DR number and date before showing the modal

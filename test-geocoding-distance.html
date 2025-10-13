@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Geocoding & Distance Calculation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2><i class="bi bi-geo-alt"></i> Geocoding & Distance Test</h2>
+        <p>This page tests the real geocoding and distance calculation functionality.</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Geocoding</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Address to Geocode:</label>
+                            <input type="text" class="form-control" id="addressInput" 
+                                   value="Makati City, Philippines" placeholder="Enter address">
+                        </div>
+                        <button class="btn btn-primary" onclick="testGeocode()">
+                            <i class="bi bi-search"></i> Geocode Address
+                        </button>
+                        <div id="geocodeResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Distance Calculation</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Origin:</label>
+                            <input type="text" class="form-control" id="originInput" 
+                                   value="SMEG Alabang warehouse" placeholder="Origin address">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Destination:</label>
+                            <input type="text" class="form-control" id="destinationInput" 
+                                   value="Makati City" placeholder="Destination address">
+                        </div>
+                        <button class="btn btn-success" onclick="testDistance()">
+                            <i class="bi bi-rulers"></i> Calculate Distance
+                        </button>
+                        <div id="distanceResult" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Batch Test - Common Philippines Destinations</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info" onclick="testBatchDistances()">
+                    <i class="bi bi-list-check"></i> Test Multiple Destinations
+                </button>
+                <div id="batchResults" class="mt-3"></div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Console Output</h5>
+            </div>
+            <div class="card-body">
+                <div id="consoleOutput" class="bg-dark text-light p-3" style="font-family: monospace; height: 300px; overflow-y: auto;">
+                    <!-- Console output will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            let color = 'text-light';
+            if (type === 'error') color = 'text-danger';
+            else if (type === 'warn') color = 'text-warning';
+            else if (type === 'success') color = 'text-success';
+            
+            consoleOutput.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        async function testGeocode() {
+            const address = document.getElementById('addressInput').value;
+            const resultDiv = document.getElementById('geocodeResult');
+            
+            if (!address.trim()) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter an address</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Geocoding...</div>';
+            
+            try {
+                console.log(`Testing geocoding for: ${address}`);
+                const coords = await geocodeAddress(address);
+                
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>✅ Geocoding Successful</h6>
+                        <strong>Address:</strong> ${address}<br>
+                        <strong>Latitude:</strong> ${coords.lat.toFixed(6)}<br>
+                        <strong>Longitude:</strong> ${coords.lng.toFixed(6)}<br>
+                        <a href="https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lng}&zoom=15" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="bi bi-map"></i> View on Map
+                        </a>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Geocoding test failed:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Geocoding failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testDistance() {
+            const origin = document.getElementById('originInput').value;
+            const destination = document.getElementById('destinationInput').value;
+            const resultDiv = document.getElementById('distanceResult');
+            
+            if (!origin.trim() || !destination.trim()) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter both origin and destination</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Calculating distance...</div>';
+            
+            try {
+                console.log(`Testing distance calculation: ${origin} → ${destination}`);
+                const distance = await calculateRealDistance(origin, destination);
+                
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6>✅ Distance Calculation Successful</h6>
+                        <strong>Origin:</strong> ${origin}<br>
+                        <strong>Destination:</strong> ${destination}<br>
+                        <strong>Distance:</strong> <span class="badge bg-primary fs-6">${distance.toFixed(2)} km</span>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Distance calculation test failed:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Distance calculation failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testBatchDistances() {
+            const resultDiv = document.getElementById('batchResults');
+            const destinations = [
+                'Makati City',
+                'Quezon City', 
+                'Pasig City',
+                'Taguig City',
+                'Mandaluyong City',
+                'Cebu City',
+                'Davao City'
+            ];
+            
+            resultDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Testing batch distance calculations...</div>';
+            
+            try {
+                console.log('Starting batch distance test...');
+                
+                let html = '<div class="table-responsive"><table class="table table-striped">';
+                html += '<thead><tr><th>Origin</th><th>Destination</th><th>Distance</th><th>Status</th></tr></thead><tbody>';
+                
+                for (const destination of destinations) {
+                    try {
+                        const distance = await calculateRealDistance('SMEG Alabang warehouse', destination);
+                        html += `
+                            <tr>
+                                <td>SMEG Alabang warehouse</td>
+                                <td>${destination}</td>
+                                <td><span class="badge bg-success">${distance.toFixed(2)} km</span></td>
+                                <td><i class="bi bi-check-circle text-success"></i> Success</td>
+                            </tr>
+                        `;
+                        console.log(`✅ ${destination}: ${distance.toFixed(2)} km`);
+                    } catch (error) {
+                        html += `
+                            <tr>
+                                <td>SMEG Alabang warehouse</td>
+                                <td>${destination}</td>
+                                <td><span class="badge bg-danger">Error</span></td>
+                                <td><i class="bi bi-x-circle text-danger"></i> Failed</td>
+                            </tr>
+                        `;
+                        console.error(`❌ ${destination}: ${error.message}`);
+                    }
+                }
+                
+                html += '</tbody></table></div>';
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Batch test failed:', error);
+                resultDiv.innerHTML = `<div class="alert alert-danger">❌ Batch test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Load the booking.js file with geocoding functions
+        const script = document.createElement('script');
+        script.src = 'public/assets/js/booking.js';
+        script.onload = function() {
+            console.log('✅ Booking.js with geocoding functions loaded');
+            addToConsole('✅ Geocoding and distance calculation functions ready', 'success');
+        };
+        script.onerror = function() {
+            console.error('❌ Failed to load booking.js');
+            addToConsole('❌ Failed to load geocoding functions', 'error');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

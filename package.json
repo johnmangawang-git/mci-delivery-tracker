@@ -1,27 +1,58 @@
 {
-  "name": "mci-delivery-system",
+  "name": "mci-delivery-tracker",
   "version": "1.0.0",
-  "description": "MCI Delivery Management System",
-  "main": "index.js",
+  "description": "A comprehensive delivery management system with e-signature capabilities, real-time tracking, and complete delivery lifecycle management.",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "serve": "npx serve public -p 8081",
-    "test": "echo 'Opening test environment...' && start http://localhost:3000",
-    "build": "echo 'No build needed for static site'",
-    "supabase:db:push": "npx supabase db push",
-    "supabase:studio": "npx supabase studio"
+    "dev": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No build process needed for static files\"",
+    "deploy": "echo \"Deploy to production server\"",
+    "lint": "eslint public/assets/js/**/*.js",
+    "format": "prettier --write public/assets/js/**/*.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnmangawang-git/mci-delivery-tracker.git"
+  },
+  "keywords": [
+    "delivery",
+    "tracking",
+    "logistics",
+    "e-signature",
+    "management",
+    "dashboard",
+    "real-time",
+    "gps",
+    "mobile",
+    "responsive"
+  ],
+  "author": "John Mangawang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/johnmangawang-git/mci-delivery-tracker/issues"
+  },
+  "homepage": "https://github.com/johnmangawang-git/mci-delivery-tracker#readme",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "chart.js": "^4.4.0",
     "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "serve": "^14.2.1"
+    "nodemon": "^3.0.1",
+    "eslint": "^8.45.0",
+    "prettier": "^3.0.0"
   },
-  "author": "Your Name",
-  "license": "MIT"
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
 }

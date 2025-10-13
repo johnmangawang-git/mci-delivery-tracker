@@ -671,17 +671,7 @@ function updateBookingViewDashboard() {
         const totalBookings = activeDeliveries.length + deliveryHistory.length;
         const activeDeliveriesCount = activeDeliveries.length;
         
-        // Calculate total distance
-        let totalDistance = 0;
-        [...activeDeliveries, ...deliveryHistory].forEach(delivery => {
-            if (delivery.distance) {
-                // Extract numeric value from distance string (e.g., "12.5 km" -> 12.5)
-                const distanceMatch = delivery.distance.match(/(\d+\.?\d*)/);
-                if (distanceMatch) {
-                    totalDistance += parseFloat(distanceMatch[1]) || 0;
-                }
-            }
-        });
+
         
         // Update the booking view dashboard cards
         const bookingView = document.getElementById('bookingView');
@@ -698,17 +688,12 @@ function updateBookingViewDashboard() {
                 activeDeliveriesCard.textContent = activeDeliveriesCount;
             }
             
-            // Total Distance card
-            const totalDistanceCard = bookingView.querySelector('.dashboard-cards .card:nth-child(3) .stat-value');
-            if (totalDistanceCard) {
-                totalDistanceCard.textContent = `${totalDistance.toLocaleString(undefined, { maximumFractionDigits: 1 })} km`;
-            }
+
         }
         
         console.log('Booking view dashboard updated:', {
             totalBookings,
-            activeDeliveriesCount,
-            totalDistance
+            activeDeliveriesCount
         });
     } catch (error) {
         console.error('Error updating booking view dashboard:', error);
@@ -1009,7 +994,7 @@ function exportEPodToPdf() {
                     <span>${record.customerName || 'N/A'}</span>
                 </div>
                 <div class="field">
-                    <span class="field-label">Customer Contact:</span>
+                    <span class="field-label">Vendor Number:</span>
                     <span>${record.customerContact || 'N/A'}</span>
                 </div>
                 <div class="field">
@@ -1949,8 +1934,8 @@ function exportDeliveryHistoryToPdf() {
                     <span>${record.customerName || 'N/A'}</span>
                 </div>
                 <div class="field">
-                    <span class="field-label">Customer Number:</span>
-                    <span>${record.customerNumber || 'N/A'}</span>
+                    <span class="field-label">Vendor Number:</span>
+                    <span>${record.vendorNumber || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Origin:</span>
@@ -2106,3 +2091,37 @@ document.addEventListener('DOMContentLoaded', function() {
 // Make functions globally accessible
 window.exportDeliveryHistoryToPdf = exportDeliveryHistoryToPdf;
 window.toggleDeliveryHistorySelection = toggleDeliveryHistorySelection;
+
+// Switch to Active Deliveries view (for DR upload integration)
+function switchToActiveDeliveriesView() {
+    console.log('Switching to Active Deliveries view...');
+    
+    try {
+        // Find the active deliveries navigation link
+        const activeDeliveriesLink = document.querySelector('a[data-view="active-deliveries"]');
+        
+        if (activeDeliveriesLink) {
+            // Simulate click on the Active Deliveries tab
+            activeDeliveriesLink.click();
+            console.log('✅ Successfully switched to Active Deliveries view');
+        } else {
+            console.warn('Active Deliveries navigation link not found');
+            
+            // Fallback: manually show the active deliveries view
+            const views = document.querySelectorAll('.view');
+            views.forEach(view => view.classList.remove('active'));
+            
+            const activeDeliveriesView = document.getElementById('activeDeliveriesView');
+            if (activeDeliveriesView) {
+                activeDeliveriesView.classList.add('active');
+                console.log('✅ Manually switched to Active Deliveries view');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error switching to Active Deliveries view:', error);
+    }
+}
+
+// Make function globally available
+window.switchToActiveDeliveriesView = switchToActiveDeliveriesView;

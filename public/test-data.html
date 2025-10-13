@@ -12,7 +12,7 @@
     <script>
         function checkData() {
             try {
-                const activeDeliveries = JSON.parse(localStorage.getItem('mci-activeDeliveries') || '[]');
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
                 const deliveryHistory = JSON.parse(localStorage.getItem('mci-deliveryHistory') || '[]');
                 
                 document.getElementById('output').innerHTML = `
@@ -27,7 +27,7 @@
         }
         
         function clearData() {
-            localStorage.removeItem('mci-activeDeliveries');
+            localStorage.removeItem('mci-active-deliveries');
             localStorage.removeItem('mci-deliveryHistory');
             document.getElementById('output').innerHTML = '<p>Data cleared</p>';
         }

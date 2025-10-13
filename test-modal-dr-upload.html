@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal DR Upload</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2><i class="bi bi-calendar-check"></i> Test Modal DR Upload</h2>
+        <p>This page tests the DR upload functionality in the booking modal.</p>
+        
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookingModal">
+            <i class="bi bi-calendar-plus"></i> Open Booking Modal
+        </button>
+        
+        <div class="mt-4">
+            <div class="alert alert-info">
+                <h6>Test Steps:</h6>
+                <ol>
+                    <li>Click "Open Booking Modal" above</li>
+                    <li>Look for "Upload DR File" button in modal header</li>
+                    <li>Click the "Upload DR File" button</li>
+                    <li>File picker should open</li>
+                    <li>Check console for logs</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Console Output</h5>
+            </div>
+            <div class="card-body">
+                <div id="consoleOutput" class="bg-dark text-light p-3" style="font-family: monospace; height: 300px; overflow-y: auto;">
+                    <!-- Console output will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal (copied from main app) -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Delivery Booking</h5>
+                    <div class="ms-auto me-3">
+                        <button class="btn btn-primary btn-sm" id="uploadDRBtn">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Upload DR File
+                        </button>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Hidden file input for DR upload -->
+                    <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;">
+                    
+                    <div class="alert alert-success">
+                        <h6>Modal is working!</h6>
+                        <p>The "Upload DR File" button should be visible in the header above.</p>
+                        <p>Click it to test the file upload functionality.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            let color = 'text-light';
+            if (type === 'error') color = 'text-danger';
+            else if (type === 'warn') color = 'text-warning';
+            else if (type === 'success') color = 'text-success';
+            
+            consoleOutput.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addToConsole(args.join(' '), 'warn');
+        };
+        
+        // Initialize global arrays
+        window.activeDeliveries = [];
+        
+        // Mock functions for testing
+        window.showToast = function(message, type) {
+            console.log(`Toast: ${message} (${type})`);
+        };
+        
+        window.showError = function(message) {
+            console.error(`Error: ${message}`);
+        };
+        
+        // Load booking.js
+        const script = document.createElement('script');
+        script.src = 'public/assets/js/booking.js';
+        script.onload = function() {
+            console.log('✅ booking.js loaded');
+            addToConsole('✅ DR upload functionality should be ready', 'success');
+        };
+        script.onerror = function() {
+            console.error('❌ Failed to load booking.js');
+            addToConsole('❌ Failed to load booking.js', 'error');
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

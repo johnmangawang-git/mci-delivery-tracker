@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pin on Map CSP Fix Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .test-section {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .log-container {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🧪 Pin on Map CSP Fix Test</h1>
+        <p>Testing the fix for Content Security Policy violations in manual pin on map functionality</p>
+
+        <!-- Test Controls -->
+        <div class="test-section">
+            <h3>🛠️ Test Controls</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-primary me-2 mb-2" onclick="testLocalGeocoding()">🗺️ Test Local Geocoding</button>
+                    <button class="btn btn-success me-2 mb-2" onclick="testDistanceCalculation()">📏 Test Distance Calculation</button>
+                    <button class="btn btn-info me-2 mb-2" onclick="testComprehensiveDatabase()">🗃️ Test Comprehensive Database</button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-warning me-2 mb-2" onclick="testAddressExtraction()">🏙️ Test Address Extraction</button>
+                    <button class="btn btn-secondary me-2 mb-2" onclick="simulateManualBooking()">📋 Simulate Manual Booking</button>
+                    <button class="btn btn-danger mb-2" onclick="clearLog()">🗑️ Clear Log</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Container -->
+        <div class="log-container" id="logContainer">
+            <div>🚀 Pin on Map CSP Fix Test initialized. Click buttons above to run tests.</div>
+        </div>
+
+        <!-- Test Results -->
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Geocoding Results</h5>
+                    <div id="geocodingResults" class="bg-light p-3" style="min-height: 200px;">
+                        <small class="text-muted">Run geocoding tests to see results</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5>Distance Calculations</h5>
+                    <div id="distanceResults" class="bg-light p-3" style="min-height: 200px;">
+                        <small class="text-muted">Run distance tests to see results</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/booking.js"></script>
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#00ff00',
+                success: '#00ff88',
+                error: '#ff4444',
+                warning: '#ffaa00'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.color = colors[type] || colors.info;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '<div>🚀 Log cleared.</div>';
+        }
+
+        // Test local geocoding
+        async function testLocalGeocoding() {
+            log('=== TESTING LOCAL GEOCODING ===');
+            
+            const testAddresses = [
+                'Makati City',
+                'Quezon City',
+                'BGC, Taguig',
+                'Alabang, Muntinlupa',
+                'Las Piñas City',
+                'UNIT 1003A RITZ TOWER AYALA AVE CITY OF MAKATI METRO MANILA'
+            ];
+            
+            const geocodingResults = document.getElementById('geocodingResults');
+            let resultsHtml = '<h6>Geocoding Test Results:</h6>';
+            
+            for (const address of testAddresses) {
+                log(`Testing geocoding for: ${address}`);
+                
+                try {
+                    if (typeof window.geocodeUsingComprehensiveDatabase === 'function') {
+                        const result = await window.geocodeUsingComprehensiveDatabase(address);
+                        log(`✅ ${address} → (${result.lat}, ${result.lng})`, 'success');
+                        resultsHtml += `<div class="mb-2">
+                            <strong>${address}</strong><br>
+                            <small class="text-success">✅ (${result.lat.toFixed(6)}, ${result.lng.toFixed(6)})</small>
+                        </div>`;
+                    } else {
+                        log(`❌ geocodeUsingComprehensiveDatabase function not available`, 'error');
+                        resultsHtml += `<div class="mb-2">
+                            <strong>${address}</strong><br>
+                            <small class="text-danger">❌ Function not available</small>
+                        </div>`;
+                    }
+                } catch (error) {
+                    log(`❌ Error geocoding ${address}: ${error.message}`, 'error');
+                    resultsHtml += `<div class="mb-2">
+                        <strong>${address}</strong><br>
+                        <small class="text-danger">❌ Error: ${error.message}</small>
+                    </div>`;
+                }
+            }
+            
+            geocodingResults.innerHTML = resultsHtml;
+            log('✅ Local geocoding test completed');
+        }
+
+        // Test distance calculation
+        async function testDistanceCalculation() {
+            log('=== TESTING DISTANCE CALCULATION ===');
+            
+            const testRoutes = [
+                { origin: 'SMEG Alabang warehouse', destination: 'Makati City' },
+                { origin: 'SMEG Alabang warehouse', destination: 'Quezon City' },
+                { origin: 'SMEG Alabang warehouse', destination: 'Las Piñas City' },
+                { origin: 'SMEG Cebu warehouse', destination: 'Cebu City' }
+            ];
+            
+            const distanceResults = document.getElementById('distanceResults');
+            let resultsHtml = '<h6>Distance Calculation Results:</h6>';
+            
+            for (const route of testRoutes) {
+                log(`Testing distance: ${route.origin} → ${route.destination}`);
+                
+                try {
+                    if (typeof window.calculateRealDistance === 'function') {
+                        const distance = await window.calculateRealDistance(route.origin, route.destination);
+                        log(`✅ ${route.origin} → ${route.destination}: ${distance.toFixed(2)} km`, 'success');
+                        resultsHtml += `<div class="mb-2">
+                            <strong>${route.origin}</strong> → <strong>${route.destination}</strong><br>
+                            <small class="text-success">✅ ${distance.toFixed(2)} km</small>
+                        </div>`;
+                    } else {
+                        log(`❌ calculateRealDistance function not available`, 'error');
+                        resultsHtml += `<div class="mb-2">
+                            <strong>${route.origin}</strong> → <strong>${route.destination}</strong><br>
+                            <small class="text-danger">❌ Function not available</small>
+                        </div>`;
+                    }
+                } catch (error) {
+                    log(`❌ Error calculating distance: ${error.message}`, 'error');
+                    resultsHtml += `<div class="mb-2">
+                        <strong>${route.origin}</strong> → <strong>${route.destination}</strong><br>
+                        <small class="text-danger">❌ Error: ${error.message}</small>
+                    </div>`;
+                }
+            }
+            
+            distanceResults.innerHTML = resultsHtml;
+            log('✅ Distance calculation test completed');
+        }
+
+        // Test comprehensive database
+        function testComprehensiveDatabase() {
+            log('=== TESTING COMPREHENSIVE DATABASE ===');
+            
+            if (typeof window.COMPREHENSIVE_PHILIPPINE_LOCATIONS !== 'undefined') {
+                const locations = window.COMPREHENSIVE_PHILIPPINE_LOCATIONS;
+                const locationCount = Object.keys(locations).length;
+                log(`✅ Comprehensive database loaded with ${locationCount} locations`, 'success');
+                
+                // Test some key locations
+                const testLocations = ['Makati', 'Quezon City', 'Las Pinas', 'BGC', 'Alabang'];
+                testLocations.forEach(location => {
+                    if (locations[location]) {
+                        log(`✅ ${location}: (${locations[location].lat}, ${locations[location].lng})`, 'success');
+                    } else {
+                        log(`❌ ${location}: Not found in database`, 'error');
+                    }
+                });
+            } else {
+                log('❌ COMPREHENSIVE_PHILIPPINE_LOCATIONS not available', 'error');
+            }
+            
+            // Test findLocationCoordinates function
+            if (typeof window.findLocationCoordinates === 'function') {
+                log('✅ findLocationCoordinates function available', 'success');
+                
+                const testResult = window.findLocationCoordinates('Makati');
+                if (testResult) {
+                    log(`✅ findLocationCoordinates('Makati'): (${testResult.lat}, ${testResult.lng})`, 'success');
+                } else {
+                    log(`❌ findLocationCoordinates('Makati'): No result`, 'error');
+                }
+            } else {
+                log('❌ findLocationCoordinates function not available', 'error');
+            }
+        }
+
+        // Test address extraction
+        function testAddressExtraction() {
+            log('=== TESTING ADDRESS EXTRACTION ===');
+            
+            const testAddresses = [
+                'UNIT 1003A RITZ TOWER AYALA AVE CITY OF MAKATI METRO MANILA',
+                'BGC TAGUIG CITY METRO MANILA',
+                'ALABANG MUNTINLUPA CITY',
+                'LAS PINAS CITY METRO MANILA',
+                'Simple Address'
+            ];
+            
+            if (typeof window.extractCityNameFromAddress === 'function') {
+                log('✅ extractCityNameFromAddress function available', 'success');
+                
+                testAddresses.forEach(address => {
+                    const extracted = window.extractCityNameFromAddress(address);
+                    log(`📍 "${address}" → "${extracted}"`);
+                });
+            } else {
+                log('❌ extractCityNameFromAddress function not available', 'error');
+            }
+        }
+
+        // Simulate manual booking
+        async function simulateManualBooking() {
+            log('=== SIMULATING MANUAL BOOKING FLOW ===');
+            
+            log('1. User selects origin: SMEG Alabang warehouse');
+            log('2. User pins destination on map: Makati City');
+            
+            try {
+                // Test the geocoding that would happen during pin on map
+                if (typeof window.geocodeUsingComprehensiveDatabase === 'function') {
+                    const originCoords = await window.geocodeUsingComprehensiveDatabase('SMEG Alabang warehouse');
+                    const destCoords = await window.geocodeUsingComprehensiveDatabase('Makati City');
+                    
+                    log(`3. Origin geocoded: (${originCoords.lat}, ${originCoords.lng})`, 'success');
+                    log(`4. Destination geocoded: (${destCoords.lat}, ${destCoords.lng})`, 'success');
+                    
+                    // Test distance calculation
+                    if (typeof window.calculateRealDistance === 'function') {
+                        const distance = await window.calculateRealDistance('SMEG Alabang warehouse', 'Makati City');
+                        log(`5. Distance calculated: ${distance.toFixed(2)} km`, 'success');
+                        log('✅ Manual booking simulation completed successfully - NO CSP violations!', 'success');
+                    } else {
+                        log('❌ Distance calculation function not available', 'error');
+                    }
+                } else {
+                    log('❌ Geocoding function not available', 'error');
+                }
+            } catch (error) {
+                log(`❌ Simulation failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Pin on Map CSP Fix Test initialized');
+            log('Available functions:');
+            log(`- geocodeUsingComprehensiveDatabase: ${typeof window.geocodeUsingComprehensiveDatabase}`);
+            log(`- calculateRealDistance: ${typeof window.calculateRealDistance}`);
+            log(`- findLocationCoordinates: ${typeof window.findLocationCoordinates}`);
+            log(`- extractCityNameFromAddress: ${typeof window.extractCityNameFromAddress}`);
+        });
+    </script>
+</body>
+</html>

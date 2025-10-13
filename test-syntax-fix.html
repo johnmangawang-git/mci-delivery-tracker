@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Syntax Fix</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2><i class="bi bi-check-circle text-success"></i> Syntax Fix Test</h2>
+        <p>This page tests if the booking.js syntax errors are fixed.</p>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>JavaScript Loading Status</h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingStatus">
+                    <p class="text-muted">Checking JavaScript loading...</p>
+                </div>
+                
+                <button class="btn btn-primary mt-3" onclick="testFunctions()">
+                    <i class="bi bi-play-circle"></i> Test Functions
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Console Output</h5>
+            </div>
+            <div class="card-body">
+                <div id="consoleOutput" class="bg-dark text-light p-3" style="font-family: monospace; height: 200px; overflow-y: auto;">
+                    <!-- Console output will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = document.getElementById('consoleOutput');
+        
+        function addToConsole(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-danger' : 'text-success';
+            consoleOutput.innerHTML += `<div class="${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+        
+        // Initialize global arrays
+        window.activeDeliveries = [];
+        
+        function updateStatus() {
+            const statusDiv = document.getElementById('loadingStatus');
+            
+            let status = '<div class="alert alert-info">';
+            status += '<h6>Loading Status:</h6><ul>';
+            
+            // Check if booking.js loaded without errors
+            try {
+                status += '<li><strong>Bootstrap:</strong> ' + (typeof bootstrap !== 'undefined' ? '✅ Loaded' : '❌ Not loaded') + '</li>';
+                status += '<li><strong>XLSX:</strong> ' + (typeof XLSX !== 'undefined' ? '✅ Loaded' : '❌ Not loaded') + '</li>';
+                status += '<li><strong>showToast:</strong> ' + (typeof showToast !== 'undefined' ? '✅ Available' : '❌ Not available') + '</li>';
+                status += '<li><strong>debugDRUpload:</strong> ' + (typeof debugDRUpload !== 'undefined' ? '✅ Available' : '❌ Not available') + '</li>';
+                status += '<li><strong>showDRPreview:</strong> ' + (typeof showDRPreview !== 'undefined' ? '✅ Available' : '❌ Not available') + '</li>';
+                
+                status += '</ul></div>';
+                
+                if (typeof showToast !== 'undefined') {
+                    status += '<div class="alert alert-success">✅ booking.js loaded successfully without syntax errors!</div>';
+                } else {
+                    status += '<div class="alert alert-warning">⚠️ Some functions not available - check console for errors</div>';
+                }
+                
+            } catch (error) {
+                status += '</ul></div>';
+                status += '<div class="alert alert-danger">❌ Error checking functions: ' + error.message + '</div>';
+            }
+            
+            statusDiv.innerHTML = status;
+        }
+        
+        function testFunctions() {
+            console.log('=== TESTING FUNCTIONS ===');
+            
+            try {
+                if (typeof debugDRUpload === 'function') {
+                    console.log('Testing debugDRUpload function...');
+                    debugDRUpload();
+                } else {
+                    console.error('debugDRUpload function not available');
+                }
+                
+                if (typeof showToast === 'function') {
+                    console.log('Testing showToast function...');
+                    showToast('Test message - syntax fix successful!', 'success');
+                } else {
+                    console.error('showToast function not available');
+                }
+                
+                console.log('Function tests completed');
+                
+            } catch (error) {
+                console.error('Error testing functions:', error);
+            }
+        }
+        
+        // Load booking.js and check for errors
+        const script = document.createElement('script');
+        script.src = 'public/assets/js/booking.js';
+        script.onload = function() {
+            console.log('booking.js loaded successfully');
+            setTimeout(updateStatus, 500);
+        };
+        script.onerror = function() {
+            console.error('Failed to load booking.js');
+            updateStatus();
+        };
+        document.head.appendChild(script);
+        
+        // Initial status check
+        setTimeout(updateStatus, 1000);
+    </script>
+</body>
+</html>

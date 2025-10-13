@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Dropdown Test - MCI Delivery System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="public/assets/css/style.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background: #f8f9fa; }
+        .test-container { max-width: 1200px; margin: 0 auto; }
+        .test-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .demo-table { margin-top: 20px; }
+        .status-demo { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-section">
+            <h2><i class="bi bi-gear-fill text-primary"></i> Status Dropdown Functionality Test</h2>
+            <p class="text-muted">Testing the new editable status dropdown for Active Deliveries</p>
+            
+            <div class="alert alert-info">
+                <h5><i class="bi bi-info-circle"></i> How it works:</h5>
+                <ul class="mb-0">
+                    <li><strong>Click any status badge</strong> to open the dropdown</li>
+                    <li><strong>Available options:</strong> In Transit, On Schedule, Delayed</li>
+                    <li><strong>Restricted statuses:</strong> Completed and Signed cannot be changed</li>
+                    <li><strong>Auto-save:</strong> Changes are saved immediately to localStorage</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h4>Demo Active Deliveries Table</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>DR Number</th>
+                            <th>Customer</th>
+                            <th>Origin</th>
+                            <th>Destination</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="demoTableBody">
+                        <!-- Demo data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h4>Status Options Demo</h4>
+            <div class="row">
+                <div class="col-md-3">
+                    <h6>Editable Statuses:</h6>
+                    <div class="status-demo">
+                        <div class="status-dropdown-container">
+                            <span class="badge bg-warning status-clickable" onclick="toggleStatusDropdown('demo1')">
+                                <i class="bi bi-truck"></i> In Transit
+                                <i class="bi bi-chevron-down ms-1"></i>
+                            </span>
+                            <div class="status-dropdown" id="statusDropdown-demo1" style="display: none;">
+                                <div class="status-option" onclick="updateDemoStatus('demo1', 'In Transit')">
+                                    <i class="bi bi-truck"></i> In Transit
+                                </div>
+                                <div class="status-option" onclick="updateDemoStatus('demo1', 'On Schedule')">
+                                    <i class="bi bi-check-circle"></i> On Schedule
+                                </div>
+                                <div class="status-option" onclick="updateDemoStatus('demo1', 'Delayed')">
+                                    <i class="bi bi-exclamation-triangle"></i> Delayed
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6>Restricted Statuses:</h6>
+                    <div class="status-demo">
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle-fill"></i> Completed
+                        </span>
+                        <small class="d-block text-muted">Cannot be changed</small>
+                    </div>
+                    <div class="status-demo">
+                        <span class="badge bg-primary">
+                            <i class="bi bi-pen-fill"></i> Signed
+                        </span>
+                        <small class="d-block text-muted">Cannot be changed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h4>Test Results</h4>
+            <div id="testResults" class="alert alert-secondary">
+                <p><strong>Status:</strong> Ready to test</p>
+                <p><strong>Instructions:</strong> Click on any status badge above to test the dropdown functionality</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mock data for testing
+        const mockDeliveries = [
+            {
+                id: 'test1',
+                drNumber: 'DR-2024-001',
+                customerName: 'ABC Company',
+                origin: 'Manila',
+                destination: 'Quezon City',
+                status: 'In Transit'
+            },
+            {
+                id: 'test2',
+                drNumber: 'DR-2024-002',
+                customerName: 'XYZ Corp',
+                origin: 'Makati',
+                destination: 'Pasig',
+                status: 'On Schedule'
+            },
+            {
+                id: 'test3',
+                drNumber: 'DR-2024-003',
+                customerName: 'DEF Ltd',
+                origin: 'Taguig',
+                destination: 'Mandaluyong',
+                status: 'Delayed'
+            },
+            {
+                id: 'test4',
+                drNumber: 'DR-2024-004',
+                customerName: 'GHI Inc',
+                origin: 'Pasay',
+                destination: 'Las Piñas',
+                status: 'Completed'
+            }
+        ];
+
+        // Status info function
+        function getStatusInfo(status) {
+            switch (status) {
+                case 'In Transit':
+                    return { class: 'bg-warning', icon: 'bi-truck' };
+                case 'On Schedule':
+                    return { class: 'bg-success', icon: 'bi-check-circle' };
+                case 'Delayed':
+                    return { class: 'bg-danger', icon: 'bi-exclamation-triangle' };
+                case 'Completed':
+                    return { class: 'bg-success', icon: 'bi-check-circle-fill' };
+                case 'Signed':
+                    return { class: 'bg-primary', icon: 'bi-pen-fill' };
+                default:
+                    return { class: 'bg-secondary', icon: 'bi-question-circle' };
+            }
+        }
+
+        // Generate status options
+        function generateStatusOptions(currentStatus, deliveryId) {
+            const availableStatuses = ['In Transit', 'On Schedule', 'Delayed'];
+            
+            if (currentStatus === 'Completed' || currentStatus === 'Signed') {
+                return '<div class="status-option disabled">Status cannot be changed</div>';
+            }
+            
+            return availableStatuses.map(status => {
+                const isSelected = status === currentStatus ? 'selected' : '';
+                const statusInfo = getStatusInfo(status);
+                return `
+                    <div class="status-option ${isSelected}" 
+                         onclick="updateDeliveryStatusById('${deliveryId}', '${status}')">
+                        <i class="bi ${statusInfo.icon}"></i> ${status}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle dropdown
+        function toggleStatusDropdown(deliveryId) {
+            document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                if (dropdown.id !== `statusDropdown-${deliveryId}`) {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Update status
+        function updateDeliveryStatusById(deliveryId, newStatus) {
+            const delivery = mockDeliveries.find(d => d.id === deliveryId);
+            if (delivery) {
+                const oldStatus = delivery.status;
+                delivery.status = newStatus;
+                
+                // Update test results
+                document.getElementById('testResults').innerHTML = `
+                    <p><strong>Status:</strong> ✅ Successfully updated</p>
+                    <p><strong>Delivery:</strong> ${delivery.drNumber}</p>
+                    <p><strong>Changed:</strong> "${oldStatus}" → "${newStatus}"</p>
+                    <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+                `;
+                
+                // Refresh table
+                populateDemoTable();
+                
+                // Close dropdown
+                const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+
+        // Demo status update
+        function updateDemoStatus(demoId, newStatus) {
+            const badge = document.querySelector(`#statusDropdown-${demoId}`).previousElementSibling;
+            const statusInfo = getStatusInfo(newStatus);
+            
+            badge.className = `badge ${statusInfo.class} status-clickable`;
+            badge.innerHTML = `<i class="bi ${statusInfo.icon}"></i> ${newStatus}<i class="bi bi-chevron-down ms-1"></i>`;
+            
+            document.getElementById(`statusDropdown-${demoId}`).style.display = 'none';
+            
+            document.getElementById('testResults').innerHTML = `
+                <p><strong>Status:</strong> ✅ Demo status updated</p>
+                <p><strong>New Status:</strong> ${newStatus}</p>
+                <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+            `;
+        }
+
+        // Populate demo table
+        function populateDemoTable() {
+            const tbody = document.getElementById('demoTableBody');
+            tbody.innerHTML = mockDeliveries.map(delivery => {
+                const statusInfo = getStatusInfo(delivery.status);
+                const isRestricted = delivery.status === 'Completed' || delivery.status === 'Signed';
+                
+                return `
+                    <tr>
+                        <td><strong>${delivery.drNumber}</strong></td>
+                        <td>${delivery.customerName}</td>
+                        <td>${delivery.origin}</td>
+                        <td>${delivery.destination}</td>
+                        <td>
+                            ${isRestricted ? 
+                                `<span class="badge ${statusInfo.class}">
+                                    <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                                </span>` :
+                                `<div class="status-dropdown-container">
+                                    <span class="badge ${statusInfo.class} status-clickable" 
+                                          onclick="toggleStatusDropdown('${delivery.id}')">
+                                        <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                                        <i class="bi bi-chevron-down ms-1"></i>
+                                    </span>
+                                    <div class="status-dropdown" id="statusDropdown-${delivery.id}" style="display: none;">
+                                        ${generateStatusOptions(delivery.status, delivery.id)}
+                                    </div>
+                                </div>`
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.status-dropdown-container')) {
+                document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+            }
+        });
+
+        // Initialize demo
+        document.addEventListener('DOMContentLoaded', function() {
+            populateDemoTable();
+        });
+    </script>
+</body>
+</html>

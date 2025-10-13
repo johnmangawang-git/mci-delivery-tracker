@@ -159,6 +159,82 @@
     <script src="assets/js/main-fixed.js"></script>
     <script src="assets/js/e-signature.js"></script>
     <script src="assets/js/app.js"></script>
+    
+    <!-- Minimal booking fix - ensures booking system works -->
+    <script src="assets/js/minimal-booking-fix.js"></script>
+    
+    <!-- Signature completion fix - prevents signature_pad.ts:136 error -->
+    <script src="assets/js/signature-completion-fix.js"></script>
+    
+    <!-- Delivery history fix - ensures signed DR items appear in history -->
+    <script src="assets/js/delivery-history-fix.js"></script>
+    
+    <!-- Emergency fix for disappearing bookings -->
+    <script>
+        console.log('🚨 Emergency booking fix loading...');
+        
+        // Force initialize arrays
+        if (typeof window.activeDeliveries === 'undefined') {
+            window.activeDeliveries = [];
+            console.log('🔧 Emergency: Initialized window.activeDeliveries');
+        }
+        
+        // Load existing data immediately
+        try {
+            const saved = localStorage.getItem('mci-active-deliveries');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.length > 0) {
+                    window.activeDeliveries = parsed;
+                    console.log(`🔧 Emergency: Loaded ${parsed.length} bookings from localStorage`);
+                }
+            }
+        } catch (error) {
+            console.error('Emergency load error:', error);
+        }
+        
+        // Prevent array from being cleared
+        let originalActiveDeliveries = window.activeDeliveries;
+        
+        // Override any function that might clear the array
+        const protectArray = () => {
+            if (window.activeDeliveries.length === 0 && originalActiveDeliveries.length > 0) {
+                console.log('🛡️ Emergency: Restoring cleared array');
+                window.activeDeliveries = [...originalActiveDeliveries];
+            }
+            originalActiveDeliveries = [...window.activeDeliveries];
+        };
+        
+        // Check every second for array clearing
+        setInterval(protectArray, 1000);
+        
+        // Force display refresh every 3 seconds - WITH CHECKBOX PRESERVATION
+        setInterval(() => {
+            // Save checkbox states before refresh
+            const checkboxStates = {};
+            document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
+                checkboxStates[checkbox.dataset.deliveryId] = checkbox.checked;
+            });
+            
+            if (typeof window.loadActiveDeliveries === 'function') {
+                window.loadActiveDeliveries();
+            } else if (typeof window.minimalLoadActiveDeliveries === 'function') {
+                window.minimalLoadActiveDeliveries();
+            }
+            
+            // Restore checkbox states after refresh
+            setTimeout(() => {
+                document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
+                    if (checkboxStates[checkbox.dataset.deliveryId]) {
+                        checkbox.checked = true;
+                    }
+                });
+            }, 100);
+        }, 3000);
+        
+        console.log('✅ Emergency booking fix active');
+    </script>
+    
     <link rel="stylesheet" href="assets/css/style.css">
     <!-- Custom styles for development -->
     <style>
@@ -170,6 +246,42 @@
         #addTestDataBtn:hover {
             background-color: #218838 !important;
             border-color: #1e7e34 !important;
+        }
+
+        #uploadDrFileBtn {
+            margin-right: 10px;
+        }
+
+        .calendar-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Custom pin icon styles for map */
+        .custom-pin-icon {
+            background: none !important;
+            border: none !important;
+            position: relative;
+        }
+
+        .custom-pin-icon i {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -100%);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Map modal styles */
+        .coordinates-display {
+            font-family: monospace;
+        }
+
+        .coordinate-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
         }
     </style>
     
@@ -328,15 +440,7 @@
                         <div class="stat-desc"><i class="bi bi-arrow-down text-danger"></i> 3% from last week</div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-geo-alt"></i> Total Distance</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="stat-value">1,248 km</div>
-                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 18% from last week</div>
-                    </div>
-                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <h5 class="card-title"><i class="bi bi-currency-exchange"></i> Revenue</h5>
@@ -364,6 +468,7 @@
                         </button>
                     </div>
                     <div class="calendar-controls">
+                        <button class="btn btn-primary" id="uploadDrFileBtn"><i class="bi bi-upload"></i> Upload DR File</button>
                         <button class="btn btn-outline-secondary active" data-view="month"><i
                                 class="bi bi-calendar-month"></i> Month</button>
                         <button class="btn btn-outline-secondary" data-view="week"><i class="bi bi-calendar-week"></i>
@@ -388,13 +493,7 @@
                         <i class="bi bi-arrow-up"></i> 14.2% from last month
                     </div>
                 </div>
-                <div class="metric-card" style="border-left-color: #2ecc71;">
-                    <div class="metric-title">Total Distance</div>
-                    <div class="metric-value">18,426 km</div>
-                    <div class="metric-change positive">
-                        <i class="bi bi-arrow-up"></i> 8.7% from last month
-                    </div>
-                </div>
+
                 <div class="metric-card" style="border-left-color: #f39c12;">
                     <div class="metric-title">Total Additional Cost</div>
                     <div class="metric-value">₱4,280</div>
@@ -524,10 +623,9 @@
                                             id="selectAllActive"></th>
                                     <th>DR Number</th>
                                     <th>Customer Name</th>
-                                    <th>Customer Number</th>
+                                    <th>Vendor Number</th>
                                     <th>Origin</th>
                                     <th>Destination</th>
-                                    <th>Distance</th>
                                     <th>Truck</th>
                                     <th>Status</th>
                                     <th>Booked Date</th>
@@ -589,10 +687,9 @@
                                     <th>Date</th>
                                     <th>DR Number</th>
                                     <th>Customer Name</th>
-                                    <th>Customer Number</th>
+                                    <th>Vendor Number</th>
                                     <th>Origin</th>
                                     <th>Destination</th>
-                                    <th>Distance</th>
                                     <th>Additional Costs</th>
                                     <th>Status</th>
                                 </tr>
@@ -1038,7 +1135,7 @@
                                         <input type="text" class="form-control" id="ePodCustomerName" readonly>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Customer Contact</label>
+                                        <label class="form-label">Vendor Number</label>
                                         <input type="text" class="form-control" id="ePodCustomerContact" readonly>
                                     </div>
                                     <div class="mb-3">
@@ -1236,10 +1333,10 @@
                                     <div class="form-text">Full name of the customer</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="customerNumber" class="form-label">Customer Number</label>
-                                    <input type="tel" class="form-control" id="customerNumber"
-                                        placeholder="Enter customer phone number" required>
-                                    <div class="form-text">Contact number for delivery coordination</div>
+                                    <label for="vendorNumber" class="form-label">Vendor Number</label>
+                                    <input type="tel" class="form-control" id="vendorNumber"
+                                        placeholder="Enter vendor number" required>
+                                    <div class="form-text">Vendor identification number</div>
                                 </div>
                             </div>
                         </div>
@@ -1356,20 +1453,7 @@
                                 </div>
                             </div>
 
-                            <div class="mb-4">
-                                <label class="form-label">Calculated Distance</label>
-                                <div class="distance-box" id="calculatedDistance">
-                                    <span id="distanceValue">-- km</span>
-                                    <div class="distance-loading d-none">
-                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                            <span class="visually-hidden">Calculating...</span>
-                                        </div>
-                                        <span class="ms-2">Calculating distance...</span>
-                                    </div>
-                                </div>
-                                <div class="form-text text-center mt-2">Distance calculated automatically between origin
-                                    and destination areas</div>
-                            </div>
+
                         </div>
 
                         <!-- Additional Costs Section -->
@@ -1402,6 +1486,166 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="confirmBookingBtn"><i
                             class="bi bi-check-circle me-2"></i>Confirm Booking</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for DR upload -->
+    <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display: none;">
+
+    <!-- DR Upload Modal -->
+    <div class="modal fade" id="drUploadModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Upload DR File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6><i class="bi bi-info-circle"></i> File Format Requirements</h6>
+                        <div class="alert alert-info">
+                            <strong>Excel Column Mapping:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Column D:</strong> DR Number</li>
+                                <li><strong>Column G:</strong> Vendor Number</li>
+                                <li><strong>Column H:</strong> Customer Name</li>
+                                <li><strong>Column I:</strong> Destination Area</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="drUploadContent">
+                        <div class="text-center py-4">
+                            <i class="bi bi-file-earmark-excel display-1 text-success"></i>
+                            <h5 class="mt-3">Select Excel File</h5>
+                            <p class="text-muted">Choose an Excel file (.xlsx or .xls) containing DR data</p>
+                            <button type="button" class="btn btn-primary" id="selectDrFileBtn">
+                                <i class="bi bi-folder2-open me-2"></i>Browse Files
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="drPreviewContent" style="display: none;">
+                        <h6><i class="bi bi-eye"></i> Preview Data & Configuration</h6>
+                        
+                        <!-- DR Items Preview Table -->
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-2">DR Items to be Created</h6>
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-sm table-striped">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th>DR Number</th>
+                                            <th>Customer Name</th>
+                                            <th>Vendor Number</th>
+                                            <th>Origin</th>
+                                            <th>Destination</th>
+                                            <th>Delivery Date</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="drPreviewTableBody">
+                                        <!-- Preview data will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-2">
+                                <span id="drPreviewSummary" class="text-muted"></span>
+                            </div>
+                        </div>
+
+                        <!-- Truck Reference Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6><i class="bi bi-truck"></i> Truck Reference</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="drTruckType" class="form-label">Truck Type</label>
+                                                <select class="form-select" id="drTruckType" required>
+                                                    <option value="">Select truck type</option>
+                                                    <option value="L300">L300</option>
+                                                    <option value="Canter">Canter</option>
+                                                    <option value="3PL">3PL</option>
+                                                </select>
+                                                <div class="form-text">Choose the type of truck for all DR items</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="drTruckPlate" class="form-label">Truck Plate #</label>
+                                                <input type="text" class="form-control" id="drTruckPlate" 
+                                                       placeholder="Enter plate number (e.g., ABC-1234)" required>
+                                                <div class="form-text">Truck plate number for all DR items</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Costs Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6><i class="bi bi-currency-exchange"></i> Additional Costs</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="drAdditionalCostsContainer">
+                                            <div class="dr-cost-item mb-3">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Description</label>
+                                                        <input type="text" class="form-control dr-cost-description" 
+                                                               placeholder="e.g., Fuel Surcharge, Toll Fee">
+                                                        <div class="form-text">Cost description for analytics</div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label">Amount</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">₱</span>
+                                                            <input type="number" class="form-control dr-cost-amount" 
+                                                                   placeholder="0.00" min="0" step="0.01">
+                                                        </div>
+                                                        <div class="form-text">Cost amount</div>
+                                                    </div>
+                                                    <div class="col-md-2 d-flex align-items-end">
+                                                        <button type="button" class="btn btn-outline-danger remove-dr-cost" disabled>
+                                                            <i class="bi bi-x-lg"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="addDrCostBtn">
+                                            <i class="bi bi-plus-circle me-1"></i>Add Additional Cost
+                                        </button>
+                                        <div class="mt-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Total Additional Cost:</span>
+                                                <span class="fw-bold text-primary" id="drTotalAdditionalCost">₱0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-outline-secondary" id="backToDrUploadBtn">
+                                <i class="bi bi-arrow-left me-1"></i>Back
+                            </button>
+                            <div>
+                                <button type="button" class="btn btn-outline-info me-2" id="previewDrSummaryBtn">
+                                    <i class="bi bi-eye me-1"></i>Preview Summary
+                                </button>
+                                <button type="button" class="btn btn-success" id="confirmDrUploadBtn">
+                                    <i class="bi bi-check-circle me-1"></i>Create Bookings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

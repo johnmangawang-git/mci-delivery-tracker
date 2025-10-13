@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Loading Diagnostic - MCI Delivery System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background: #f8f9fa; }
+        .diagnostic-container { max-width: 1200px; margin: 0 auto; }
+        .diagnostic-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .script-status { font-family: monospace; font-size: 12px; }
+        .status-good { color: #28a745; font-weight: bold; }
+        .status-bad { color: #dc3545; font-weight: bold; }
+        .status-warning { color: #ffc107; font-weight: bold; }
+        .error-log { background: #f8f9fa; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="diagnostic-container">
+        <div class="diagnostic-section">
+            <h2><i class="bi bi-file-earmark-code text-primary"></i> Script Loading Diagnostic</h2>
+            <p class="text-muted">Checking if JavaScript files are loading correctly and functions are available</p>
+            
+            <div class="alert alert-warning">
+                <strong>Issue Found:</strong> saveBooking and loadActiveDeliveries functions are not available globally.
+                This suggests JavaScript files aren't loading completely or there are errors preventing function exports.
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="diagnostic-section">
+                    <h5>📄 Script Files Status</h5>
+                    <div class="script-status">
+                        <div>booking.js: <span id="bookingJsStatus">Checking...</span></div>
+                        <div>app.js: <span id="appJsStatus">Checking...</span></div>
+                        <div>main.js: <span id="mainJsStatus">Checking...</span></div>
+                        <div>customers.js: <span id="customersJsStatus">Checking...</span></div>
+                        <div>analytics.js: <span id="analyticsJsStatus">Checking...</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="diagnostic-section">
+                    <h5>🔧 Function Availability</h5>
+                    <div class="script-status">
+                        <div>window.saveBooking: <span id="saveBookingFunc">Checking...</span></div>
+                        <div>window.loadActiveDeliveries: <span id="loadActiveDeliveriesFunc">Checking...</span></div>
+                        <div>window.populateActiveDeliveriesTable: <span id="populateTableFunc">Checking...</span></div>
+                        <div>window.activeDeliveries: <span id="activeDeliveriesVar">Checking...</span></div>
+                        <div>window.deliveryHistory: <span id="deliveryHistoryVar">Checking...</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h5>🚨 JavaScript Errors</h5>
+            <div id="errorLog" class="error-log">
+                <div>Monitoring for JavaScript errors...</div>
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h5>🧪 Manual Script Loading Test</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <p>Try loading the scripts manually to see if there are any errors:</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button id="loadBookingJs" class="btn btn-primary btn-sm">Load booking.js</button>
+                        <button id="loadAppJs" class="btn btn-primary btn-sm">Load app.js</button>
+                        <button id="loadMainJs" class="btn btn-primary btn-sm">Load main.js</button>
+                        <button id="checkFunctions" class="btn btn-success btn-sm">Check Functions</button>
+                        <button id="clearErrors" class="btn btn-outline-secondary btn-sm">Clear Errors</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Quick Fix</h6>
+                            <button id="forceInitialize" class="btn btn-warning btn-sm">Force Initialize Functions</button>
+                            <small class="d-block text-muted mt-1">Creates missing functions manually</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h5>🔍 Network Requests</h5>
+            <div id="networkStatus" class="script-status">
+                <div>Checking network requests for script files...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let errorCount = 0;
+
+        function log(message, type = 'info') {
+            const errorLog = document.getElementById('errorLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#333';
+            errorLog.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            errorLog.scrollTop = errorLog.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const className = status === 'good' ? 'status-good' : status === 'bad' ? 'status-bad' : 'status-warning';
+            const icon = status === 'good' ? '✅' : status === 'bad' ? '❌' : '⚠️';
+            element.innerHTML = `<span class="${className}">${icon} ${message}</span>`;
+        }
+
+        function checkScriptFiles() {
+            log('Checking script file availability...');
+
+            // Check if scripts have loaded by looking for specific functions or variables
+            
+            // booking.js check
+            if (typeof window.saveBooking === 'function') {
+                updateStatus('bookingJsStatus', 'good', 'Loaded (saveBooking available)');
+                log('✅ booking.js loaded successfully', 'success');
+            } else {
+                updateStatus('bookingJsStatus', 'bad', 'Not loaded or error');
+                log('❌ booking.js not loaded or has errors', 'error');
+            }
+
+            // app.js check
+            if (typeof window.loadActiveDeliveries === 'function') {
+                updateStatus('appJsStatus', 'good', 'Loaded (loadActiveDeliveries available)');
+                log('✅ app.js loaded successfully', 'success');
+            } else {
+                updateStatus('appJsStatus', 'bad', 'Not loaded or error');
+                log('❌ app.js not loaded or has errors', 'error');
+            }
+
+            // main.js check (look for window.activeDeliveries initialization)
+            if (typeof window.activeDeliveries !== 'undefined') {
+                updateStatus('mainJsStatus', 'good', 'Loaded (activeDeliveries initialized)');
+                log('✅ main.js loaded successfully', 'success');
+            } else {
+                updateStatus('mainJsStatus', 'warning', 'May not be loaded');
+                log('⚠️ main.js may not be loaded', 'warning');
+            }
+
+            // customers.js check
+            if (typeof window.customers !== 'undefined' || typeof window.loadCustomers === 'function') {
+                updateStatus('customersJsStatus', 'good', 'Loaded');
+                log('✅ customers.js loaded successfully', 'success');
+            } else {
+                updateStatus('customersJsStatus', 'warning', 'May not be loaded');
+                log('⚠️ customers.js may not be loaded', 'warning');
+            }
+
+            // analytics.js check
+            if (typeof window.initAnalyticsCharts === 'function') {
+                updateStatus('analyticsJsStatus', 'good', 'Loaded');
+                log('✅ analytics.js loaded successfully', 'success');
+            } else {
+                updateStatus('analyticsJsStatus', 'warning', 'May not be loaded');
+                log('⚠️ analytics.js may not be loaded', 'warning');
+            }
+        }
+
+        function checkFunctions() {
+            log('Checking function availability...');
+
+            // Check critical functions
+            const functions = [
+                { name: 'saveBooking', id: 'saveBookingFunc' },
+                { name: 'loadActiveDeliveries', id: 'loadActiveDeliveriesFunc' },
+                { name: 'populateActiveDeliveriesTable', id: 'populateTableFunc' }
+            ];
+
+            functions.forEach(func => {
+                if (typeof window[func.name] === 'function') {
+                    updateStatus(func.id, 'good', 'Available');
+                    log(`✅ ${func.name} function available`, 'success');
+                } else {
+                    updateStatus(func.id, 'bad', 'Not Available');
+                    log(`❌ ${func.name} function not available`, 'error');
+                }
+            });
+
+            // Check variables
+            const variables = [
+                { name: 'activeDeliveries', id: 'activeDeliveriesVar' },
+                { name: 'deliveryHistory', id: 'deliveryHistoryVar' }
+            ];
+
+            variables.forEach(variable => {
+                if (typeof window[variable.name] !== 'undefined') {
+                    const length = Array.isArray(window[variable.name]) ? window[variable.name].length : 'not array';
+                    updateStatus(variable.id, 'good', `Available (${length} items)`);
+                    log(`✅ ${variable.name} variable available`, 'success');
+                } else {
+                    updateStatus(variable.id, 'bad', 'Not Available');
+                    log(`❌ ${variable.name} variable not available`, 'error');
+                }
+            });
+        }
+
+        function loadScript(src, callback) {
+            log(`Attempting to load script: ${src}`);
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = function() {
+                log(`✅ Successfully loaded: ${src}`, 'success');
+                if (callback) callback(true);
+            };
+            script.onerror = function() {
+                log(`❌ Failed to load: ${src}`, 'error');
+                if (callback) callback(false);
+            };
+            document.head.appendChild(script);
+        }
+
+        function forceInitializeFunctions() {
+            log('Force initializing missing functions...', 'warning');
+
+            // Initialize window.activeDeliveries if missing
+            if (typeof window.activeDeliveries === 'undefined') {
+                window.activeDeliveries = [];
+                log('🔧 Initialized window.activeDeliveries', 'warning');
+            }
+
+            // Initialize window.deliveryHistory if missing
+            if (typeof window.deliveryHistory === 'undefined') {
+                window.deliveryHistory = [];
+                log('🔧 Initialized window.deliveryHistory', 'warning');
+            }
+
+            // Create minimal saveBooking function if missing
+            if (typeof window.saveBooking !== 'function') {
+                window.saveBooking = function() {
+                    log('🔧 Minimal saveBooking function called', 'warning');
+                    alert('saveBooking function was missing and has been replaced with a minimal version. The original script may have failed to load.');
+                };
+                log('🔧 Created minimal saveBooking function', 'warning');
+            }
+
+            // Create minimal loadActiveDeliveries function if missing
+            if (typeof window.loadActiveDeliveries !== 'function') {
+                window.loadActiveDeliveries = function() {
+                    log('🔧 Minimal loadActiveDeliveries function called', 'warning');
+                    console.log('loadActiveDeliveries called - original script may have failed to load');
+                };
+                log('🔧 Created minimal loadActiveDeliveries function', 'warning');
+            }
+
+            // Re-check functions
+            setTimeout(checkFunctions, 100);
+        }
+
+        function setupErrorMonitoring() {
+            // Monitor console errors
+            const originalError = console.error;
+            console.error = function(...args) {
+                errorCount++;
+                log('🚨 Console Error: ' + args.join(' '), 'error');
+                originalError.apply(console, args);
+            };
+
+            // Monitor unhandled errors
+            window.addEventListener('error', function(event) {
+                errorCount++;
+                log(`🚨 Script Error: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+            });
+
+            // Monitor unhandled promise rejections
+            window.addEventListener('unhandledrejection', function(event) {
+                errorCount++;
+                log('🚨 Unhandled Promise Rejection: ' + event.reason, 'error');
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Script loading diagnostic initialized');
+            
+            setupErrorMonitoring();
+            
+            // Initial checks
+            setTimeout(() => {
+                checkScriptFiles();
+                checkFunctions();
+            }, 1000);
+
+            // Set up buttons
+            document.getElementById('loadBookingJs').addEventListener('click', function() {
+                loadScript('assets/js/booking.js', function(success) {
+                    setTimeout(checkFunctions, 500);
+                });
+            });
+
+            document.getElementById('loadAppJs').addEventListener('click', function() {
+                loadScript('assets/js/app.js', function(success) {
+                    setTimeout(checkFunctions, 500);
+                });
+            });
+
+            document.getElementById('loadMainJs').addEventListener('click', function() {
+                loadScript('assets/js/main.js', function(success) {
+                    setTimeout(checkFunctions, 500);
+                });
+            });
+
+            document.getElementById('checkFunctions').addEventListener('click', function() {
+                checkScriptFiles();
+                checkFunctions();
+            });
+
+            document.getElementById('clearErrors').addEventListener('click', function() {
+                document.getElementById('errorLog').innerHTML = '<div>Error log cleared...</div>';
+                errorCount = 0;
+            });
+
+            document.getElementById('forceInitialize').addEventListener('click', forceInitializeFunctions);
+
+            // Periodic checks
+            setInterval(() => {
+                checkFunctions();
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

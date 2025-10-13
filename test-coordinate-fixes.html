@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Coordinate Fixes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-result { font-family: monospace; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🧪 Coordinate Fixes Verification</h1>
+        <p>Testing the coordinate fixes applied to the Philippine location database</p>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults" class="test-result">
+                            Running tests...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Distance Calculations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="distanceResults" class="test-result">
+                            Calculating distances...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/assets/js/booking.js"></script>
+    <script>
+        // Test the coordinate fixes
+        function runCoordinateTests() {
+            const results = document.getElementById('testResults');
+            const distanceResults = document.getElementById('distanceResults');
+            let output = '';
+            let distanceOutput = '';
+
+            // Test 1: Check if Las Piñas has correct coordinates
+            output += '=== COORDINATE VERIFICATION ===\n\n';
+            
+            // Check if the comprehensive database is available
+            if (typeof COMPREHENSIVE_PHILIPPINE_LOCATIONS !== 'undefined') {
+                const lasPinas = COMPREHENSIVE_PHILIPPINE_LOCATIONS['Las Pinas'];
+                const lasPinasCity = COMPREHENSIVE_PHILIPPINE_LOCATIONS['Las Pinas City'];
+                const alabang = COMPREHENSIVE_PHILIPPINE_LOCATIONS['Alabang'];
+                const warehouse = COMPREHENSIVE_PHILIPPINE_LOCATIONS['SMEG Alabang warehouse'];
+
+                output += '1. Las Piñas Coordinates:\n';
+                if (lasPinas) {
+                    const expectedLat = 14.4642;
+                    const expectedLng = 120.9822;
+                    if (Math.abs(lasPinas.lat - expectedLat) < 0.001 && Math.abs(lasPinas.lng - expectedLng) < 0.001) {
+                        output += `   ✅ Las Pinas: ${lasPinas.lat}, ${lasPinas.lng} (CORRECT)\n`;
+                    } else {
+                        output += `   ❌ Las Pinas: ${lasPinas.lat}, ${lasPinas.lng} (Expected: ${expectedLat}, ${expectedLng})\n`;
+                    }
+                } else {
+                    output += '   ❌ Las Pinas not found in database\n';
+                }
+
+                if (lasPinasCity) {
+                    const expectedLat = 14.4642;
+                    const expectedLng = 120.9822;
+                    if (Math.abs(lasPinasCity.lat - expectedLat) < 0.001 && Math.abs(lasPinasCity.lng - expectedLng) < 0.001) {
+                        output += `   ✅ Las Pinas City: ${lasPinasCity.lat}, ${lasPinasCity.lng} (CORRECT)\n`;
+                    } else {
+                        output += `   ❌ Las Pinas City: ${lasPinasCity.lat}, ${lasPinasCity.lng} (Expected: ${expectedLat}, ${expectedLng})\n`;
+                    }
+                } else {
+                    output += '   ❌ Las Pinas City not found in database\n';
+                }
+
+                output += '\n2. Alabang Coordinates (should remain unchanged):\n';
+                if (alabang) {
+                    const expectedLat = 14.4378;
+                    const expectedLng = 121.0199;
+                    if (Math.abs(alabang.lat - expectedLat) < 0.001 && Math.abs(alabang.lng - expectedLng) < 0.001) {
+                        output += `   ✅ Alabang: ${alabang.lat}, ${alabang.lng} (CORRECT)\n`;
+                    } else {
+                        output += `   ❌ Alabang: ${alabang.lat}, ${alabang.lng} (Expected: ${expectedLat}, ${expectedLng})\n`;
+                    }
+                } else {
+                    output += '   ❌ Alabang not found in database\n';
+                }
+
+                output += '\n3. SMEG Alabang Warehouse:\n';
+                if (warehouse) {
+                    output += `   ✅ Warehouse: ${warehouse.lat}, ${warehouse.lng}\n`;
+                } else {
+                    output += '   ❌ SMEG Alabang warehouse not found in database\n';
+                }
+
+                // Calculate distances
+                distanceOutput += '=== DISTANCE CALCULATIONS ===\n\n';
+                
+                if (lasPinas && alabang) {
+                    const distance = calculateDistance(lasPinas.lat, lasPinas.lng, alabang.lat, alabang.lng);
+                    distanceOutput += `Las Piñas to Alabang: ${distance.toFixed(2)} km\n`;
+                    if (distance > 2.0 && distance < 4.0) {
+                        distanceOutput += '✅ Distance looks reasonable (2-4 km expected)\n\n';
+                    } else {
+                        distanceOutput += '⚠️ Distance seems unusual\n\n';
+                    }
+                }
+
+                if (warehouse && lasPinas) {
+                    const distance = calculateDistance(warehouse.lat, warehouse.lng, lasPinas.lat, lasPinas.lng);
+                    distanceOutput += `SMEG Alabang to Las Piñas: ${distance.toFixed(2)} km\n`;
+                    distanceOutput += '✅ Warehouse to Las Piñas distance calculated\n\n';
+                }
+
+                if (warehouse && alabang) {
+                    const distance = calculateDistance(warehouse.lat, warehouse.lng, alabang.lat, alabang.lng);
+                    distanceOutput += `SMEG Alabang to Alabang District: ${distance.toFixed(2)} km\n`;
+                    if (distance < 1.0) {
+                        distanceOutput += '✅ Warehouse and district are close (expected)\n\n';
+                    } else {
+                        distanceOutput += '⚠️ Warehouse and district seem far apart\n\n';
+                    }
+                }
+
+            } else {
+                output += '❌ COMPREHENSIVE_PHILIPPINE_LOCATIONS not available\n';
+                output += 'Make sure booking.js is loaded properly\n';
+            }
+
+            // Test coordinate lookup functions
+            output += '\n=== FUNCTION TESTS ===\n\n';
+            if (typeof findLocationCoordinates === 'function') {
+                const lasPinasLookup = findLocationCoordinates('Las Pinas');
+                const alabangLookup = findLocationCoordinates('Alabang');
+                
+                output += '4. Location Lookup Function:\n';
+                if (lasPinasLookup) {
+                    output += `   ✅ Las Pinas lookup: ${lasPinasLookup.lat}, ${lasPinasLookup.lng}\n`;
+                } else {
+                    output += '   ❌ Las Pinas lookup failed\n';
+                }
+                
+                if (alabangLookup) {
+                    output += `   ✅ Alabang lookup: ${alabangLookup.lat}, ${alabangLookup.lng}\n`;
+                } else {
+                    output += '   ❌ Alabang lookup failed\n';
+                }
+            } else {
+                output += '❌ findLocationCoordinates function not available\n';
+            }
+
+            results.innerHTML = output;
+            distanceResults.innerHTML = distanceOutput;
+        }
+
+        // Calculate distance between two coordinates (Haversine formula)
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runCoordinateTests, 1000); // Give time for booking.js to load
+        });
+    </script>
+</body>
+</html>

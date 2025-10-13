@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Data Tracker - MCI Delivery System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background: #f8f9fa; font-size: 13px; }
+        .tracker-container { max-width: 1600px; margin: 0 auto; }
+        .tracker-section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .data-flow { background: #f8f9fa; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 11px; }
+        .step-indicator { display: inline-block; width: 25px; height: 25px; border-radius: 50%; background: #6c757d; color: white; text-align: center; line-height: 25px; font-size: 11px; margin-right: 10px; }
+        .step-success { background: #28a745; }
+        .step-error { background: #dc3545; }
+        .step-warning { background: #ffc107; color: #000; }
+        .step-active { background: #007bff; animation: pulse 1s infinite; }
+        .data-display { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; }
+        .live-monitor { background: #000; color: #00ff00; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 11px; max-height: 300px; overflow-y: auto; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="tracker-container">
+        <div class="tracker-section">
+            <h2><i class="bi bi-diagram-3 text-primary"></i> Booking Data Flow Tracker</h2>
+            <p class="text-muted">Real-time tracking of booking data from confirmation to Active Deliveries display</p>
+            
+            <div class="alert alert-info">
+                <h6><i class="bi bi-info-circle"></i> How to Use:</h6>
+                <ol class="mb-0">
+                    <li><strong>Keep this page open</strong> while creating bookings</li>
+                    <li><strong>Go to your main app</strong> and create a booking</li>
+                    <li><strong>Watch the flow tracker</strong> - it shows each step in real-time</li>
+                    <li><strong>Check data storage</strong> - see exactly where your data goes</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="tracker-section">
+            <h5>📊 Data Flow Steps</h5>
+            <div id="dataFlowSteps">
+                <div class="mb-2">
+                    <span class="step-indicator" id="step1">1</span>
+                    <strong>Confirm Button Clicked</strong>
+                    <span id="step1Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step2">2</span>
+                    <strong>saveBooking() Function Called</strong>
+                    <span id="step2Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step3">3</span>
+                    <strong>Form Data Collected</strong>
+                    <span id="step3Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step4">4</span>
+                    <strong>Delivery Object Created</strong>
+                    <span id="step4Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step5">5</span>
+                    <strong>Added to window.activeDeliveries</strong>
+                    <span id="step5Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step6">6</span>
+                    <strong>Saved to localStorage</strong>
+                    <span id="step6Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step7">7</span>
+                    <strong>loadActiveDeliveries() Called</strong>
+                    <span id="step7Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+                <div class="mb-2">
+                    <span class="step-indicator" id="step8">8</span>
+                    <strong>Table Populated</strong>
+                    <span id="step8Status" class="ms-2 text-muted">Waiting...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="tracker-section">
+                    <h6>💾 Data Storage Monitor</h6>
+                    <div class="data-display" id="dataStorageMonitor">
+                        <div>window.activeDeliveries: <span id="memoryCount">-</span></div>
+                        <div>localStorage count: <span id="localStorageCount">-</span></div>
+                        <div>Last booking: <span id="lastBooking">-</span></div>
+                        <div>Last update: <span id="lastUpdate">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="tracker-section">
+                    <h6>🔧 Function Status</h6>
+                    <div class="data-display" id="functionStatus">
+                        <div>saveBooking: <span id="saveBookingAvailable">-</span></div>
+                        <div>loadActiveDeliveries: <span id="loadActiveDeliveriesAvailable">-</span></div>
+                        <div>populateActiveDeliveriesTable: <span id="populateTableAvailable">-</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="tracker-section">
+                    <h6>📋 Table Status</h6>
+                    <div class="data-display" id="tableStatus">
+                        <div>Table element: <span id="tableElement">-</span></div>
+                        <div>Rows count: <span id="tableRows">-</span></div>
+                        <div>Last populated: <span id="lastPopulated">-</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tracker-section">
+            <h5>📝 Live Activity Monitor</h5>
+            <div id="liveMonitor" class="live-monitor">
+                <div>[SYSTEM] Booking data tracker initialized</div>
+                <div>[SYSTEM] Monitoring all booking-related activities...</div>
+            </div>
+            <div class="mt-2">
+                <button id="clearMonitor" class="btn btn-sm btn-outline-secondary">Clear Monitor</button>
+                <button id="inspectData" class="btn btn-sm btn-info">Inspect Current Data</button>
+                <button id="testDataFlow" class="btn btn-sm btn-primary">Test Data Flow</button>
+            </div>
+        </div>
+
+        <div class="tracker-section">
+            <h5>🗂️ Current Data Snapshot</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>window.activeDeliveries Content:</h6>
+                    <div id="activeDeliveriesContent" class="data-display">Loading...</div>
+                </div>
+                <div class="col-md-6">
+                    <h6>localStorage Content:</h6>
+                    <div id="localStorageContent" class="data-display">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tracker-section">
+            <h5>🧪 Manual Test Controls</h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Simulate Booking Creation</h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <input type="text" id="testDrNumber" class="form-control form-control-sm mb-2" placeholder="DR Number" value="DR-TRACK-001">
+                                    <input type="text" id="testCustomer" class="form-control form-control-sm mb-2" placeholder="Customer" value="Track Test Customer">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" id="testOrigin" class="form-control form-control-sm mb-2" placeholder="Origin" value="Manila">
+                                    <input type="text" id="testDestination" class="form-control form-control-sm mb-2" placeholder="Destination" value="Quezon City">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" id="testTruck" class="form-control form-control-sm mb-2" placeholder="Truck Type" value="10-Wheeler">
+                                    <input type="text" id="testPlate" class="form-control form-control-sm mb-2" placeholder="Plate Number" value="TRACK-123">
+                                </div>
+                                <div class="col-md-3">
+                                    <button id="simulateBooking" class="btn btn-primary btn-sm mb-2">Simulate Complete Flow</button>
+                                    <button id="checkActiveDeliveries" class="btn btn-outline-secondary btn-sm">Check Active Deliveries</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Quick Actions</h6>
+                            <div class="d-flex flex-column gap-2">
+                                <button id="clearAllData" class="btn btn-warning btn-sm">Clear All Data</button>
+                                <button id="exportData" class="btn btn-success btn-sm">Export Data</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stepCount = 0;
+        let monitoringActive = true;
+
+        // Live monitoring function
+        function liveLog(message, type = 'info') {
+            const monitor = document.getElementById('liveMonitor');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff4444' : type === 'success' ? '#44ff44' : type === 'warning' ? '#ffff44' : '#00ff00';
+            
+            monitor.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            monitor.scrollTop = monitor.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Update step status
+        function updateStep(stepNum, status, message) {
+            const stepElement = document.getElementById(`step${stepNum}`);
+            const statusElement = document.getElementById(`step${stepNum}Status`);
+            
+            stepElement.className = `step-indicator step-${status}`;
+            statusElement.innerHTML = `<span class="text-${status === 'success' ? 'success' : status === 'error' ? 'danger' : 'warning'}">${message}</span>`;
+            
+            liveLog(`Step ${stepNum}: ${message}`, status === 'success' ? 'success' : status === 'error' ? 'error' : 'warning');
+        }
+
+        // Monitor data storage
+        function updateDataMonitor() {
+            // Memory count
+            const memoryCount = typeof window.activeDeliveries !== 'undefined' ? window.activeDeliveries.length : 'undefined';
+            document.getElementById('memoryCount').textContent = memoryCount;
+
+            // localStorage count
+            try {
+                const saved = localStorage.getItem('mci-active-deliveries');
+                const localCount = saved ? JSON.parse(saved).length : 0;
+                document.getElementById('localStorageCount').textContent = localCount;
+            } catch (error) {
+                document.getElementById('localStorageCount').textContent = 'error';
+            }
+
+            // Last booking
+            if (typeof window.activeDeliveries !== 'undefined' && window.activeDeliveries.length > 0) {
+                const lastBooking = window.activeDeliveries[window.activeDeliveries.length - 1];
+                document.getElementById('lastBooking').textContent = lastBooking.drNumber || 'N/A';
+            } else {
+                document.getElementById('lastBooking').textContent = 'None';
+            }
+
+            // Last update
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+            // Update content displays
+            updateContentDisplays();
+        }
+
+        // Update content displays
+        function updateContentDisplays() {
+            // Active deliveries content
+            const activeContent = document.getElementById('activeDeliveriesContent');
+            if (typeof window.activeDeliveries !== 'undefined') {
+                if (window.activeDeliveries.length === 0) {
+                    activeContent.textContent = 'Array exists but empty';
+                } else {
+                    activeContent.innerHTML = window.activeDeliveries.map((delivery, index) => 
+                        `[${index}] ${delivery.drNumber} - ${delivery.customerName} (${delivery.status})`
+                    ).join('\n');
+                }
+            } else {
+                activeContent.textContent = 'window.activeDeliveries is undefined';
+            }
+
+            // localStorage content
+            const localContent = document.getElementById('localStorageContent');
+            try {
+                const saved = localStorage.getItem('mci-active-deliveries');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.length === 0) {
+                        localContent.textContent = 'localStorage exists but empty';
+                    } else {
+                        localContent.innerHTML = parsed.map((delivery, index) => 
+                            `[${index}] ${delivery.drNumber} - ${delivery.customerName} (${delivery.status})`
+                        ).join('\n');
+                    }
+                } else {
+                    localContent.textContent = 'No mci-active-deliveries in localStorage';
+                }
+            } catch (error) {
+                localContent.textContent = `Error reading localStorage: ${error.message}`;
+            }
+        }
+
+        // Check function availability
+        function checkFunctions() {
+            const functions = [
+                { name: 'saveBooking', id: 'saveBookingAvailable' },
+                { name: 'loadActiveDeliveries', id: 'loadActiveDeliveriesAvailable' },
+                { name: 'populateActiveDeliveriesTable', id: 'populateTableAvailable' }
+            ];
+
+            functions.forEach(func => {
+                const available = typeof window[func.name] === 'function';
+                document.getElementById(func.id).innerHTML = available ? 
+                    '<span class="text-success">✅ Available</span>' : 
+                    '<span class="text-danger">❌ Missing</span>';
+            });
+        }
+
+        // Check table status
+        function checkTableStatus() {
+            const tableBody = document.getElementById('activeDeliveriesTableBody');
+            const tableElement = document.getElementById('tableElement');
+            const tableRows = document.getElementById('tableRows');
+
+            if (tableBody) {
+                tableElement.innerHTML = '<span class="text-success">✅ Found</span>';
+                const rows = tableBody.querySelectorAll('tr');
+                tableRows.textContent = rows.length;
+            } else {
+                tableElement.innerHTML = '<span class="text-danger">❌ Not Found</span>';
+                tableRows.textContent = 'N/A';
+            }
+        }
+
+        // Setup monitoring
+        function setupMonitoring() {
+            liveLog('Setting up comprehensive monitoring...', 'success');
+
+            // Monitor saveBooking
+            if (typeof window.saveBooking === 'function') {
+                const originalSaveBooking = window.saveBooking;
+                window.saveBooking = function(...args) {
+                    updateStep(2, 'active', 'saveBooking() called');
+                    liveLog('🎯 saveBooking() function called', 'success');
+                    
+                    try {
+                        updateStep(3, 'active', 'Collecting form data...');
+                        const result = originalSaveBooking.apply(this, args);
+                        updateStep(2, 'success', 'saveBooking() completed');
+                        liveLog('✅ saveBooking() completed successfully', 'success');
+                        return result;
+                    } catch (error) {
+                        updateStep(2, 'error', 'saveBooking() failed: ' + error.message);
+                        liveLog('❌ saveBooking() error: ' + error.message, 'error');
+                        throw error;
+                    }
+                };
+                liveLog('✅ saveBooking monitoring active', 'success');
+            } else {
+                liveLog('❌ saveBooking function not found', 'error');
+            }
+
+            // Monitor loadActiveDeliveries
+            if (typeof window.loadActiveDeliveries === 'function') {
+                const originalLoadActiveDeliveries = window.loadActiveDeliveries;
+                window.loadActiveDeliveries = function(...args) {
+                    updateStep(7, 'active', 'loadActiveDeliveries() called');
+                    liveLog('🔄 loadActiveDeliveries() called', 'success');
+                    
+                    try {
+                        const result = originalLoadActiveDeliveries.apply(this, args);
+                        updateStep(7, 'success', 'loadActiveDeliveries() completed');
+                        updateStep(8, 'active', 'Checking table population...');
+                        
+                        setTimeout(() => {
+                            checkTableStatus();
+                            const tableBody = document.getElementById('activeDeliveriesTableBody');
+                            if (tableBody && tableBody.querySelectorAll('tr').length > 0) {
+                                updateStep(8, 'success', 'Table populated successfully');
+                            } else {
+                                updateStep(8, 'error', 'Table not populated');
+                            }
+                        }, 500);
+                        
+                        liveLog('✅ loadActiveDeliveries() completed', 'success');
+                        return result;
+                    } catch (error) {
+                        updateStep(7, 'error', 'loadActiveDeliveries() failed: ' + error.message);
+                        liveLog('❌ loadActiveDeliveries() error: ' + error.message, 'error');
+                        throw error;
+                    }
+                };
+                liveLog('✅ loadActiveDeliveries monitoring active', 'success');
+            } else {
+                liveLog('❌ loadActiveDeliveries function not found', 'error');
+            }
+
+            // Monitor array changes
+            if (typeof window.activeDeliveries !== 'undefined') {
+                const originalPush = window.activeDeliveries.push;
+                window.activeDeliveries.push = function(...items) {
+                    updateStep(5, 'success', `Added ${items.length} item(s) to activeDeliveries`);
+                    liveLog(`📊 Added ${items.length} item(s) to window.activeDeliveries`, 'success');
+                    
+                    items.forEach(item => {
+                        updateStep(4, 'success', `Created delivery: ${item.drNumber}`);
+                        liveLog(`📝 Created delivery object: ${item.drNumber}`, 'success');
+                    });
+                    
+                    const result = originalPush.apply(this, items);
+                    updateDataMonitor();
+                    return result;
+                };
+                liveLog('✅ Array monitoring active', 'success');
+            }
+
+            // Monitor localStorage
+            const originalSetItem = localStorage.setItem;
+            localStorage.setItem = function(key, value) {
+                if (key === 'mci-active-deliveries') {
+                    updateStep(6, 'success', 'Saved to localStorage');
+                    liveLog('💾 Data saved to localStorage', 'success');
+                    updateDataMonitor();
+                }
+                return originalSetItem.apply(this, arguments);
+            };
+        }
+
+        // Simulate booking creation
+        function simulateBooking() {
+            liveLog('🧪 Simulating complete booking flow...', 'warning');
+            
+            // Reset steps
+            for (let i = 1; i <= 8; i++) {
+                updateStep(i, '', 'Waiting...');
+            }
+
+            updateStep(1, 'success', 'Confirm button clicked (simulated)');
+
+            // Initialize if needed
+            if (typeof window.activeDeliveries === 'undefined') {
+                window.activeDeliveries = [];
+                liveLog('🔧 Initialized window.activeDeliveries', 'warning');
+            }
+
+            // Create test booking
+            const testBooking = {
+                id: 'DEL-' + Date.now() + '-TRACK',
+                drNumber: document.getElementById('testDrNumber').value,
+                customerName: document.getElementById('testCustomer').value,
+                vendorNumber: 'VN-TRACK-TEST',
+                origin: document.getElementById('testOrigin').value,
+                destination: document.getElementById('testDestination').value,
+                truckType: document.getElementById('testTruck').value,
+                truckPlateNumber: document.getElementById('testPlate').value,
+                status: 'On Schedule',
+                deliveryDate: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString(),
+                source: 'DATA_TRACKER'
+            };
+
+            updateStep(3, 'success', 'Form data collected');
+            updateStep(4, 'success', `Created delivery: ${testBooking.drNumber}`);
+
+            // Add to array
+            window.activeDeliveries.push(testBooking);
+            updateStep(5, 'success', `Added to activeDeliveries (${window.activeDeliveries.length} total)`);
+
+            // Save to localStorage
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+            updateStep(6, 'success', 'Saved to localStorage');
+
+            // Call loadActiveDeliveries if available
+            if (typeof window.loadActiveDeliveries === 'function') {
+                setTimeout(() => {
+                    window.loadActiveDeliveries();
+                }, 500);
+            } else {
+                updateStep(7, 'error', 'loadActiveDeliveries function not available');
+                updateStep(8, 'error', 'Cannot populate table');
+            }
+
+            updateDataMonitor();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            liveLog('🚀 Booking data tracker initialized', 'success');
+            
+            // Setup monitoring
+            setTimeout(() => {
+                setupMonitoring();
+                checkFunctions();
+                checkTableStatus();
+                updateDataMonitor();
+            }, 1000);
+
+            // Event listeners
+            document.getElementById('clearMonitor').addEventListener('click', function() {
+                document.getElementById('liveMonitor').innerHTML = '<div>[SYSTEM] Monitor cleared</div>';
+            });
+
+            document.getElementById('inspectData').addEventListener('click', function() {
+                liveLog('🔍 Inspecting current data state...', 'warning');
+                updateDataMonitor();
+                checkFunctions();
+                checkTableStatus();
+            });
+
+            document.getElementById('testDataFlow').addEventListener('click', function() {
+                liveLog('🧪 Testing data flow...', 'warning');
+                updateDataMonitor();
+            });
+
+            document.getElementById('simulateBooking').addEventListener('click', simulateBooking);
+
+            document.getElementById('checkActiveDeliveries').addEventListener('click', function() {
+                if (typeof window.loadActiveDeliveries === 'function') {
+                    window.loadActiveDeliveries();
+                    liveLog('🔄 Called loadActiveDeliveries manually', 'success');
+                } else {
+                    liveLog('❌ loadActiveDeliveries function not available', 'error');
+                }
+            });
+
+            document.getElementById('clearAllData').addEventListener('click', function() {
+                if (typeof window.activeDeliveries !== 'undefined') {
+                    window.activeDeliveries = [];
+                }
+                localStorage.removeItem('mci-active-deliveries');
+                updateDataMonitor();
+                liveLog('🧹 Cleared all data', 'warning');
+            });
+
+            // Periodic updates
+            setInterval(() => {
+                if (monitoringActive) {
+                    updateDataMonitor();
+                    checkFunctions();
+                    checkTableStatus();
+                }
+            }, 3000);
+
+            liveLog('✅ All monitoring systems active', 'success');
+        });
+
+        // Initialize arrays if needed
+        if (typeof window.activeDeliveries === 'undefined') {
+            window.activeDeliveries = [];
+            liveLog('🔧 Initialized window.activeDeliveries for tracking', 'warning');
+        }
+    </script>
+</body>
+</html>

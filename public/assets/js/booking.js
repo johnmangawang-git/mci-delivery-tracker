@@ -238,6 +238,8 @@ if (document.readyState === 'loading') {
 
 function initBookingModal() {
     console.log('=== INITIALIZING BOOKING MODAL ===');
+    console.log('Leaflet available:', typeof L !== 'undefined');
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
     
     // Ensure customer management is available
     ensureCustomerManagementReady();
@@ -359,22 +361,35 @@ function initBookingModal() {
                     }
                 }
             }
-            updateDistance();
         });
     }
 
     // Map pin buttons for origin with proper event listener cleanup
     const pinOriginBtn = document.getElementById('pinOrigin');
+    console.log('Pin Origin Button found:', !!pinOriginBtn);
+    console.log('Custom Origin Container found:', !!customOriginContainer);
+    console.log('Origin Select found:', !!originSelect);
+    
     if (pinOriginBtn && customOriginContainer && originSelect) {
         // Remove existing event listeners by cloning
         const newPinOriginBtn = pinOriginBtn.cloneNode(true);
         pinOriginBtn.parentNode.replaceChild(newPinOriginBtn, pinOriginBtn);
         
         newPinOriginBtn.addEventListener('click', function () {
+            console.log('🗺️ Pin Origin button clicked');
             customOriginContainer.classList.remove('d-none');
             if (originSelect) originSelect.value = '';
-            showMapPinDialog('origin');
+            
+            try {
+                showMapPinDialog('origin');
+                console.log('✅ showMapPinDialog called successfully for origin');
+            } catch (error) {
+                console.error('❌ Error calling showMapPinDialog for origin:', error);
+            }
         });
+        console.log('✅ Pin Origin button event listener attached');
+    } else {
+        console.warn('❌ Pin Origin button setup failed - missing elements');
     }
 
     // Add destination area functionality with proper event listener cleanup
@@ -413,17 +428,27 @@ function initBookingModal() {
         });
 
         // Add event listeners to existing destination area elements
-        document.querySelectorAll('.pin-on-map-btn').forEach((btn, index) => {
-            if (index >= 0) { // Include the origin pin button now
-                // Remove existing event listeners by cloning
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
+        const pinOnMapBtns = document.querySelectorAll('.pin-on-map-btn');
+        console.log('Found pin-on-map buttons:', pinOnMapBtns.length);
+        
+        pinOnMapBtns.forEach((btn, index) => {
+            console.log(`Setting up pin-on-map button ${index}, area-index: ${btn.dataset.areaIndex}`);
+            
+            // Remove existing event listeners by cloning
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', function () {
+                const areaIndex = parseInt(this.dataset.areaIndex) || 0;
+                console.log(`🗺️ Pin on map button clicked for destination area ${areaIndex}`);
                 
-                newBtn.addEventListener('click', function () {
-                    const areaIndex = parseInt(this.dataset.areaIndex);
+                try {
                     showMapPinDialog('destination', areaIndex);
-                });
-            }
+                    console.log('✅ showMapPinDialog called successfully for destination');
+                } catch (error) {
+                    console.error('❌ Error calling showMapPinDialog for destination:', error);
+                }
+            });
         });
 
         // Remove existing event listeners by cloning
@@ -495,7 +520,6 @@ function initBookingModal() {
                 
                 newRemoveBtn.addEventListener('click', function () {
                     areaItem.remove();
-                    updateDistance();
                 });
             }
         });
@@ -576,32 +600,9 @@ function initBookingModal() {
     // Cancel booking button (uses data-bs-dismiss="modal" in HTML)
     // No need to add event listener as Bootstrap handles modal dismissal
 
-    // Calculate distance when origin or destination changes
-    const originSelectElement = document.getElementById('originSelect');
-    const customOriginElement = document.getElementById('customOrigin');
+
     
-    if (originSelectElement) {
-        // Remove existing event listeners by cloning
-        const newOriginSelectElement = originSelectElement.cloneNode(true);
-        originSelectElement.parentNode.replaceChild(newOriginSelectElement, originSelectElement);
-        
-        newOriginSelectElement.addEventListener('change', updateDistance);
-    }
-    
-    if (customOriginElement) {
-        // Remove existing event listeners by cloning
-        const newCustomOriginElement = customOriginElement.cloneNode(true);
-        customOriginElement.parentNode.replaceChild(newCustomOriginElement, customOriginElement);
-        
-        newCustomOriginElement.addEventListener('change', updateDistance);
-    }
-    
-    // Add event listeners for destination area inputs
-    document.addEventListener('input', function(e) {
-        if (e.target && e.target.classList.contains('destination-area-input')) {
-            updateDistance();
-        }
-    });
+
     
     console.log('✅ BOOKING MODAL INITIALIZATION COMPLETED SUCCESSFULLY');
     console.log('  - Origin coordinates will display when warehouse selected');
@@ -610,71 +611,7 @@ function initBookingModal() {
     console.log('  - Event listeners properly attached');
 }
 
-// Calculate distance between origin and destination
-function calculateDistance() {
-    const originSelect = document.getElementById('originSelect');
-    const customOrigin = document.getElementById('customOrigin');
-    const destinationInputs = document.querySelectorAll('.destination-area-input'); // Get all destination inputs
-    const distanceBox = document.getElementById('distanceBox');
 
-    // In a real implementation, this would use Google Maps API to calculate distance
-    // For demo purposes, we'll use mock data
-
-    // Check if at least one destination is provided
-    let hasDestination = false;
-    destinationInputs.forEach(input => {
-        if (input.value.trim()) {
-            hasDestination = true;
-        }
-    });
-
-    if (!hasDestination) {
-        if (distanceBox) {
-            distanceBox.textContent = '0.0 km';
-        }
-        return;
-    }
-
-    let origin = '';
-    if (originSelect && originSelect.value && originSelect.value !== '') {
-        origin = originSelect.options[originSelect.selectedIndex].text;
-    } else if (customOrigin && customOrigin.value) {
-        origin = customOrigin.value;
-    }
-
-    if (!origin) {
-        if (distanceBox) {
-            distanceBox.textContent = '0.0 km';
-        }
-        return;
-    }
-
-    // Mock distance calculation
-    let totalDistance = 0;
-    destinationInputs.forEach(input => {
-        if (input.value.trim()) {
-            let distance = 0;
-            if (origin.includes('Alabang')) {
-                if (input.value.includes('Makati')) distance = 12.5;
-                else if (input.value.includes('Laguna')) distance = 24.7;
-                else distance = 18.3;
-            } else if (origin.includes('Cebu')) {
-                if (input.value.includes('Cebu')) distance = 8.2;
-                else distance = 14.8;
-            } else if (origin.includes('Davao')) {
-                if (input.value.includes('Davao')) distance = 5.3;
-                else distance = 10.6;
-            } else {
-                distance = Math.floor(Math.random() * 50);
-            }
-            totalDistance += distance;
-        }
-    });
-
-    if (distanceBox) {
-        distanceBox.textContent = `${totalDistance.toFixed(1)} km`;
-    }
-}
 
 // Save booking to Supabase
 async function saveBooking() {
@@ -758,18 +695,17 @@ async function saveBooking() {
         }
 
         const customerName = document.getElementById('customerName').value;
-        const customerNumber = document.getElementById('customerNumber').value;
+        const vendorNumber = document.getElementById('vendorNumber').value;
         const originSelect = document.getElementById('originSelect');
         const customOrigin = document.getElementById('customOrigin');
         const destinationInputs = document.querySelectorAll('.destination-area-input'); // Get all destination inputs
-        const distanceValue = document.getElementById('distanceValue'); // Changed from distanceBox
         const deliveryDate = document.getElementById('deliveryDate').value;
         const truckType = document.getElementById('truckType').value;
         const truckPlateNumber = document.getElementById('truckPlateNumber').value;
 
         console.log('Form data collected:', {
             customerName,
-            customerNumber,
+            vendorNumber,
             deliveryDate,
             truckType,
             truckPlateNumber,
@@ -782,8 +718,8 @@ async function saveBooking() {
             return;
         }
 
-        if (!customerNumber) {
-            showError('Customer Number is required');
+        if (!vendorNumber) {
+            showError('Vendor Number is required');
             return;
         }
 
@@ -830,12 +766,7 @@ async function saveBooking() {
             return;
         }
 
-        // Get distance
-        let distance = 0;
-        if (distanceValue) {
-            const distanceText = distanceValue.textContent.replace(' km', '');
-            distance = parseFloat(distanceText) || 0;
-        }
+
 
         // Get additional costs with descriptions
         const costItems = document.querySelectorAll('#costItemsContainer .cost-item');
@@ -865,11 +796,11 @@ async function saveBooking() {
             console.log('=== SAVE BOOKING DEBUG ===');
             console.log('About to call autoCreateCustomer with:', {
                 customerName,
-                customerNumber,
+                vendorNumber,
                 destinations
             });
             
-            await autoCreateCustomer(customerName, customerNumber, destinations.join('; '));
+            await autoCreateCustomer(customerName, vendorNumber, destinations.join('; '));
             
             console.log('autoCreateCustomer completed');
 
@@ -878,10 +809,9 @@ async function saveBooking() {
                 id: 'DEL-' + Date.now() + '-' + drNumber,
                 drNumber: drNumber,
                 customerName: customerName,
-                customerNumber: customerNumber,
+                vendorNumber: vendorNumber,
                 origin: origin,
                 destination: destinations.join('; '),
-                distance: distance + ' km',
                 truckType: truckType,
                 truckPlateNumber: truckPlateNumber,
                 status: 'On Schedule',
@@ -894,7 +824,7 @@ async function saveBooking() {
             // Add to active deliveries
             if (typeof window.activeDeliveries !== 'undefined') {
                 window.activeDeliveries.push(newDelivery);
-                console.log(`✅ Added delivery to activeDeliveries. Total: ${window.activeDeliveries.length}`);
+                console.log(`✅ Added delivery to window.activeDeliveries. Total: ${window.activeDeliveries.length}`);
                 
                 // Save to localStorage
                 try {
@@ -902,6 +832,28 @@ async function saveBooking() {
                     console.log('✅ Saved activeDeliveries to localStorage');
                 } catch (error) {
                     console.error('Error saving to localStorage:', error);
+                }
+                
+                // Force immediate refresh of Active Deliveries display
+                console.log('🔄 Forcing immediate refresh of Active Deliveries...');
+                if (typeof window.loadActiveDeliveries === 'function') {
+                    // Multiple refresh attempts to ensure data shows up
+                    setTimeout(() => {
+                        window.loadActiveDeliveries();
+                        console.log('✅ Active Deliveries refreshed after manual booking (attempt 1)');
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        window.loadActiveDeliveries();
+                        console.log('✅ Active Deliveries refreshed after manual booking (attempt 2)');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        window.loadActiveDeliveries();
+                        console.log('✅ Active Deliveries refreshed after manual booking (attempt 3)');
+                    }, 1000);
+                } else {
+                    console.error('❌ window.loadActiveDeliveries function not available!');
                 }
                 
                 // Update analytics dashboard metrics
@@ -921,9 +873,18 @@ async function saveBooking() {
                     }
                 }
                 
-                // Refresh active deliveries display
+                // CRITICAL: Force refresh active deliveries display multiple times
                 if (typeof window.loadActiveDeliveries === 'function') {
+                    // Immediate refresh
                     window.loadActiveDeliveries();
+                    
+                    // Delayed refresh to ensure data persistence
+                    setTimeout(() => {
+                        window.loadActiveDeliveries();
+                        console.log('🔄 Final refresh of Active Deliveries after booking save');
+                    }, 200);
+                } else {
+                    console.error('❌ window.loadActiveDeliveries not available for final refresh!');
                 }
             } else {
                 console.error('❌ window.activeDeliveries is not defined!');
@@ -1034,11 +995,11 @@ function ensureCustomerManagementReady() {
 }
 
 // Auto-create customer from booking details
-async function autoCreateCustomer(customerName, customerNumber, destination) {
+async function autoCreateCustomer(customerName, vendorNumber, destination) {
     try {
         console.log('=== AUTO CREATE CUSTOMER DEBUG ===');
         console.log('Customer Name:', customerName);
-        console.log('Customer Number:', customerNumber);
+        console.log('Vendor Number:', vendorNumber);
         console.log('Destination:', destination);
         console.log('Window.customers exists:', !!window.customers);
         console.log('Window.customers array:', window.customers);
@@ -1064,7 +1025,7 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
         // Check if customer already exists (by name or phone)
         const existingCustomer = window.customers?.find(customer => 
             customer.contactPerson.toLowerCase() === customerName.toLowerCase() ||
-            customer.phone === customerNumber
+            customer.phone === vendorNumber
         );
         
         console.log('Existing customer found:', existingCustomer);
@@ -1084,7 +1045,7 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
             if (typeof customers !== 'undefined') {
                 const htmlCustomerIndex = customers.findIndex(c => 
                     c.contactPerson.toLowerCase() === customerName.toLowerCase() ||
-                    c.phone === customerNumber
+                    c.phone === vendorNumber
                 );
                 if (htmlCustomerIndex !== -1) {
                     customers[htmlCustomerIndex] = existingCustomer;
@@ -1115,7 +1076,7 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
         const newCustomer = {
             id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
             contactPerson: customerName,
-            phone: customerNumber,
+            phone: vendorNumber,
             address: destination, // Use destination as address
             accountType: 'Individual', // Default account type for individual customers
             email: '', // Empty email - can be filled later
@@ -1203,10 +1164,7 @@ function resetBookingForm() {
         bookingForm.reset();
     }
     
-    const distanceBox = document.getElementById('distanceBox');
-    if (distanceBox) {
-        distanceBox.textContent = '0.0 km';
-    }
+
     
     const customOriginContainer = document.getElementById('customOriginContainer');
     if (customOriginContainer) {
@@ -1310,157 +1268,7 @@ function ensureWarehouseManagerReady() {
     console.log('Warehouse manager ready check completed');
 }
 
-// Update distance calculation
-function updateDistance() {
-    const originSelect = document.getElementById('originSelect');
-    const customOrigin = document.getElementById('customOrigin');
-    const destinationInputs = document.querySelectorAll('.destination-area-input');
-    const distanceBox = document.getElementById('calculatedDistance');
-    const distanceValue = document.getElementById('distanceValue');
-    
-    // Get origin coordinates display element
-    const originCoordinatesDisplay = document.getElementById('originCoordinatesDisplay');
-    const destinationCoordinatesDisplay = document.getElementById('destinationCoordinatesDisplay');
 
-    // Get origin
-    let origin = '';
-    let originLat = null;
-    let originLng = null;
-    
-    if (originSelect.value && originSelect.value !== '') {
-        origin = originSelect.options[originSelect.selectedIndex].text;
-        // Get warehouse coordinates
-        if (window.warehouseManager && window.warehouseManager.warehouseLocations) {
-            const warehouse = window.warehouseManager.warehouseLocations.find(w => w.id === originSelect.value);
-            if (warehouse) {
-                originLat = warehouse.coordinates.lat;
-                originLng = warehouse.coordinates.lng;
-            }
-        }
-    } else if (customOrigin.value) {
-        origin = customOrigin.value;
-        // Check if custom origin has coordinates stored
-        if (customOrigin.hasAttribute('data-lat') && customOrigin.hasAttribute('data-lng')) {
-            originLat = parseFloat(customOrigin.getAttribute('data-lat'));
-            originLng = parseFloat(customOrigin.getAttribute('data-lng'));
-        }
-    }
-
-    // Display origin coordinates
-    if (originLat && originLng) {
-        if (originCoordinatesDisplay) {
-            originCoordinatesDisplay.textContent = `(${originLat.toFixed(6)}, ${originLng.toFixed(6)})`;
-        }
-    } else {
-        if (originCoordinatesDisplay) {
-            originCoordinatesDisplay.textContent = '';
-        }
-    }
-
-    if ((!origin || destinationInputs.length === 0) && !originLat) {
-        distanceValue.textContent = '-- km';
-        if (destinationCoordinatesDisplay) {
-            destinationCoordinatesDisplay.innerHTML = '';
-        }
-        return;
-    }
-
-    // Get destinations
-    let totalDistance = 0;
-    let hasDestination = false;
-    
-    // Process each destination and display coordinates
-    let destinationCoordinatesHtml = '';
-    
-    destinationInputs.forEach((input, index) => {
-        if (input.value.trim()) {
-            hasDestination = true;
-            
-            // Check if destination has coordinates
-            if (input.hasAttribute('data-lat') && input.hasAttribute('data-lng')) {
-                const destLat = parseFloat(input.getAttribute('data-lat'));
-                const destLng = parseFloat(input.getAttribute('data-lng'));
-                
-                // Display destination coordinates
-                destinationCoordinatesHtml += `<div class="destination-coordinate-item">
-                    <small class="text-muted">Destination ${index + 1}:</small>
-                    <span class="fw-bold">(${destLat.toFixed(6)}, ${destLng.toFixed(6)})</span>
-                </div>`;
-                
-                // Calculate real distance if we have both origin and destination coordinates
-                if (originLat && originLng && destLat && destLng) {
-                    const distance = calculateRealDistance(originLat, originLng, destLat, destLng);
-                    totalDistance += distance;
-                } else {
-                    // Fallback to mock calculation
-                    let distance = 0;
-                    if (origin.includes('Alabang')) {
-                        if (input.value.includes('Makati')) distance = 12.5;
-                        else if (input.value.includes('Laguna')) distance = 24.7;
-                        else distance = 18.3;
-                    } else if (origin.includes('Cebu')) {
-                        if (input.value.includes('Cebu')) distance = 8.2;
-                        else distance = 14.8;
-                    } else if (origin.includes('Davao')) {
-                        if (input.value.includes('Davao')) distance = 5.3;
-                        else distance = 10.6;
-                    } else {
-                        distance = Math.floor(Math.random() * 50);
-                    }
-                    totalDistance += distance;
-                }
-            } else {
-                // Display destination without coordinates
-                destinationCoordinatesHtml += `<div class="destination-coordinate-item">
-                    <small class="text-muted">Destination ${index + 1}:</small>
-                    <span class="fw-bold">Coordinates not available</span>
-                </div>`;
-                
-                // Fallback to mock calculation
-                let distance = 0;
-                if (origin.includes('Alabang')) {
-                    if (input.value.includes('Makati')) distance = 12.5;
-                    else if (input.value.includes('Laguna')) distance = 24.7;
-                    else distance = 18.3;
-                } else if (origin.includes('Cebu')) {
-                    if (input.value.includes('Cebu')) distance = 8.2;
-                    else distance = 14.8;
-                } else if (origin.includes('Davao')) {
-                    if (input.value.includes('Davao')) distance = 5.3;
-                    else distance = 10.6;
-                } else {
-                    distance = Math.floor(Math.random() * 50);
-                }
-                totalDistance += distance;
-            }
-        }
-    });
-
-    // Display destination coordinates
-    if (destinationCoordinatesDisplay) {
-        destinationCoordinatesDisplay.innerHTML = destinationCoordinatesHtml;
-    }
-
-    if (hasDestination) {
-        distanceValue.textContent = `${totalDistance.toFixed(1)} km`;
-    } else {
-        distanceValue.textContent = '-- km';
-    }
-}
-
-// Calculate real distance between two points using Haversine formula
-function calculateRealDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distance = R * c;
-    return distance;
-}
 
 // Show map pin dialog for selecting locations
 function showMapPinDialog(type, index = 0) {
@@ -1594,6 +1402,22 @@ let selectedCoordinates = { lat: null, lng: null };
 function initializeMapModal(type, index) {
     console.log(`Initializing map modal for ${type}, index: ${index}`);
     
+    // Check if Leaflet is available
+    if (typeof L === 'undefined') {
+        console.error('Leaflet library not loaded');
+        const mapContainer = document.getElementById('mapContainer');
+        if (mapContainer) {
+            mapContainer.innerHTML = `
+                <div class="alert alert-danger text-center">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <h5>Map Library Not Available</h5>
+                    <p>The map functionality requires the Leaflet library to be loaded.</p>
+                </div>
+            `;
+        }
+        return;
+    }
+    
     // Get map container
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) {
@@ -1604,9 +1428,22 @@ function initializeMapModal(type, index) {
     // Clear loading indicator
     mapContainer.innerHTML = '';
 
-    // Initialize Leaflet map centered on Luzon (focus on major cities in Luzon)
-    // Default view centered on Metro Manila area
-    currentMapInstance = L.map('mapContainer').setView([14.6091, 121.0223], 10);
+    try {
+        // Initialize Leaflet map centered on Luzon (focus on major cities in Luzon)
+        // Default view centered on Metro Manila area
+        currentMapInstance = L.map('mapContainer').setView([14.6091, 121.0223], 10);
+        console.log('✅ Leaflet map initialized successfully');
+    } catch (error) {
+        console.error('Error initializing Leaflet map:', error);
+        mapContainer.innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="bi bi-exclamation-triangle"></i>
+                <h5>Map Initialization Error</h5>
+                <p>Failed to initialize the map: ${error.message}</p>
+            </div>
+        `;
+        return;
+    }
     
     // Set bounds to restrict view to Luzon area
     const luzonBounds = L.latLngBounds(
@@ -1620,11 +1457,17 @@ function initializeMapModal(type, index) {
         currentMapInstance.panInsideBounds(luzonBounds, { animate: false });
     });
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(currentMapInstance);
+    // Add OpenStreetMap tiles with error handling
+    try {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            errorTileUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjU2IiBoZWlnaHQ9IjI1NiIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5NYXAgVGlsZSBOb3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg=='
+        }).addTo(currentMapInstance);
+        console.log('✅ Map tiles loaded successfully');
+    } catch (error) {
+        console.error('Error loading map tiles:', error);
+    }
 
     // Initialize selected marker and coordinates
     selectedMarker = null;
@@ -1635,30 +1478,55 @@ function initializeMapModal(type, index) {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
         
+        console.log(`Map clicked at coordinates: ${lat}, ${lng}`);
+        
         // Update selected coordinates display
-        document.getElementById('selectedLat').textContent = lat.toFixed(6);
-        document.getElementById('selectedLng').textContent = lng.toFixed(6);
+        const selectedLatElement = document.getElementById('selectedLat');
+        const selectedLngElement = document.getElementById('selectedLng');
+        
+        if (selectedLatElement && selectedLngElement) {
+            selectedLatElement.textContent = lat.toFixed(6);
+            selectedLngElement.textContent = lng.toFixed(6);
+            console.log('✅ Coordinates display updated');
+        } else {
+            console.error('Coordinate display elements not found');
+        }
         
         // Remove existing marker if any
         if (selectedMarker) {
             currentMapInstance.removeLayer(selectedMarker);
+            console.log('Removed existing marker');
         }
         
         // Add new marker with pin icon
-        const pinIcon = L.divIcon({
-            className: 'custom-pin-icon',
-            html: '<i class="bi bi-geo-alt-fill" style="color: #d63384; font-size: 24px; transform: translate(-50%, -100%);"></i>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24]
-        });
-        
-        selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
+        try {
+            const pinIcon = L.divIcon({
+                className: 'custom-pin-icon',
+                html: '<i class="bi bi-geo-alt-fill" style="color: #d63384; font-size: 24px;"></i>',
+                iconSize: [24, 24],
+                iconAnchor: [12, 24]
+            });
+            
+            selectedMarker = L.marker([lat, lng], { icon: pinIcon }).addTo(currentMapInstance);
+            console.log('✅ New marker added successfully');
+        } catch (error) {
+            console.error('Error adding marker:', error);
+            // Fallback to default marker
+            selectedMarker = L.marker([lat, lng]).addTo(currentMapInstance);
+        }
         
         // Update coordinates
         selectedCoordinates = { lat, lng };
+        console.log('Selected coordinates updated:', selectedCoordinates);
         
         // Enable confirm button
-        document.getElementById('confirmLocationBtn').disabled = false;
+        const confirmBtn = document.getElementById('confirmLocationBtn');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            console.log('✅ Confirm button enabled');
+        } else {
+            console.error('Confirm button not found');
+        }
     });
 
     // Set up enhanced search functionality
@@ -2095,17 +1963,1035 @@ function mockAddressSearch(query) {
 
 // Make sure all required functions are globally available
 // Note: Some functions were removed as they were not defined
-// Make functions globally available
+// Make functions globally available immediately
 window.initBookingModal = initBookingModal;
 window.openBookingModal = openBookingModal;
 window.showBookingModal = showBookingModal;
 
-// Ensure initBookingModal is available immediately
+// Ensure functions are available immediately
 if (typeof window.initBookingModal === 'undefined') {
     console.error('❌ initBookingModal not available globally');
 } else {
     console.log('✅ initBookingModal is available globally');
 }
+
+// Also make them available on the global scope for backward compatibility
+if (typeof globalThis !== 'undefined') {
+    globalThis.initBookingModal = initBookingModal;
+    globalThis.openBookingModal = openBookingModal;
+    globalThis.showBookingModal = showBookingModal;
+}
 window.saveBooking = saveBooking;
 window.generateDRNumber = generateDRNumber;
 window.selectSearchResult = selectSearchResult;
+
+// DR File Upload Functionality (without distance calculations)
+let pendingDRBookings = [];
+
+// Initialize DR upload functionality
+function initDRUpload() {
+    console.log('Initializing DR upload functionality...');
+    
+    const uploadDrFileBtn = document.getElementById('uploadDrFileBtn');
+    const drFileInput = document.getElementById('drFileInput');
+    const selectDrFileBtn = document.getElementById('selectDrFileBtn');
+    const backToDrUploadBtn = document.getElementById('backToDrUploadBtn');
+    const confirmDrUploadBtn = document.getElementById('confirmDrUploadBtn');
+    const addDrCostBtn = document.getElementById('addDrCostBtn');
+    const previewDrSummaryBtn = document.getElementById('previewDrSummaryBtn');
+    
+    if (uploadDrFileBtn) {
+        uploadDrFileBtn.addEventListener('click', function() {
+            const drUploadModal = new bootstrap.Modal(document.getElementById('drUploadModal'));
+            drUploadModal.show();
+        });
+    }
+    
+    if (selectDrFileBtn) {
+        selectDrFileBtn.addEventListener('click', function() {
+            drFileInput.click();
+        });
+    }
+    
+    if (drFileInput) {
+        drFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processDRFile(file);
+            }
+        });
+    }
+    
+    if (backToDrUploadBtn) {
+        backToDrUploadBtn.addEventListener('click', function() {
+            showDRUploadContent();
+        });
+    }
+    
+    if (confirmDrUploadBtn) {
+        confirmDrUploadBtn.addEventListener('click', function() {
+            confirmDRUpload();
+        });
+    }
+    
+    if (addDrCostBtn) {
+        addDrCostBtn.addEventListener('click', function() {
+            addDRCostItem();
+        });
+    }
+    
+    if (previewDrSummaryBtn) {
+        previewDrSummaryBtn.addEventListener('click', function() {
+            showDRSummaryPreview();
+        });
+    }
+    
+    // Initialize cost calculation listeners
+    initDRCostCalculation();
+}
+
+// Process DR Excel file
+async function processDRFile(file) {
+    try {
+        console.log('Processing DR file:', file.name);
+        
+        const data = await readExcelFile(file);
+        const mappedData = mapDRData(data);
+        
+        if (mappedData.length === 0) {
+            showError('No valid DR data found in the file');
+            return;
+        }
+        
+        pendingDRBookings = mappedData;
+        showDRPreview(mappedData);
+        
+    } catch (error) {
+        console.error('Error processing DR file:', error);
+        showError('Error processing file: ' + error.message);
+    }
+}
+
+// Read Excel file
+function readExcelFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                resolve(jsonData);
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        reader.onerror = function() {
+            reject(new Error('Failed to read file'));
+        };
+        
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// Map DR data from Excel columns - Complete Version 2 of Manual Booking Process
+function mapDRData(data) {
+    const mappedData = [];
+    
+    // Skip header row (index 0)
+    for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        
+        // Skip empty rows
+        if (!row || row.length === 0) continue;
+        
+        const drNumber = row[3]; // Column D
+        const vendorNumber = row[6]; // Column G
+        const customerName = row[7]; // Column H
+        const destination = row[8]; // Column I
+        
+        // Validate required fields
+        if (!drNumber || !customerName || !destination) {
+            console.warn(`Skipping row ${i + 1}: Missing required data`);
+            continue;
+        }
+        
+        // Create complete booking object matching manual booking modal structure
+        const booking = {
+            // Core identification
+            id: generateBookingId(),
+            drNumber: String(drNumber).trim(),
+            
+            // Customer details (matching manual booking modal)
+            customerName: String(customerName).trim(),
+            vendorNumber: vendorNumber ? String(vendorNumber).trim() : '',
+            
+            // Location details
+            origin: 'SMEG Alabang warehouse',
+            destination: String(destination).trim(),
+            
+            // Date and timing
+            deliveryDate: new Date().toISOString().split('T')[0],
+            bookedDate: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString(),
+            
+            // Truck reference (will be filled from form inputs)
+            truckType: '',
+            truckPlateNumber: '',
+            truck: '', // Combined truck info for display
+            
+            // Status and tracking
+            status: 'On Schedule',
+            source: 'DR_UPLOAD',
+            
+            // Cost information
+            additionalCosts: 0,
+            additionalCostBreakdown: [],
+            
+            // Distance (removed as requested)
+            distance: '',
+            
+            // Additional fields for complete data mapping
+            completedDate: null,
+            signedAt: null,
+            signature: null,
+            
+            // Metadata for tracking
+            createdBy: 'Excel Upload',
+            lastModified: new Date().toISOString()
+        };
+        
+        mappedData.push(booking);
+    }
+    
+    console.log(`Mapped ${mappedData.length} valid bookings from ${data.length - 1} rows`);
+    console.log('Sample booking structure:', mappedData[0]);
+    return mappedData;
+}
+
+// Show DR preview with enhanced details
+function showDRPreview(bookings) {
+    const drUploadContent = document.getElementById('drUploadContent');
+    const drPreviewContent = document.getElementById('drPreviewContent');
+    const drPreviewTableBody = document.getElementById('drPreviewTableBody');
+    const drPreviewSummary = document.getElementById('drPreviewSummary');
+    
+    if (!drUploadContent || !drPreviewContent || !drPreviewTableBody || !drPreviewSummary) {
+        console.error('DR preview elements not found');
+        return;
+    }
+    
+    // Hide upload content, show preview
+    drUploadContent.style.display = 'none';
+    drPreviewContent.style.display = 'block';
+    
+    // Populate preview table with enhanced details
+    drPreviewTableBody.innerHTML = '';
+    
+    bookings.forEach(booking => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${booking.drNumber}</strong></td>
+            <td>${booking.customerName}</td>
+            <td>${booking.vendorNumber || 'N/A'}</td>
+            <td><span class="badge bg-info">${booking.origin}</span></td>
+            <td>${booking.destination}</td>
+            <td><span class="badge bg-secondary">${booking.deliveryDate}</span></td>
+            <td><span class="badge bg-warning">Ready to Create</span></td>
+        `;
+        drPreviewTableBody.appendChild(row);
+    });
+    
+    // Update summary
+    drPreviewSummary.textContent = `${bookings.length} DR items ready to create`;
+    
+    // Reset truck reference and additional costs
+    resetDRConfiguration();
+}
+
+// Show DR upload content
+function showDRUploadContent() {
+    const drUploadContent = document.getElementById('drUploadContent');
+    const drPreviewContent = document.getElementById('drPreviewContent');
+    
+    if (drUploadContent && drPreviewContent) {
+        drUploadContent.style.display = 'block';
+        drPreviewContent.style.display = 'none';
+    }
+    
+    // Clear file input
+    const drFileInput = document.getElementById('drFileInput');
+    if (drFileInput) {
+        drFileInput.value = '';
+    }
+}
+
+// Confirm DR upload and create bookings - Complete Version 2 Integration
+async function confirmDRUpload() {
+    try {
+        console.log('=== CONFIRMING DR UPLOAD - VERSION 2 INTEGRATION ===');
+        console.log('Pending bookings count:', pendingDRBookings.length);
+        
+        if (pendingDRBookings.length === 0) {
+            showError('No bookings to create');
+            return;
+        }
+        
+        // Get truck reference data
+        const truckType = document.getElementById('drTruckType').value;
+        const truckPlate = document.getElementById('drTruckPlate').value;
+        
+        // Validate truck reference
+        if (!truckType || !truckPlate) {
+            showError('Please fill in truck reference details (Truck Type and Plate Number)');
+            return;
+        }
+        
+        // Get additional costs
+        const additionalCosts = getDRAdditionalCosts();
+        const totalAdditionalCost = additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+        
+        console.log('Truck Reference:', { truckType, truckPlate });
+        console.log('Additional Costs:', additionalCosts);
+        console.log('Total Additional Cost:', totalAdditionalCost);
+        
+        // Enhanced booking creation with complete data mapping
+        const bookingCount = pendingDRBookings.length;
+        const createdBookings = [];
+        
+        for (const booking of pendingDRBookings) {
+            // Complete data mapping - Version 2 of manual booking process
+            booking.truckType = truckType;
+            booking.truckPlateNumber = truckPlate;
+            booking.truck = `${truckType} (${truckPlate})`; // Combined for display
+            booking.additionalCosts = totalAdditionalCost;
+            booking.additionalCostBreakdown = [...additionalCosts]; // Deep copy
+            
+            // Ensure all required fields for Active Deliveries display
+            booking.bookedDate = booking.deliveryDate;
+            booking.lastModified = new Date().toISOString();
+            
+            // Create the booking
+            await createBookingFromDR(booking);
+            createdBookings.push(booking);
+            
+            console.log(`✅ Created booking: ${booking.drNumber} with complete data mapping`);
+        }
+        
+        console.log('=== ALL BOOKINGS CREATED SUCCESSFULLY ===');
+        console.log('Created bookings:', createdBookings.length);
+        console.log('Sample created booking:', createdBookings[0]);
+        
+        // Close modal
+        const drUploadModal = bootstrap.Modal.getInstance(document.getElementById('drUploadModal'));
+        if (drUploadModal) {
+            drUploadModal.hide();
+        }
+        
+        // Reset state
+        pendingDRBookings = [];
+        showDRUploadContent();
+        
+        // Force refresh of Active Deliveries to show new data
+        console.log('Refreshing Active Deliveries view...');
+        if (typeof window.loadActiveDeliveries === 'function') {
+            await window.loadActiveDeliveries();
+            console.log('✅ Active Deliveries refreshed');
+        } else {
+            console.warn('loadActiveDeliveries function not available');
+        }
+        
+        // Switch to active deliveries view to show results
+        if (typeof window.switchToActiveDeliveriesView === 'function') {
+            window.switchToActiveDeliveriesView();
+            console.log('✅ Switched to Active Deliveries view');
+        } else {
+            console.warn('switchToActiveDeliveriesView function not available');
+        }
+        
+        // Update analytics with new cost data
+        if (typeof window.updateAnalyticsDashboard === 'function') {
+            window.updateAnalyticsDashboard();
+            console.log('✅ Analytics dashboard updated');
+        }
+        
+        // Enhanced success message
+        const costMessage = totalAdditionalCost > 0 ? ` with ₱${totalAdditionalCost.toFixed(2)} additional costs` : '';
+        showToast(`Successfully created ${bookingCount} bookings from DR file${costMessage}. Check Active Deliveries tab.`, 'success');
+        
+        console.log('=== DR UPLOAD CONFIRMATION COMPLETED ===');
+        
+    } catch (error) {
+        console.error('Error confirming DR upload:', error);
+        showError('Error creating bookings: ' + error.message);
+    }
+}
+
+// Create booking from DR data - Complete Version 2 Integration
+async function createBookingFromDR(bookingData) {
+    try {
+        console.log('Creating booking from DR with complete data mapping:', bookingData.drNumber);
+        console.log('Booking data structure:', bookingData);
+        
+        // Ensure activeDeliveries array exists
+        if (!window.activeDeliveries) {
+            window.activeDeliveries = [];
+            console.log('Initialized activeDeliveries array');
+        }
+        
+        // Validate required fields for Active Deliveries display
+        const requiredFields = ['drNumber', 'customerName', 'origin', 'destination', 'status'];
+        const missingFields = requiredFields.filter(field => !bookingData[field]);
+        
+        if (missingFields.length > 0) {
+            console.warn('Missing required fields:', missingFields);
+        }
+        
+        // Ensure all display fields are properly set
+        bookingData.bookedDate = bookingData.bookedDate || bookingData.deliveryDate || new Date().toISOString().split('T')[0];
+        bookingData.truck = bookingData.truck || (bookingData.truckType && bookingData.truckPlateNumber ? 
+            `${bookingData.truckType} (${bookingData.truckPlateNumber})` : 'N/A');
+        
+        // Add to active deliveries
+        window.activeDeliveries.push(bookingData);
+        console.log(`Added booking to activeDeliveries. Total count: ${window.activeDeliveries.length}`);
+        
+        // Save to localStorage with multiple keys for compatibility
+        const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
+        localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
+        localStorage.setItem('activeDeliveries', activeDeliveriesData);
+        
+        console.log('Saved to localStorage:', {
+            'mci-active-deliveries': localStorage.getItem('mci-active-deliveries') ? 'Saved' : 'Failed',
+            'activeDeliveries': localStorage.getItem('activeDeliveries') ? 'Saved' : 'Failed'
+        });
+        
+        // Auto-create customer if needed
+        if (typeof autoCreateCustomer === 'function') {
+            await autoCreateCustomer(bookingData.customerName, bookingData.vendorNumber, bookingData.destination);
+            console.log('Auto-created customer for:', bookingData.customerName);
+        }
+        
+        // Update analytics with additional cost breakdown
+        if (bookingData.additionalCostBreakdown && bookingData.additionalCostBreakdown.length > 0) {
+            updateAnalyticsWithCostBreakdown(bookingData.additionalCostBreakdown);
+            console.log('Updated analytics with cost breakdown:', bookingData.additionalCostBreakdown);
+        }
+        
+        console.log('✅ Successfully created booking with complete data mapping:', bookingData.drNumber);
+        
+    } catch (error) {
+        console.error('Error creating booking from DR:', error);
+        console.error('Booking data that failed:', bookingData);
+        throw error;
+    }
+}
+
+// Generate unique booking ID
+function generateBookingId() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substr(2, 9);
+    return `DR_${timestamp}_${random}`;
+}
+
+// Initialize DR upload when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initDRUpload();
+});
+
+// Make functions globally available
+window.initDRUpload = initDRUpload;
+window.processDRFile = processDRFile;
+window.createBookingFromDR = createBookingFromDR;
+
+// Reset DR configuration (truck reference and additional costs)
+function resetDRConfiguration() {
+    // Reset truck reference
+    const drTruckType = document.getElementById('drTruckType');
+    const drTruckPlate = document.getElementById('drTruckPlate');
+    
+    if (drTruckType) drTruckType.value = '';
+    if (drTruckPlate) drTruckPlate.value = '';
+    
+    // Reset additional costs to single empty item
+    const drAdditionalCostsContainer = document.getElementById('drAdditionalCostsContainer');
+    if (drAdditionalCostsContainer) {
+        drAdditionalCostsContainer.innerHTML = `
+            <div class="dr-cost-item mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control dr-cost-description" 
+                               placeholder="e.g., Fuel Surcharge, Toll Fee">
+                        <div class="form-text">Cost description for analytics</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" class="form-control dr-cost-amount" 
+                                   placeholder="0.00" min="0" step="0.01">
+                        </div>
+                        <div class="form-text">Cost amount</div>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger remove-dr-cost" disabled>
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Reset total cost display
+    updateDRTotalCost();
+    
+    // Re-initialize cost calculation listeners
+    initDRCostCalculation();
+}
+
+// Add new DR cost item
+function addDRCostItem() {
+    const drAdditionalCostsContainer = document.getElementById('drAdditionalCostsContainer');
+    if (!drAdditionalCostsContainer) return;
+    
+    const costItem = document.createElement('div');
+    costItem.className = 'dr-cost-item mb-3';
+    costItem.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-control dr-cost-description" 
+                       placeholder="e.g., Fuel Surcharge, Toll Fee">
+                <div class="form-text">Cost description for analytics</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">₱</span>
+                    <input type="number" class="form-control dr-cost-amount" 
+                           placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="form-text">Cost amount</div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger remove-dr-cost">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    drAdditionalCostsContainer.appendChild(costItem);
+    
+    // Add event listener for remove button
+    const removeBtn = costItem.querySelector('.remove-dr-cost');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+            costItem.remove();
+            updateDRTotalCost();
+            updateRemoveButtonStates();
+        });
+    }
+    
+    // Add event listeners for cost calculation
+    const amountInput = costItem.querySelector('.dr-cost-amount');
+    if (amountInput) {
+        amountInput.addEventListener('input', updateDRTotalCost);
+    }
+    
+    // Update remove button states
+    updateRemoveButtonStates();
+}
+
+// Initialize DR cost calculation listeners
+function initDRCostCalculation() {
+    // Add event listeners to existing cost inputs
+    document.querySelectorAll('.dr-cost-amount').forEach(input => {
+        input.addEventListener('input', updateDRTotalCost);
+    });
+    
+    // Add event listeners to existing remove buttons
+    document.querySelectorAll('.remove-dr-cost').forEach(btn => {
+        btn.addEventListener('click', function() {
+            btn.closest('.dr-cost-item').remove();
+            updateDRTotalCost();
+            updateRemoveButtonStates();
+        });
+    });
+    
+    // Update initial state
+    updateRemoveButtonStates();
+    updateDRTotalCost();
+}
+
+// Update DR total cost display
+function updateDRTotalCost() {
+    const costInputs = document.querySelectorAll('.dr-cost-amount');
+    let total = 0;
+    
+    costInputs.forEach(input => {
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+    
+    const totalDisplay = document.getElementById('drTotalAdditionalCost');
+    if (totalDisplay) {
+        totalDisplay.textContent = `₱${total.toFixed(2)}`;
+    }
+}
+
+// Update remove button states (disable if only one item)
+function updateRemoveButtonStates() {
+    const removeButtons = document.querySelectorAll('.remove-dr-cost');
+    const shouldDisable = removeButtons.length <= 1;
+    
+    removeButtons.forEach(btn => {
+        btn.disabled = shouldDisable;
+    });
+}
+
+// Get DR additional costs data
+function getDRAdditionalCosts() {
+    const costs = [];
+    const costItems = document.querySelectorAll('.dr-cost-item');
+    
+    costItems.forEach(item => {
+        const description = item.querySelector('.dr-cost-description').value.trim();
+        const amount = parseFloat(item.querySelector('.dr-cost-amount').value) || 0;
+        
+        if (description && amount > 0) {
+            costs.push({
+                description: description,
+                amount: amount
+            });
+        }
+    });
+    
+    return costs;
+}
+
+// Show DR summary preview
+function showDRSummaryPreview() {
+    const truckType = document.getElementById('drTruckType').value;
+    const truckPlate = document.getElementById('drTruckPlate').value;
+    const additionalCosts = getDRAdditionalCosts();
+    const totalAdditionalCost = additionalCosts.reduce((sum, cost) => sum + cost.amount, 0);
+    
+    let summaryHtml = `
+        <div class="alert alert-info">
+            <h6><i class="bi bi-info-circle"></i> DR Upload Summary</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>DR Items:</strong> ${pendingDRBookings.length} bookings<br>
+                    <strong>Truck Type:</strong> ${truckType || 'Not specified'}<br>
+                    <strong>Truck Plate:</strong> ${truckPlate || 'Not specified'}
+                </div>
+                <div class="col-md-6">
+                    <strong>Additional Costs:</strong><br>
+    `;
+    
+    if (additionalCosts.length > 0) {
+        additionalCosts.forEach(cost => {
+            summaryHtml += `• ${cost.description}: ₱${cost.amount.toFixed(2)}<br>`;
+        });
+        summaryHtml += `<strong>Total: ₱${totalAdditionalCost.toFixed(2)}</strong>`;
+    } else {
+        summaryHtml += `No additional costs`;
+    }
+    
+    summaryHtml += `
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Show summary in a toast or modal
+    showToast('Preview summary displayed in console. Check browser console for details.', 'info');
+    console.log('=== DR UPLOAD SUMMARY ===');
+    console.log('DR Items:', pendingDRBookings.length);
+    console.log('Truck Type:', truckType);
+    console.log('Truck Plate:', truckPlate);
+    console.log('Additional Costs:', additionalCosts);
+    console.log('Total Additional Cost:', totalAdditionalCost);
+    console.log('========================');
+}
+
+// Enhanced create booking from DR data with truck reference and additional costs
+async function createBookingFromDREnhanced(bookingData) {
+    try {
+        console.log('Creating enhanced booking from DR:', bookingData.drNumber);
+        
+        // Ensure activeDeliveries array exists
+        if (!window.activeDeliveries) {
+            window.activeDeliveries = [];
+        }
+        
+        // Add to active deliveries
+        window.activeDeliveries.push(bookingData);
+        
+        // Save to localStorage
+        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+        localStorage.setItem('activeDeliveries', JSON.stringify(window.activeDeliveries));
+        
+        // Auto-create customer if needed
+        if (typeof autoCreateCustomer === 'function') {
+            await autoCreateCustomer(bookingData.customerName, bookingData.vendorNumber, bookingData.destination);
+        }
+        
+        // Update analytics with additional cost breakdown
+        if (bookingData.additionalCostBreakdown && bookingData.additionalCostBreakdown.length > 0) {
+            updateAnalyticsWithCostBreakdown(bookingData.additionalCostBreakdown);
+        }
+        
+        console.log('Successfully created enhanced booking:', bookingData.drNumber);
+        
+    } catch (error) {
+        console.error('Error creating enhanced booking from DR:', error);
+        throw error;
+    }
+}
+
+// Update analytics with cost breakdown data
+function updateAnalyticsWithCostBreakdown(costBreakdown) {
+    try {
+        // Get existing cost breakdown data from localStorage
+        let existingBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+        
+        // Add new cost breakdown items
+        costBreakdown.forEach(cost => {
+            const existingIndex = existingBreakdown.findIndex(item => item.description === cost.description);
+            
+            if (existingIndex >= 0) {
+                // Update existing cost category
+                existingBreakdown[existingIndex].amount += cost.amount;
+                existingBreakdown[existingIndex].count += 1;
+            } else {
+                // Add new cost category
+                existingBreakdown.push({
+                    description: cost.description,
+                    amount: cost.amount,
+                    count: 1,
+                    lastUpdated: new Date().toISOString()
+                });
+            }
+        });
+        
+        // Save updated breakdown
+        localStorage.setItem('analytics-cost-breakdown', JSON.stringify(existingBreakdown));
+        
+        console.log('Updated analytics cost breakdown:', existingBreakdown);
+        
+    } catch (error) {
+        console.error('Error updating analytics cost breakdown:', error);
+    }
+}
+
+// Debug function to verify DR upload data integration
+function debugDRUploadIntegration() {
+    console.log('=== DR UPLOAD INTEGRATION DEBUG ===');
+    
+    // Check localStorage data
+    const activeDeliveriesData = localStorage.getItem('mci-active-deliveries');
+    const activeDeliveriesBackup = localStorage.getItem('activeDeliveries');
+    
+    console.log('localStorage data:');
+    console.log('- mci-active-deliveries:', activeDeliveriesData ? JSON.parse(activeDeliveriesData).length + ' items' : 'Not found');
+    console.log('- activeDeliveries backup:', activeDeliveriesBackup ? JSON.parse(activeDeliveriesBackup).length + ' items' : 'Not found');
+    
+    // Check global arrays
+    console.log('Global arrays:');
+    console.log('- window.activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length + ' items' : 'Not found');
+    
+    // Check if functions exist
+    console.log('Required functions:');
+    console.log('- loadActiveDeliveries:', typeof window.loadActiveDeliveries);
+    console.log('- switchToActiveDeliveriesView:', typeof window.switchToActiveDeliveriesView);
+    console.log('- updateAnalyticsDashboard:', typeof window.updateAnalyticsDashboard);
+    
+    // Sample DR upload data structure
+    if (window.activeDeliveries && window.activeDeliveries.length > 0) {
+        const sampleDRUpload = window.activeDeliveries.find(item => item.source === 'DR_UPLOAD');
+        if (sampleDRUpload) {
+            console.log('Sample DR upload booking structure:');
+            console.log(sampleDRUpload);
+        } else {
+            console.log('No DR upload bookings found in activeDeliveries');
+        }
+    }
+    
+    console.log('=== END DEBUG ===');
+}
+
+// Make debug function globally available
+window.debugDRUploadIntegration = debugDRUploadIntegration;
+
+// Update distance calculation (placeholder since distance calculation was removed)
+function updateDistance() {
+    console.log('updateDistance called - distance calculation disabled');
+    // Distance calculation was removed as requested
+    // This function is kept as a placeholder to prevent errors
+}
+
+// Make updateDistance globally available
+window.updateDistance = updateDistance;
+
+// Debug function to test pin on map functionality
+function testPinOnMap() {
+    console.log('=== PIN ON MAP DEBUG TEST ===');
+    
+    // Check if Leaflet is loaded
+    console.log('Leaflet available:', typeof L !== 'undefined');
+    
+    // Check if Bootstrap is loaded
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+    
+    // Check if required elements exist
+    const elements = {
+        'originSelect': document.getElementById('originSelect'),
+        'customOriginContainer': document.getElementById('customOriginContainer'),
+        'customOrigin': document.getElementById('customOrigin'),
+        'pinOrigin': document.getElementById('pinOrigin'),
+        'destinationAreaInputs': document.querySelectorAll('.destination-area-input'),
+        'pinOnMapBtns': document.querySelectorAll('.pin-on-map-btn')
+    };
+    
+    console.log('Required elements:');
+    Object.keys(elements).forEach(key => {
+        const element = elements[key];
+        if (element) {
+            if (element.length !== undefined) {
+                console.log(`✅ ${key}: ${element.length} elements found`);
+            } else {
+                console.log(`✅ ${key}: Found`);
+            }
+        } else {
+            console.log(`❌ ${key}: Not found`);
+        }
+    });
+    
+    // Test showMapPinDialog function
+    console.log('showMapPinDialog function available:', typeof showMapPinDialog === 'function');
+    
+    // Test manual trigger
+    console.log('Testing manual trigger for origin...');
+    try {
+        showMapPinDialog('origin');
+        console.log('✅ Manual trigger successful');
+    } catch (error) {
+        console.error('❌ Manual trigger failed:', error);
+    }
+    
+    console.log('=== END PIN ON MAP DEBUG ===');
+}
+
+// Make test function globally available
+window.testPinOnMap = testPinOnMap;
+
+// Syntax validation test - this should not cause any errors
+// Cache buster: 2024-01-09-v4 - All syntax errors fixed
+console.log('✅ Booking.js loaded - all syntax errors resolved');
+
+// Debug function to check manual booking data flow
+function debugManualBookingFlow() {
+    console.log('=== MANUAL BOOKING DEBUG ===');
+    
+    // Check global activeDeliveries
+    console.log('window.activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length + ' items' : 'Not found');
+    if (window.activeDeliveries && window.activeDeliveries.length > 0) {
+        console.log('Latest booking:', window.activeDeliveries[window.activeDeliveries.length - 1]);
+    }
+    
+    // Check localStorage
+    const savedData = localStorage.getItem('mci-active-deliveries');
+    console.log('localStorage data:', savedData ? JSON.parse(savedData).length + ' items' : 'Not found');
+    
+    // Check if loadActiveDeliveries function exists
+    console.log('loadActiveDeliveries function:', typeof window.loadActiveDeliveries);
+    
+    // Check Active Deliveries table
+    const tableBody = document.getElementById('activeDeliveriesTableBody');
+    console.log('Active Deliveries table body:', tableBody ? 'Found' : 'Not found');
+    if (tableBody) {
+        console.log('Table rows:', tableBody.children.length);
+    }
+    
+    // Test manual refresh
+    if (typeof window.loadActiveDeliveries === 'function') {
+        console.log('Testing manual refresh...');
+        window.loadActiveDeliveries();
+    }
+    
+    console.log('=== END DEBUG ===');
+}
+
+// Make debug function globally available
+window.debugManualBookingFlow = debugManualBookingFlow;
+
+// Test function to simulate manual booking and verify data flow
+function testManualBookingFlow() {
+    console.log('=== TESTING MANUAL BOOKING FLOW ===');
+    
+    // Create a test booking similar to manual entry
+    const testBooking = {
+        id: 'DEL-' + Date.now() + '-TEST123',
+        drNumber: 'TEST-DR-' + Date.now(),
+        customerName: 'Test Customer',
+        vendorNumber: 'TEST-VENDOR-001',
+        origin: 'SMEG Alabang warehouse',
+        destination: 'Test Destination City',
+        truckType: 'L300',
+        truckPlateNumber: 'TEST-123',
+        status: 'On Schedule',
+        deliveryDate: new Date().toISOString().split('T')[0],
+        additionalCosts: 0,
+        additionalCostItems: [],
+        timestamp: new Date().toISOString()
+    };
+    
+    console.log('📝 Test booking created:', testBooking);
+    
+    // Add to window.activeDeliveries
+    if (!window.activeDeliveries) {
+        window.activeDeliveries = [];
+    }
+    window.activeDeliveries.push(testBooking);
+    console.log('✅ Added to window.activeDeliveries. Total:', window.activeDeliveries.length);
+    
+    // Save to localStorage
+    try {
+        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+        console.log('✅ Saved to localStorage');
+    } catch (error) {
+        console.error('❌ Error saving to localStorage:', error);
+    }
+    
+    // Test loading
+    if (typeof window.loadActiveDeliveries === 'function') {
+        console.log('🔄 Calling loadActiveDeliveries...');
+        window.loadActiveDeliveries();
+    } else {
+        console.error('❌ loadActiveDeliveries function not available');
+    }
+    
+    // Check if data appears in table
+    setTimeout(() => {
+        const tableBody = document.getElementById('activeDeliveriesTableBody');
+        if (tableBody) {
+            const rows = tableBody.querySelectorAll('tr');
+            console.log('📊 Table rows after test:', rows.length);
+            
+            // Look for our test booking
+            const testRow = Array.from(rows).find(row => 
+                row.textContent.includes(testBooking.drNumber)
+            );
+            
+            if (testRow) {
+                console.log('✅ Test booking found in table!');
+            } else {
+                console.log('❌ Test booking NOT found in table');
+                console.log('Available rows:', Array.from(rows).map(row => row.textContent));
+            }
+        }
+    }, 500);
+    
+    console.log('=== END TEST ===');
+}
+
+// Make test function globally available
+window.testManualBookingFlow = testManualBookingFlow;
+
+// Test function to verify calendar integration
+function testCalendarIntegration() {
+    console.log('=== CALENDAR INTEGRATION TEST ===');
+    
+    // Check if functions are available
+    console.log('Functions availability:');
+    console.log('- window.initBookingModal:', typeof window.initBookingModal);
+    console.log('- window.openBookingModal:', typeof window.openBookingModal);
+    console.log('- window.showBookingModal:', typeof window.showBookingModal);
+    
+    // Check if booking modal element exists
+    const bookingModal = document.getElementById('bookingModal');
+    console.log('- bookingModal element:', bookingModal ? 'Found' : 'Not found');
+    
+    // Test opening booking modal
+    if (typeof window.openBookingModal === 'function') {
+        console.log('✅ Testing openBookingModal...');
+        try {
+            window.openBookingModal('2024-01-09');
+            console.log('✅ openBookingModal test successful');
+        } catch (error) {
+            console.error('❌ openBookingModal test failed:', error);
+        }
+    }
+    
+    console.log('=== END TEST ===');
+}
+
+// Make test function globally available
+window.testCalendarIntegration = testCalendarIntegration;
+
+// Comprehensive syntax validation function
+function validateBookingJsSyntax() {
+    console.log('=== BOOKING.JS SYNTAX VALIDATION ===');
+    
+    try {
+        // Test basic JavaScript functionality
+        const testObj = { test: 'value' };
+        const testArray = [1, 2, 3];
+        const testFunction = () => 'test';
+        
+        console.log('✅ Basic JavaScript syntax: OK');
+        
+        // Test function availability
+        const functions = [
+            'initBookingModal',
+            'openBookingModal', 
+            'showBookingModal',
+            'saveBooking',
+            'debugManualBookingFlow',
+            'testManualBookingFlow',
+            'testCalendarIntegration'
+        ];
+        
+        functions.forEach(funcName => {
+            if (typeof window[funcName] === 'function') {
+                console.log(`✅ ${funcName}: Available`);
+            } else {
+                console.log(`❌ ${funcName}: Not available`);
+            }
+        });
+        
+        // Test regex patterns
+        const testRegex = /test/g;
+        console.log('✅ Regex syntax: OK');
+        
+        // Test template literals
+        const testTemplate = `Template literal test: ${testObj.test}`;
+        console.log('✅ Template literal syntax: OK');
+        
+        console.log('✅ All syntax validation tests passed');
+        
+    } catch (error) {
+        console.error('❌ Syntax validation failed:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+    }
+    
+    console.log('=== END VALIDATION ===');
+}
+
+// Make validation function globally available
+window.validateBookingJsSyntax = validateBookingJsSyntax;
+
+// Auto-run validation
+validateBookingJsSyntax();

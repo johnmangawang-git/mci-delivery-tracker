@@ -348,11 +348,11 @@ function displayCustomers() {
 }
 
 // Auto-create customer from booking details
-async function autoCreateCustomer(customerName, customerNumber, destination) {
+async function autoCreateCustomer(customerName, vendorNumber, destination) {
     try {
         console.log('=== AUTO CREATE CUSTOMER DEBUG ===');
         console.log('Customer Name:', customerName);
-        console.log('Customer Number:', customerNumber);
+        console.log('Vendor Number:', vendorNumber);
         console.log('Destination:', destination);
         console.log('Window.customers exists:', !!window.customers);
         console.log('Window.customers array:', window.customers);
@@ -366,7 +366,7 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
         // Check if customer already exists (by name or phone)
         const existingCustomer = window.customers?.find(customer => 
             customer.contactPerson.toLowerCase() === customerName.toLowerCase() ||
-            customer.phone === customerNumber
+            customer.phone === vendorNumber
         );
         
         console.log('Existing customer found:', existingCustomer);
@@ -400,7 +400,7 @@ async function autoCreateCustomer(customerName, customerNumber, destination) {
         const newCustomer = {
             id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
             contactPerson: customerName,
-            phone: customerNumber,
+            phone: vendorNumber,
             address: destination, // Use destination as address
             accountType: 'Individual', // Default account type for individual customers
             email: '', // Empty email - can be filled later

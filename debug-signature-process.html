@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Signature Process</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>🔍 Debug: Signature Process Flow</h2>
+        
+        <div class="alert alert-warning">
+            <strong>Purpose:</strong> Debug why signed DR items aren't moving to Delivery History
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Current State</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Active Deliveries:</strong> <span id="activeCount">0</span></p>
+                        <p><strong>Delivery History:</strong> <span id="historyCount">0</span></p>
+                        <p><strong>E-POD Records:</strong> <span id="epodCount">0</span></p>
+                        <p><strong>Enhanced Function Available:</strong> <span id="enhancedAvailable">No</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Test Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary btn-sm mb-2 w-100" onclick="addTestDelivery()">Add Test Delivery</button>
+                        <button class="btn btn-success btn-sm mb-2 w-100" onclick="simulateSignature()">Simulate Signature</button>
+                        <button class="btn btn-info btn-sm mb-2 w-100" onclick="checkFunctions()">Check Functions</button>
+                        <button class="btn btn-warning btn-sm mb-2 w-100" onclick="debugProcess()">Debug Process</button>
+                        <button class="btn btn-secondary btn-sm w-100" onclick="clearData()">Clear Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h5>Process Log</h5>
+            <div id="processLog" class="border p-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa; font-family: monospace; font-size: 12px;">
+                Process log will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/signature-completion-fix.js"></script>
+    <script>
+        // Initialize arrays
+        if (typeof window.activeDeliveries === 'undefined') {
+            window.activeDeliveries = [];
+        }
+        if (typeof window.deliveryHistory === 'undefined') {
+            window.deliveryHistory = [];
+        }
+
+        // Load existing data
+        try {
+            const savedActive = localStorage.getItem('mci-active-deliveries');
+            const savedHistory = localStorage.getItem('mci-delivery-history');
+            
+            if (savedActive) {
+                window.activeDeliveries = JSON.parse(savedActive);
+            }
+            if (savedHistory) {
+                window.deliveryHistory = JSON.parse(savedHistory);
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+
+        // Logging
+        const processLog = document.getElementById('processLog');
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warning' ? 'orange' : 'black';
+            processLog.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            processLog.scrollTop = processLog.scrollHeight;
+            console.log(message);
+        }
+
+        // Mock updateDeliveryStatus to trace the process
+        const originalUpdateDeliveryStatus = window.updateDeliveryStatus;
+        window.updateDeliveryStatus = function(drNumber, newStatus) {
+            log(`🔄 updateDeliveryStatus called: ${drNumber} -> ${newStatus}`, 'info');
+            
+            if (originalUpdateDeliveryStatus) {
+                log('📞 Calling original updateDeliveryStatus', 'info');
+                return originalUpdateDeliveryStatus(drNumber, newStatus);
+            } else {
+                log('⚠️ No original updateDeliveryStatus found, using fallback', 'warning');
+                
+                // Fallback implementation
+                if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                    const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
+                    log(`📍 Found delivery at index: ${deliveryIndex}`, 'info');
+                    
+                    if (deliveryIndex !== -1) {
+                        const delivery = window.activeDeliveries[deliveryIndex];
+                        delivery.status = newStatus;
+                        delivery.completedDate = new Date().toLocaleDateString();
+                        
+                        if (newStatus === 'Completed') {
+                            log('📦 Moving delivery to history...', 'info');
+                            
+                            if (!window.deliveryHistory) {
+                                window.deliveryHistory = [];
+                                log('🔧 Initialized deliveryHistory array', 'info');
+                            }
+                            
+                            window.deliveryHistory.unshift(delivery);
+                            window.activeDeliveries.splice(deliveryIndex, 1);
+                            
+                            log(`✅ Moved to history. Active: ${window.activeDeliveries.length}, History: ${window.deliveryHistory.length}`, 'success');
+                            
+                            // Save to localStorage
+                            try {
+                                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                                localStorage.setItem('mci-delivery-history', JSON.stringify(window.deliveryHistory));
+                                log('💾 Saved to localStorage', 'success');
+                            } catch (error) {
+                                log(`❌ Error saving to localStorage: ${error.message}`, 'error');
+                            }
+                        }
+                    } else {
+                        log(`❌ Delivery ${drNumber} not found in activeDeliveries`, 'error');
+                    }
+                } else {
+                    log('❌ activeDeliveries array not found', 'error');
+                }
+            }
+        };
+
+        function addTestDelivery() {
+            const testDelivery = {
+                id: 'test-' + Date.now(),
+                drNumber: 'DR-TEST-' + Date.now(),
+                customerName: 'Test Customer',
+                vendorNumber: 'VN-001',
+                truckPlateNumber: 'ABC-123',
+                origin: 'Manila',
+                destination: 'Quezon City',
+                status: 'Active',
+                createdDate: new Date().toLocaleDateString()
+            };
+            
+            window.activeDeliveries.push(testDelivery);
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+            
+            log(`✅ Added test delivery: ${testDelivery.drNumber}`, 'success');
+            updateDisplay();
+        }
+
+        function simulateSignature() {
+            if (window.activeDeliveries.length === 0) {
+                log('⚠️ No active deliveries to sign', 'warning');
+                return;
+            }
+            
+            const delivery = window.activeDeliveries[0];
+            log(`🖊️ Simulating signature for: ${delivery.drNumber}`, 'info');
+            
+            // Create E-POD record first
+            const ePodRecord = {
+                drNumber: delivery.drNumber,
+                customerName: delivery.customerName,
+                customerContact: delivery.vendorNumber,
+                truckPlate: delivery.truckPlateNumber,
+                origin: delivery.origin,
+                destination: delivery.destination,
+                signature: 'data:image/png;base64,test',
+                status: 'Completed',
+                signedAt: new Date().toISOString(),
+                timestamp: new Date().toISOString()
+            };
+            
+            // Save E-POD record
+            try {
+                let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                ePodRecords.push(ePodRecord);
+                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                log(`📝 Saved E-POD record. Total: ${ePodRecords.length}`, 'success');
+            } catch (error) {
+                log(`❌ Error saving E-POD: ${error.message}`, 'error');
+            }
+            
+            // Check if enhanced function is available
+            if (typeof window.enhancedSaveSignature === 'function') {
+                log('🚀 Using enhanced signature save', 'info');
+                const success = window.enhancedSaveSignature({
+                    drNumber: delivery.drNumber,
+                    customerName: delivery.customerName,
+                    customerContact: delivery.vendorNumber,
+                    truckPlate: delivery.truckPlateNumber,
+                    origin: delivery.origin,
+                    destination: delivery.destination,
+                    signatureData: 'data:image/png;base64,test'
+                });
+                
+                if (success) {
+                    log('✅ Enhanced signature save successful', 'success');
+                } else {
+                    log('❌ Enhanced signature save failed', 'error');
+                }
+            } else {
+                log('⚠️ Enhanced function not available, using fallback', 'warning');
+                window.updateDeliveryStatus(delivery.drNumber, 'Completed');
+            }
+            
+            updateDisplay();
+        }
+
+        function checkFunctions() {
+            log('🔍 Checking available functions:', 'info');
+            log(`- window.enhancedSaveSignature: ${typeof window.enhancedSaveSignature}`, 'info');
+            log(`- window.enhancedUpdateDeliveryStatus: ${typeof window.enhancedUpdateDeliveryStatus}`, 'info');
+            log(`- window.updateDeliveryStatus: ${typeof window.updateDeliveryStatus}`, 'info');
+            log(`- window.saveToLocalStorage: ${typeof window.saveToLocalStorage}`, 'info');
+            log(`- window.loadDeliveryHistory: ${typeof window.loadDeliveryHistory}`, 'info');
+        }
+
+        function debugProcess() {
+            log('🔍 Debug Process - Current State:', 'info');
+            log(`Active Deliveries: ${JSON.stringify(window.activeDeliveries, null, 2)}`, 'info');
+            log(`Delivery History: ${JSON.stringify(window.deliveryHistory, null, 2)}`, 'info');
+            
+            // Check localStorage
+            try {
+                const savedActive = localStorage.getItem('mci-active-deliveries');
+                const savedHistory = localStorage.getItem('mci-delivery-history');
+                const savedEPod = localStorage.getItem('ePodRecords');
+                
+                log(`localStorage Active: ${savedActive ? JSON.parse(savedActive).length : 0} items`, 'info');
+                log(`localStorage History: ${savedHistory ? JSON.parse(savedHistory).length : 0} items`, 'info');
+                log(`localStorage E-POD: ${savedEPod ? JSON.parse(savedEPod).length : 0} items`, 'info');
+            } catch (error) {
+                log(`❌ Error reading localStorage: ${error.message}`, 'error');
+            }
+        }
+
+        function clearData() {
+            window.activeDeliveries = [];
+            window.deliveryHistory = [];
+            localStorage.removeItem('mci-active-deliveries');
+            localStorage.removeItem('mci-delivery-history');
+            localStorage.removeItem('ePodRecords');
+            log('🗑️ All data cleared', 'info');
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('activeCount').textContent = window.activeDeliveries.length;
+            document.getElementById('historyCount').textContent = window.deliveryHistory.length;
+            
+            try {
+                const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                document.getElementById('epodCount').textContent = epodRecords.length;
+            } catch (error) {
+                document.getElementById('epodCount').textContent = 'Error';
+            }
+            
+            document.getElementById('enhancedAvailable').textContent = 
+                typeof window.enhancedSaveSignature === 'function' ? 'Yes' : 'No';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Debug page loaded', 'info');
+            updateDisplay();
+            checkFunctions();
+        });
+    </script>
+</body>
+</html>

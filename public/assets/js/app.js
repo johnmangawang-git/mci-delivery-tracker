@@ -1,8 +1,19 @@
 console.log('app.js loaded');
 (function() {
-    // Global variables
-    let activeDeliveries = [];
-    let deliveryHistory = [];
+    // CRITICAL FIX: Use window.activeDeliveries directly instead of local variables
+    // This ensures data synchronization between booking.js and app.js
+    
+    // Initialize global arrays if they don't exist
+    if (typeof window.activeDeliveries === 'undefined') {
+        window.activeDeliveries = [];
+    }
+    if (typeof window.deliveryHistory === 'undefined') {
+        window.deliveryHistory = [];
+    }
+    
+    // Use references to global arrays (not local copies)
+    let activeDeliveries = window.activeDeliveries;
+    let deliveryHistory = window.deliveryHistory;
     let refreshInterval = null;
     let filteredDeliveries = [];
     let filteredHistory = [];
@@ -53,7 +64,136 @@ console.log('app.js loaded');
         }
     }
 
-    // Placeholder function for status change handling
+    // Generate status options based on current status and business rules
+    function generateStatusOptions(currentStatus, deliveryId) {
+        const availableStatuses = ['In Transit', 'On Schedule', 'Delayed'];
+        
+        // Don't allow changing from Completed or Signed status
+        if (currentStatus === 'Completed' || currentStatus === 'Signed') {
+            return `<div class="status-option disabled">Status cannot be changed</div>`;
+        }
+        
+        return availableStatuses.map(status => {
+            const isSelected = status === currentStatus ? 'selected' : '';
+            const statusInfo = getStatusInfo(status);
+            return `
+                <div class="status-option ${isSelected}" 
+                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')"
+                    <i class="bi ${statusInfo.icon}"></i> ${status}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Toggle status dropdown visibility
+    function toggleStatusDropdown(deliveryId) {
+        // Close all other dropdowns first
+        document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+            if (dropdown.id !== `statusDropdown-${deliveryId}`) {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        // Toggle current dropdown
+        const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    // Update delivery status by delivery ID (for dropdown)
+    function updateDeliveryStatusById(deliveryId, newStatus) {
+        console.log(`Updating status for delivery ${deliveryId} to ${newStatus}`);
+        
+        // Find the delivery and update its status
+        const deliveryIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+        if (deliveryIndex !== -1) {
+            const oldStatus = activeDeliveries[deliveryIndex].status;
+            activeDeliveries[deliveryIndex].status = newStatus;
+            
+            // Update timestamp for status change
+            activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
+            
+            // Save to localStorage and database
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+            saveToDatabase();
+            
+            // Refresh the display
+            loadActiveDeliveries();
+            
+            // Show success message
+            showToast(`Status updated from "${oldStatus}" to "${newStatus}"`, 'success');
+            
+            // Close the dropdown
+            const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+            if (dropdown) {
+                dropdown.style.display = 'none';
+            }
+        }
+    }
+
+    // Update delivery status by DR number (for signature completion)
+    function updateDeliveryStatus(drNumber, newStatus) {
+        console.log(`Updating DR ${drNumber} status to: ${newStatus}`);
+        
+        try {
+            // Find delivery by DR number and update status
+            const deliveryIndex = activeDeliveries.findIndex(d => d.drNumber === drNumber);
+            if (deliveryIndex !== -1) {
+                const delivery = activeDeliveries[deliveryIndex];
+                const oldStatus = delivery.status;
+                delivery.status = newStatus;
+                delivery.lastStatusUpdate = new Date().toISOString();
+                
+                // If status is Completed, move to delivery history
+                if (newStatus === 'Completed') {
+                    delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    
+                    // Add to delivery history
+                    if (!deliveryHistory) {
+                        window.deliveryHistory = [];
+                        deliveryHistory = window.deliveryHistory;
+                    }
+                    deliveryHistory.unshift(delivery);
+                    
+                    // Remove from active deliveries
+                    activeDeliveries.splice(deliveryIndex, 1);
+                    
+                    console.log(`Moved DR ${drNumber} from active to history`);
+                }
+                
+                // Save to localStorage and database
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+                localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
+                saveToDatabase();
+                
+                // Refresh the display
+                loadActiveDeliveries();
+                loadDeliveryHistory();
+                
+                console.log(`Successfully updated DR ${drNumber} from "${oldStatus}" to "${newStatus}"`);
+            } else {
+                console.warn(`Delivery with DR ${drNumber} not found in active deliveries`);
+            }
+        } catch (error) {
+            console.error('Error updating delivery status:', error);
+        }
+    }
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.status-dropdown-container')) {
+            document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        }
+    });
+
+    // Legacy function for status change handling (keeping for compatibility)
     function handleStatusChange(e) {
         const deliveryId = e.target.dataset.deliveryId;
         const newStatus = e.target.value;
@@ -107,7 +247,7 @@ console.log('app.js loaded');
                 const delivery = window.activeDeliveries.find(d => d.drNumber === drNumber);
                 if (delivery) {
                     customerName = delivery.customerName || '';
-                    customerContact = delivery.customerNumber || '';
+                    customerContact = delivery.vendorNumber || '';
                     truckPlate = delivery.truckPlateNumber || '';
                     deliveryRoute = (delivery.origin && delivery.destination) ? 
                         `${delivery.origin} to ${delivery.destination}` : '';
@@ -166,10 +306,14 @@ console.log('app.js loaded');
 
     // Save data to localStorage (fallback)
     function saveToLocalStorage() {
+        // Always use the current global arrays
+        const currentActiveDeliveries = window.activeDeliveries || [];
+        const currentDeliveryHistory = window.deliveryHistory || [];
+        
         // Use dataService to save deliveries if available
         if (typeof window.dataService !== 'undefined') {
             // Save each active delivery
-            activeDeliveries.forEach(delivery => {
+            currentActiveDeliveries.forEach(delivery => {
                 window.dataService.saveDelivery(delivery).catch(error => {
                     console.error('Error saving delivery to dataService:', error);
                     // Fallback to localStorage
@@ -178,7 +322,7 @@ console.log('app.js loaded');
             });
             
             // Save each delivery history item
-            deliveryHistory.forEach(delivery => {
+            currentDeliveryHistory.forEach(delivery => {
                 window.dataService.saveDelivery(delivery).catch(error => {
                     console.error('Error saving delivery history to dataService:', error);
                     // Fallback to localStorage
@@ -195,9 +339,13 @@ console.log('app.js loaded');
 
     function fallbackSaveToLocalStorage() {
         try {
-            localStorage.setItem('mci-activeDeliveries', JSON.stringify(activeDeliveries));
-            localStorage.setItem('mci-deliveryHistory', JSON.stringify(deliveryHistory));
-            console.log('Data saved to localStorage (fallback)');
+            // Always use the current global arrays
+            const currentActiveDeliveries = window.activeDeliveries || [];
+            const currentDeliveryHistory = window.deliveryHistory || [];
+            
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(currentActiveDeliveries));
+            localStorage.setItem('mci-delivery-history', JSON.stringify(currentDeliveryHistory));
+            console.log(`Data saved to localStorage: ${currentActiveDeliveries.length} active, ${currentDeliveryHistory.length} history`);
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
@@ -261,16 +409,18 @@ console.log('app.js loaded');
     // Load data from localStorage (fallback)
     function loadFromLocalStorage() {
         try {
-            const savedActive = localStorage.getItem('mci-activeDeliveries');
-            const savedHistory = localStorage.getItem('mci-deliveryHistory');
+            const savedActive = localStorage.getItem('mci-active-deliveries');
+            const savedHistory = localStorage.getItem('mci-delivery-history');
             
             if (savedActive) {
-                activeDeliveries = JSON.parse(savedActive);
+                window.activeDeliveries = JSON.parse(savedActive);
+                activeDeliveries = window.activeDeliveries; // Update reference
                 console.log('Active deliveries loaded from localStorage:', activeDeliveries.length);
             }
             
             if (savedHistory) {
-                deliveryHistory = JSON.parse(savedHistory);
+                window.deliveryHistory = JSON.parse(savedHistory);
+                deliveryHistory = window.deliveryHistory; // Update reference
                 console.log('Delivery history loaded from localStorage:', deliveryHistory.length);
             }
             
@@ -403,7 +553,7 @@ console.log('app.js loaded');
                 'Date': delivery.completedDate || 'N/A',
                 'DR Number': delivery.drNumber || 'N/A',
                 'Customer Name': delivery.customerName || 'N/A',
-                'Customer Number': delivery.customerNumber || 'N/A',
+                'Vendor Number': delivery.vendorNumber || 'N/A',
                 'Origin': delivery.origin || 'N/A',
                 'Destination': delivery.destination || 'N/A',
                 'Distance': delivery.distance || 'N/A',
@@ -450,25 +600,71 @@ console.log('app.js loaded');
     function loadActiveDeliveries() {
         console.log('=== LOAD ACTIVE DELIVERIES FUNCTION CALLED ===');
         
-        // Load from database or localStorage
+        // CRITICAL FIX: Ensure we're always working with the global arrays
+        activeDeliveries = window.activeDeliveries;
+        deliveryHistory = window.deliveryHistory;
+        
+        console.log('✅ Using global activeDeliveries directly:', activeDeliveries.length);
+        
+        // If global arrays are empty, try to load from localStorage immediately
+        if (activeDeliveries.length === 0) {
+            try {
+                const savedActive = localStorage.getItem('mci-active-deliveries');
+                if (savedActive) {
+                    const parsedActive = JSON.parse(savedActive);
+                    if (parsedActive && parsedActive.length > 0) {
+                        window.activeDeliveries = parsedActive;
+                        activeDeliveries = window.activeDeliveries; // Update reference
+                        console.log('✅ Loaded activeDeliveries from localStorage:', activeDeliveries.length);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
+            }
+        }
+        
+        // CRITICAL FIX: Always populate table immediately with current data
+        populateActiveDeliveriesTable();
+        
+        // Also try to load from database in background (but don't wait for it)
         loadFromDatabase().then(success => {
             if (!success) {
                 loadFromLocalStorage();
             }
             
-            const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
-            if (!activeDeliveriesTableBody) {
-                console.error('Active deliveries table body not found');
-                return;
-            }
+            // Re-sync and re-populate after database load
+            activeDeliveries = window.activeDeliveries;
+            deliveryHistory = window.deliveryHistory;
+            console.log('✅ Post-database-load sync: activeDeliveries count:', activeDeliveries.length);
             
-            // Apply search filter
-            filteredDeliveries = currentSearchTerm ? 
-                activeDeliveries.filter(delivery => 
-                    delivery.drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase())
-                ) : 
-                [...activeDeliveries];
+            // Re-populate table with potentially updated data
+            populateActiveDeliveriesTable();
+        }).catch(error => {
+            console.error('Error loading from database:', error);
+            // Even if database fails, we still have the table populated from above
+        });
+    }
+
+    // Separate function to populate the Active Deliveries table
+    function populateActiveDeliveriesTable() {
+        console.log('📊 Populating Active Deliveries table...');
         
+        const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
+        if (!activeDeliveriesTableBody) {
+            console.error('❌ Active deliveries table body not found');
+            return;
+        }
+        
+        // Ensure we have the latest data
+        activeDeliveries = window.activeDeliveries || [];
+        
+        // Apply search filter
+        filteredDeliveries = currentSearchTerm ? 
+            activeDeliveries.filter(delivery => 
+                delivery.drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase())
+            ) : 
+            [...activeDeliveries];
+    
         // Update search results info
         const searchResultsInfo = document.getElementById('searchResultsInfo');
         if (searchResultsInfo) {
@@ -486,6 +682,17 @@ console.log('app.js loaded');
             }
         }
         
+        // Debug logging
+        console.log('📊 Active Deliveries Debug Info:');
+        console.log('- Local activeDeliveries:', activeDeliveries.length);
+        console.log('- Window activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 'undefined');
+        console.log('- Filtered deliveries:', filteredDeliveries.length);
+        console.log('- Current search term:', currentSearchTerm);
+        
+        if (filteredDeliveries.length > 0) {
+            console.log('- Sample delivery:', filteredDeliveries[0]);
+        }
+        
         // Display deliveries
         if (filteredDeliveries.length === 0) {
             activeDeliveriesTableBody.innerHTML = `
@@ -499,6 +706,7 @@ console.log('app.js loaded');
                     </td>
                 </tr>
             `;
+            console.log('📊 Displayed empty state message');
             return;
         }
         
@@ -508,22 +716,32 @@ console.log('app.js loaded');
             return `
                 <tr data-delivery-id="${delivery.id}">
                     <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
-                    <td><strong>${delivery.drNumber}</strong></td>
-                    <td>${delivery.customerName}</td>
-                    <td>${delivery.customerNumber}</td>
-                    <td>${delivery.origin}</td>
-                    <td>${delivery.destination}</td>
-                    <td>${delivery.distance}</td>
-                    <td>${delivery.truckPlateNumber}</td>
+                    <td><strong>${delivery.drNumber || 'N/A'}</strong></td>
+                    <td>${delivery.customerName || 'N/A'}</td>
+                    <td>${delivery.vendorNumber || 'N/A'}</td>
+                    <td>${delivery.origin || 'N/A'}</td>
+                    <td>${delivery.destination || 'N/A'}</td>
+                    <td>${delivery.truck || (delivery.truckType && delivery.truckPlateNumber ? `${delivery.truckType} (${delivery.truckPlateNumber})` : delivery.truckPlateNumber || 'N/A')}</td>
                     <td>
-                        <span class="badge ${statusInfo.class}">
-                            <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
-                        </span>
+                        <div class="status-dropdown-container">
+                            <span class="badge ${statusInfo.class} status-clickable" 
+                                  data-delivery-id="${delivery.id}" 
+                                  data-current-status="${delivery.status}"
+                                  onclick="toggleStatusDropdown('${delivery.id}')">
+                                <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                                <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
+                            </span>
+                            <div class="status-dropdown" id="statusDropdown-${delivery.id}" style="display: none;">
+                                ${generateStatusOptions(delivery.status, delivery.id)}
+                            </div>
+                        </div>
                     </td>
                     <td>${delivery.deliveryDate || delivery.timestamp || 'N/A'}</td>
                 </tr>
             `;
         }).join('');
+        
+        console.log(`✅ Successfully populated table with ${filteredDeliveries.length} deliveries`);
         
         // Update booking view dashboard with real data
         if (typeof window.updateBookingViewDashboard === 'function') {
@@ -531,35 +749,33 @@ console.log('app.js loaded');
                 window.updateBookingViewDashboard();
             }, 100);
         }
-        
-        console.log('Active deliveries loaded successfully');
-    }).catch(error => {
-        console.error('Error loading active deliveries:', error);
-    });
-}
+    }
 
 // Load delivery history
 function loadDeliveryHistory() {
     console.log('=== LOAD DELIVERY HISTORY FUNCTION CALLED ===');
     
-    // Load from database or localStorage
-    loadFromDatabase().then(success => {
-        if (!success) {
-            loadFromLocalStorage();
-        }
-        
-        const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
-        if (!deliveryHistoryTableBody) {
-            console.error('Delivery history table body not found');
-            return;
-        }
-        
-        // Apply search filter
-        filteredHistory = currentHistorySearchTerm ? 
-            deliveryHistory.filter(delivery => 
-                delivery.drNumber.toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
-            ) : 
-            [...deliveryHistory];
+    console.log('📊 Current delivery history length:', window.deliveryHistory ? window.deliveryHistory.length : 0);
+    
+    // CRITICAL FIX: Skip database loading for now and use current global data
+    // The database loading was overwriting our freshly updated delivery history
+    const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
+    if (!deliveryHistoryTableBody) {
+        console.error('Delivery history table body not found');
+        return;
+    }
+    
+    // Apply search filter - use global window.deliveryHistory
+    const currentDeliveryHistory = window.deliveryHistory || [];
+    console.log('📊 Using delivery history with', currentDeliveryHistory.length, 'items');
+    
+    filteredHistory = currentHistorySearchTerm ? 
+        currentDeliveryHistory.filter(delivery => 
+            delivery.drNumber.toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
+        ) : 
+        [...currentDeliveryHistory];
+    
+    console.log('📊 Filtered history:', filteredHistory.length, 'items');
         
         // Update search results info
         const historySearchResultsInfo = document.getElementById('historySearchResultsInfo');
@@ -636,10 +852,9 @@ function loadDeliveryHistory() {
                     <td>${delivery.completedDate || 'N/A'}</td>
                     <td><strong>${delivery.drNumber}</strong></td>
                     <td>${delivery.customerName}</td>
-                    <td>${delivery.customerNumber}</td>
+                    <td>${delivery.vendorNumber}</td>
                     <td>${delivery.origin}</td>
                     <td>${delivery.destination}</td>
-                    <td>${delivery.distance}</td>
                     <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
                         ${statusDisplay}
@@ -690,8 +905,13 @@ function initApp() {
 
 // Make functions globally available
 window.loadActiveDeliveries = loadActiveDeliveries;
+window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
 window.saveToLocalStorage = saveToLocalStorage;
+window.toggleStatusDropdown = toggleStatusDropdown;
+window.updateDeliveryStatusById = updateDeliveryStatusById;
+window.updateDeliveryStatus = updateDeliveryStatus;
+window.generateStatusOptions = generateStatusOptions;
 window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
 window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
 window.showESignatureModal = showESignatureModal;
@@ -1042,8 +1262,8 @@ function exportDeliveryHistoryToPdf() {
                     <span>${record.customerName || 'N/A'}</span>
                 </div>
                 <div class="field">
-                    <span class="field-label">Customer Number:</span>
-                    <span>${record.customerNumber || 'N/A'}</span>
+                    <span class="field-label">Vendor Number:</span>
+                    <span>${record.vendorNumber || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Origin:</span>
@@ -1119,10 +1339,27 @@ function resetExportButton(button, originalText) {
     }
 }
 
+// Debug function to check data state
+function debugActiveDeliveries() {
+    console.log('=== ACTIVE DELIVERIES DEBUG ===');
+    console.log('Local activeDeliveries:', activeDeliveries.length);
+    console.log('Window activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 'undefined');
+    console.log('localStorage mci-active-deliveries:', localStorage.getItem('mci-active-deliveries') ? JSON.parse(localStorage.getItem('mci-active-deliveries')).length : 'null');
+    console.log('Sample data:', activeDeliveries.length > 0 ? activeDeliveries[0] : 'No data');
+    
+    // Force refresh
+    loadActiveDeliveries();
+}
+
 // Make functions globally accessible
 window.loadActiveDeliveries = loadActiveDeliveries;
+window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
 window.saveToLocalStorage = saveToLocalStorage;
+window.toggleStatusDropdown = toggleStatusDropdown;
+window.updateDeliveryStatusById = updateDeliveryStatusById;
+window.updateDeliveryStatus = updateDeliveryStatus;
+window.generateStatusOptions = generateStatusOptions;
 window.exportActiveDeliveriesToExcel = exportActiveDeliveriesToExcel;
 window.exportDeliveryHistoryToExcel = exportDeliveryHistoryToExcel;
 window.exportDeliveryHistoryToPdf = exportDeliveryHistoryToPdf;
@@ -1131,6 +1368,7 @@ window.showESignatureModal = showESignatureModal;
 window.showEPodModal = showEPodModal;
 window.handleStatusChange = handleStatusChange;
 window.testModalFunctionality = testModalFunctionality;
+window.debugActiveDeliveries = debugActiveDeliveries;
 
 console.log('=== APP.JS INITIALIZATION COMPLETE ===');
 })();

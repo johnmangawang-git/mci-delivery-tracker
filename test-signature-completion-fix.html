@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Signature Completion Fix</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>🧪 Test: Signature Completion & Delivery History Movement</h2>
+        
+        <div class="alert alert-info">
+            <strong>Test Purpose:</strong> Diagnose why signed deliveries aren't moving to delivery history and causing signature_pad.ts:136 error.
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Active Deliveries</h5>
+                <div id="activeDeliveriesCount" class="badge bg-primary mb-2">0</div>
+                <div id="activeDeliveriesList" class="border p-3" style="height: 200px; overflow-y: auto;">
+                    Loading...
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5>Delivery History</h5>
+                <div id="deliveryHistoryCount" class="badge bg-success mb-2">0</div>
+                <div id="deliveryHistoryList" class="border p-3" style="height: 200px; overflow-y: auto;">
+                    Loading...
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h5>Test Actions</h5>
+            <button class="btn btn-primary me-2" onclick="addTestDelivery()">Add Test Delivery</button>
+            <button class="btn btn-warning me-2" onclick="simulateSignatureCompletion()">Simulate Signature Completion</button>
+            <button class="btn btn-info me-2" onclick="checkFunctions()">Check Functions</button>
+            <button class="btn btn-secondary" onclick="refreshViews()">Refresh Views</button>
+        </div>
+        
+        <div class="mt-4">
+            <h5>Console Log</h5>
+            <div id="consoleLog" class="border p-3" style="height: 300px; overflow-y: auto; background-color: #f8f9fa; font-family: monospace; font-size: 12px;">
+                Console output will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize arrays
+        if (typeof window.activeDeliveries === 'undefined') {
+            window.activeDeliveries = [];
+        }
+        if (typeof window.deliveryHistory === 'undefined') {
+            window.deliveryHistory = [];
+        }
+
+        // Console logging override
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleLogDiv = document.getElementById('consoleLog');
+        
+        function logToDiv(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            consoleLogDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            consoleLogDiv.scrollTop = consoleLogDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            logToDiv(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            logToDiv(args.join(' '), 'error');
+        };
+
+        // Mock updateDeliveryStatus function
+        function updateDeliveryStatus(drNumber, newStatus) {
+            console.log(`🔄 updateDeliveryStatus called: ${drNumber} -> ${newStatus}`);
+            
+            try {
+                // Find delivery in activeDeliveries
+                if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                    const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
+                    console.log(`Delivery index found: ${deliveryIndex}`);
+                    
+                    if (deliveryIndex !== -1) {
+                        const delivery = window.activeDeliveries[deliveryIndex];
+                        delivery.status = newStatus;
+                        delivery.completedDate = new Date().toLocaleDateString();
+                        
+                        // If completed, move to history
+                        if (newStatus === 'Completed') {
+                            console.log('Moving delivery to history...');
+                            
+                            // Initialize history array if needed
+                            if (!window.deliveryHistory) {
+                                window.deliveryHistory = [];
+                                console.log('Initialized deliveryHistory array');
+                            }
+                            
+                            // Add to history
+                            window.deliveryHistory.unshift(delivery);
+                            console.log(`Added to history. History length: ${window.deliveryHistory.length}`);
+                            
+                            // Remove from active
+                            window.activeDeliveries.splice(deliveryIndex, 1);
+                            console.log(`Removed from active. Active length: ${window.activeDeliveries.length}`);
+                            
+                            // Save to localStorage
+                            try {
+                                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                                localStorage.setItem('mci-delivery-history', JSON.stringify(window.deliveryHistory));
+                                console.log('✅ Saved to localStorage');
+                            } catch (error) {
+                                console.error('❌ Error saving to localStorage:', error);
+                            }
+                            
+                            // Refresh views
+                            refreshViews();
+                        }
+                    } else {
+                        console.error(`❌ Delivery ${drNumber} not found in activeDeliveries`);
+                    }
+                } else {
+                    console.error('❌ activeDeliveries array not found or not an array');
+                }
+            } catch (error) {
+                console.error('❌ Error in updateDeliveryStatus:', error);
+            }
+        }
+
+        function addTestDelivery() {
+            const testDelivery = {
+                id: 'test-' + Date.now(),
+                drNumber: 'DR-TEST-' + Date.now(),
+                customerName: 'Test Customer',
+                vendorNumber: 'VN-TEST-001',
+                truckPlateNumber: 'ABC-123',
+                origin: 'Manila',
+                destination: 'Quezon City',
+                status: 'Active',
+                createdDate: new Date().toLocaleDateString()
+            };
+            
+            window.activeDeliveries.push(testDelivery);
+            console.log(`✅ Added test delivery: ${testDelivery.drNumber}`);
+            refreshViews();
+        }
+
+        function simulateSignatureCompletion() {
+            if (window.activeDeliveries.length === 0) {
+                console.log('⚠️ No active deliveries to complete. Add a test delivery first.');
+                return;
+            }
+            
+            const delivery = window.activeDeliveries[0];
+            console.log(`🖊️ Simulating signature completion for: ${delivery.drNumber}`);
+            updateDeliveryStatus(delivery.drNumber, 'Completed');
+        }
+
+        function checkFunctions() {
+            console.log('🔍 Checking function availability:');
+            console.log(`- updateDeliveryStatus: ${typeof updateDeliveryStatus}`);
+            console.log(`- loadActiveDeliveries: ${typeof window.loadActiveDeliveries}`);
+            console.log(`- loadDeliveryHistory: ${typeof window.loadDeliveryHistory}`);
+            console.log(`- saveToLocalStorage: ${typeof window.saveToLocalStorage}`);
+            
+            console.log('🔍 Checking arrays:');
+            console.log(`- activeDeliveries: ${window.activeDeliveries ? window.activeDeliveries.length : 'undefined'} items`);
+            console.log(`- deliveryHistory: ${window.deliveryHistory ? window.deliveryHistory.length : 'undefined'} items`);
+        }
+
+        function refreshViews() {
+            // Update active deliveries
+            const activeCount = document.getElementById('activeDeliveriesCount');
+            const activeList = document.getElementById('activeDeliveriesList');
+            
+            activeCount.textContent = window.activeDeliveries.length;
+            if (window.activeDeliveries.length === 0) {
+                activeList.innerHTML = '<div class="text-muted">No active deliveries</div>';
+            } else {
+                activeList.innerHTML = window.activeDeliveries.map(d => 
+                    `<div class="mb-1"><strong>${d.drNumber}</strong> - ${d.status}</div>`
+                ).join('');
+            }
+            
+            // Update delivery history
+            const historyCount = document.getElementById('deliveryHistoryCount');
+            const historyList = document.getElementById('deliveryHistoryList');
+            
+            historyCount.textContent = window.deliveryHistory.length;
+            if (window.deliveryHistory.length === 0) {
+                historyList.innerHTML = '<div class="text-muted">No delivery history</div>';
+            } else {
+                historyList.innerHTML = window.deliveryHistory.map(d => 
+                    `<div class="mb-1"><strong>${d.drNumber}</strong> - ${d.status}</div>`
+                ).join('');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Test page loaded');
+            checkFunctions();
+            refreshViews();
+        });
+    </script>
+</body>
+</html>

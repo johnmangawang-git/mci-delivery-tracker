@@ -27,7 +27,7 @@ function initRobustESignature() {
  * Open the robust signature pad modal
  * @param {string} drNumber - Delivery receipt number
  * @param {string} customerName - Customer name
- * @param {string} customerContact - Customer contact information
+ * @param {string} customerContact - Vendor number information
  * @param {string} truckPlate - Truck plate number
  * @param {string} deliveryRoute - Delivery route (origin to destination)
  * @param {Array} drNumbers - Optional array of multiple DR numbers
@@ -561,14 +561,38 @@ function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i c
                 localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
                 console.log('EPOD record saved to localStorage. Total records now:', ePodRecords.length);
                 
-                // Update delivery status
-                updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-                
-                // Show success message
-                showToast('E-POD saved successfully!', 'success');
-                
-                // Refresh views
-                refreshDeliveryViews();
+                // Use enhanced signature completion if available
+                if (typeof window.enhancedSignatureComplete === 'function') {
+                    console.log('🚀 Using enhanced signature completion');
+                    const success = window.enhancedSignatureComplete(signatureInfo.drNumber);
+                    
+                    if (!success) {
+                        showError('Failed to complete signature process. Please try again.');
+                    }
+                } else if (typeof window.enhancedSaveSignature === 'function') {
+                    console.log('🚀 Using enhanced signature save');
+                    const success = window.enhancedSaveSignature({
+                        drNumber: signatureInfo.drNumber,
+                        customerName: signatureInfo.customerName,
+                        customerContact: signatureInfo.customerContact,
+                        truckPlate: signatureInfo.truckPlate,
+                        origin: origin,
+                        destination: destination,
+                        signatureData: signatureInfo.signatureData
+                    });
+                    
+                    if (success) {
+                        showToast('E-POD saved successfully!', 'success');
+                    } else {
+                        showError('Failed to complete signature process. Please try again.');
+                    }
+                } else {
+                    // Fallback to original method
+                    console.log('⚠️ Using fallback signature completion');
+                    updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+                    showToast('E-POD saved successfully!', 'success');
+                    refreshDeliveryViews();
+                }
                 
                 // Close modal
                 closeESignatureModal();

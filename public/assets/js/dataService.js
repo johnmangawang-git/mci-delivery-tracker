@@ -982,3 +982,54 @@ window.saveCustomer = dataService.saveCustomer.bind(dataService);
 window.deleteCustomer = dataService.deleteCustomer.bind(dataService);
 window.getEPodRecords = dataService.getEPodRecords.bind(dataService);
 window.saveEPodRecord = dataService.saveEPodRecord.bind(dataService);
+
+// Fallback implementation for loading from database
+async function fallbackLoadFromDatabase() {
+    try {
+        // Load active deliveries
+        const getDeliveries = typeof window.getDeliveries === 'function' ? window.getDeliveries : null;
+        if (getDeliveries) {
+            const deliveries = await getDeliveries();
+            activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
+            deliveryHistory = deliveries.filter(d => d.status === 'Completed');
+            
+            console.log('Active deliveries loaded from database:', activeDeliveries.length);
+            console.log('Delivery history loaded from database:', deliveryHistory.length);
+            
+            // Update global references
+            window.activeDeliveries = activeDeliveries;
+            window.deliveryHistory = deliveryHistory;
+            
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        console.error('Error loading from database:', error);
+        return false;
+    }
+}
+
+// Load data from localStorage (fallback)
+function loadFromLocalStorage() {
+    try {
+        const savedActive = localStorage.getItem('mci-active-deliveries');
+        const savedHistory = localStorage.getItem('mci-deliveryHistory');
+        
+        if (savedActive) {
+            activeDeliveries = JSON.parse(savedActive);
+            console.log('Active deliveries loaded from localStorage:', activeDeliveries.length);
+        }
+        
+        if (savedHistory) {
+            deliveryHistory = JSON.parse(savedHistory);
+            console.log('Delivery history loaded from localStorage:', deliveryHistory.length);
+        }
+        
+        // Update global references
+        window.activeDeliveries = activeDeliveries;
+        window.deliveryHistory = deliveryHistory;
+    } catch (error) {
+        console.error('Error loading from localStorage:', error);
+    }
+}
