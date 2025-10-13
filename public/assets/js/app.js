@@ -286,19 +286,23 @@ console.log('app.js loaded');
     // Save data to database
     async function saveToDatabase() {
         try {
-            // Save active deliveries
-            for (const delivery of activeDeliveries) {
-                await window.saveDelivery(delivery);
+            if (window.dataService) {
+                // Save active deliveries
+                for (const delivery of activeDeliveries) {
+                    await window.dataService.saveDelivery(delivery);
+                }
+                
+                // Save delivery history
+                for (const delivery of deliveryHistory) {
+                    await window.dataService.saveDelivery(delivery);
+                }
+                
+                console.log('Data saved to Supabase successfully');
+            } else {
+                throw new Error('DataService not available');
             }
-            
-            // Save delivery history
-            for (const delivery of deliveryHistory) {
-                await window.saveDelivery(delivery);
-            }
-            
-            console.log('Data saved to database');
         } catch (error) {
-            console.error('Error saving to database:', error);
+            console.error('Error saving to Supabase:', error);
             // Fallback to localStorage
             saveToLocalStorage();
         }
@@ -360,8 +364,8 @@ console.log('app.js loaded');
                 activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
                 deliveryHistory = deliveries.filter(d => d.status === 'Completed');
                 
-                console.log('Active deliveries loaded from dataService:', activeDeliveries.length);
-                console.log('Delivery history loaded from dataService:', deliveryHistory.length);
+                console.log('Active deliveries loaded from Supabase:', activeDeliveries.length);
+                console.log('Delivery history loaded from Supabase:', deliveryHistory.length);
                 
                 // Update global references
                 window.activeDeliveries = activeDeliveries;
@@ -373,7 +377,7 @@ console.log('app.js loaded');
                 return await fallbackLoadFromDatabase();
             }
         } catch (error) {
-            console.error('Error loading from dataService:', error);
+            console.error('Error loading from Supabase, using fallback:', error);
             // Fallback to current implementation
             return await fallbackLoadFromDatabase();
         }

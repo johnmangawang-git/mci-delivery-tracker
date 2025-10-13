@@ -1,165 +1,182 @@
-// Supabase client configuration
-// This file handles the initialization and configuration of the Supabase client
+/**
+ * Supabase Client and Authentication Module
+ * Handles all Supabase operations with fallback to localStorage
+ */
 
-// Global Supabase client instance
+console.log('🔧 Loading Supabase integration...');
+
+// Global Supabase client
 let supabaseClient = null;
+let isOnline = true;
+let connectionRetries = 0;
+const MAX_RETRIES = 3;
 
-// Initialize Supabase client
+/**
+ * Initialize Supabase client
+ */
 function initSupabase() {
-    // Check if we're in a browser environment
-    if (typeof window === 'undefined') {
-        console.warn('Supabase client can only be initialized in browser environment');
-        return null;
-    }
-
-    // Check if Supabase is already initialized
-    if (supabaseClient) {
-        return supabaseClient;
-    }
-
-    // Get Supabase URL and key from environment variables or use defaults for development
-    const supabaseUrl = window.SUPABASE_URL || 'YOUR_SUPABASE_URL';
-    const supabaseKey = window.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-
-    // Validate configuration
-    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'YOUR_SUPABASE_URL' || supabaseKey === 'YOUR_SUPABASE_ANON_KEY') {
-        console.warn('Supabase URL or Key not configured correctly.');
-        console.warn('You need to set the Supabase configuration in your HTML files.');
-        console.warn('Visit: https://supabase.com/dashboard/project/_/settings/api');
-        console.warn('Then update the Supabase configuration in your HTML files (login.html and index.html).');
-        return null;
-    }
-
-    // Initialize Supabase client
     try {
-        // Check if Supabase is available globally (from CDN or local fallback)
-        // The library might be available as window.supabase or through module system
-        let supabaseLibrary = null;
-        
-        // Check for different possible locations of the Supabase library
-        if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient !== 'undefined') {
-            supabaseLibrary = window.supabase;
-        } else if (typeof supabase !== 'undefined' && typeof supabase.createClient !== 'undefined') {
-            // In case it's loaded directly without attaching to window
-            supabaseLibrary = supabase;
-        }
-        
-        if (supabaseLibrary) {
-            supabaseClient = supabaseLibrary.createClient(supabaseUrl, supabaseKey);
-            console.log('Supabase client initialized successfully');
-            return supabaseClient;
-        } else {
-            console.error('Supabase library not found. Please include the Supabase CDN script or local fallback.');
+        // Check if Supabase library is available
+        if (typeof window.supabase === 'undefined') {
+            console.warn('Supabase library not loaded, using localStorage fallback');
             return null;
         }
+
+        // Get configuration from window variables
+        const supabaseUrl = window.SUPABASE_URL;
+        const supabaseKey = window.SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseKey) {
+            console.error('Supabase configuration missing');
+            return null;
+        }
+
+        // Create Supabase client
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        });
+
+        console.log('✅ Supabase client initialized successfully');
+        
+        // Test connection
+        testConnection();
+        
+        // Set up auth state listener
+        setupAuthStateListener();
+        
+        return supabaseClient;
+        
     } catch (error) {
-        console.error('Error initializing Supabase client:', error);
+        console.error('❌ Failed to initialize Supabase:', error);
         return null;
     }
 }
 
-// Get the Supabase client instance
-function getSupabaseClient() {
+/**
+ * Test Supabase connection
+ */
+async function testConnection() {
     if (!supabaseClient) {
-        return initSupabase();
+        isOnline = false;
+        return false;
     }
-    return supabaseClient;
-}
-
-// Check if user is authenticated
-async function isAuthenticated() {
-    const supabase = getSupabaseClient();
-    if (!supabase) return false;
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
-        return !!session;
+        // Simple query to test connection
+        const { data, error } = await supabaseClient
+            .from('deliveries')
+            .select('count', { count: 'exact', head: true });
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist yet
+            throw error;
+        }
+        
+        isOnline = true;
+        connectionRetries = 0;
+        console.log('✅ Supabase connection test successful');
+        return true;
+        
     } catch (error) {
-        console.error('Error checking authentication status:', error);
+        console.warn('⚠️ Supabase connection test failed:', error.message);
+        isOnline = false;
+        
+        // Retry connection
+        if (connectionRetries < MAX_RETRIES) {
+            connectionRetries++;
+            setTimeout(() => testConnection(), 2000 * connectionRetries);
+        }
+        
         return false;
     }
 }
 
-// Get current user
-async function getCurrentUser() {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
+/**
+ * Setup authentication state listener
+ */
+function setupAuthStateListener() {
+    if (!supabaseClient) return;
 
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         
-        if (!session) return null;
-
-        // Get user profile
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-        if (profileError) {
-            console.warn('Profile not found, using basic user data');
-            return {
-                id: session.user.id,
-                email: session.user.email,
-                name: session.user.user_metadata?.full_name || session.user.email,
-                role: 'user'
-            };
+        switch (event) {
+            case 'SIGNED_IN':
+                handleSignIn(session.user);
+                break;
+            case 'SIGNED_OUT':
+                handleSignOut();
+                break;
+            case 'TOKEN_REFRESHED':
+                console.log('Token refreshed successfully');
+                break;
         }
+    });
+}
 
-        return {
-            id: session.user.id,
-            email: session.user.email,
-            name: profile.full_name || session.user.user_metadata?.full_name || session.user.email,
-            role: profile.role || 'user',
-            avatar_url: profile.avatar_url
-        };
-    } catch (error) {
-        console.error('Error getting current user:', error);
-        return null;
+/**
+ * Handle user sign in
+ */
+function handleSignIn(user) {
+    const userData = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || user.email.split('@')[0],
+        role: 'Logistics Manager',
+        avatar_url: user.user_metadata?.avatar_url
+    };
+
+    localStorage.setItem('mci-user', JSON.stringify(userData));
+    updateUserInterface(userData);
+    console.log('✅ User signed in:', userData.email);
+}
+
+/**
+ * Handle user sign out
+ */
+function handleSignOut() {
+    localStorage.removeItem('mci-user');
+    updateUserInterface(null);
+    console.log('✅ User signed out');
+}
+
+/**
+ * Update user interface elements
+ */
+function updateUserInterface(userData) {
+    const userNameEl = document.getElementById('userName');
+    const userRoleEl = document.getElementById('userRole');
+    const userAvatarEl = document.getElementById('userAvatar');
+
+    if (userData) {
+        if (userNameEl) userNameEl.textContent = userData.name;
+        if (userRoleEl) userRoleEl.textContent = userData.role;
+        if (userAvatarEl) {
+            const initials = userData.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            userAvatarEl.textContent = initials;
+        }
+    } else {
+        if (userNameEl) userNameEl.textContent = 'Guest User';
+        if (userRoleEl) userRoleEl.textContent = 'Not Authenticated';
+        if (userAvatarEl) userAvatarEl.textContent = 'GU';
     }
 }
 
-// Login function
-async function login(email, password) {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-        throw new Error('Supabase client not initialized');
+/**
+ * Authentication Functions
+ */
+
+// Sign up new user
+async function signUp(email, password, fullName) {
+    if (!supabaseClient) {
+        throw new Error('Supabase not available');
     }
 
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-
-        if (error) throw error;
-
-        // Get user profile
-        const user = await getCurrentUser();
-
-        // Store user in localStorage for backward compatibility
-        if (user) {
-            localStorage.setItem('mci-user', JSON.stringify(user));
-        }
-
-        return user;
-    } catch (error) {
-        console.error('Login error:', error);
-        throw new Error(error.message || 'Failed to login');
-    }
-}
-
-// Signup function
-async function signup(email, password, fullName) {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-        throw new Error('Supabase client not initialized');
-    }
-
-    try {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
@@ -171,70 +188,186 @@ async function signup(email, password, fullName) {
 
         if (error) throw error;
 
+        console.log('✅ User signed up successfully');
         return data;
+        
     } catch (error) {
-        console.error('Signup error:', error);
-        throw new Error(error.message || 'Failed to signup');
-    }
-}
-
-// Logout function
-async function logout() {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-        // Fallback if Supabase is not available
-        localStorage.removeItem('mci-user');
-        return;
-    }
-
-    try {
-        await supabase.auth.signOut();
-        localStorage.removeItem('mci-user');
-    } catch (error) {
-        console.error('Logout error:', error);
-        // Still remove local storage as fallback
-        localStorage.removeItem('mci-user');
+        console.error('❌ Sign up failed:', error);
         throw error;
     }
 }
 
-// Handle auth state changes
-function onAuthStateChange(callback) {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
+// Sign in existing user
+async function signIn(email, password) {
+    if (!supabaseClient) {
+        throw new Error('Supabase not available');
+    }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        callback(event, session);
-    });
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
 
-    return subscription;
+        if (error) throw error;
+
+        console.log('✅ User signed in successfully');
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Sign in failed:', error);
+        throw error;
+    }
 }
 
-// Initialize Supabase when DOM is loaded
+// Sign out user
+async function signOut() {
+    if (!supabaseClient) {
+        handleSignOut();
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) throw error;
+        
+        console.log('✅ User signed out successfully');
+        
+    } catch (error) {
+        console.error('❌ Sign out failed:', error);
+        // Still clear local session
+        handleSignOut();
+    }
+}
+
+// Get current user
+function getCurrentUser() {
+    if (!supabaseClient) {
+        const savedUser = localStorage.getItem('mci-user');
+        return savedUser ? JSON.parse(savedUser) : null;
+    }
+
+    return supabaseClient.auth.getUser();
+}
+
+// Check if user is authenticated
+async function isAuthenticated() {
+    if (!supabaseClient) {
+        return !!localStorage.getItem('mci-user');
+    }
+
+    try {
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        return !!user;
+    } catch (error) {
+        console.error('Error checking authentication:', error);
+        return false;
+    }
+}
+
+/**
+ * Database Operations with Fallback
+ */
+
+// Generic database operation with fallback
+async function executeWithFallback(operation, fallbackOperation) {
+    if (!isOnline || !supabaseClient) {
+        console.log('Using localStorage fallback');
+        return await fallbackOperation();
+    }
+
+    try {
+        const result = await operation();
+        return result;
+    } catch (error) {
+        console.warn('Supabase operation failed, using fallback:', error);
+        isOnline = false;
+        return await fallbackOperation();
+    }
+}
+
+// Save delivery to Supabase
+async function saveDelivery(delivery) {
+    const supabaseOperation = async () => {
+        const { data, error } = await supabaseClient
+            .from('deliveries')
+            .upsert(delivery)
+            .select();
+        
+        if (error) throw error;
+        return data[0];
+    };
+
+    const fallbackOperation = async () => {
+        // Save to localStorage as fallback
+        const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+        const existingIndex = activeDeliveries.findIndex(d => d.id === delivery.id);
+        
+        if (existingIndex >= 0) {
+            activeDeliveries[existingIndex] = delivery;
+        } else {
+            activeDeliveries.push(delivery);
+        }
+        
+        localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+        return delivery;
+    };
+
+    return executeWithFallback(supabaseOperation, fallbackOperation);
+}
+
+// Get deliveries from Supabase
+async function getDeliveries(filters = {}) {
+    const supabaseOperation = async () => {
+        let query = supabaseClient.from('deliveries').select('*');
+        
+        // Apply filters
+        if (filters.status) {
+            query = query.eq('status', filters.status);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        return data || [];
+    };
+
+    const fallbackOperation = async () => {
+        const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+        const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+        
+        let allDeliveries = [...activeDeliveries, ...deliveryHistory];
+        
+        // Apply filters
+        if (filters.status) {
+            allDeliveries = allDeliveries.filter(d => d.status === filters.status);
+        }
+        
+        return allDeliveries;
+    };
+
+    return executeWithFallback(supabaseOperation, fallbackOperation);
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initSupabase();
 });
 
-// Make functions globally accessible
+// Export functions to global scope
 window.initSupabase = initSupabase;
-window.getSupabaseClient = getSupabaseClient;
-window.isAuthenticated = isAuthenticated;
+window.testConnection = testConnection;
+window.signUp = signUp;
+window.signIn = signIn;
+window.signOut = signOut;
+window.logout = signOut; // Alias for compatibility
 window.getCurrentUser = getCurrentUser;
-window.login = login;
-window.signup = signup;
-window.logout = logout;
-window.onAuthStateChange = onAuthStateChange;
+window.isAuthenticated = isAuthenticated;
+window.saveDelivery = saveDelivery;
+window.getDeliveries = getDeliveries;
 
-// Export for module usage (if needed)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        initSupabase,
-        getSupabaseClient,
-        isAuthenticated,
-        getCurrentUser,
-        login,
-        signup,
-        logout,
-        onAuthStateChange
-    };
-}
+// Export client for direct access
+window.supabaseClient = () => supabaseClient;
+window.isSupabaseOnline = () => isOnline;
+
+console.log('✅ Supabase integration module loaded');

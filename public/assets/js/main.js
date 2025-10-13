@@ -173,8 +173,30 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize customers data
     loadCustomers();
 
-    // Initialize Supabase authentication
-    initSupabaseAuth();
+    // Initialize Supabase integration
+    if (typeof window.initSupabase === 'function') {
+        window.initSupabase();
+        
+        // Auto-migrate data if this is first time using Supabase
+        setTimeout(async () => {
+            if (window.dataService && window.isSupabaseOnline && window.isSupabaseOnline()) {
+                const hasLocalData = localStorage.getItem('mci-active-deliveries') || 
+                                   localStorage.getItem('mci-delivery-history') || 
+                                   localStorage.getItem('mci-customers');
+                
+                if (hasLocalData) {
+                    console.log('🔄 Detected local data, starting migration...');
+                    const migrated = await window.dataService.migrateLocalStorageToSupabase();
+                    if (migrated) {
+                        console.log('✅ Data migration completed');
+                        // Refresh views to show migrated data
+                        if (typeof loadActiveDeliveries === 'function') loadActiveDeliveries();
+                        if (typeof loadCustomers === 'function') loadCustomers();
+                    }
+                }
+            }
+        }, 2000);
+    }
 
     // Ensure signature pad is initialized for E-Signature functionality
     if (document.getElementById('signaturePad')) {
@@ -458,12 +480,8 @@ function setupSaveSignatureButton() {
                 // Handle multiple DR numbers
                 const drNumbers = window.multipleDRNumbers;
                 
-                // Create E-POD records for each DR number
-                let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                
-                drNumbers.forEach(drNum => {
-                    // In a real app, you would fetch the complete delivery details from your data source
-                    // For now, we'll use placeholder data
+                // Create E-POD records for each DR number using Supabase
+                const savePromises = drNumbers.map(async (drNum) => {
                     const deliveryDetails = {
                         origin: deliveryRoute.split(' to ')[0] || 'Unknown Origin',
                         destination: deliveryRoute.split(' to ')[1] || 'Unknown Destination'
@@ -471,26 +489,43 @@ function setupSaveSignatureButton() {
                     
                     // Create E-POD record with complete data
                     const ePodRecord = {
-                        drNumber: drNum,
-                        customerName,
-                        customerContact,
-                        truckPlate,
+                        dr_number: drNum,
+                        customer_name: customerName,
+                        customer_contact: customerContact,
+                        vendor_number: customerContact,
+                        truck_plate: truckPlate,
                         origin: deliveryDetails.origin,
                         destination: deliveryDetails.destination,
-                        signature: signatureData, // Same signature for all DRs
+                        signature_data: signatureData,
                         status: 'Completed',
-                        signedAt: new Date().toISOString(),
-                        timestamp: new Date().toISOString()
+                        signed_at: new Date().toISOString()
                     };
                     
-                    ePodRecords.push(ePodRecord);
+                    // Save to Supabase using dataService
+                    if (window.dataService) {
+                        try {
+                            await window.dataService.saveEPodRecord(ePodRecord);
+                            console.log(`✅ E-POD record saved to Supabase for DR: ${drNum}`);
+                        } catch (error) {
+                            console.error(`❌ Failed to save E-POD to Supabase for DR ${drNum}:`, error);
+                            // Fallback to localStorage
+                            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                            ePodRecords.push(ePodRecord);
+                            localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                        }
+                    } else {
+                        // Fallback to localStorage
+                        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                        ePodRecords.push(ePodRecord);
+                        localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                    }
                     
                     // Update delivery status in active deliveries
                     updateDeliveryStatus(drNum, 'Completed');
                 });
                 
-                // Save all EPOD records to local storage
-                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                // Wait for all saves to complete
+                await Promise.all(savePromises);
                 
                 // Show success message
                 showToast(`${drNumbers.length} E-PODs saved successfully`, 'success');
@@ -505,27 +540,39 @@ function setupSaveSignatureButton() {
                 
                 // Create E-POD record with complete data
                 const ePodRecord = {
-                    drNumber,
-                    customerName,
-                    customerContact,
-                    truckPlate,
+                    dr_number: drNumber,
+                    customer_name: customerName,
+                    customer_contact: customerContact,
+                    vendor_number: customerContact,
+                    truck_plate: truckPlate,
                     origin: deliveryDetails.origin,
                     destination: deliveryDetails.destination,
-                    signature: signatureData,
+                    signature_data: signatureData,
                     status: 'Completed',
-                    signedAt: new Date().toISOString(),
-                    timestamp: new Date().toISOString()
+                    signed_at: new Date().toISOString()
                 };
                 
-                // Save to local storage
-                let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                ePodRecords.push(ePodRecord);
+                // Save to Supabase using dataService
+                if (window.dataService) {
+                    try {
+                        await window.dataService.saveEPodRecord(ePodRecord);
+                        console.log('✅ E-POD record saved to Supabase successfully');
+                    } catch (error) {
+                        console.error('❌ Failed to save E-POD to Supabase:', error);
+                        // Fallback to localStorage
+                        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                        ePodRecords.push(ePodRecord);
+                        localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                    }
+                } else {
+                    // Fallback to localStorage
+                    const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+                    ePodRecords.push(ePodRecord);
+                    localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                }
                 
                 // Update delivery status in active deliveries
                 updateDeliveryStatus(drNumber, 'Completed');
-                
-                // Save to local storage
-                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
                 
                 // Show success message
                 showToast('E-POD saved successfully', 'success');

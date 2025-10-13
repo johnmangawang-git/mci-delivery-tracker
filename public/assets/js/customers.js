@@ -45,9 +45,33 @@ function showError(message) {
 // Global customers array
 window.customers = [];
 
-// Load customers from localStorage
-function loadCustomers() {
+// Load customers from Supabase/localStorage
+async function loadCustomers() {
     console.log('=== LOAD CUSTOMERS FUNCTION CALLED ===');
+    
+    try {
+        // Try to load from Supabase first
+        if (window.dataService) {
+            const customers = await window.dataService.getCustomers();
+            window.customers = customers;
+            console.log(`✅ Loaded ${customers.length} customers from Supabase`);
+        } else {
+            // Fallback to localStorage
+            const savedCustomers = localStorage.getItem('mci-customers');
+            if (savedCustomers) {
+                window.customers = JSON.parse(savedCustomers);
+                console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading customers:', error);
+        // Fallback to localStorage
+        const savedCustomers = localStorage.getItem('mci-customers');
+        if (savedCustomers) {
+            window.customers = JSON.parse(savedCustomers);
+            console.log(`✅ Loaded ${window.customers.length} customers from localStorage (fallback)`);
+        }
+    }
     
     try {
         // Load from localStorage
@@ -617,14 +641,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 createdAt: new Date()
             };
             
-            // Add to customers array
-            if (!window.customers) {
-                window.customers = [];
+            // Save customer using dataService
+            if (window.dataService) {
+                window.dataService.saveCustomer(newCustomer).then(() => {
+                    console.log('✅ Customer saved to Supabase successfully');
+                    // Refresh display
+                    displayCustomers();
+                }).catch(error => {
+                    console.error('❌ Failed to save customer to Supabase:', error);
+                    // Fallback to localStorage
+                    if (!window.customers) {
+                        window.customers = [];
+                    }
+                    window.customers.push(newCustomer);
+                    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+                    displayCustomers();
+                });
+            } else {
+                // Fallback to localStorage
+                if (!window.customers) {
+                    window.customers = [];
+                }
+                window.customers.push(newCustomer);
+                localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+                displayCustomers();
             }
-            window.customers.push(newCustomer);
-            
-            // Save to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
             
             // Refresh display
             displayCustomers();

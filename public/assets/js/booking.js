@@ -821,17 +821,32 @@ async function saveBooking() {
                 timestamp: new Date().toISOString()
             };
 
-            // Add to active deliveries
-            if (typeof window.activeDeliveries !== 'undefined') {
-                window.activeDeliveries.push(newDelivery);
-                console.log(`✅ Added delivery to window.activeDeliveries. Total: ${window.activeDeliveries.length}`);
-                
-                // Save to localStorage
+            // Save to Supabase using dataService
+            if (window.dataService) {
                 try {
-                    localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                    console.log('✅ Saved activeDeliveries to localStorage');
+                    await window.dataService.saveDelivery(newDelivery);
+                    console.log('✅ Delivery saved to Supabase successfully');
                 } catch (error) {
-                    console.error('Error saving to localStorage:', error);
+                    console.error('❌ Failed to save to Supabase:', error);
+                    // Fallback to localStorage
+                    if (typeof window.activeDeliveries !== 'undefined') {
+                        window.activeDeliveries.push(newDelivery);
+                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                        console.log('✅ Saved to localStorage as fallback');
+                    }
+                }
+            } else {
+                // Fallback to localStorage if dataService not available
+                if (typeof window.activeDeliveries !== 'undefined') {
+                    window.activeDeliveries.push(newDelivery);
+                    console.log(`✅ Added delivery to window.activeDeliveries. Total: ${window.activeDeliveries.length}`);
+                    
+                    try {
+                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                        console.log('✅ Saved activeDeliveries to localStorage');
+                    } catch (error) {
+                        console.error('Error saving to localStorage:', error);
+                    }
                 }
                 
                 // Force immediate refresh of Active Deliveries display
