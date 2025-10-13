@@ -144,6 +144,31 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initialize user session
     initAuth();
+    
+    // Initialize profile form when settings modal is opened
+    const settingsModal = document.getElementById('settingsModal');
+    if (settingsModal) {
+        settingsModal.addEventListener('show.bs.modal', function() {
+            const savedUser = localStorage.getItem('mci-user');
+            if (savedUser) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    const firstNameEl = document.getElementById('profileFirstName');
+                    const lastNameEl = document.getElementById('profileLastName');
+                    const emailEl = document.getElementById('profileEmail');
+                    
+                    if (userData.name) {
+                        const nameParts = userData.name.split(' ');
+                        if (firstNameEl) firstNameEl.value = nameParts[0] || '';
+                        if (lastNameEl) lastNameEl.value = nameParts.slice(1).join(' ') || '';
+                    }
+                    if (emailEl && userData.email) emailEl.value = userData.email;
+                } catch (error) {
+                    console.error('Error loading user data into profile form:', error);
+                }
+            }
+        });
+    }
 
     // Initialize customers data
     loadCustomers();
@@ -815,6 +840,12 @@ document.addEventListener('DOMContentLoaded', function() {
         exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
     }
     
+    // Profile settings save button
+    const saveProfileChangesBtn = document.getElementById('saveProfileChangesBtn');
+    if (saveProfileChangesBtn) {
+        saveProfileChangesBtn.addEventListener('click', saveProfileSettings);
+    }
+
     console.log('Main.js: Event listeners added');
 });
 
@@ -1149,7 +1180,7 @@ function initAuth() {
     // For testing purposes, create mock user data if none exists
     if (!user) {
         const mockUser = {
-            name: 'SMEG warehouse',
+            name: 'John Mangawang',
             role: 'Administrator',
             email: 'admin@mci.com'
         };
@@ -1171,7 +1202,7 @@ function initAuth() {
         
         if (userNameEl) userNameEl.textContent = userData.name;
         if (userRoleEl) userRoleEl.textContent = userData.role;
-        if (userAvatarEl) userAvatarEl.textContent = userData.name.charAt(0) + (userData.name.split(' ')[1] ? userData.name.split(' ')[1].charAt(0) : '');
+        if (userAvatarEl) userAvatarEl.textContent = getInitials(userData.name);
         if (profileNameEl) profileNameEl.textContent = userData.name;
         if (profileRoleEl) profileRoleEl.textContent = userData.role;
         if (firstNameEl) firstNameEl.value = userData.name.split(' ')[0];
@@ -1700,6 +1731,16 @@ function initSupabaseAuth() {
     }
 }
 
+// Helper function to get initials from name
+function getInitials(name) {
+    if (!name) return 'U';
+    const nameParts = name.trim().split(' ');
+    if (nameParts.length === 1) {
+        return nameParts[0].charAt(0).toUpperCase();
+    }
+    return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+}
+
 // Update user info in the UI
 async function updateUserInfo() {
     if (typeof window.getCurrentUser === 'function') {
@@ -1716,10 +1757,11 @@ async function updateUserInfo() {
                 if (el) el.textContent = user.role || 'User';
             });
             
-            // Update avatar
+            // Update avatar with proper initials
             const avatarElement = document.getElementById('userAvatar');
             if (avatarElement) {
-                avatarElement.textContent = user.name ? user.name.charAt(0) : 'U';
+                const initials = getInitials(user.name);
+                avatarElement.textContent = initials;
             }
             
             // Update profile settings form
@@ -1738,6 +1780,68 @@ async function updateUserInfo() {
                 }
             }
         }
+    }
+}
+
+// Save profile settings
+function saveProfileSettings() {
+    const firstNameEl = document.getElementById('profileFirstName');
+    const lastNameEl = document.getElementById('profileLastName');
+    const emailEl = document.getElementById('profileEmail');
+    
+    if (firstNameEl && lastNameEl && emailEl) {
+        const firstName = firstNameEl.value.trim();
+        const lastName = lastNameEl.value.trim();
+        const email = emailEl.value.trim();
+        
+        if (!firstName) {
+            showToast('First name is required', 'error');
+            return;
+        }
+        
+        const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+        
+        // Update user data
+        const userData = {
+            name: fullName,
+            email: email,
+            role: 'Administrator' // Keep existing role
+        };
+        
+        // Save to localStorage
+        localStorage.setItem('mci-user', JSON.stringify(userData));
+        
+        // Update UI immediately
+        updateUIWithUserData(userData);
+        
+        // Show success message
+        showToast('Profile updated successfully!', 'success');
+        
+        // Close modal if it exists
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal) {
+            const modal = bootstrap.Modal.getInstance(settingsModal);
+            if (modal) modal.hide();
+        }
+    }
+}
+
+// Update UI with user data
+function updateUIWithUserData(userData) {
+    const userNameElements = document.querySelectorAll('#userName, #profileName');
+    userNameElements.forEach(el => {
+        if (el) el.textContent = userData.name || 'User';
+    });
+    
+    const userRoleElements = document.querySelectorAll('#userRole, #profileRole');
+    userRoleElements.forEach(el => {
+        if (el) el.textContent = userData.role || 'User';
+    });
+    
+    const avatarElement = document.getElementById('userAvatar');
+    if (avatarElement) {
+        const initials = getInitials(userData.name);
+        avatarElement.textContent = initials;
     }
 }
 
@@ -2125,3 +2229,8 @@ function switchToActiveDeliveriesView() {
 
 // Make function globally available
 window.switchToActiveDeliveriesView = switchToActiveDeliveriesView;
+
+// Make functions available globally
+window.saveProfileSettings = saveProfileSettings;
+window.getInitials = getInitials;
+window.updateUIWithUserData = updateUIWithUserData;
