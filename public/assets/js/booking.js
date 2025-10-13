@@ -2170,42 +2170,55 @@ function mapDRData(data) {
         console.log(`🔍 DEBUG: Processing row ${i}:`, row);
         console.log(`🔍 DEBUG: Row length: ${row.length}`);
         
-        const drNumber = row[3]; // Column D - DR Number (4th column)
-        const vendorNumber = row[6]; // Column G - Vendor Number (7th column)
-        const customerName = row[7]; // Column H - Customer Name (8th column)
-        const destination = row[8]; // Column I - Destination (9th column)
+        // Extract data with robust handling for different data types
+        const drNumber = row[3] !== undefined && row[3] !== null ? String(row[3]).trim() : '';
+        const vendorNumber = row[6] !== undefined && row[6] !== null ? String(row[6]).trim() : '';
+        const customerName = row[7] !== undefined && row[7] !== null ? String(row[7]).trim() : '';
+        const destination = row[8] !== undefined && row[8] !== null ? String(row[8]).trim() : '';
         
-        console.log(`🔍 DEBUG: Extracted values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
+        console.log(`🔍 DEBUG: Raw values - D[3]: "${row[3]}", G[6]: "${row[6]}", H[7]: "${row[7]}", I[8]: "${row[8]}"`);
+        console.log(`🔍 DEBUG: Processed values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
         
-        // Also try different column indices in case the mapping is wrong
-        console.log(`🔍 DEBUG: All row values:`, row.map((val, idx) => `[${idx}]: "${val}"`).join(', '));
+        // Show all row values for debugging
+        console.log(`🔍 DEBUG: All row values:`, row.map((val, idx) => `[${idx}]: "${val}" (${typeof val})`).join(', '));
         
-        // EMERGENCY: Show alert with row data for first few rows
+        // EMERGENCY: Show detailed debug for first few rows
         if (i <= 3) {
-            const alertMsg = `DEBUG Row ${i}:\n` + 
-                           `Length: ${row.length}\n` +
-                           `Values: ${row.map((val, idx) => `[${idx}]: "${val}"`).join('\n')}`;
-            console.log('🚨 EMERGENCY DEBUG:', alertMsg);
+            console.log('🚨 EMERGENCY DEBUG Row', i);
+            console.log('  Row length:', row.length);
+            console.log('  Column D (index 3):', row[3], typeof row[3]);
+            console.log('  Column G (index 6):', row[6], typeof row[6]);
+            console.log('  Column H (index 7):', row[7], typeof row[7]);
+            console.log('  Column I (index 8):', row[8], typeof row[8]);
+            console.log('  Processed DR Number:', drNumber);
+            console.log('  Processed Customer Name:', customerName);
+            console.log('  Processed Vendor Number:', vendorNumber);
+            console.log('  Processed Destination:', destination);
         }
         
-        // Validate required fields
+        // Validate required fields with detailed logging
         if (!drNumber || !customerName || !destination) {
-            console.warn(`Skipping row ${i + 1}: Missing required data`);
+            console.warn(`❌ Skipping row ${i + 1}: Missing required data`);
+            console.warn(`  DR Number: "${drNumber}" (${drNumber ? 'OK' : 'MISSING'})`);
+            console.warn(`  Customer Name: "${customerName}" (${customerName ? 'OK' : 'MISSING'})`);
+            console.warn(`  Destination: "${destination}" (${destination ? 'OK' : 'MISSING'})`);
             continue;
         }
+        
+        console.log(`✅ Row ${i + 1}: Valid data found`);
         
         // Create complete booking object with proper field names for Supabase compatibility
         const booking = {
             // Core identification - will be converted to dr_number for Supabase
-            drNumber: String(drNumber).trim(),
+            drNumber: drNumber, // Already processed and trimmed above
             
             // Customer details - will be converted to customer_name, vendor_number for Supabase
-            customerName: String(customerName).trim(),
-            vendorNumber: vendorNumber ? String(vendorNumber).trim() : '',
+            customerName: customerName, // Already processed and trimmed above
+            vendorNumber: vendorNumber || '', // Already processed and trimmed above
             
             // Location details
             origin: 'SMEG Alabang warehouse',
-            destination: String(destination).trim(),
+            destination: destination, // Already processed and trimmed above
             
             // Date and timing
             deliveryDate: new Date().toISOString().split('T')[0],
