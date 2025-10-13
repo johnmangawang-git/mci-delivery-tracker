@@ -2170,10 +2170,10 @@ function mapDRData(data) {
         console.log(`🔍 DEBUG: Processing row ${i}:`, row);
         console.log(`🔍 DEBUG: Row length: ${row.length}`);
         
-        const drNumber = row[3]; // Column D
-        const vendorNumber = row[6]; // Column G
-        const customerName = row[7]; // Column H
-        const destination = row[8]; // Column I
+        const drNumber = row[3]; // Column D - DR Number (4th column)
+        const vendorNumber = row[6]; // Column G - Vendor Number (7th column)
+        const customerName = row[7]; // Column H - Customer Name (8th column)
+        const destination = row[8]; // Column I - Destination (9th column)
         
         console.log(`🔍 DEBUG: Extracted values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
         
@@ -2218,7 +2218,7 @@ function mapDRData(data) {
             truck: '', // Combined truck info for display
             
             // Status and tracking
-            status: 'Active', // Changed from 'On Schedule' to match Supabase schema
+            status: 'On Schedule', // Default status as requested
             source: 'DR_UPLOAD',
             
             // Cost information - will be converted to additional_costs for Supabase
