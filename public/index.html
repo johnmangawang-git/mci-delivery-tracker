@@ -186,12 +186,15 @@
                 return;
             }
             
-            // Simple file processing with inline backup
-            if (typeof window.processSelectedFile === 'function') {
+            // Try original functions first, then fallback to inline backup
+            if (typeof window.processDRFile === 'function') {
+                console.log('✅ GLOBAL: Using original processDRFile function');
+                window.processDRFile(file);
+            } else if (typeof window.processSelectedFile === 'function') {
                 console.log('✅ GLOBAL: Using processSelectedFile function');
                 window.processSelectedFile(file);
             } else {
-                console.log('⚠️ GLOBAL: processSelectedFile not available, using inline backup');
+                console.log('⚠️ GLOBAL: No processing functions available, using inline backup');
                 
                 // INLINE BACKUP PROCESSING
                 try {
@@ -458,6 +461,14 @@
         window.fixModalButtons = function() {
             console.log('🔧 BACKUP: Fixing modal buttons...');
             
+            // First, try to use the original booking.js initialization
+            if (typeof window.initDRUpload === 'function') {
+                console.log('✅ BACKUP: Using original initDRUpload function');
+                window.initDRUpload();
+                return; // Exit early if original function works
+            }
+            
+            // Fallback to manual button fixing
             const selectBtn = document.getElementById('selectDrFileBtn');
             const fileInput = document.getElementById('drFileInput');
             
@@ -487,7 +498,12 @@
                 fileInput.addEventListener('change', function(e) {
                     console.log('📁 BACKUP: File input changed via event listener');
                     if (e.target.files[0]) {
-                        handleFileSelection(e.target.files[0]);
+                        // Try original function first
+                        if (typeof window.processDRFile === 'function') {
+                            window.processDRFile(e.target.files[0]);
+                        } else {
+                            handleFileSelection(e.target.files[0]);
+                        }
                     }
                 });
                 
@@ -501,9 +517,20 @@
             setTimeout(function() {
                 console.log('🔍 DIAGNOSTIC: Checking function availability...');
                 console.log('processSelectedFile available:', typeof window.processSelectedFile === 'function');
+                console.log('processDRFile available:', typeof window.processDRFile === 'function');
+                console.log('initDRUpload available:', typeof window.initDRUpload === 'function');
+                console.log('confirmDRUpload available:', typeof window.confirmDRUpload === 'function');
                 console.log('showDataPreview available:', typeof window.showDataPreview === 'function');
                 console.log('XLSX available:', typeof XLSX !== 'undefined');
                 console.log('handleFileSelection available:', typeof window.handleFileSelection === 'function');
+                
+                // Try to initialize the original DR upload functionality
+                if (typeof window.initDRUpload === 'function') {
+                    console.log('✅ DIAGNOSTIC: Calling original initDRUpload function');
+                    window.initDRUpload();
+                } else {
+                    console.log('⚠️ DIAGNOSTIC: Original initDRUpload not available');
+                }
             }, 2000);
         });
         
