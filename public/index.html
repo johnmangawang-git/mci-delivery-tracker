@@ -173,7 +173,7 @@
     <script src="assets/js/github-pages-fix.js"></script>
     
     <!-- Direct fix for Upload DR File button -->
-    <script src="assets/js/upload-dr-fix.js"></script>
+    <script src="assets/js/upload-dr-fix.js" onload="console.log('✅ upload-dr-fix.js loaded successfully')" onerror="console.error('❌ upload-dr-fix.js failed to load')"></script>
     
     <!-- INLINE BACKUP: Upload DR File button fix -->
     <script>
@@ -186,12 +186,65 @@
                 return;
             }
             
-            // Simple file processing
+            // Simple file processing with inline backup
             if (typeof window.processSelectedFile === 'function') {
+                console.log('✅ GLOBAL: Using processSelectedFile function');
                 window.processSelectedFile(file);
             } else {
-                // Fallback: Simple alert
-                alert('File selected: ' + file.name + '\nSize: ' + (file.size / 1024).toFixed(2) + ' KB\n\nProcessing function not available. Please refresh the page.');
+                console.log('⚠️ GLOBAL: processSelectedFile not available, using inline backup');
+                
+                // INLINE BACKUP PROCESSING
+                try {
+                    console.log('📖 INLINE: Starting file processing...');
+                    
+                    // Check XLSX library
+                    if (typeof XLSX === 'undefined') {
+                        alert('Excel processing library not loaded. Please refresh the page and try again.');
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            console.log('📖 INLINE: Reading Excel data...');
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                            
+                            console.log('✅ INLINE: Excel processed:', jsonData.length, 'rows');
+                            console.log('📊 INLINE: Sample data:', jsonData[0]);
+                            
+                            if (jsonData.length === 0) {
+                                alert('No data found in Excel file. Please check the file format.');
+                                return;
+                            }
+                            
+                            // Show simple preview
+                            alert('SUCCESS!\\n\\nFile processed: ' + file.name + '\\nRows found: ' + jsonData.length + '\\nSample data: ' + JSON.stringify(jsonData[0], null, 2));
+                            
+                            // Try to show preview if function exists
+                            if (typeof window.showDataPreview === 'function') {
+                                window.showDataPreview(jsonData);
+                            }
+                            
+                        } catch (error) {
+                            console.error('❌ INLINE: Error processing Excel:', error);
+                            alert('Error processing Excel file: ' + error.message);
+                        }
+                    };
+                    
+                    reader.onerror = function(error) {
+                        console.error('❌ INLINE: Error reading file:', error);
+                        alert('Error reading file: ' + error.message);
+                    };
+                    
+                    reader.readAsArrayBuffer(file);
+                    
+                } catch (error) {
+                    console.error('❌ INLINE: Error in backup processing:', error);
+                    alert('Error in backup processing: ' + error.message);
+                }
             }
         };
         
@@ -236,6 +289,17 @@
                 console.log('✅ BACKUP: File input fixed');
             }
         };
+        
+        // Check function availability after page load
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                console.log('🔍 DIAGNOSTIC: Checking function availability...');
+                console.log('processSelectedFile available:', typeof window.processSelectedFile === 'function');
+                console.log('showDataPreview available:', typeof window.showDataPreview === 'function');
+                console.log('XLSX available:', typeof XLSX !== 'undefined');
+                console.log('handleFileSelection available:', typeof window.handleFileSelection === 'function');
+            }, 2000);
+        });
         
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
