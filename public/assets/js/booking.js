@@ -2371,19 +2371,51 @@ async function createBookingFromDR(bookingData) {
         bookingData.truck = bookingData.truck || (bookingData.truckType && bookingData.truckPlateNumber ? 
             `${bookingData.truckType} (${bookingData.truckPlateNumber})` : 'N/A');
         
-        // Add to active deliveries
-        window.activeDeliveries.push(bookingData);
-        console.log(`Added booking to activeDeliveries. Total count: ${window.activeDeliveries.length}`);
-        
-        // Save to localStorage with multiple keys for compatibility
-        const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
-        localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
-        localStorage.setItem('activeDeliveries', activeDeliveriesData);
-        
-        console.log('Saved to localStorage:', {
-            'mci-active-deliveries': localStorage.getItem('mci-active-deliveries') ? 'Saved' : 'Failed',
-            'activeDeliveries': localStorage.getItem('activeDeliveries') ? 'Saved' : 'Failed'
-        });
+        // Save to Supabase using dataService
+        if (window.dataService) {
+            try {
+                // Prepare data for Supabase format
+                const deliveryData = {
+                    id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
+                    dr_number: bookingData.drNumber,
+                    customer_name: bookingData.customerName,
+                    vendor_number: bookingData.vendorNumber,
+                    origin: bookingData.origin,
+                    destination: bookingData.destination,
+                    truck_type: bookingData.truckType,
+                    truck_plate_number: bookingData.truckPlateNumber,
+                    status: bookingData.status || 'Active',
+                    additional_costs: bookingData.additionalCosts || 0,
+                    created_date: bookingData.bookedDate,
+                    created_by: 'Excel Upload',
+                    created_at: new Date().toISOString()
+                };
+                
+                await window.dataService.saveDelivery(deliveryData);
+                console.log('✅ Booking saved to Supabase successfully:', bookingData.drNumber);
+                
+                // Also update local arrays for immediate UI update
+                window.activeDeliveries = window.activeDeliveries || [];
+                window.activeDeliveries.push(bookingData);
+                
+            } catch (error) {
+                console.error('❌ Failed to save booking to Supabase:', error);
+                // Fallback to localStorage
+                window.activeDeliveries = window.activeDeliveries || [];
+                window.activeDeliveries.push(bookingData);
+                const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
+                localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
+                console.log('✅ Saved to localStorage as fallback');
+            }
+        } else {
+            // Fallback to localStorage if dataService not available
+            window.activeDeliveries = window.activeDeliveries || [];
+            window.activeDeliveries.push(bookingData);
+            const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
+            localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
+            localStorage.setItem('activeDeliveries', activeDeliveriesData);
+            console.log('✅ Saved to localStorage (dataService not available)');
+        }
         
         // Auto-create customer if needed
         if (typeof autoCreateCustomer === 'function') {

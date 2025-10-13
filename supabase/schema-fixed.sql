@@ -1,7 +1,5 @@
--- Supabase Database Schema for MCI Delivery Tracker
+-- Supabase Database Schema for MCI Delivery Tracker (Fixed Version)
 -- Run this in your Supabase SQL Editor
-
--- Note: auth.users table already has RLS enabled by default
 
 -- User Profiles table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
@@ -199,10 +197,3 @@ CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON public.customers
 
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON public.bookings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Insert default user profile for existing users
-INSERT INTO public.user_profiles (id, full_name, warehouse_name)
-SELECT id, COALESCE(raw_user_meta_data->>'full_name', email), 'SMEG warehouse'
-FROM auth.users
-WHERE id NOT IN (SELECT id FROM public.user_profiles)
-ON CONFLICT (id) DO NOTHING;
