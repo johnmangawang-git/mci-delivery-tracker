@@ -31,8 +31,8 @@ try {
     console.error('Error loading from localStorage:', error);
 }
 
-// Minimal saveBooking function
-window.saveBooking = function() {
+// Minimal saveBooking function - DISABLED: Using main booking.js saveBooking that saves to Supabase
+// window.saveBooking = function() {
     console.log('🎯 Minimal saveBooking called');
     
     try {
@@ -104,7 +104,9 @@ window.saveBooking = function() {
         console.error('❌ Error in minimal saveBooking:', error);
         alert('Error saving booking: ' + error.message);
     }
-};
+}; */
+
+// Use the main saveBooking function from booking.js that properly saves to Supabase
 
 // Minimal loadActiveDeliveries function
 window.minimalLoadActiveDeliveries = function() {
@@ -260,10 +262,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const newBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
             
-            // Add new listener
-            newBtn.addEventListener('click', function() {
-                console.log('🔘 Confirm booking clicked (minimal fix)');
-                window.saveBooking();
+            // Add new listener - use main saveBooking function that saves to Supabase
+            newBtn.addEventListener('click', async function() {
+                console.log('🔘 Confirm booking clicked (using main saveBooking with Supabase)');
+                if (typeof window.saveBooking === 'function') {
+                    await window.saveBooking();
+                } else {
+                    console.error('❌ Main saveBooking function not available');
+                }
             });
             
             console.log('✅ Confirm booking button set up');
