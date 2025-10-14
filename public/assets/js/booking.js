@@ -2463,11 +2463,25 @@ async function confirmDRUpload() {
         console.log('Created bookings:', createdBookings.length);
         console.log('Sample created booking:', createdBookings[0]);
         
-        // Close modal
+        // Close modal and clean up properly
         const drUploadModal = bootstrap.Modal.getInstance(document.getElementById('drUploadModal'));
         if (drUploadModal) {
             drUploadModal.hide();
         }
+        
+        // Force cleanup of modal backdrop and body classes
+        setTimeout(() => {
+            // Remove any lingering modal backdrops
+            const modalBackdrops = document.querySelectorAll('.modal-backdrop');
+            modalBackdrops.forEach(backdrop => backdrop.remove());
+            
+            // Remove modal-open class from body
+            document.body.classList.remove('modal-open');
+            
+            // Re-enable body scrolling
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, 100);
         
         // Reset state
         pendingDRBookings = [];
