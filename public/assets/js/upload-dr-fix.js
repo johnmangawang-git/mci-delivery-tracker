@@ -73,6 +73,10 @@ function fixMainUploadButton() {
 }
 
 function fixSelectFileButton() {
+    // DISABLED: This function is now handled by booking.js to avoid duplicate event listeners
+    console.log('⚠️ fixSelectFileButton disabled - handled by booking.js');
+    return;
+    
     const selectBtn = document.getElementById('selectDrFileBtn');
     const fileInput = document.getElementById('drFileInput');
     
