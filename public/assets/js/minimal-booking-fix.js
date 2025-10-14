@@ -334,8 +334,10 @@ function toggleStatusDropdown(deliveryId) {
 function updateDeliveryStatusById(deliveryId, newStatus) {
     console.log(`🔄 Updating status for delivery ${deliveryId} to ${newStatus}`);
     
-    // Find the delivery and update its status
-    const deliveryIndex = window.activeDeliveries.findIndex(d => d.id === deliveryId);
+    // Find the delivery and update its status (handle both id formats)
+    const deliveryIndex = window.activeDeliveries.findIndex(d => 
+        d.id === deliveryId || d.delivery_id === deliveryId || 
+        String(d.id) === String(deliveryId));
     if (deliveryIndex !== -1) {
         const oldStatus = window.activeDeliveries[deliveryIndex].status;
         window.activeDeliveries[deliveryIndex].status = newStatus;

@@ -78,7 +78,7 @@ console.log('app.js loaded');
             const statusInfo = getStatusInfo(status);
             return `
                 <div class="status-option ${isSelected}" 
-                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')"
+                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')">
                     <i class="bi ${statusInfo.icon}"></i> ${status}
                 </div>
             `;
@@ -105,8 +105,10 @@ console.log('app.js loaded');
     function updateDeliveryStatusById(deliveryId, newStatus) {
         console.log(`Updating status for delivery ${deliveryId} to ${newStatus}`);
         
-        // Find the delivery and update its status
-        const deliveryIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+        // Find the delivery and update its status (handle both id formats)
+        const deliveryIndex = activeDeliveries.findIndex(d => 
+            d.id === deliveryId || d.delivery_id === deliveryId || 
+            String(d.id) === String(deliveryId));
         if (deliveryIndex !== -1) {
             const oldStatus = activeDeliveries[deliveryIndex].status;
             activeDeliveries[deliveryIndex].status = newStatus;
