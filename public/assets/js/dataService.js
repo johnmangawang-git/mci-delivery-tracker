@@ -39,16 +39,27 @@ class DataService {
                 // For duplicate DR numbers, try to fetch the existing record
                 if (tableName === 'deliveries' && error.message?.includes('dr_number')) {
                     try {
-                        const client = window.supabaseClient();
-                        const { data: existingRecord } = await client
-                            .from('deliveries')
-                            .select('*')
-                            .eq('dr_number', error.details?.split('=')[1]?.replace(/[()]/g, ''))
-                            .single();
+                        // Extract DR number from error message more safely
+                        let drNumber = null;
+                        if (error.details) {
+                            const match = error.details.match(/dr_number.*?=.*?([^,)]+)/);
+                            drNumber = match ? match[1].replace(/[()'"]/g, '').trim() : null;
+                        }
                         
-                        if (existingRecord) {
-                            console.log('✅ Found existing DR record:', existingRecord.dr_number);
-                            return existingRecord;
+                        if (drNumber && drNumber !== 'undefined') {
+                            const client = window.supabaseClient();
+                            const { data: existingRecord } = await client
+                                .from('deliveries')
+                                .select('*')
+                                .eq('dr_number', drNumber)
+                                .single();
+                            
+                            if (existingRecord) {
+                                console.log('✅ Found existing DR record:', existingRecord.dr_number);
+                                return existingRecord;
+                            }
+                        } else {
+                            console.warn('Could not extract DR number from error details:', error.details);
                         }
                     } catch (fetchError) {
                         console.warn('Could not fetch existing record:', fetchError);

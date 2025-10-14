@@ -343,8 +343,40 @@ function updateBookingViewDashboard() {
     }
 }
 
-// Expose function globally
+// Switch to Active Deliveries view (for DR upload integration)
+function switchToActiveDeliveriesView() {
+    console.log('Switching to Active Deliveries view...');
+    
+    try {
+        // Find the active deliveries navigation link
+        const activeDeliveriesLink = document.querySelector('a[data-view="active-deliveries"]');
+        
+        if (activeDeliveriesLink) {
+            // Simulate click on the Active Deliveries tab
+            activeDeliveriesLink.click();
+            console.log('✅ Successfully switched to Active Deliveries view');
+        } else {
+            console.warn('Active Deliveries navigation link not found');
+            
+            // Fallback: manually show the active deliveries view
+            const views = document.querySelectorAll('.view');
+            views.forEach(view => view.classList.remove('active'));
+            
+            const activeDeliveriesView = document.getElementById('activeDeliveriesView');
+            if (activeDeliveriesView) {
+                activeDeliveriesView.classList.add('active');
+                console.log('✅ Manually switched to Active Deliveries view');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error switching to Active Deliveries view:', error);
+    }
+}
+
+// Expose functions globally
 window.updateBookingViewDashboard = updateBookingViewDashboard;
+window.switchToActiveDeliveriesView = switchToActiveDeliveriesView;
 
 // Ensure functions are properly exposed globally
 window.addEventListener('load', function() {
