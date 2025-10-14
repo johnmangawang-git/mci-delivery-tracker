@@ -46,19 +46,20 @@ window.saveBooking = function() {
         const truckPlateNumber = document.getElementById('truckPlateNumber')?.value || 'ABC-123';
         const deliveryDate = document.getElementById('deliveryDate')?.value || new Date().toISOString().split('T')[0];
         
-        // Create delivery object
+        // Create delivery object with snake_case fields to match main saveBooking function
         const newDelivery = {
             id: 'DEL-' + Date.now() + '-' + drNumber,
-            drNumber: drNumber,
-            customerName: customerName,
-            vendorNumber: vendorNumber,
+            dr_number: drNumber,
+            customer_name: customerName,
+            vendor_number: vendorNumber,
             origin: origin,
             destination: destination,
-            truckType: truckType,
-            truckPlateNumber: truckPlateNumber,
-            status: 'On Schedule',
-            deliveryDate: deliveryDate,
-            timestamp: new Date().toISOString(),
+            truck_type: truckType,
+            truck_plate_number: truckPlateNumber,
+            status: 'Active',
+            created_date: deliveryDate,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             source: 'MINIMAL_FIX'
         };
         

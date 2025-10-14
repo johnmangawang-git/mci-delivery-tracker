@@ -716,20 +716,26 @@ console.log('app.js loaded');
         }
         
         // Generate table rows
-        activeDeliveriesTableBody.innerHTML = filteredDeliveries.map(delivery => {
+        activeDeliveriesTableBody.innerHTML = filteredDeliveries.map((delivery, index) => {
             const statusInfo = getStatusInfo(delivery.status);
             
+            // Debug logging for first few deliveries to identify field structure
+            if (index < 3) {
+                console.log(`🔍 Delivery ${index} structure:`, delivery);
+                console.log(`🔍 Available fields:`, Object.keys(delivery));
+            }
+            
             // Handle both camelCase and snake_case field names for compatibility
-            const drNumber = delivery.drNumber || delivery.dr_number || 'N/A';
-            const customerName = delivery.customerName || delivery.customer_name || 'N/A';
-            const vendorNumber = delivery.vendorNumber || delivery.vendor_number || 'N/A';
-            const origin = delivery.origin || 'N/A';
-            const destination = delivery.destination || 'N/A';
+            const drNumber = delivery.drNumber || delivery.dr_number || delivery.DR_Number || delivery['DR Number'] || 'undefined';
+            const customerName = delivery.customerName || delivery.customer_name || delivery.Customer_Name || delivery['Customer Name'] || 'undefined';
+            const vendorNumber = delivery.vendorNumber || delivery.vendor_number || delivery.Vendor_Number || delivery['Vendor Number'] || 'undefined';
+            const origin = delivery.origin || delivery.Origin || 'undefined';
+            const destination = delivery.destination || delivery.Destination || 'undefined';
             const truckInfo = delivery.truck || 
                              (delivery.truckType && delivery.truckPlateNumber ? `${delivery.truckType} (${delivery.truckPlateNumber})` : 
                               delivery.truck_type && delivery.truck_plate_number ? `${delivery.truck_type} (${delivery.truck_plate_number})` :
-                              delivery.truckPlateNumber || delivery.truck_plate_number || 'N/A');
-            const deliveryDate = delivery.deliveryDate || delivery.created_date || delivery.timestamp || 'N/A';
+                              delivery.truckPlateNumber || delivery.truck_plate_number || 'undefined');
+            const deliveryDate = delivery.deliveryDate || delivery.created_date || delivery.timestamp || delivery.created_at || 'undefined';
             
             return `
                 <tr data-delivery-id="${delivery.id}">
