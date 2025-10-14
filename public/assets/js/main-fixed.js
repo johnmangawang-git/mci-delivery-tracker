@@ -129,14 +129,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Special handling for active deliveries view
                 if (viewName === 'active-deliveries') {
-                    console.log('Loading active deliveries');
-                    console.log('typeof loadActiveDeliveries:', typeof loadActiveDeliveries);
-                    if (typeof loadActiveDeliveries === 'function') {
-                        console.log('Calling loadActiveDeliveries function');
-                        loadActiveDeliveries();
-                        console.log('loadActiveDeliveries function completed');
+                    console.log('Switching to active deliveries view');
+                    // Don't reload data, just refresh the display to preserve status changes
+                    if (typeof populateActiveDeliveriesTable === 'function') {
+                        console.log('Refreshing display with existing data');
+                        populateActiveDeliveriesTable();
+                    } else if (typeof loadActiveDeliveries === 'function') {
+                        // Only load data if no data exists
+                        if (!window.activeDeliveries || window.activeDeliveries.length === 0) {
+                            console.log('No data exists, loading from source');
+                            loadActiveDeliveries();
+                        } else {
+                            console.log('Data exists, skipping reload to preserve changes');
+                        }
                     } else {
-                        console.log('loadActiveDeliveries function not available');
+                        console.log('No display functions available');
                     }
                 }
 

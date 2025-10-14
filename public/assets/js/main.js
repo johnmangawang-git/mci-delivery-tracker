@@ -92,7 +92,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Special handling for active deliveries view
                 if (viewName === 'active-deliveries') {
-                    loadActiveDeliveries();
+                    // Don't reload data, just refresh the display to preserve status changes
+                    if (typeof populateActiveDeliveriesTable === 'function') {
+                        populateActiveDeliveriesTable();
+                    } else {
+                        // Only load data if no data exists
+                        if (!window.activeDeliveries || window.activeDeliveries.length === 0) {
+                            loadActiveDeliveries();
+                        }
+                    }
                     // Initialize E-POD functionality for E-Signature button
                     initEPod();
                 }

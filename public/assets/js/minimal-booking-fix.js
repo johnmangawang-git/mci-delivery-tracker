@@ -344,10 +344,6 @@ function updateDeliveryStatusById(deliveryId, newStatus) {
         window.activeDeliveries[deliveryIndex].status = newStatus;
         window.activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
         console.log(`📦 Updated delivery status from "${oldStatus}" to "${newStatus}"`);
-    } else {
-        console.error(`❌ Delivery with ID ${deliveryId} not found in activeDeliveries array`);
-        console.log('Available delivery IDs:', window.activeDeliveries.map(d => d.id));
-        return;
         
         // Save to localStorage
         localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
@@ -383,6 +379,10 @@ function updateDeliveryStatusById(deliveryId, newStatus) {
         if (dropdown) {
             dropdown.style.display = 'none';
         }
+    } else {
+        console.error(`❌ Delivery with ID ${deliveryId} not found in activeDeliveries array`);
+        console.log('Available delivery IDs:', window.activeDeliveries.map(d => d.id));
+        return;
     }
 }
 
