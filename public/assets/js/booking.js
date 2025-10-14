@@ -2063,7 +2063,11 @@ function initDRUpload() {
     }
     
     if (selectDrFileBtn) {
-        selectDrFileBtn.addEventListener('click', function() {
+        // Remove any existing event listeners by cloning the button
+        const newSelectDrFileBtn = selectDrFileBtn.cloneNode(true);
+        selectDrFileBtn.parentNode.replaceChild(newSelectDrFileBtn, selectDrFileBtn);
+        
+        newSelectDrFileBtn.addEventListener('click', function() {
             drFileInput.click();
         });
     }
