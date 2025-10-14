@@ -31,7 +31,33 @@ class DataService {
             const result = await supabaseOperation();
             return result;
         } catch (error) {
-            console.warn(`Supabase operation failed for ${tableName}, using fallback:`, error);
+            // Handle specific error types
+            if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+                console.warn(`⚠️ Duplicate DR number detected for ${tableName}:`, error.message);
+                console.warn('This DR number already exists in the database. Using existing record.');
+                
+                // For duplicate DR numbers, try to fetch the existing record
+                if (tableName === 'deliveries' && error.message?.includes('dr_number')) {
+                    try {
+                        const client = window.supabaseClient();
+                        const { data: existingRecord } = await client
+                            .from('deliveries')
+                            .select('*')
+                            .eq('dr_number', error.details?.split('=')[1]?.replace(/[()]/g, ''))
+                            .single();
+                        
+                        if (existingRecord) {
+                            console.log('✅ Found existing DR record:', existingRecord.dr_number);
+                            return existingRecord;
+                        }
+                    } catch (fetchError) {
+                        console.warn('Could not fetch existing record:', fetchError);
+                    }
+                }
+            } else {
+                console.warn(`Supabase operation failed for ${tableName}, using fallback:`, error);
+            }
+            
             this.isOnline = false;
             return await localStorageOperation();
         }

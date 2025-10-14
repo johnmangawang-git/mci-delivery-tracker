@@ -2603,8 +2603,17 @@ async function createBookingFromDR(bookingData) {
                 window.activeDeliveries.push(displayData);
                 
             } catch (error) {
-                console.error('❌ Failed to save booking to Supabase:', error);
-                // Fallback to localStorage
+                // Handle duplicate DR number error specifically
+                if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || error.code === '23505') {
+                    console.warn(`⚠️ DR Number ${bookingData.drNumber} already exists in database`);
+                    showToast(`DR Number ${bookingData.drNumber} already exists. Skipping duplicate.`, 'warning');
+                    return; // Skip this booking, don't add to local storage
+                } else {
+                    console.error('❌ Failed to save booking to Supabase:', error);
+                    showToast(`Failed to save DR ${bookingData.drNumber} to database. Saved locally.`, 'warning');
+                }
+                
+                // Fallback to localStorage for other errors
                 window.activeDeliveries = window.activeDeliveries || [];
                 window.activeDeliveries.push(bookingData);
                 const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
