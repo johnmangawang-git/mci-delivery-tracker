@@ -2215,15 +2215,14 @@ function mapDRData(data) {
         console.log(`🔍 DEBUG: Raw values - D[3]: "${row[3]}", G[6]: "${row[6]}", H[7]: "${row[7]}", I[8]: "${row[8]}"`);
         console.log(`🔍 DEBUG: Processed values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
         
-        // EMERGENCY ALERT for first row to ensure you see the data
+        // DEBUG INFO logged to console instead of alert popup
         if (i === 1) {
-            const alertMsg = `FIRST DATA ROW DEBUG:\n` +
-                           `Row length: ${row.length}\n` +
-                           `D[3] (DR): "${row[3]}"\n` +
-                           `G[6] (Vendor): "${row[6]}"\n` +
-                           `H[7] (Customer): "${row[7]}"\n` +
-                           `I[8] (Destination): "${row[8]}"`;
-            alert(alertMsg);
+            console.log('🔍 FIRST DATA ROW DEBUG:');
+            console.log(`  Row length: ${row.length}`);
+            console.log(`  D[3] (DR): "${row[3]}"`);
+            console.log(`  G[6] (Vendor): "${row[6]}"`);
+            console.log(`  H[7] (Customer): "${row[7]}"`);
+            console.log(`  I[8] (Destination): "${row[8]}"`);
         }
         
         // Show all row values for debugging
