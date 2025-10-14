@@ -804,9 +804,9 @@ async function saveBooking() {
             
             console.log('autoCreateCustomer completed');
 
-            // Create delivery object with Supabase-compatible field names
-            const newDelivery = {
-                // Remove custom ID - let Supabase generate UUID
+            // Create delivery object with both snake_case and camelCase fields
+            let newDelivery = {
+                // Supabase fields (snake_case)
                 dr_number: drNumber,
                 customer_name: customerName,
                 vendor_number: vendorNumber || '',
@@ -814,14 +814,28 @@ async function saveBooking() {
                 destination: destinations.join('; '),
                 truck_type: truckType || '',
                 truck_plate_number: truckPlateNumber || '',
-                status: 'Active', // Changed from 'On Schedule' to match schema
-                distance: '', // Add distance field
+                status: 'Active',
+                distance: '',
                 additional_costs: parseFloat(additionalCostsTotal) || 0.00,
                 created_date: deliveryDate || new Date().toISOString().split('T')[0],
                 created_by: 'Manual',
                 created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                
+                // Display fields (camelCase) - for backward compatibility
+                drNumber: drNumber,
+                customerName: customerName,
+                vendorNumber: vendorNumber || '',
+                truckType: truckType || '',
+                truckPlateNumber: truckPlateNumber || '',
+                deliveryDate: deliveryDate || new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString()
             };
+            
+            // Use global field normalizer if available
+            if (window.normalizeDeliveryFields) {
+                newDelivery = window.normalizeDeliveryFields(newDelivery);
+            }
 
             console.log('🔧 Converted delivery data for Supabase:', newDelivery);
 

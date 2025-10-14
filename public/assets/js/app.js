@@ -362,20 +362,12 @@ console.log('app.js loaded');
             if (typeof window.dataService !== 'undefined') {
                 const deliveries = await window.dataService.getDeliveries();
                 
-                // Transform snake_case fields to camelCase for display compatibility
-                const transformedDeliveries = deliveries.map(delivery => ({
-                    ...delivery,
-                    // Add camelCase aliases for display
-                    drNumber: delivery.dr_number || delivery.drNumber,
-                    customerName: delivery.customer_name || delivery.customerName,
-                    vendorNumber: delivery.vendor_number || delivery.vendorNumber,
-                    truckType: delivery.truck_type || delivery.truckType,
-                    truckPlateNumber: delivery.truck_plate_number || delivery.truckPlateNumber,
-                    deliveryDate: delivery.created_date || delivery.deliveryDate
-                }));
+                // Use global field mapper to normalize all delivery objects
+                const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(deliveries) : deliveries;
                 
-                activeDeliveries = transformedDeliveries.filter(d => d.status !== 'Completed');
-                deliveryHistory = transformedDeliveries.filter(d => d.status === 'Completed');
+                activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
+                deliveryHistory = normalizedDeliveries.filter(d => d.status === 'Completed');
                 
                 console.log('Active deliveries loaded from Supabase:', activeDeliveries.length);
                 console.log('Delivery history loaded from Supabase:', deliveryHistory.length);
@@ -675,10 +667,11 @@ console.log('app.js loaded');
         // Ensure we have the latest data
         activeDeliveries = window.activeDeliveries || [];
         
-        // Apply search filter - handle both camelCase and snake_case field names
+        // Apply search filter using global field mapper
         filteredDeliveries = currentSearchTerm ? 
             activeDeliveries.filter(delivery => {
-                const drNumber = delivery.drNumber || delivery.dr_number || '';
+                const getField = window.getFieldValue || ((obj, field) => obj[field]);
+                const drNumber = getField(delivery, 'drNumber') || getField(delivery, 'dr_number') || '';
                 return drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase());
             }) : 
             [...activeDeliveries];
@@ -746,17 +739,22 @@ console.log('app.js loaded');
                 });
             }
             
-            // Handle both camelCase and snake_case field names for compatibility
-            const drNumber = delivery.drNumber || delivery.dr_number || delivery.DR_Number || delivery['DR Number'] || 'undefined';
-            const customerName = delivery.customerName || delivery.customer_name || delivery.Customer_Name || delivery['Customer Name'] || 'undefined';
-            const vendorNumber = delivery.vendorNumber || delivery.vendor_number || delivery.Vendor_Number || delivery['Vendor Number'] || 'undefined';
-            const origin = delivery.origin || delivery.Origin || 'undefined';
-            const destination = delivery.destination || delivery.Destination || 'undefined';
+            // Use global field mapper for consistent field access
+            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            
+            const drNumber = getField(delivery, 'drNumber') || getField(delivery, 'dr_number') || 'N/A';
+            const customerName = getField(delivery, 'customerName') || getField(delivery, 'customer_name') || 'N/A';
+            const vendorNumber = getField(delivery, 'vendorNumber') || getField(delivery, 'vendor_number') || 'N/A';
+            const origin = getField(delivery, 'origin') || 'N/A';
+            const destination = getField(delivery, 'destination') || 'N/A';
+            
+            const truckType = getField(delivery, 'truckType') || getField(delivery, 'truck_type') || '';
+            const truckPlate = getField(delivery, 'truckPlateNumber') || getField(delivery, 'truck_plate_number') || '';
             const truckInfo = delivery.truck || 
-                             (delivery.truckType && delivery.truckPlateNumber ? `${delivery.truckType} (${delivery.truckPlateNumber})` : 
-                              delivery.truck_type && delivery.truck_plate_number ? `${delivery.truck_type} (${delivery.truck_plate_number})` :
-                              delivery.truckPlateNumber || delivery.truck_plate_number || 'undefined');
-            const deliveryDate = delivery.deliveryDate || delivery.created_date || delivery.timestamp || delivery.created_at || 'undefined';
+                             (truckType && truckPlate ? `${truckType} (${truckPlate})` : truckPlate || 'N/A');
+            
+            const deliveryDate = getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
+                               getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
             
             return `
                 <tr data-delivery-id="${delivery.id}">
