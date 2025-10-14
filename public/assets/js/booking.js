@@ -908,25 +908,26 @@ async function saveBooking() {
                 }
                 
                 // CRITICAL: Force refresh active deliveries display multiple times
-                if (typeof window.loadActiveDeliveries === 'function') {
-                    // Immediate refresh
-                    window.loadActiveDeliveries();
-                    
-                    // Delayed refresh to ensure data persistence
-                    setTimeout(() => {
+                if (typeof window.activeDeliveries !== 'undefined') {
+                    if (typeof window.loadActiveDeliveries === 'function') {
+                        // Immediate refresh
                         window.loadActiveDeliveries();
-                        console.log('🔄 Final refresh of Active Deliveries after booking save');
-                    }, 200);
+                        
+                        // Delayed refresh to ensure data persistence
+                        setTimeout(() => {
+                            window.loadActiveDeliveries();
+                            console.log('🔄 Final refresh of Active Deliveries after booking save');
+                        }, 200);
+                    } else {
+                        console.error('❌ window.loadActiveDeliveries not available for final refresh!');
+                    }
                 } else {
-                    console.error('❌ window.loadActiveDeliveries not available for final refresh!');
+                    console.error('❌ window.activeDeliveries is not defined!');
+                    // Initialize it if it doesn't exist
+                    window.activeDeliveries = [];
+                    window.activeDeliveries.push(newDelivery);
+                    console.log('✅ Initialized and added to activeDeliveries');
                 }
-            } else {
-                console.error('❌ window.activeDeliveries is not defined!');
-                // Initialize it if it doesn't exist
-                window.activeDeliveries = [];
-                window.activeDeliveries.push(newDelivery);
-                console.log('✅ Initialized and added to activeDeliveries');
-            }
         }
 
         // Mock success

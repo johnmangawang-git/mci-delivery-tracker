@@ -576,8 +576,7 @@ function fixModalButtons() {
 setTimeout(initCompleteUploadWorkflow, 1000);
 setTimeout(initCompleteUploadWorkflow, 3000);
 setTimeout(initCompleteUploadWorkflow, 5000);
-// EMERGE
-NCY TEST FUNCTION - Call this from console to test preview
+// EMERGENCY TEST FUNCTION - Call this from console to test preview
 window.testPreview = function() {
     console.log('🧪 Testing preview with sample data...');
     
