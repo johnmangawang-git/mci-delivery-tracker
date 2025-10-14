@@ -1,16 +1,15 @@
 /**
- * COMPLETE FIX: Upload DR File Workflow
- * This ensures the entire upload process works on the live site
+ * DISABLED: Upload DR File Workflow
+ * This file is completely disabled - all functionality moved to booking.js
  */
 
-console.log('🔧 Complete Upload DR File workflow fix loading...');
+// IMMEDIATE EXIT - Prevent any execution of this file
+(function() {
+    console.log('🚫 upload-dr-fix.js is COMPLETELY DISABLED');
+    return;
+})();
 
-// Wait for DOM to be ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCompleteUploadWorkflow);
-} else {
-    initCompleteUploadWorkflow();
-}
+// Everything below this point will not execute
 
 function initCompleteUploadWorkflow() {
     console.log('🔧 Initializing complete Upload DR File workflow...');
