@@ -518,10 +518,11 @@ const dataService = new DataService();
 window.dataService = dataService;
 
 // Auto-sync every 30 seconds if online
-setInterval(() => {
-    if (dataService.isSupabaseAvailable()) {
-        dataService.syncData();
-    }
-}, 30000);
+// DISABLED: This might be interfering with status updates
+// setInterval(() => {
+//     if (dataService.isSupabaseAvailable()) {
+//         dataService.syncData();
+//     }
+// }, 30000);
 
 console.log('✅ Data Service loaded successfully');

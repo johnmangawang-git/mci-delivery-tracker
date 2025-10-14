@@ -618,28 +618,29 @@
         setInterval(protectArray, 1000);
         
         // Force display refresh every 3 seconds - WITH CHECKBOX PRESERVATION
-        setInterval(() => {
-            // Save checkbox states before refresh
-            const checkboxStates = {};
-            document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
-                checkboxStates[checkbox.dataset.deliveryId] = checkbox.checked;
-            });
-            
-            if (typeof window.loadActiveDeliveries === 'function') {
-                window.loadActiveDeliveries();
-            } else if (typeof window.minimalLoadActiveDeliveries === 'function') {
-                window.minimalLoadActiveDeliveries();
-            }
-            
-            // Restore checkbox states after refresh
-            setTimeout(() => {
-                document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
-                    if (checkboxStates[checkbox.dataset.deliveryId]) {
-                        checkbox.checked = true;
-                    }
-                });
-            }, 100);
-        }, 3000);
+        // DISABLED: This was causing status changes to revert every 3 seconds
+        // setInterval(() => {
+        //     // Save checkbox states before refresh
+        //     const checkboxStates = {};
+        //     document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
+        //         checkboxStates[checkbox.dataset.deliveryId] = checkbox.checked;
+        //     });
+        //     
+        //     if (typeof window.loadActiveDeliveries === 'function') {
+        //         window.loadActiveDeliveries();
+        //     } else if (typeof window.minimalLoadActiveDeliveries === 'function') {
+        //         window.minimalLoadActiveDeliveries();
+        //     }
+        //     
+        //     // Restore checkbox states after refresh
+        //     setTimeout(() => {
+        //         document.querySelectorAll('.delivery-checkbox').forEach(checkbox => {
+        //             if (checkboxStates[checkbox.dataset.deliveryId]) {
+        //                 checkbox.checked = true;
+        //             }
+        //         });
+        //     }, 100);
+        // }, 3000);
         
         console.log('✅ Emergency booking fix active');
     </script>
