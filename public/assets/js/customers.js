@@ -49,43 +49,69 @@ window.customers = [];
 async function loadCustomers() {
     console.log('=== LOAD CUSTOMERS FUNCTION CALLED ===');
     
+    // Prevent multiple simultaneous calls
+    if (window.loadingCustomers) {
+        console.log('⚠️ Customer loading already in progress, skipping...');
+        return;
+    }
+    
+    window.loadingCustomers = true;
+    
     try {
+        let customersLoaded = false;
+        
         // Try to load from Supabase first
         if (window.dataService) {
-            const customers = await window.dataService.getCustomers();
-            window.customers = customers;
-            console.log(`✅ Loaded ${customers.length} customers from Supabase`);
-        } else {
-            // Fallback to localStorage
-            const savedCustomers = localStorage.getItem('mci-customers');
-            if (savedCustomers) {
-                window.customers = JSON.parse(savedCustomers);
-                console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
+            try {
+                const customers = await window.dataService.getCustomers();
+                if (customers && customers.length > 0) {
+                    window.customers = customers;
+                    customersLoaded = true;
+                    console.log(`✅ Loaded ${customers.length} customers from Supabase`);
+                } else {
+                    console.log('📊 Supabase returned empty customer list, checking localStorage...');
+                }
+            } catch (supabaseError) {
+                console.log('⚠️ Supabase customer loading failed:', supabaseError.message);
             }
         }
+        
+        // If Supabase didn't provide data, load from localStorage
+        if (!customersLoaded) {
+            const savedCustomers = localStorage.getItem('mci-customers');
+            if (savedCustomers) {
+                const parsed = JSON.parse(savedCustomers);
+                if (parsed && parsed.length > 0) {
+                    window.customers = parsed;
+                    customersLoaded = true;
+                    console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
+                }
+            }
+        }
+        
+        // Initialize empty array if no data found
+        if (!customersLoaded) {
+            window.customers = window.customers || [];
+            console.log('📊 No customer data found, initialized empty array');
+        }
+        
     } catch (error) {
         console.error('❌ Error loading customers:', error);
-        // Fallback to localStorage
-        const savedCustomers = localStorage.getItem('mci-customers');
-        if (savedCustomers) {
-            window.customers = JSON.parse(savedCustomers);
-            console.log(`✅ Loaded ${window.customers.length} customers from localStorage (fallback)`);
-        }
+        // Ensure we have an array even if loading fails
+        window.customers = window.customers || [];
+    } finally {
+        window.loadingCustomers = false;
     }
     
     try {
-        // Load from localStorage
-        const savedCustomers = localStorage.getItem('mci-customers');
-        if (savedCustomers) {
-            window.customers = JSON.parse(savedCustomers);
-            console.log('Loaded customers from localStorage:', window.customers.length);
-            
-            // Merge duplicate customers based on name and phone number
+        // Only merge duplicates if we have customers loaded
+        if (window.customers && window.customers.length > 0) {
+            console.log('Merging duplicate customers...');
             mergeDuplicateCustomers();
         } else {
-            console.log('No saved customers found in localStorage');
+            console.log('No customers to merge, initializing with mock data...');
             // Initialize with mock data if no data exists
-            if (window.customers.length === 0) {
+            if (!window.customers || window.customers.length === 0) {
                 window.customers = [
                     {
                         id: 'CUST-001',
