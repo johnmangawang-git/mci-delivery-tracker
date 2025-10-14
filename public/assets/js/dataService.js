@@ -39,14 +39,32 @@ class DataService {
                 // For duplicate DR numbers, try to fetch the existing record
                 if (tableName === 'deliveries' && error.message?.includes('dr_number')) {
                     try {
-                        // Extract DR number from error message more safely
+                        // Extract DR number from error message or details
                         let drNumber = null;
+                        
+                        // Try to extract from error.details first
                         if (error.details) {
-                            const match = error.details.match(/dr_number.*?=.*?([^,)]+)/);
-                            drNumber = match ? match[1].replace(/[()'"]/g, '').trim() : null;
+                            const detailsMatch = error.details.match(/dr_number.*?=.*?([^,)]+)/);
+                            drNumber = detailsMatch ? detailsMatch[1].replace(/[()'"]/g, '').trim() : null;
                         }
                         
-                        if (drNumber && drNumber !== 'undefined') {
+                        // If not found in details, try to extract from error.message
+                        if (!drNumber && error.message) {
+                            // Look for patterns like: "deliveries_dr_number_key" followed by constraint info
+                            // or try to find DR number patterns in the message
+                            const messageMatch = error.message.match(/dr_number[^"]*"([^"]+)"/);
+                            if (messageMatch) {
+                                drNumber = messageMatch[1].trim();
+                            } else {
+                                // Try alternative pattern matching for DR numbers
+                                const drPattern = error.message.match(/DR\d+/i);
+                                drNumber = drPattern ? drPattern[0] : null;
+                            }
+                        }
+                        
+                        console.log('Extracted DR number:', drNumber, 'from error:', { details: error.details, message: error.message });
+                        
+                        if (drNumber && drNumber !== 'undefined' && drNumber !== 'null') {
                             const client = window.supabaseClient();
                             const { data: existingRecord } = await client
                                 .from('deliveries')
@@ -59,7 +77,7 @@ class DataService {
                                 return existingRecord;
                             }
                         } else {
-                            console.warn('Could not extract DR number from error details:', error.details);
+                            console.warn('Could not extract valid DR number from error. Details:', error.details, 'Message:', error.message);
                         }
                     } catch (fetchError) {
                         console.warn('Could not fetch existing record:', fetchError);
@@ -94,9 +112,32 @@ class DataService {
                 delete supabaseData.id;
             }
             
+            // Check if record with this DR number already exists
+            if (supabaseData.dr_number) {
+                const { data: existingRecord } = await client
+                    .from('deliveries')
+                    .select('*')
+                    .eq('dr_number', supabaseData.dr_number)
+                    .single();
+                
+                if (existingRecord) {
+                    console.log('✅ DR number already exists, updating existing record:', supabaseData.dr_number);
+                    // Update existing record
+                    const { data, error } = await client
+                        .from('deliveries')
+                        .update(supabaseData)
+                        .eq('dr_number', supabaseData.dr_number)
+                        .select();
+                    
+                    if (error) throw error;
+                    return data[0];
+                }
+            }
+            
+            // Insert new record
             const { data, error } = await client
                 .from('deliveries')
-                .upsert(supabaseData)
+                .insert(supabaseData)
                 .select();
             
             if (error) throw error;
