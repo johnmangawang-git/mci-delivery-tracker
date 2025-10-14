@@ -928,6 +928,7 @@ async function saveBooking() {
                     window.activeDeliveries.push(newDelivery);
                     console.log('✅ Initialized and added to activeDeliveries');
                 }
+            }
         }
 
         // Mock success
