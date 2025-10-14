@@ -740,7 +740,10 @@ console.log('app.js loaded');
             }
             
             // Use global field mapper for consistent field access
-            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            const getField = window.getFieldValue || ((obj, field) => {
+                console.log(`⚠️ Field mapper not available, using fallback for field: ${field}`);
+                return obj[field];
+            });
             
             const drNumber = getField(delivery, 'drNumber') || getField(delivery, 'dr_number') || 'N/A';
             const customerName = getField(delivery, 'customerName') || getField(delivery, 'customer_name') || 'N/A';

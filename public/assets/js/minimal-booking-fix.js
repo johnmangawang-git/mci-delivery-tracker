@@ -132,18 +132,35 @@ window.minimalLoadActiveDeliveries = function() {
             return;
         }
         
-        // Generate table rows with clickable status dropdown
+        // Generate table rows with clickable status dropdown using field mapper
         tableBody.innerHTML = window.activeDeliveries.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
+            
+            // Use global field mapper for consistent field access
+            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            
+            const drNumber = getField(delivery, 'drNumber') || getField(delivery, 'dr_number') || 'N/A';
+            const customerName = getField(delivery, 'customerName') || getField(delivery, 'customer_name') || 'N/A';
+            const vendorNumber = getField(delivery, 'vendorNumber') || getField(delivery, 'vendor_number') || 'N/A';
+            const origin = getField(delivery, 'origin') || 'N/A';
+            const destination = getField(delivery, 'destination') || 'N/A';
+            
+            const truckType = getField(delivery, 'truckType') || getField(delivery, 'truck_type') || '';
+            const truckPlate = getField(delivery, 'truckPlateNumber') || getField(delivery, 'truck_plate_number') || '';
+            const truckInfo = (truckType && truckPlate) ? `${truckType} (${truckPlate})` : (truckPlate || 'N/A');
+            
+            const deliveryDate = getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
+                               getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
+            
             return `
                 <tr>
                     <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
-                    <td><strong>${delivery.drNumber}</strong></td>
-                    <td>${delivery.customerName}</td>
-                    <td>${delivery.vendorNumber}</td>
-                    <td>${delivery.origin}</td>
-                    <td>${delivery.destination}</td>
-                    <td>${delivery.truckType} (${delivery.truckPlateNumber})</td>
+                    <td><strong>${drNumber}</strong></td>
+                    <td>${customerName}</td>
+                    <td>${vendorNumber}</td>
+                    <td>${origin}</td>
+                    <td>${destination}</td>
+                    <td>${truckInfo}</td>
                     <td>
                         <div class="status-dropdown-container">
                             <span class="badge ${statusInfo.class} status-clickable" 
@@ -158,7 +175,7 @@ window.minimalLoadActiveDeliveries = function() {
                             </div>
                         </div>
                     </td>
-                    <td>${delivery.deliveryDate}</td>
+                    <td>${deliveryDate}</td>
                 </tr>
             `;
         }).join('');
@@ -174,18 +191,42 @@ window.minimalLoadActiveDeliveries = function() {
 window.loadActiveDeliveries = function() {
     console.log('🔄 Enhanced loadActiveDeliveries called');
     
-    // ALWAYS load from localStorage first
+    // Try to load from Supabase first, then fallback to localStorage
     try {
-        const saved = localStorage.getItem('mci-active-deliveries');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.length > 0) {
-                window.activeDeliveries = parsed;
-                console.log(`📊 Loaded ${parsed.length} deliveries from localStorage`);
+        if (window.dataService && typeof window.dataService.getDeliveries === 'function') {
+            const deliveries = await window.dataService.getDeliveries();
+            if (deliveries && deliveries.length > 0) {
+                // Normalize field names using global field mapper
+                const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(deliveries) : deliveries;
+                
+                window.activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
+                console.log(`📊 Loaded ${window.activeDeliveries.length} deliveries from Supabase`);
+            } else {
+                throw new Error('No deliveries from Supabase');
             }
+        } else {
+            throw new Error('DataService not available');
         }
     } catch (error) {
-        console.error('Error loading from localStorage:', error);
+        console.log('Supabase load failed, using localStorage:', error.message);
+        // Fallback to localStorage
+        try {
+            const saved = localStorage.getItem('mci-active-deliveries');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.length > 0) {
+                    // Normalize localStorage data too
+                    const normalizedParsed = window.normalizeDeliveryArray ? 
+                        window.normalizeDeliveryArray(parsed) : parsed;
+                    
+                    window.activeDeliveries = normalizedParsed;
+                    console.log(`📊 Loaded ${parsed.length} deliveries from localStorage`);
+                }
+            }
+        } catch (localError) {
+            console.error('Error loading from localStorage:', localError);
+        }
     }
     
     // Filter out only truly completed items (not Pending)
