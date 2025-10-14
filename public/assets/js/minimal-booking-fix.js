@@ -188,11 +188,12 @@ window.minimalLoadActiveDeliveries = function() {
 };
 
 // Enhanced loadActiveDeliveries that works with existing data
-window.loadActiveDeliveries = function() {
+window.loadActiveDeliveries = async function() {
     console.log('🔄 Enhanced loadActiveDeliveries called');
     
-    // Try to load from Supabase first, then fallback to localStorage
+    // SUPABASE FIRST: Central database is the source of truth
     try {
+        // Load from Supabase first (central database)
         if (window.dataService && typeof window.dataService.getDeliveries === 'function') {
             const deliveries = await window.dataService.getDeliveries();
             if (deliveries && deliveries.length > 0) {
@@ -201,32 +202,30 @@ window.loadActiveDeliveries = function() {
                     window.normalizeDeliveryArray(deliveries) : deliveries;
                 
                 window.activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
-                console.log(`📊 Loaded ${window.activeDeliveries.length} deliveries from Supabase`);
+                console.log(`📊 Loaded ${window.activeDeliveries.length} deliveries from Supabase (central database)`);
+                return;
             } else {
-                throw new Error('No deliveries from Supabase');
+                console.log('📊 Supabase returned empty, checking localStorage...');
             }
         } else {
-            throw new Error('DataService not available');
+            console.log('📊 DataService not available, using localStorage...');
+        }
+        
+        // Fallback to localStorage only if Supabase fails or is empty
+        const saved = localStorage.getItem('mci-active-deliveries');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.length > 0) {
+                // Normalize localStorage data
+                const normalizedParsed = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(parsed) : parsed;
+                
+                window.activeDeliveries = normalizedParsed;
+                console.log(`📊 Loaded ${parsed.length} deliveries from localStorage (fallback)`);
+            }
         }
     } catch (error) {
-        console.log('Supabase load failed, using localStorage:', error.message);
-        // Fallback to localStorage
-        try {
-            const saved = localStorage.getItem('mci-active-deliveries');
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.length > 0) {
-                    // Normalize localStorage data too
-                    const normalizedParsed = window.normalizeDeliveryArray ? 
-                        window.normalizeDeliveryArray(parsed) : parsed;
-                    
-                    window.activeDeliveries = normalizedParsed;
-                    console.log(`📊 Loaded ${parsed.length} deliveries from localStorage`);
-                }
-            }
-        } catch (localError) {
-            console.error('Error loading from localStorage:', localError);
-        }
+        console.error('Error in enhanced loadActiveDeliveries:', error);
     }
     
     // Filter out only truly completed items (not Pending)
@@ -331,7 +330,7 @@ function toggleStatusDropdown(deliveryId) {
     }
 }
 
-function updateDeliveryStatusById(deliveryId, newStatus) {
+async function updateDeliveryStatusById(deliveryId, newStatus) {
     console.log(`🔄 CLICK DETECTED: Updating status for delivery ${deliveryId} to ${newStatus}`);
     console.log(`🔄 Function called at:`, new Date().toISOString());
     console.log(`🔄 Current activeDeliveries length:`, window.activeDeliveries?.length || 0);
@@ -347,10 +346,9 @@ function updateDeliveryStatusById(deliveryId, newStatus) {
         window.activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
         console.log(`📦 Updated delivery status from "${oldStatus}" to "${newStatus}"`);
         
-        // Save to localStorage
-        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+        // Note: localStorage save is handled in the Supabase save section below
         
-        // Try to save to Supabase if available
+        // CRITICAL: Save to Supabase (central database) - MUST succeed
         if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
             try {
                 // Normalize the delivery object before saving
@@ -358,11 +356,25 @@ function updateDeliveryStatusById(deliveryId, newStatus) {
                     window.normalizeDeliveryFields(window.activeDeliveries[deliveryIndex]) : 
                     window.activeDeliveries[deliveryIndex];
                 
-                window.dataService.saveDelivery(deliveryToSave);
-                console.log('✅ Status updated in Supabase');
+                console.log('💾 Saving status change to Supabase (central database):', deliveryToSave);
+                
+                // Make this synchronous to ensure it completes
+                await window.dataService.saveDelivery(deliveryToSave);
+                console.log('✅ Status successfully updated in Supabase central database');
+                
+                // Also update localStorage to match Supabase
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                console.log('✅ localStorage synced with Supabase');
+                
             } catch (error) {
-                console.warn('⚠️ Failed to update status in Supabase:', error);
+                console.error('❌ CRITICAL: Failed to save status to Supabase:', error);
+                console.error('❌ This will cause status to revert on page refresh!');
+                // Still save to localStorage as backup
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
             }
+        } else {
+            console.warn('⚠️ DataService not available - status change only saved to localStorage');
+            console.warn('⚠️ Status will revert on page refresh without Supabase save!');
         }
         
         // Refresh only the table display, don't reload all data
