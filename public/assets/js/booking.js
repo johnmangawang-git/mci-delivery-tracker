@@ -2546,11 +2546,11 @@ async function createBookingFromDR(bookingData) {
         bookingData.truck = bookingData.truck || (bookingData.truckType && bookingData.truckPlateNumber ? 
             `${bookingData.truckType} (${bookingData.truckPlateNumber})` : 'N/A');
         
-        // Save to Supabase using dataService
+        // Save to Supabase using dataService - SAME APPROACH AS MANUAL BOOKING
         if (window.dataService) {
             try {
-                // Prepare data for Supabase format - convert all field names to match schema
-                const deliveryData = {
+                // Create delivery object with Supabase-compatible field names (same as manual booking)
+                const newDelivery = {
                     // Remove custom ID - let Supabase generate UUID
                     dr_number: bookingData.drNumber,
                     customer_name: bookingData.customerName,
@@ -2559,66 +2559,43 @@ async function createBookingFromDR(bookingData) {
                     destination: bookingData.destination,
                     truck_type: bookingData.truckType || '',
                     truck_plate_number: bookingData.truckPlateNumber || '',
-                    status: 'On Schedule', // Use default status as requested
-                    distance: bookingData.distance || '',
+                    status: 'Active', // Changed to match manual booking
+                    distance: '', // Add distance field
                     additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
                     created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 };
-                
-                console.log('🔧 Converted booking data for Supabase:', deliveryData);
-                
-                // Validate required Supabase fields
-                if (!deliveryData.dr_number || !deliveryData.customer_name || !deliveryData.destination) {
-                    throw new Error(`Missing required Supabase fields: dr_number=${deliveryData.dr_number}, customer_name=${deliveryData.customer_name}, destination=${deliveryData.destination}`);
-                }
-                
-                const savedDelivery = await window.dataService.saveDelivery(deliveryData);
-                console.log('✅ Booking saved to Supabase successfully:', bookingData.drNumber, savedDelivery);
-                
-                // Convert Supabase data back to camelCase for local display
-                const displayData = {
-                    id: savedDelivery.id,
-                    drNumber: savedDelivery.dr_number,
-                    customerName: savedDelivery.customer_name,
-                    vendorNumber: savedDelivery.vendor_number,
-                    origin: savedDelivery.origin,
-                    destination: savedDelivery.destination,
-                    truckType: savedDelivery.truck_type,
-                    truckPlateNumber: savedDelivery.truck_plate_number,
-                    truck: savedDelivery.truck_type && savedDelivery.truck_plate_number ? 
-                          `${savedDelivery.truck_type} (${savedDelivery.truck_plate_number})` : 'N/A',
-                    status: savedDelivery.status,
-                    bookedDate: savedDelivery.created_date,
-                    deliveryDate: savedDelivery.created_date,
-                    additionalCosts: savedDelivery.additional_costs,
-                    createdBy: savedDelivery.created_by,
-                    timestamp: savedDelivery.created_at
-                };
-                
-                // Update local arrays for immediate UI update
-                window.activeDeliveries = window.activeDeliveries || [];
-                window.activeDeliveries.push(displayData);
+
+                console.log('🔧 Converted delivery data for Supabase:', newDelivery);
+
+                // Save to Supabase using dataService (same as manual booking)
+                const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+                console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
                 
             } catch (error) {
-                // Handle duplicate DR number error specifically
-                if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint') || error.code === '23505') {
-                    console.warn(`⚠️ DR Number ${bookingData.drNumber} already exists in database`);
-                    showToast(`DR Number ${bookingData.drNumber} already exists. Skipping duplicate.`, 'warning');
-                    return; // Skip this booking, don't add to local storage
-                } else {
-                    console.error('❌ Failed to save booking to Supabase:', error);
-                    showToast(`Failed to save DR ${bookingData.drNumber} to database. Saved locally.`, 'warning');
+                console.error('❌ Failed to save to Supabase:', error);
+                // Fallback to localStorage with original format for compatibility (same as manual booking)
+                const localDelivery = {
+                    id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
+                    drNumber: bookingData.drNumber,
+                    customerName: bookingData.customerName,
+                    vendorNumber: bookingData.vendorNumber,
+                    origin: bookingData.origin,
+                    destination: bookingData.destination,
+                    truckType: bookingData.truckType,
+                    truckPlateNumber: bookingData.truckPlateNumber,
+                    status: 'On Schedule',
+                    deliveryDate: bookingData.deliveryDate,
+                    additionalCosts: bookingData.additionalCosts,
+                    timestamp: new Date().toISOString()
+                };
+                if (typeof window.activeDeliveries !== 'undefined') {
+                    window.activeDeliveries.push(localDelivery);
+                    localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                    console.log('✅ Saved to localStorage as fallback');
                 }
-                
-                // Fallback to localStorage for other errors
-                window.activeDeliveries = window.activeDeliveries || [];
-                window.activeDeliveries.push(bookingData);
-                const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
-                localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
-                console.log('✅ Saved to localStorage as fallback');
             }
         } else {
             // Fallback to localStorage if dataService not available
