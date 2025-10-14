@@ -361,8 +361,21 @@ console.log('app.js loaded');
             // Use dataService to load deliveries if available
             if (typeof window.dataService !== 'undefined') {
                 const deliveries = await window.dataService.getDeliveries();
-                activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
-                deliveryHistory = deliveries.filter(d => d.status === 'Completed');
+                
+                // Transform snake_case fields to camelCase for display compatibility
+                const transformedDeliveries = deliveries.map(delivery => ({
+                    ...delivery,
+                    // Add camelCase aliases for display
+                    drNumber: delivery.dr_number || delivery.drNumber,
+                    customerName: delivery.customer_name || delivery.customerName,
+                    vendorNumber: delivery.vendor_number || delivery.vendorNumber,
+                    truckType: delivery.truck_type || delivery.truckType,
+                    truckPlateNumber: delivery.truck_plate_number || delivery.truckPlateNumber,
+                    deliveryDate: delivery.created_date || delivery.deliveryDate
+                }));
+                
+                activeDeliveries = transformedDeliveries.filter(d => d.status !== 'Completed');
+                deliveryHistory = transformedDeliveries.filter(d => d.status === 'Completed');
                 
                 console.log('Active deliveries loaded from Supabase:', activeDeliveries.length);
                 console.log('Delivery history loaded from Supabase:', deliveryHistory.length);
@@ -723,6 +736,14 @@ console.log('app.js loaded');
             if (index < 3) {
                 console.log(`🔍 Delivery ${index} structure:`, delivery);
                 console.log(`🔍 Available fields:`, Object.keys(delivery));
+                console.log(`🔍 Field values check:`, {
+                    'delivery.dr_number': delivery.dr_number,
+                    'delivery.drNumber': delivery.drNumber,
+                    'delivery.customer_name': delivery.customer_name,
+                    'delivery.customerName': delivery.customerName,
+                    'delivery.origin': delivery.origin,
+                    'delivery.destination': delivery.destination
+                });
             }
             
             // Handle both camelCase and snake_case field names for compatibility
