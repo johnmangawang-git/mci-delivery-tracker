@@ -318,10 +318,9 @@ DEBUG INFO:
     `;
     console.log(debugInfo);
     
-    // Show debug alert
-    if (confirm('DEBUG: Data was read successfully. Click OK to see debug info, Cancel to continue.')) {
-        alert(debugInfo);
-    }
+    // DEBUG DISABLED: This functionality is now handled by booking.js
+    console.log('📊 DEBUG: Data was read successfully');
+    console.log('📊 DEBUG INFO:', debugInfo);
     
     // Hide upload content and show preview
     const uploadContent = document.getElementById('drUploadContent');
@@ -576,10 +575,11 @@ function fixModalButtons() {
     }, 100);
 }
 
-// Initialize with retries
-setTimeout(initCompleteUploadWorkflow, 1000);
-setTimeout(initCompleteUploadWorkflow, 3000);
-setTimeout(initCompleteUploadWorkflow, 5000);
+// DISABLED: Initialize with retries - Now handled by booking.js
+// setTimeout(initCompleteUploadWorkflow, 1000);
+// setTimeout(initCompleteUploadWorkflow, 3000);
+// setTimeout(initCompleteUploadWorkflow, 5000);
+console.log('⚠️ upload-dr-fix.js initialization disabled - using booking.js instead');
 // EMERGENCY TEST FUNCTION - Call this from console to test preview
 window.testPreview = function() {
     console.log('🧪 Testing preview with sample data...');

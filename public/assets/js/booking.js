@@ -2337,7 +2337,20 @@ function showDRPreview(bookings) {
     const drPreviewSummary = document.getElementById('drPreviewSummary');
     
     if (!drUploadContent || !drPreviewContent || !drPreviewTableBody || !drPreviewSummary) {
-        console.error('❌ DR preview elements not found');
+        console.error('❌ DR preview elements not found:');
+        console.error('  drUploadContent:', !!drUploadContent);
+        console.error('  drPreviewContent:', !!drPreviewContent);
+        console.error('  drPreviewTableBody:', !!drPreviewTableBody);
+        console.error('  drPreviewSummary:', !!drPreviewSummary);
+        
+        // Try to find the modal to see if it exists
+        const modal = document.getElementById('drUploadModal');
+        console.error('  drUploadModal exists:', !!modal);
+        
+        if (modal) {
+            console.error('  Modal innerHTML length:', modal.innerHTML.length);
+        }
+        
         return;
     }
     
