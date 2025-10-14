@@ -60,8 +60,8 @@ async function loadCustomers() {
     try {
         let customersLoaded = false;
         
-        // Try to load from Supabase first
-        if (window.dataService) {
+        // Try to load from Supabase first (if getCustomers function exists)
+        if (window.dataService && typeof window.dataService.getCustomers === 'function') {
             try {
                 const customers = await window.dataService.getCustomers();
                 if (customers && customers.length > 0) {
@@ -74,17 +74,27 @@ async function loadCustomers() {
             } catch (supabaseError) {
                 console.log('⚠️ Supabase customer loading failed:', supabaseError.message);
             }
+        } else {
+            console.log('📊 dataService.getCustomers not available, using localStorage...');
         }
         
         // If Supabase didn't provide data, load from localStorage
         if (!customersLoaded) {
             const savedCustomers = localStorage.getItem('mci-customers');
+            console.log('📊 Checking localStorage for customers:', savedCustomers ? 'Found data' : 'No data');
+            
             if (savedCustomers) {
-                const parsed = JSON.parse(savedCustomers);
-                if (parsed && parsed.length > 0) {
-                    window.customers = parsed;
-                    customersLoaded = true;
-                    console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
+                try {
+                    const parsed = JSON.parse(savedCustomers);
+                    console.log('📊 Parsed localStorage data:', parsed.length, 'customers');
+                    
+                    if (parsed && parsed.length > 0) {
+                        window.customers = parsed;
+                        customersLoaded = true;
+                        console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
+                    }
+                } catch (parseError) {
+                    console.error('❌ Error parsing localStorage customers:', parseError);
                 }
             }
         }
@@ -109,9 +119,13 @@ async function loadCustomers() {
             console.log('Merging duplicate customers...');
             mergeDuplicateCustomers();
         } else {
-            console.log('No customers to merge, initializing with mock data...');
-            // Initialize with mock data if no data exists
-            if (!window.customers || window.customers.length === 0) {
+            console.log('No customers found in any data source');
+            // Only initialize with mock data if absolutely no data exists anywhere
+            const hasLocalStorage = localStorage.getItem('mci-customers');
+            console.log('📊 Final check - hasLocalStorage:', !!hasLocalStorage, 'window.customers length:', window.customers?.length || 0);
+            
+            if (!window.customers || (window.customers.length === 0 && !hasLocalStorage)) {
+                console.log('🔧 Initializing with mock data (no real data found)');
                 window.customers = [
                     {
                         id: 'CUST-001',
@@ -141,6 +155,8 @@ async function loadCustomers() {
                     }
                 ];
                 console.log('Initialized with mock customer data');
+            } else {
+                console.log('📊 Skipping mock data initialization - real data exists');
             }
         }
         
