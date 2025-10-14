@@ -19,9 +19,5 @@ self.addEventListener('message', function(event) {
   }
 });
 
-// Handle fetch events
-self.addEventListener('fetch', function(event) {
-  // For now, we're not intercepting any fetch requests
-  // Just let the browser handle them normally
-  return;
-});
+// Fetch event handler removed to prevent "no-op fetch handler" warning
+// If you need to intercept fetch requests in the future, add the handler back
