@@ -358,7 +358,9 @@ document.addEventListener('DOMContentLoaded', function() {
 window.initSupabase = initSupabase;
 window.testConnection = testConnection;
 window.signUp = signUp;
+window.signup = signUp; // Alias for compatibility
 window.signIn = signIn;
+window.login = signIn; // Alias for compatibility
 window.signOut = signOut;
 window.logout = signOut; // Alias for compatibility
 window.getCurrentUser = getCurrentUser;
