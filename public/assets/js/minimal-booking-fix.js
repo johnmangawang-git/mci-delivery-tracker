@@ -330,75 +330,8 @@ function toggleStatusDropdown(deliveryId) {
     }
 }
 
-async function updateDeliveryStatusById(deliveryId, newStatus) {
-    console.log(`🔄 CLICK DETECTED: Updating status for delivery ${deliveryId} to ${newStatus}`);
-    console.log(`🔄 Function called at:`, new Date().toISOString());
-    console.log(`🔄 Current activeDeliveries length:`, window.activeDeliveries?.length || 0);
-    
-    // Find the delivery and update its status (handle both id formats)
-    const deliveryIndex = window.activeDeliveries.findIndex(d => 
-        d.id === deliveryId || d.delivery_id === deliveryId || 
-        String(d.id) === String(deliveryId));
-    if (deliveryIndex !== -1) {
-        console.log(`📦 Found delivery at index ${deliveryIndex}:`, window.activeDeliveries[deliveryIndex]);
-        const oldStatus = window.activeDeliveries[deliveryIndex].status;
-        window.activeDeliveries[deliveryIndex].status = newStatus;
-        window.activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
-        console.log(`📦 Updated delivery status from "${oldStatus}" to "${newStatus}"`);
-        
-        // Note: localStorage save is handled in the Supabase save section below
-        
-        // CRITICAL: Save to Supabase (central database) - MUST succeed
-        if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
-            try {
-                // Normalize the delivery object before saving
-                const deliveryToSave = window.normalizeDeliveryFields ? 
-                    window.normalizeDeliveryFields(window.activeDeliveries[deliveryIndex]) : 
-                    window.activeDeliveries[deliveryIndex];
-                
-                console.log('💾 Saving status change to Supabase (central database):', deliveryToSave);
-                
-                // Make this synchronous to ensure it completes
-                await window.dataService.saveDelivery(deliveryToSave);
-                console.log('✅ Status successfully updated in Supabase central database');
-                
-                // Also update localStorage to match Supabase
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                console.log('✅ localStorage synced with Supabase');
-                
-            } catch (error) {
-                console.error('❌ CRITICAL: Failed to save status to Supabase:', error);
-                console.error('❌ This will cause status to revert on page refresh!');
-                // Still save to localStorage as backup
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-            }
-        } else {
-            console.warn('⚠️ DataService not available - status change only saved to localStorage');
-            console.warn('⚠️ Status will revert on page refresh without Supabase save!');
-        }
-        
-        // Refresh only the table display, don't reload all data
-        if (typeof window.populateActiveDeliveriesTable === 'function') {
-            window.populateActiveDeliveriesTable();
-        } else {
-            // Fallback: reload data if populate function not available
-            window.loadActiveDeliveries();
-        }
-        
-        // Show success message
-        console.log(`✅ Status updated from "${oldStatus}" to "${newStatus}"`);
-        
-        // Close the dropdown
-        const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
-        if (dropdown) {
-            dropdown.style.display = 'none';
-        }
-    } else {
-        console.error(`❌ Delivery with ID ${deliveryId} not found in activeDeliveries array`);
-        console.log('Available delivery IDs:', window.activeDeliveries.map(d => d.id));
-        return;
-    }
-}
+// Status update function now handled by ultimate-status-fix.js
+// Removed conflicting updateDeliveryStatusById function
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', function(event) {
@@ -554,19 +487,8 @@ function monitorCheckboxes() {
     });
 }
 
-// SENIOR QA FIX: Prevent unwanted table refreshes
-let tableRefreshBlocked = false;
-
-const originalLoadActiveDeliveries = window.loadActiveDeliveries;
-window.loadActiveDeliveries = function(...args) {
-    if (tableRefreshBlocked) {
-        console.log('🛡️ SENIOR QA: Blocked unwanted table refresh');
-        return;
-    }
-    
-    console.log('🔄 SENIOR QA: Allowing table refresh');
-    return originalLoadActiveDeliveries.apply(this, args);
-};
+// SENIOR QA FIX: Table refresh handling (now handled by ultimate-status-fix.js)
+// Removed conflicting originalLoadActiveDeliveries declaration
 
 // SENIOR QA FIX: Periodic button enabler
 function keepButtonEnabled() {
@@ -604,10 +526,10 @@ window.addEventListener('load', function() {
     setTimeout(monitorCheckboxes, 1500);
 });
 
-// Export functions globally
+// Export functions globally (updateDeliveryStatusById now handled by ultimate-status-fix.js)
 window.getStatusInfo = getStatusInfo;
 window.generateStatusOptions = generateStatusOptions;
 window.toggleStatusDropdown = toggleStatusDropdown;
-window.updateDeliveryStatusById = updateDeliveryStatusById;
+// window.updateDeliveryStatusById = updateDeliveryStatusById; // Handled by ultimate fix
 
 console.log('✅ Minimal booking fix loaded successfully with status dropdown functionality');
