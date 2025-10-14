@@ -120,8 +120,13 @@ console.log('app.js loaded');
             localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
             saveToDatabase();
             
-            // Refresh the display
-            loadActiveDeliveries();
+            // Refresh only the table display, don't reload all data
+            if (typeof populateActiveDeliveriesTable === 'function') {
+                populateActiveDeliveriesTable();
+            } else {
+                // Fallback: reload data if populate function not available
+                loadActiveDeliveries();
+            }
             
             // Show success message
             showToast(`Status updated from "${oldStatus}" to "${newStatus}"`, 'success');

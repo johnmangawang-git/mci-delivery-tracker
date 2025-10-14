@@ -339,15 +339,41 @@ function updateDeliveryStatusById(deliveryId, newStatus) {
         d.id === deliveryId || d.delivery_id === deliveryId || 
         String(d.id) === String(deliveryId));
     if (deliveryIndex !== -1) {
+        console.log(`📦 Found delivery at index ${deliveryIndex}:`, window.activeDeliveries[deliveryIndex]);
         const oldStatus = window.activeDeliveries[deliveryIndex].status;
         window.activeDeliveries[deliveryIndex].status = newStatus;
         window.activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
+        console.log(`📦 Updated delivery status from "${oldStatus}" to "${newStatus}"`);
+    } else {
+        console.error(`❌ Delivery with ID ${deliveryId} not found in activeDeliveries array`);
+        console.log('Available delivery IDs:', window.activeDeliveries.map(d => d.id));
+        return;
         
         // Save to localStorage
         localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
         
-        // Refresh the display
-        window.loadActiveDeliveries();
+        // Try to save to Supabase if available
+        if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
+            try {
+                // Normalize the delivery object before saving
+                const deliveryToSave = window.normalizeDeliveryFields ? 
+                    window.normalizeDeliveryFields(window.activeDeliveries[deliveryIndex]) : 
+                    window.activeDeliveries[deliveryIndex];
+                
+                window.dataService.saveDelivery(deliveryToSave);
+                console.log('✅ Status updated in Supabase');
+            } catch (error) {
+                console.warn('⚠️ Failed to update status in Supabase:', error);
+            }
+        }
+        
+        // Refresh only the table display, don't reload all data
+        if (typeof window.populateActiveDeliveriesTable === 'function') {
+            window.populateActiveDeliveriesTable();
+        } else {
+            // Fallback: reload data if populate function not available
+            window.loadActiveDeliveries();
+        }
         
         // Show success message
         console.log(`✅ Status updated from "${oldStatus}" to "${newStatus}"`);
