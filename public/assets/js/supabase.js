@@ -5,8 +5,14 @@
 
 console.log('🔧 Loading Supabase integration...');
 
-// Global Supabase client
+// Global Supabase client - prevent multiple instances
 let supabaseClient = null;
+
+// Check if already initialized to prevent GoTrueClient warnings
+if (window.supabaseClientInitialized) {
+    console.log('🛡️ Supabase client already initialized, using existing instance');
+    supabaseClient = window.globalSupabaseClient;
+}
 let isOnline = true;
 let connectionRetries = 0;
 const MAX_RETRIES = 3;
@@ -31,8 +37,9 @@ function initSupabase() {
             return null;
         }
 
-        // Create Supabase client
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+        // Create Supabase client only if not already created
+        if (!window.supabaseClientInitialized) {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
@@ -46,7 +53,15 @@ function initSupabase() {
         testConnection();
         
         // Set up auth state listener
-        setupAuthStateListener();
+            setupAuthStateListener();
+            
+            // Mark as initialized and store globally
+            window.supabaseClientInitialized = true;
+            window.globalSupabaseClient = supabaseClient;
+            console.log('✅ Supabase client created and marked as initialized');
+        } else {
+            console.log('✅ Using existing Supabase client instance');
+        }
         
         return supabaseClient;
         
