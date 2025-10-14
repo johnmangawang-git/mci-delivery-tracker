@@ -2578,9 +2578,29 @@ async function createBookingFromDR(bookingData) {
                 const savedDelivery = await window.dataService.saveDelivery(deliveryData);
                 console.log('✅ Booking saved to Supabase successfully:', bookingData.drNumber, savedDelivery);
                 
-                // Also update local arrays for immediate UI update
+                // Convert Supabase data back to camelCase for local display
+                const displayData = {
+                    id: savedDelivery.id,
+                    drNumber: savedDelivery.dr_number,
+                    customerName: savedDelivery.customer_name,
+                    vendorNumber: savedDelivery.vendor_number,
+                    origin: savedDelivery.origin,
+                    destination: savedDelivery.destination,
+                    truckType: savedDelivery.truck_type,
+                    truckPlateNumber: savedDelivery.truck_plate_number,
+                    truck: savedDelivery.truck_type && savedDelivery.truck_plate_number ? 
+                          `${savedDelivery.truck_type} (${savedDelivery.truck_plate_number})` : 'N/A',
+                    status: savedDelivery.status,
+                    bookedDate: savedDelivery.created_date,
+                    deliveryDate: savedDelivery.created_date,
+                    additionalCosts: savedDelivery.additional_costs,
+                    createdBy: savedDelivery.created_by,
+                    timestamp: savedDelivery.created_at
+                };
+                
+                // Update local arrays for immediate UI update
                 window.activeDeliveries = window.activeDeliveries || [];
-                window.activeDeliveries.push(bookingData);
+                window.activeDeliveries.push(displayData);
                 
             } catch (error) {
                 console.error('❌ Failed to save booking to Supabase:', error);
