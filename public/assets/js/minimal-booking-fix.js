@@ -166,7 +166,7 @@ window.minimalLoadActiveDeliveries = function() {
                             <span class="badge ${statusInfo.class} status-clickable" 
                                   data-delivery-id="${delivery.id}" 
                                   data-current-status="${delivery.status}"
-                                  onclick="toggleStatusDropdown('${delivery.id}')">
+                                  onclick="event.stopPropagation(); toggleStatusDropdown('${delivery.id}')">
                                 <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
                                 <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
                             </span>
@@ -309,7 +309,7 @@ function generateStatusOptions(currentStatus, deliveryId) {
         const statusInfo = getStatusInfo(status);
         return `
             <div class="status-option ${isSelected}" 
-                 onclick="updateDeliveryStatusById('${deliveryId}', '${status}')">
+                 onclick="event.stopPropagation(); updateDeliveryStatusById('${deliveryId}', '${status}')">
                 <i class="bi ${statusInfo.icon}"></i> ${status}
             </div>
         `;
@@ -332,7 +332,9 @@ function toggleStatusDropdown(deliveryId) {
 }
 
 function updateDeliveryStatusById(deliveryId, newStatus) {
-    console.log(`🔄 Updating status for delivery ${deliveryId} to ${newStatus}`);
+    console.log(`🔄 CLICK DETECTED: Updating status for delivery ${deliveryId} to ${newStatus}`);
+    console.log(`🔄 Function called at:`, new Date().toISOString());
+    console.log(`🔄 Current activeDeliveries length:`, window.activeDeliveries?.length || 0);
     
     // Find the delivery and update its status (handle both id formats)
     const deliveryIndex = window.activeDeliveries.findIndex(d => 
