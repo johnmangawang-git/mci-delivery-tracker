@@ -456,8 +456,8 @@ window.definitiveLoadData = async function() {
 // Override saveBooking
 window.saveBooking = window.definitiveBookingSave;
 
-// Override upload processing
-window.processUploadData = window.definitiveProcessUpload;
+// Don't override processUploadData - let booking.js handle Excel uploads
+// window.processUploadData = window.definitiveProcessUpload;
 
 // Override data loading
 const originalLoadActiveDeliveries = window.loadActiveDeliveries;
@@ -482,8 +482,17 @@ async function initDefinitiveFix() {
     // Initialize Supabase
     await ensureSupabaseClient();
     
-    // Initialize DataService
-    window.dataService = new DefinitiveDataService();
+    // Initialize DataService - make sure it's available globally
+    if (!window.dataService) {
+        window.dataService = new DefinitiveDataService();
+        console.log('✅ DefinitiveDataService set as global dataService');
+    } else {
+        console.log('✅ DataService already exists, enhancing it...');
+        // Enhance existing dataService with our methods
+        const definitiveService = new DefinitiveDataService();
+        window.dataService.saveDelivery = definitiveService.saveDelivery.bind(definitiveService);
+        window.dataService.getDeliveries = definitiveService.getDeliveries.bind(definitiveService);
+    }
     
     // Load initial data
     setTimeout(async () => {
