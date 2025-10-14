@@ -662,11 +662,12 @@ console.log('app.js loaded');
         // Ensure we have the latest data
         activeDeliveries = window.activeDeliveries || [];
         
-        // Apply search filter
+        // Apply search filter - handle both camelCase and snake_case field names
         filteredDeliveries = currentSearchTerm ? 
-            activeDeliveries.filter(delivery => 
-                delivery.drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase())
-            ) : 
+            activeDeliveries.filter(delivery => {
+                const drNumber = delivery.drNumber || delivery.dr_number || '';
+                return drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase());
+            }) : 
             [...activeDeliveries];
     
         // Update search results info
@@ -717,15 +718,28 @@ console.log('app.js loaded');
         // Generate table rows
         activeDeliveriesTableBody.innerHTML = filteredDeliveries.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
+            
+            // Handle both camelCase and snake_case field names for compatibility
+            const drNumber = delivery.drNumber || delivery.dr_number || 'N/A';
+            const customerName = delivery.customerName || delivery.customer_name || 'N/A';
+            const vendorNumber = delivery.vendorNumber || delivery.vendor_number || 'N/A';
+            const origin = delivery.origin || 'N/A';
+            const destination = delivery.destination || 'N/A';
+            const truckInfo = delivery.truck || 
+                             (delivery.truckType && delivery.truckPlateNumber ? `${delivery.truckType} (${delivery.truckPlateNumber})` : 
+                              delivery.truck_type && delivery.truck_plate_number ? `${delivery.truck_type} (${delivery.truck_plate_number})` :
+                              delivery.truckPlateNumber || delivery.truck_plate_number || 'N/A');
+            const deliveryDate = delivery.deliveryDate || delivery.created_date || delivery.timestamp || 'N/A';
+            
             return `
                 <tr data-delivery-id="${delivery.id}">
                     <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
-                    <td><strong>${delivery.drNumber || 'N/A'}</strong></td>
-                    <td>${delivery.customerName || 'N/A'}</td>
-                    <td>${delivery.vendorNumber || 'N/A'}</td>
-                    <td>${delivery.origin || 'N/A'}</td>
-                    <td>${delivery.destination || 'N/A'}</td>
-                    <td>${delivery.truck || (delivery.truckType && delivery.truckPlateNumber ? `${delivery.truckType} (${delivery.truckPlateNumber})` : delivery.truckPlateNumber || 'N/A')}</td>
+                    <td><strong>${drNumber}</strong></td>
+                    <td>${customerName}</td>
+                    <td>${vendorNumber}</td>
+                    <td>${origin}</td>
+                    <td>${destination}</td>
+                    <td>${truckInfo}</td>
                     <td>
                         <div class="status-dropdown-container">
                             <span class="badge ${statusInfo.class} status-clickable" 
@@ -740,7 +754,7 @@ console.log('app.js loaded');
                             </div>
                         </div>
                     </td>
-                    <td>${delivery.deliveryDate || delivery.timestamp || 'N/A'}</td>
+                    <td>${deliveryDate}</td>
                 </tr>
             `;
         }).join('');
