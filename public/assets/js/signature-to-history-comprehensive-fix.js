@@ -41,7 +41,19 @@ console.log('🔧 Loading Comprehensive Signature to History Fix...');
             additionalCosts: delivery.additionalCosts || 0,
             createdDate: delivery.createdDate || delivery.created_date || delivery.timestamp || '',
             created_date: delivery.createdDate || delivery.created_date || delivery.timestamp || '',
-            timestamp: delivery.createdDate || delivery.created_date || delivery.timestamp || ''
+            timestamp: delivery.createdDate || delivery.created_date || delivery.timestamp || '',
+            
+            // Completion date fields (for delivery history)
+            completedDate: delivery.completedDate || delivery.completed_date || '',
+            completed_date: delivery.completedDate || delivery.completed_date || '',
+            completedTime: delivery.completedTime || delivery.completed_time || '',
+            completed_time: delivery.completedTime || delivery.completed_time || '',
+            signedAt: delivery.signedAt || delivery.signed_at || '',
+            signed_at: delivery.signedAt || delivery.signed_at || '',
+            
+            // Delivery date fields
+            deliveryDate: delivery.deliveryDate || delivery.delivery_date || delivery.createdDate || delivery.created_date || '',
+            delivery_date: delivery.deliveryDate || delivery.delivery_date || delivery.createdDate || delivery.created_date || ''
         };
     }
     
