@@ -158,12 +158,17 @@ class DataService {
             const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
             const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
-            // Remove from both arrays first
-            const filteredActive = activeDeliveries.filter(d => d.id !== delivery.id && d.dr_number !== delivery.dr_number);
-            const filteredHistory = deliveryHistory.filter(d => d.id !== delivery.id && d.dr_number !== delivery.dr_number);
+            // Remove from both arrays first using both id and dr_number for robustness
+            const filteredActive = activeDeliveries.filter(d => 
+                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
+            );
+            const filteredHistory = deliveryHistory.filter(d => 
+                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
+            );
             
             // Add to appropriate array based on status
             if (delivery.status === 'Completed') {
+                // For completed deliveries, ensure we're not duplicating in active
                 filteredHistory.unshift(delivery);
                 localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
@@ -179,11 +184,14 @@ class DataService {
                     }, 100);
                 }
             } else {
+                // For active deliveries, ensure we're not duplicating in history
                 filteredActive.push(delivery);
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
+                localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
                 
                 // Update global arrays
                 window.activeDeliveries = filteredActive;
+                window.deliveryHistory = filteredHistory;
                 
                 // Update analytics dashboard stats
                 if (typeof window.updateDashboardStats === 'function') {
@@ -220,11 +228,21 @@ class DataService {
             
             let allDeliveries = [...activeDeliveries, ...deliveryHistory];
             
+            // Ensure we're using the correct field name for status filtering
             if (filters.status) {
                 if (filters.status === 'Completed') {
-                    allDeliveries = deliveryHistory;
+                    // For completed status, filter by both field name formats
+                    allDeliveries = allDeliveries.filter(d => 
+                        (d.status === 'Completed') || 
+                        (d.status === 'Signed') ||
+                        (d.status === 'Completed' && (d.dr_number || d.drNumber))
+                    );
                 } else {
-                    allDeliveries = activeDeliveries.filter(d => d.status === filters.status);
+                    // For other statuses, exclude completed deliveries
+                    allDeliveries = allDeliveries.filter(d => 
+                        (d.status !== 'Completed') && 
+                        (d.status !== 'Signed')
+                    );
                 }
             }
             
@@ -250,8 +268,13 @@ class DataService {
             const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
             const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
-            const filteredActive = activeDeliveries.filter(d => d.id !== deliveryId);
-            const filteredHistory = deliveryHistory.filter(d => d.id !== deliveryId);
+            // Filter using both id and dr_number/drNumber for robustness
+            const filteredActive = activeDeliveries.filter(d => 
+                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
+            );
+            const filteredHistory = deliveryHistory.filter(d => 
+                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
+            );
             
             localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
             localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));

@@ -152,7 +152,7 @@ console.log('app.js loaded');
         
         try {
             // Find delivery by DR number and update status
-            const deliveryIndex = activeDeliveries.findIndex(d => d.drNumber === drNumber);
+            const deliveryIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
             if (deliveryIndex !== -1) {
                 const delivery = activeDeliveries[deliveryIndex];
                 const oldStatus = delivery.status;
@@ -180,10 +180,22 @@ console.log('app.js loaded');
                     console.log(`Moved DR ${drNumber} from active to history`);
                 }
                 
-                // Save to localStorage and database
+                // Save to localStorage and database - FIXED: Ensure proper saving to both
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
                 localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
-                saveToDatabase();
+                
+                // Also save to Supabase if dataService is available
+                if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveDelivery === 'function') {
+                    // Save the delivery that was updated
+                    window.dataService.saveDelivery(delivery).catch(error => {
+                        console.error('Error saving delivery to Supabase:', error);
+                    });
+                    
+                    // Also save all deliveries to ensure consistency
+                    saveToDatabase();
+                } else {
+                    saveToDatabase();
+                }
                 
                 // Refresh the display
                 loadActiveDeliveries();
@@ -395,8 +407,13 @@ console.log('app.js loaded');
                 const normalizedDeliveries = window.normalizeDeliveryArray ? 
                     window.normalizeDeliveryArray(deliveries) : deliveries;
                 
-                activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
-                deliveryHistory = normalizedDeliveries.filter(d => d.status === 'Completed');
+                // Properly separate active deliveries from history based on status
+                activeDeliveries = normalizedDeliveries.filter(d => 
+                    d.status !== 'Completed' && d.status !== 'Signed'
+                );
+                deliveryHistory = normalizedDeliveries.filter(d => 
+                    d.status === 'Completed' || d.status === 'Signed'
+                );
                 
                 console.log('Active deliveries loaded from Supabase:', activeDeliveries.length);
                 console.log('Delivery history loaded from Supabase:', deliveryHistory.length);

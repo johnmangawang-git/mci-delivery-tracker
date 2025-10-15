@@ -717,7 +717,7 @@ function updateDeliveryStatus(drNumber, newStatus) {
         
         // Update in global activeDeliveries array if it exists and move to history if completed
         if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-            const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
+            const deliveryIndex = window.activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
             console.log('Delivery index found in activeDeliveries:', deliveryIndex);
             if (deliveryIndex !== -1) {
                 const delivery = window.activeDeliveries[deliveryIndex];
@@ -742,17 +742,33 @@ function updateDeliveryStatus(drNumber, newStatus) {
                     window.activeDeliveries.splice(deliveryIndex, 1);
                     console.log('Removed from active, new active length:', window.activeDeliveries.length);
                     
-                    // Save both arrays using the existing save functions
+                    // Save both arrays using the existing save functions - FIXED: Ensure proper saving to database
                     if (typeof window.saveToLocalStorage === 'function') {
                         console.log('Saving to localStorage');
                         window.saveToLocalStorage();
+                    }
+                    
+                    // Also save to Supabase if dataService is available
+                    if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveDelivery === 'function') {
+                        console.log('Saving to Supabase');
+                        // Save the completed delivery to history
+                        window.dataService.saveDelivery(delivery).catch(error => {
+                            console.error('Error saving completed delivery to Supabase:', error);
+                        });
+                        
+                        // Also update the global arrays in Supabase
+                        if (typeof window.saveToDatabase === 'function') {
+                            window.saveToDatabase().catch(error => {
+                                console.error('Error saving arrays to Supabase:', error);
+                            });
+                        }
                     }
                 }
             } else {
                 console.log('Delivery not found in activeDeliveries array');
                 // If not found in activeDeliveries, check if it's already in history
                 if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
-                    const historyIndex = window.deliveryHistory.findIndex(d => d.drNumber === drNumber);
+                    const historyIndex = window.deliveryHistory.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
                     console.log('Delivery index found in deliveryHistory:', historyIndex);
                     if (historyIndex !== -1) {
                         // Update status in history if needed
@@ -762,6 +778,13 @@ function updateDeliveryStatus(drNumber, newStatus) {
                         // Save to localStorage
                         if (typeof window.saveToLocalStorage === 'function') {
                             window.saveToLocalStorage();
+                        }
+                        
+                        // Also save to Supabase if dataService is available
+                        if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveDelivery === 'function') {
+                            window.dataService.saveDelivery(window.deliveryHistory[historyIndex]).catch(error => {
+                                console.error('Error saving updated delivery to Supabase:', error);
+                            });
                         }
                     }
                 }
