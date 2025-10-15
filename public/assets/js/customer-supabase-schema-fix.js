@@ -80,6 +80,114 @@ console.log('🔧 Loading Customer Supabase Schema Fix...');
     }
     
     /**
+     * Enhanced duplicate customer merging with schema mapping
+     */
+    function mergeDuplicateCustomersWithSchemaMapping(customers) {
+        console.log('🔄 Merging duplicate customers with schema mapping...');
+        console.log('📊 Customers before merge:', customers.length);
+        
+        if (!customers || customers.length === 0) {
+            return customers;
+        }
+        
+        // Create a map to group customers by name and phone
+        const customerGroups = new Map();
+        
+        // Group customers by normalized name and phone number
+        customers.forEach(customer => {
+            const normalizedCustomer = mapFromSupabaseSchema(customer);
+            const key = `${normalizedCustomer.contactPerson.toLowerCase()}|${normalizedCustomer.phone}`;
+            
+            if (!customerGroups.has(key)) {
+                customerGroups.set(key, []);
+            }
+            customerGroups.get(key).push(normalizedCustomer);
+        });
+        
+        // Process groups to merge duplicates
+        const mergedCustomers = [];
+        let mergeCount = 0;
+        
+        customerGroups.forEach((group, key) => {
+            if (group.length === 1) {
+                // No duplicates, just add the customer
+                mergedCustomers.push(group[0]);
+            } else {
+                // Merge duplicates
+                console.log(`🔄 Merging ${group.length} duplicate customers for: ${key}`);
+                mergeCount += group.length - 1;
+                
+                // Sort by createdAt to get the most recent one as the primary
+                group.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+                
+                // Use the most recent customer as the base
+                const primaryCustomer = { ...group[0] };
+                
+                // Merge data from all duplicates
+                let totalBookings = 0;
+                let latestDeliveryDate = null;
+                let mergedNotes = [];
+                
+                group.forEach(customer => {
+                    totalBookings += customer.bookingsCount || customer.bookings_count || 0;
+                    
+                    // Get the latest delivery date
+                    if (customer.lastDelivery || customer.last_delivery) {
+                        const customerDate = new Date(customer.lastDelivery || customer.last_delivery);
+                        if (!latestDeliveryDate || customerDate > latestDeliveryDate) {
+                            latestDeliveryDate = customerDate;
+                        }
+                    }
+                    
+                    // Merge notes
+                    if (customer.notes && !mergedNotes.includes(customer.notes)) {
+                        mergedNotes.push(customer.notes);
+                    }
+                    
+                    // Keep the most complete address if available
+                    if (customer.address && customer.address.length > (primaryCustomer.address?.length || 0)) {
+                        primaryCustomer.address = customer.address;
+                    }
+                    
+                    // Keep the most complete email if available
+                    if (customer.email && customer.email.length > (primaryCustomer.email?.length || 0)) {
+                        primaryCustomer.email = customer.email;
+                    }
+                });
+                
+                // Update the primary customer with merged data
+                primaryCustomer.bookingsCount = totalBookings;
+                primaryCustomer.bookings_count = totalBookings;
+                
+                if (latestDeliveryDate) {
+                    primaryCustomer.lastDelivery = latestDeliveryDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    primaryCustomer.last_delivery = primaryCustomer.lastDelivery;
+                }
+                
+                // Merge notes
+                if (mergedNotes.length > 0) {
+                    primaryCustomer.notes = mergedNotes.join('; ');
+                }
+                
+                // Update timestamps
+                primaryCustomer.updatedAt = new Date().toISOString();
+                primaryCustomer.updated_at = primaryCustomer.updatedAt;
+                
+                mergedCustomers.push(primaryCustomer);
+            }
+        });
+        
+        console.log(`✅ Merged ${mergeCount} duplicate customers`);
+        console.log('📊 Customers after merge:', mergedCustomers.length);
+        
+        return mergedCustomers;
+    }
+
+    /**
      * Enhanced dataService customer operations with proper schema mapping
      */
     const originalDataService = window.dataService;
@@ -139,7 +247,7 @@ console.log('🔧 Loading Customer Supabase Schema Fix...');
         // Override getCustomers method
         const originalGetCustomers = originalDataService.getCustomers.bind(originalDataService);
         originalDataService.getCustomers = async function() {
-            console.log('🔄 Enhanced getCustomers with schema mapping...');
+            console.log('🔄 Enhanced getCustomers with schema mapping and duplicate merging...');
             
             const supabaseOp = async () => {
                 const client = window.supabaseClient();
@@ -161,11 +269,23 @@ console.log('🔧 Loading Customer Supabase Schema Fix...');
                 console.log('✅ Supabase customers response:', data);
                 
                 // Map all customers back to JavaScript format
-                return (data || []).map(customer => mapFromSupabaseSchema(customer));
+                let customers = (data || []).map(customer => mapFromSupabaseSchema(customer));
+                
+                // Merge duplicates before returning
+                customers = mergeDuplicateCustomersWithSchemaMapping(customers);
+                
+                return customers;
             };
 
             const localStorageOp = async () => {
-                const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
+                let customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
+                
+                // Merge duplicates in localStorage data too
+                customers = mergeDuplicateCustomersWithSchemaMapping(customers);
+                
+                // Save the merged data back to localStorage
+                localStorage.setItem('mci-customers', JSON.stringify(customers));
+                
                 return customers;
             };
 
@@ -249,6 +369,7 @@ console.log('🔧 Loading Customer Supabase Schema Fix...');
     // Export utility functions
     window.mapToSupabaseSchema = mapToSupabaseSchema;
     window.mapFromSupabaseSchema = mapFromSupabaseSchema;
+    window.mergeDuplicateCustomersWithSchemaMapping = mergeDuplicateCustomersWithSchemaMapping;
     window.testCustomerOperations = testCustomerOperations;
     
     // Initialize when DOM is ready

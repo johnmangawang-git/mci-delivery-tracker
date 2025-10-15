@@ -63,6 +63,114 @@ console.log('🔧 Loading Customer Field Mapping Fix...');
     }
     
     /**
+     * Enhanced duplicate customer merging with field normalization
+     */
+    function mergeDuplicateCustomersEnhanced(customers) {
+        console.log('🔄 Enhanced duplicate customer merging...');
+        console.log('📊 Customers before merge:', customers.length);
+        
+        if (!customers || customers.length === 0) {
+            return customers;
+        }
+        
+        // Create a map to group customers by normalized name and phone
+        const customerGroups = new Map();
+        
+        // Group customers by name and phone number
+        customers.forEach(customer => {
+            const normalizedCustomer = normalizeCustomerFields(customer);
+            const key = `${normalizedCustomer.contactPerson.toLowerCase()}|${normalizedCustomer.phone}`;
+            
+            if (!customerGroups.has(key)) {
+                customerGroups.set(key, []);
+            }
+            customerGroups.get(key).push(normalizedCustomer);
+        });
+        
+        // Process groups to merge duplicates
+        const mergedCustomers = [];
+        let mergeCount = 0;
+        
+        customerGroups.forEach((group, key) => {
+            if (group.length === 1) {
+                // No duplicates, just add the customer
+                mergedCustomers.push(group[0]);
+            } else {
+                // Merge duplicates
+                console.log(`🔄 Merging ${group.length} duplicate customers for: ${key}`);
+                mergeCount += group.length - 1;
+                
+                // Sort by createdAt to get the most recent one as the primary
+                group.sort((a, b) => new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+                
+                // Use the most recent customer as the base
+                const primaryCustomer = { ...group[0] };
+                
+                // Merge data from all duplicates
+                let totalBookings = 0;
+                let latestDeliveryDate = null;
+                let mergedNotes = [];
+                
+                group.forEach(customer => {
+                    totalBookings += customer.bookingsCount || customer.bookings_count || 0;
+                    
+                    // Get the latest delivery date
+                    if (customer.lastDelivery || customer.last_delivery) {
+                        const customerDate = new Date(customer.lastDelivery || customer.last_delivery);
+                        if (!latestDeliveryDate || customerDate > latestDeliveryDate) {
+                            latestDeliveryDate = customerDate;
+                        }
+                    }
+                    
+                    // Merge notes (avoid duplicates)
+                    if (customer.notes && !mergedNotes.includes(customer.notes)) {
+                        mergedNotes.push(customer.notes);
+                    }
+                    
+                    // Keep the most complete address if available
+                    if (customer.address && customer.address.length > (primaryCustomer.address?.length || 0)) {
+                        primaryCustomer.address = customer.address;
+                    }
+                    
+                    // Keep the most complete email if available
+                    if (customer.email && customer.email.length > (primaryCustomer.email?.length || 0)) {
+                        primaryCustomer.email = customer.email;
+                    }
+                });
+                
+                // Update the primary customer with merged data
+                primaryCustomer.bookingsCount = totalBookings;
+                primaryCustomer.bookings_count = totalBookings;
+                
+                if (latestDeliveryDate) {
+                    primaryCustomer.lastDelivery = latestDeliveryDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    primaryCustomer.last_delivery = primaryCustomer.lastDelivery;
+                }
+                
+                // Merge notes
+                if (mergedNotes.length > 0) {
+                    primaryCustomer.notes = mergedNotes.join('; ');
+                }
+                
+                // Update timestamps
+                primaryCustomer.updatedAt = new Date().toISOString();
+                primaryCustomer.updated_at = primaryCustomer.updatedAt;
+                
+                mergedCustomers.push(primaryCustomer);
+            }
+        });
+        
+        console.log(`✅ Enhanced merge completed: ${mergeCount} duplicates merged`);
+        console.log('📊 Customers after merge:', mergedCustomers.length);
+        
+        return mergedCustomers;
+    }
+
+    /**
      * Enhanced customer loading with field normalization
      */
     async function enhancedLoadCustomers() {
@@ -117,14 +225,20 @@ console.log('🔧 Loading Customer Field Mapping Fix...');
                 }
             }
             
+            // Merge duplicates before updating global array
+            if (customers.length > 0) {
+                console.log('🔄 Merging duplicate customers...');
+                customers = mergeDuplicateCustomersEnhanced(customers);
+            }
+            
             // Update global customers array
             window.customers = customers;
             
-            // Save normalized data back to localStorage
+            // Save normalized and merged data back to localStorage
             if (customers.length > 0) {
                 try {
                     localStorage.setItem('mci-customers', JSON.stringify(customers));
-                    console.log('💾 Saved normalized customer data to localStorage');
+                    console.log('💾 Saved normalized and merged customer data to localStorage');
                 } catch (saveError) {
                     console.error('❌ Error saving normalized customers to localStorage:', saveError);
                 }
@@ -467,6 +581,7 @@ console.log('🔧 Loading Customer Field Mapping Fix...');
     
     // Add utility functions to window
     window.normalizeCustomerFields = normalizeCustomerFields;
+    window.mergeDuplicateCustomersEnhanced = mergeDuplicateCustomersEnhanced;
     window.enhancedLoadCustomers = enhancedLoadCustomers;
     window.enhancedSaveCustomer = enhancedSaveCustomer;
     window.enhancedAutoCreateCustomer = enhancedAutoCreateCustomer;
