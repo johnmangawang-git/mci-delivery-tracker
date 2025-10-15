@@ -865,6 +865,18 @@
 
                 <div class="card">
                     <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-check-circle"></i> Completed Deliveries</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value" id="completedDeliveriesCount">0</div>
+                        <div class="stat-desc" id="completedDeliveriesChange">
+                            <i class="bi bi-arrow-up text-success"></i> Calculating...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
                         <h5 class="card-title"><i class="bi bi-pie-chart"></i> Status Breakdown</h5>
                     </div>
                     <div class="card-body">
@@ -880,10 +892,6 @@
                             <div class="status-item">
                                 <span class="status-label">Delayed:</span>
                                 <span class="status-count text-warning" id="delayedCount">0</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">Completed:</span>
-                                <span class="status-count text-success" id="completedCount">0</span>
                             </div>
                         </div>
                     </div>
