@@ -178,6 +178,19 @@ function enhancedSaveSignature(signatureInfo) {
     try {
         const timestamp = new Date().toISOString();
         
+        // Get current user ID if available
+        let userId = null;
+        try {
+            if (typeof window.getCurrentUser === 'function') {
+                const currentUser = window.getCurrentUser();
+                if (currentUser && currentUser.id) {
+                    userId = currentUser.id;
+                }
+            }
+        } catch (userError) {
+            console.warn('⚠️ Could not get current user ID:', userError);
+        }
+        
         // Create E-POD record with field names matching Supabase schema exactly
         const ePodRecord = {
             dr_number: signatureInfo.drNumber,
@@ -189,7 +202,8 @@ function enhancedSaveSignature(signatureInfo) {
             destination: signatureInfo.destination || 'Unknown Destination',
             signature_data: signatureInfo.signatureData,
             status: 'Completed',
-            signed_at: timestamp
+            signed_at: timestamp,
+            user_id: userId  // Add user_id if available
         };
         
         console.log('📝 Created EPOD record:', ePodRecord);

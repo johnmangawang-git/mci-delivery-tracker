@@ -186,6 +186,88 @@ class DefinitiveDataService {
             return [];
         }
     }
+    
+    // =============================================================================
+    // EPOD RECORDS METHODS
+    // =============================================================================
+    
+    async saveEPodRecord(epodRecord) {
+        await this.init();
+        
+        if (!this.client) {
+            throw new Error('Supabase client not available');
+        }
+        
+        console.log('💾 DEFINITIVE: Saving EPOD record to Supabase:', epodRecord);
+        
+        // Prepare data for Supabase - ensure field names match schema
+        const supabaseData = {
+            dr_number: epodRecord.dr_number,
+            customer_name: epodRecord.customer_name,
+            customer_contact: epodRecord.customer_contact,
+            vendor_number: epodRecord.vendor_number,
+            truck_plate: epodRecord.truck_plate,
+            origin: epodRecord.origin,
+            destination: epodRecord.destination,
+            signature_data: epodRecord.signature_data,
+            status: epodRecord.status || 'Completed',
+            signed_at: epodRecord.signed_at || new Date().toISOString(),
+            user_id: epodRecord.user_id
+        };
+        
+        // Remove undefined/null values
+        Object.keys(supabaseData).forEach(key => {
+            if (supabaseData[key] === undefined || supabaseData[key] === null) {
+                delete supabaseData[key];
+            }
+        });
+        
+        console.log('📤 Prepared EPOD data for Supabase:', supabaseData);
+        
+        try {
+            console.log('➕ Inserting new EPOD record:', supabaseData.dr_number);
+            const { data, error } = await this.client
+                .from('epod_records')
+                .insert(supabaseData)
+                .select();
+            
+            if (error) throw error;
+            
+            console.log('✅ Supabase EPOD save successful:', data[0]);
+            return data[0];
+            
+        } catch (error) {
+            console.error('❌ Supabase EPOD save failed:', error);
+            throw error;
+        }
+    }
+    
+    async getEPodRecords() {
+        await this.init();
+        
+        if (!this.client) {
+            console.warn('⚠️ Supabase client not available, returning empty array');
+            return [];
+        }
+        
+        try {
+            console.log('📡 DEFINITIVE: Loading EPOD records from Supabase...');
+            
+            const { data, error } = await this.client
+                .from('epod_records')
+                .select('*')
+                .order('signed_at', { ascending: false });
+            
+            if (error) throw error;
+            
+            console.log('✅ Loaded EPOD records from Supabase:', data?.length || 0, 'records');
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Failed to load EPOD records from Supabase:', error);
+            return [];
+        }
+    }
 }
 
 // =============================================================================
@@ -370,11 +452,11 @@ window.definitiveProcessUpload = async function(data) {
     console.log(`🎉 Upload complete: ${savedCount}/${data.length} saved`);
     
     // Show results
-    let message = `Successfully uploaded ${savedCount}/${data.length} deliveries!`;
+    let message = "Successfully uploaded " + savedCount + "/" + data.length + " deliveries!";
     if (errors.length > 0) {
-        message += `\n\nWarnings:\n${errors.slice(0, 5).join('\n')}`;
+        message += "\n\nWarnings:\n" + errors.slice(0, 5).join('\n');
         if (errors.length > 5) {
-            message += `\n... and ${errors.length - 5} more`;
+            message += "\n... and " + (errors.length - 5) + " more";
         }
     }
     
@@ -492,6 +574,9 @@ async function initDefinitiveFix() {
         const definitiveService = new DefinitiveDataService();
         window.dataService.saveDelivery = definitiveService.saveDelivery.bind(definitiveService);
         window.dataService.getDeliveries = definitiveService.getDeliveries.bind(definitiveService);
+        // Add EPOD methods
+        window.dataService.saveEPodRecord = definitiveService.saveEPodRecord.bind(definitiveService);
+        window.dataService.getEPodRecords = definitiveService.getEPodRecords.bind(definitiveService);
     }
     
     // Load initial data

@@ -6,13 +6,16 @@
 console.log('🔧 Loading Supabase integration...');
 
 // Global Supabase client - prevent multiple instances
-let supabaseClient = null;
+let supabaseClientInstance;
 
 // Check if already initialized to prevent GoTrueClient warnings
 if (window.supabaseClientInitialized) {
     console.log('🛡️ Supabase client already initialized, using existing instance');
-    supabaseClient = window.globalSupabaseClient;
+    supabaseClientInstance = window.globalSupabaseClient;
+} else {
+    supabaseClientInstance = null;
 }
+
 let isOnline = true;
 let connectionRetries = 0;
 const MAX_RETRIES = 3;
@@ -32,6 +35,11 @@ function initSupabase() {
         const supabaseUrl = window.SUPABASE_URL;
         const supabaseKey = window.SUPABASE_ANON_KEY;
 
+        console.log('🔍 Supabase configuration:', {
+            url: supabaseUrl ? '***' + supabaseUrl.substring(supabaseUrl.length - 10) : 'MISSING',
+            key: supabaseKey ? '***' + supabaseKey.substring(supabaseKey.length - 10) : 'MISSING'
+        });
+
         if (!supabaseUrl || !supabaseKey) {
             console.error('Supabase configuration missing');
             return null;
@@ -39,7 +47,7 @@ function initSupabase() {
 
         // Create Supabase client only if not already created
         if (!window.supabaseClientInitialized) {
-            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            supabaseClientInstance = window.supabase.createClient(supabaseUrl, supabaseKey, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,
@@ -57,13 +65,13 @@ function initSupabase() {
             
             // Mark as initialized and store globally
             window.supabaseClientInitialized = true;
-            window.globalSupabaseClient = supabaseClient;
+            window.globalSupabaseClient = supabaseClientInstance;
             console.log('✅ Supabase client created and marked as initialized');
         } else {
             console.log('✅ Using existing Supabase client instance');
         }
         
-        return supabaseClient;
+        return supabaseClientInstance;
         
     } catch (error) {
         console.error('❌ Failed to initialize Supabase:', error);
@@ -75,14 +83,14 @@ function initSupabase() {
  * Test Supabase connection
  */
 async function testConnection() {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         isOnline = false;
         return false;
     }
 
     try {
         // Simple query to test connection
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabaseClientInstance
             .from('deliveries')
             .select('count', { count: 'exact', head: true });
         
@@ -113,9 +121,9 @@ async function testConnection() {
  * Setup authentication state listener
  */
 function setupAuthStateListener() {
-    if (!supabaseClient) return;
+    if (!supabaseClientInstance) return;
 
-    supabaseClient.auth.onAuthStateChange((event, session) => {
+    supabaseClientInstance.auth.onAuthStateChange((event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         switch (event) {
@@ -186,12 +194,12 @@ function updateUserInterface(userData) {
 
 // Sign up new user
 async function signUp(email, password, fullName) {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         throw new Error('Supabase not available');
     }
 
     try {
-        const { data, error } = await supabaseClient.auth.signUp({
+        const { data, error } = await supabaseClientInstance.auth.signUp({
             email,
             password,
             options: {
@@ -214,12 +222,12 @@ async function signUp(email, password, fullName) {
 
 // Sign in existing user
 async function signIn(email, password) {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         throw new Error('Supabase not available');
     }
 
     try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
+        const { data, error } = await supabaseClientInstance.auth.signInWithPassword({
             email,
             password
         });
@@ -237,13 +245,13 @@ async function signIn(email, password) {
 
 // Sign out user
 async function signOut() {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         handleSignOut();
         return;
     }
 
     try {
-        const { error } = await supabaseClient.auth.signOut();
+        const { error } = await supabaseClientInstance.auth.signOut();
         if (error) throw error;
         
         console.log('✅ User signed out successfully');
@@ -257,22 +265,22 @@ async function signOut() {
 
 // Get current user
 function getCurrentUser() {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         const savedUser = localStorage.getItem('mci-user');
         return savedUser ? JSON.parse(savedUser) : null;
     }
 
-    return supabaseClient.auth.getUser();
+    return supabaseClientInstance.auth.getUser();
 }
 
 // Check if user is authenticated
 async function isAuthenticated() {
-    if (!supabaseClient) {
+    if (!supabaseClientInstance) {
         return !!localStorage.getItem('mci-user');
     }
 
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data: { user } } = await supabaseClientInstance.auth.getUser();
         return !!user;
     } catch (error) {
         console.error('Error checking authentication:', error);
@@ -286,7 +294,7 @@ async function isAuthenticated() {
 
 // Generic database operation with fallback
 async function executeWithFallback(operation, fallbackOperation) {
-    if (!isOnline || !supabaseClient) {
+    if (!isOnline || !supabaseClientInstance) {
         console.log('Using localStorage fallback');
         return await fallbackOperation();
     }
@@ -304,7 +312,7 @@ async function executeWithFallback(operation, fallbackOperation) {
 // Save delivery to Supabase
 async function saveDelivery(delivery) {
     const supabaseOperation = async () => {
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabaseClientInstance
             .from('deliveries')
             .upsert(delivery)
             .select();
@@ -334,7 +342,7 @@ async function saveDelivery(delivery) {
 // Get deliveries from Supabase
 async function getDeliveries(filters = {}) {
     const supabaseOperation = async () => {
-        let query = supabaseClient.from('deliveries').select('*');
+        let query = supabaseClientInstance.from('deliveries').select('*');
         
         // Apply filters
         if (filters.status) {
@@ -384,7 +392,7 @@ window.saveDelivery = saveDelivery;
 window.getDeliveries = getDeliveries;
 
 // Export client for direct access
-window.supabaseClient = () => supabaseClient;
+window.supabaseClient = () => supabaseClientInstance;
 window.isSupabaseOnline = () => isOnline;
 
 console.log('✅ Supabase integration module loaded');

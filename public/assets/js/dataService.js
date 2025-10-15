@@ -15,7 +15,16 @@ class DataService {
      * Check if Supabase is available and online
      */
     isSupabaseAvailable() {
-        return window.supabaseClient && window.supabaseClient() && window.isSupabaseOnline();
+        const client = window.supabaseClient && window.supabaseClient();
+        const isOnline = window.isSupabaseOnline && window.isSupabaseOnline();
+        
+        console.log('🔍 Supabase availability check:', {
+            clientAvailable: !!client,
+            isOnline: isOnline,
+            clientType: typeof client
+        });
+        
+        return client && isOnline;
     }
 
     /**
@@ -355,13 +364,33 @@ class DataService {
             // Log the EPOD record being saved for debugging
             console.log('📝 Saving EPOD record to Supabase:', epodRecord);
             
+            // Validate required fields
+            if (!epodRecord.dr_number) {
+                throw new Error('Missing required field: dr_number');
+            }
+            
+            console.log('🔍 Supabase client status:', {
+                clientAvailable: !!client,
+                clientType: typeof client
+            });
+            
+            if (!client) {
+                throw new Error('Supabase client not available');
+            }
+            
             const { data, error } = await client
                 .from('epod_records')
                 .insert(epodRecord)
                 .select();
             
             if (error) {
-                console.error('❌ Supabase EPOD save error:', error);
+                console.error('❌ Supabase EPOD save error details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                });
+                console.error('📝 EPOD record that failed to save:', epodRecord);
                 throw error;
             }
             return data[0];
@@ -380,13 +409,28 @@ class DataService {
     async getEPodRecords() {
         const supabaseOp = async () => {
             const client = window.supabaseClient();
+            
+            console.log('🔍 Supabase client status for getEPodRecords:', {
+                clientAvailable: !!client,
+                clientType: typeof client
+            });
+            
+            if (!client) {
+                throw new Error('Supabase client not available');
+            }
+            
             const { data, error } = await client
                 .from('epod_records')
                 .select('*')
                 .order('signed_at', { ascending: false });
             
             if (error) {
-                console.error('❌ Supabase EPOD fetch error:', error);
+                console.error('❌ Supabase EPOD fetch error details:', {
+                    message: error.message,
+                    code: error.code,
+                    details: error.details,
+                    hint: error.hint
+                });
                 throw error;
             }
             return data || [];
