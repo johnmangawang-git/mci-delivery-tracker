@@ -252,6 +252,42 @@ class DataService {
         return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
     }
 
+    async updateDeliveryStatusInSupabase(drNumber, newStatus) {
+        const supabaseOp = async () => {
+            const client = window.supabaseClient();
+            const { data, error } = await client
+                .from('deliveries')
+                .update({ 
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('dr_number', drNumber)
+                .select();
+
+            if (error) {
+                console.error(`Error updating status in Supabase for DR ${drNumber}:`, error);
+                throw error;
+            }
+            console.log(`Successfully updated status to ${newStatus} for DR ${drNumber} in Supabase.`, data);
+            return data;
+        };
+
+        // This operation is critical for Supabase, so the fallback is just to log an error.
+        const localStorageOp = async () => {
+            console.warn(`Supabase is offline. Could not update status for DR ${drNumber} to ${newStatus}.`);
+            // We can try to update the local storage as a fallback, but the source of truth is Supabase
+            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+            const deliveryIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
+            if (deliveryIndex !== -1) {
+                activeDeliveries[deliveryIndex].status = newStatus;
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+            }
+            return null; // Indicate that the primary operation failed.
+        };
+
+        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+    }
+
     async deleteDelivery(deliveryId) {
         const supabaseOp = async () => {
             const client = window.supabaseClient();

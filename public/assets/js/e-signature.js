@@ -491,21 +491,18 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
 /**
  * Save a single signature
  */
-function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
+async function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
     console.log('Saving single signature for DR:', signatureInfo.drNumber);
     
     try {
         const timestamp = new Date().toISOString();
-        
-        // Parse route information
         const [origin, destination] = signatureInfo.deliveryRoute.split(' to ');
-        
-        // Create E-POD record with field names matching Supabase schema
+
         const ePodRecord = {
             dr_number: signatureInfo.drNumber,
             customer_name: signatureInfo.customerName,
             customer_contact: signatureInfo.customerContact,
-            vendor_number: signatureInfo.customerContact,  // For compatibility
+            vendor_number: signatureInfo.customerContact,
             truck_plate: signatureInfo.truckPlate,
             origin: origin || 'Unknown Origin',
             destination: destination || 'Unknown Destination',
@@ -513,118 +510,49 @@ function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i c
             status: 'Completed',
             signed_at: timestamp
         };
-        
+
         console.log('Created EPOD record:', ePodRecord);
-        
-        // Save using dataService if available, otherwise fallback to localStorage
+
         if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveEPodRecord === 'function') {
             console.log('Saving EPOD record via dataService');
-            window.dataService.saveEPodRecord(ePodRecord)
-                .then((result) => {
-                    console.log('EPOD record saved via dataService:', result);
-                    // Update delivery status
-                    updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-                    showToast('E-POD saved successfully!', 'success');
-                    // Refresh views after save completes
-                    refreshDeliveryViews();
-                })
-                .catch(error => {
-                    console.error('Error saving E-POD record via dataService:', error);
-                    // Even on error, update status and refresh views to show what we can
-                    updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-                    refreshDeliveryViews();
-                    showError('Failed to save E-POD record. Please try again.');
-                })
-                .finally(() => {
-                    // Always close modal
-                    closeESignatureModal();
-                    // Reset save button
-                    resetSaveButton(saveBtn, originalText);
-                });
+            // Step 1: Await saving of the EPOD record.
+            const epodResult = await window.dataService.saveEPodRecord(ePodRecord);
+            console.log('EPOD record saved via dataService:', epodResult);
+
+            // Step 2: Await the update of the delivery status in the main 'deliveries' table.
+            console.log('Updating delivery status to Completed in Supabase for DR:', signatureInfo.drNumber);
+            await window.dataService.updateDeliveryStatusInSupabase(signatureInfo.drNumber, 'Completed');
+            
+            // Step 3: If both are successful, show toast and refresh UI from the source of truth (database).
+            showToast('E-POD saved and status updated successfully!', 'success');
+            refreshDeliveryViews();
+
         } else {
+            // Fallback to localStorage (less ideal, but maintained for offline)
             console.log('Saving EPOD record via localStorage - dataService not available');
-            // Fallback to localStorage
-            try {
-                let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                console.log('Current EPOD records in localStorage:', ePodRecords.length);
-                
-                // Check if record already exists
-                const existingIndex = ePodRecords.findIndex(r => r.dr_number === ePodRecord.dr_number);
-                if (existingIndex >= 0) {
-                    ePodRecords[existingIndex] = ePodRecord;
-                    console.log('Updated existing EPOD record in localStorage');
-                } else {
-                    ePodRecords.push(ePodRecord);
-                    console.log('Added new EPOD record to localStorage');
-                }
-                
-                localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
-                console.log('EPOD record saved to localStorage. Total records now:', ePodRecords.length);
-                
-                // Use enhanced signature completion if available
-                if (typeof window.enhancedSignatureComplete === 'function') {
-                    console.log('🚀 Using enhanced signature completion');
-                    const success = window.enhancedSignatureComplete(signatureInfo.drNumber);
-                    
-                    if (!success) {
-                        showError('Failed to complete signature process. Please try again.');
-                    }
-                } else if (typeof window.enhancedSaveSignature === 'function') {
-                    console.log('🚀 Using enhanced signature save');
-                    const success = window.enhancedSaveSignature({
-                        drNumber: signatureInfo.drNumber,
-                        customerName: signatureInfo.customerName,
-                        customerContact: signatureInfo.customerContact,
-                        truckPlate: signatureInfo.truckPlate,
-                        origin: origin,
-                        destination: destination,
-                        signatureData: signatureInfo.signatureData
-                    });
-                    
-                    if (success) {
-                        showToast('E-POD saved successfully!', 'success');
-                    } else {
-                        showError('Failed to complete signature process. Please try again.');
-                    }
-                } else if (typeof window.enhancedUpdateDeliveryStatus === 'function') {
-                    // Use the enhanced updateDeliveryStatus function from signature-completion-fix.js
-                    console.log('🚀 Using enhanced updateDeliveryStatus function');
-                    const success = window.enhancedUpdateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-                    
-                    if (success) {
-                        showToast('E-POD saved successfully!', 'success');
-                        refreshDeliveryViews();
-                    } else {
-                        showError('Failed to complete signature process. Please try again.');
-                    }
-                } else {
-                    // Fallback to original method
-                    console.log('⚠️ Using fallback signature completion');
-                    updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-                    showToast('E-POD saved successfully!', 'success');
-                    refreshDeliveryViews();
-                }
-                
-                // Close modal
-                closeESignatureModal();
-            } catch (storageError) {
-                console.error('Error saving to localStorage:', storageError);
-                showError('Failed to save E-POD record. Please try again.');
-                closeESignatureModal();
-            } finally {
-                // Reset save button
-                resetSaveButton(saveBtn, originalText);
+            let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+            const existingIndex = ePodRecords.findIndex(r => r.dr_number === ePodRecord.dr_number);
+            if (existingIndex >= 0) {
+                ePodRecords[existingIndex] = ePodRecord;
+            } else {
+                ePodRecords.push(ePodRecord);
             }
+            localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+            
+            // Manually trigger the local update logic
+            updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+            showToast('E-POD saved successfully (local)!', 'success');
+            refreshDeliveryViews();
         }
-        
+
     } catch (error) {
-        console.error('Error saving single signature:', error);
-        showError('Failed to save signature. Please try again.');
-        // Even on error, close modal
+        console.error('Error in saveSingleSignature flow:', error);
+        showError('Failed to save signature and update status. Please check connection and try again.');
+        // Do not refresh views on error to avoid inconsistent state
+    } finally {
+        // Always close modal and reset the button
         closeESignatureModal();
-        // Reset save button
         resetSaveButton(saveBtn, originalText);
-        throw error;
     }
 }
 
