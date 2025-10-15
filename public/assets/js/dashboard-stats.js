@@ -95,10 +95,43 @@ function calculateStatusBreakdown() {
         
         activeDeliveries.forEach(delivery => {
             const status = delivery.status || 'Active';
-            if (statusCounts.hasOwnProperty(status)) {
-                statusCounts[status]++;
+            // Normalize status values to match expected categories
+            let normalizedStatus = status;
+            
+            // Map common status variations to standard categories
+            switch (status.toLowerCase()) {
+                case 'in transit':
+                case 'in-transit':
+                    normalizedStatus = 'In Transit';
+                    break;
+                case 'on schedule':
+                case 'on-schedule':
+                    normalizedStatus = 'On Schedule';
+                    break;
+                case 'delayed':
+                    normalizedStatus = 'Delayed';
+                    break;
+                case 'active':
+                    normalizedStatus = 'Active';
+                    break;
+                case 'completed':
+                    normalizedStatus = 'Completed';
+                    break;
+                default:
+                    // For any other status, try to match it to existing categories
+                    if (statusCounts.hasOwnProperty(status)) {
+                        normalizedStatus = status;
+                    } else {
+                        normalizedStatus = 'Active'; // Default fallback
+                    }
+                    break;
+            }
+            
+            // Increment the count for the normalized status
+            if (statusCounts.hasOwnProperty(normalizedStatus)) {
+                statusCounts[normalizedStatus]++;
             } else {
-                statusCounts['Active']++; // Default fallback
+                statusCounts['Active']++; // Fallback to Active for unrecognized statuses
             }
         });
         
@@ -118,6 +151,17 @@ function calculateStatusBreakdown() {
 
 function updateDashboardStats() {
     console.log('🔄 Updating dashboard statistics...');
+    
+    // Check if required elements exist
+    const inTransitEl = document.getElementById('inTransitCount');
+    const onScheduleEl = document.getElementById('onScheduleCount');
+    const delayedEl = document.getElementById('delayedCount');
+    
+    console.log('📊 Dashboard elements check:', {
+        inTransitEl: !!inTransitEl,
+        onScheduleEl: !!onScheduleEl,
+        delayedEl: !!delayedEl
+    });
     
     try {
         // Update Completed Deliveries Card
@@ -139,10 +183,20 @@ function updateDashboardStats() {
         
         // Update Status Breakdown Card (active deliveries only)
         const statusStats = calculateStatusBreakdown();
+        console.log('📊 Status stats:', statusStats);
         
         const inTransitEl = document.getElementById('inTransitCount');
         const onScheduleEl = document.getElementById('onScheduleCount');
         const delayedEl = document.getElementById('delayedCount');
+        
+        console.log('📊 Updating status elements:', {
+            inTransitEl: !!inTransitEl,
+            onScheduleEl: !!onScheduleEl,
+            delayedEl: !!delayedEl,
+            inTransitValue: statusStats['In Transit'],
+            onScheduleValue: statusStats['On Schedule'],
+            delayedValue: statusStats['Delayed']
+        });
         
         if (inTransitEl) inTransitEl.textContent = statusStats['In Transit'];
         if (onScheduleEl) onScheduleEl.textContent = statusStats['On Schedule'];
@@ -151,7 +205,39 @@ function updateDashboardStats() {
         // Also update Analytics Dashboard if visible
         updateAnalyticsDashboard(completedStats, statusStats);
         
+        // Update Analytics Dashboard elements directly to ensure they're always updated
+        const analyticsView = document.getElementById('analyticsView');
+        console.log('📊 Analytics view check:', {
+            analyticsView: !!analyticsView,
+            analyticsViewActive: analyticsView ? analyticsView.classList.contains('active') : false
+        });
+        
+        if (analyticsView) {
+            // Update Delayed Deliveries count
+            const analyticsDelayedEl = document.getElementById('analyticsDelayedCount');
+            if (analyticsDelayedEl) {
+                analyticsDelayedEl.textContent = statusStats['Delayed'] || 0;
+            }
+            
+            // Update Delayed Deliveries percentage
+            const analyticsDelayedChangeEl = document.getElementById('analyticsDelayedChange');
+            if (analyticsDelayedChangeEl) {
+                const delayedCount = statusStats['Delayed'] || 0;
+                const totalActive = (statusStats['In Transit'] || 0) + (statusStats['On Schedule'] || 0) + (statusStats['Delayed'] || 0);
+                const delayedPercentage = totalActive > 0 ? Math.round((delayedCount / totalActive) * 100) : 0;
+                
+                analyticsDelayedChangeEl.className = delayedCount > 0 ? 'metric-change negative' : 'metric-change positive';
+                analyticsDelayedChangeEl.innerHTML = `
+                    <i class="bi ${delayedCount > 0 ? 'bi-exclamation-triangle' : 'bi-check-circle'}"></i> 
+                    ${delayedPercentage}% of active deliveries
+                `;
+            }
+        }
+        
         console.log('✅ Dashboard statistics updated');
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('deliveryDataUpdated'));
         
     } catch (error) {
         console.error('❌ Error updating dashboard stats:', error);
@@ -223,8 +309,7 @@ console.log('📊 DASHBOARD STATS: Loaded');
 console.log('🎯 Wildcards will show:');
 console.log('   ✅ Completed Deliveries (monthly with % change)');
 console.log('   📊 Status Breakdown (In Transit, On Schedule, Delayed)');
-// =
-============================================================================
+// =============================================================================
 // 6. UPDATE ANALYTICS DASHBOARD
 // =============================================================================
 
@@ -295,4 +380,17 @@ function setupAnalyticsAutoUpdate() {
         analyticsViewObserver.observe(analyticsView, { attributes: true });
         console.log('✅ Analytics Dashboard auto-update enabled');
     }
+    
+    // Also update analytics dashboard when data changes
+    const updateAnalyticsOnDataChange = () => {
+        const analyticsView = document.getElementById('analyticsView');
+        if (analyticsView && analyticsView.classList.contains('active')) {
+            const completedStats = calculateCompletedDeliveries();
+            const statusStats = calculateStatusBreakdown();
+            updateAnalyticsDashboard(completedStats, statusStats);
+        }
+    };
+    
+    // Listen for custom data update events
+    window.addEventListener('deliveryDataUpdated', updateAnalyticsOnDataChange);
 }

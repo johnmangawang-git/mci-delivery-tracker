@@ -144,6 +144,16 @@ function refreshAllViews() {
             console.error('❌ Error updating dashboard:', error);
         }
     }
+    
+    // Update analytics dashboard stats
+    if (typeof window.updateDashboardStats === 'function') {
+        try {
+            window.updateDashboardStats();
+            console.log('✅ Analytics dashboard stats updated');
+        } catch (error) {
+            console.error('❌ Error updating analytics dashboard stats:', error);
+        }
+    }
 }
 
 // Enhanced signature save function

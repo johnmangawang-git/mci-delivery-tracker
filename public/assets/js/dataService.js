@@ -161,12 +161,26 @@ class DataService {
                 // Update global arrays
                 window.deliveryHistory = filteredHistory;
                 window.activeDeliveries = filteredActive;
+                
+                // Update analytics dashboard stats
+                if (typeof window.updateDashboardStats === 'function') {
+                    setTimeout(() => {
+                        window.updateDashboardStats();
+                    }, 100);
+                }
             } else {
                 filteredActive.push(delivery);
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
                 
                 // Update global arrays
                 window.activeDeliveries = filteredActive;
+                
+                // Update analytics dashboard stats
+                if (typeof window.updateDashboardStats === 'function') {
+                    setTimeout(() => {
+                        window.updateDashboardStats();
+                    }, 100);
+                }
             }
             
             return delivery;

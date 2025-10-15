@@ -784,6 +784,13 @@ function updateDeliveryStatus(drNumber, newStatus) {
             }
         });
         
+        // Update analytics dashboard stats
+        if (typeof window.updateDashboardStats === 'function') {
+            setTimeout(() => {
+                window.updateDashboardStats();
+            }, 100);
+        }
+        
     } catch (error) {
         console.error('Error updating delivery status:', error);
     }

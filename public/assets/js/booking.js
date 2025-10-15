@@ -986,6 +986,13 @@ async function saveBooking() {
                 window.updateBookingViewDashboard();
             }, 100);
         }
+        
+        // Update analytics dashboard stats
+        if (typeof window.updateDashboardStats === 'function') {
+            setTimeout(() => {
+                window.updateDashboardStats();
+            }, 150);
+        }
     } catch (error) {
         console.error('Error saving booking:', error);
         showError('Failed to save booking');

@@ -131,6 +131,13 @@ console.log('app.js loaded');
             // Show success message
             showToast(`Status updated from "${oldStatus}" to "${newStatus}"`, 'success');
             
+            // Update analytics dashboard stats
+            if (typeof window.updateDashboardStats === 'function') {
+                setTimeout(() => {
+                    window.updateDashboardStats();
+                }, 100);
+            }
+            
             // Close the dropdown
             const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
             if (dropdown) {
@@ -181,6 +188,13 @@ console.log('app.js loaded');
                 // Refresh the display
                 loadActiveDeliveries();
                 loadDeliveryHistory();
+                
+                // Update analytics dashboard stats
+                if (typeof window.updateDashboardStats === 'function') {
+                    setTimeout(() => {
+                        window.updateDashboardStats();
+                    }, 100);
+                }
                 
                 console.log(`Successfully updated DR ${drNumber} from "${oldStatus}" to "${newStatus}"`);
             } else {
@@ -233,6 +247,14 @@ console.log('app.js loaded');
             
             loadActiveDeliveries();
             loadDeliveryHistory();
+            
+            // Update analytics dashboard stats
+            if (typeof window.updateDashboardStats === 'function') {
+                setTimeout(() => {
+                    window.updateDashboardStats();
+                }, 100);
+            }
+            
             showToast(`Delivery status updated to ${newStatus}`);
         }
     }
