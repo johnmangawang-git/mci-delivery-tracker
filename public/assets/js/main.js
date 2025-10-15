@@ -960,6 +960,16 @@ function exportEPodToPdf() {
             ePodRecords = ePodRecords.filter(record => selectedDRNumbers.includes(record.drNumber));
         }
         
+        // Filter records based on search term - FIXED: Use correct field names
+        ePodRecords = ePodRecords.filter(record => 
+            (record.dr_number || record.drNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        // Further filter by selected DR numbers - FIXED: Use correct field names
+        ePodRecords = ePodRecords.filter(record => 
+            selectedDRNumbers.includes(record.dr_number || record.drNumber || '')
+        );
+
         if (ePodRecords.length === 0) {
             showToast('No E-POD records to export', 'warning');
             return;
@@ -1073,7 +1083,7 @@ function exportEPodToPdf() {
                 <div class="record-title">Record #${i + 1}</div>
                 <div class="field">
                     <span class="field-label">DR Number:</span>
-                    <span>${record.drNumber || 'N/A'}</span>
+                    <span>${record.drNumber || record.dr_number || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Customer Name:</span>
@@ -1975,13 +1985,13 @@ function exportDeliveryHistoryToPdf() {
             const drNumber = row.querySelector('td:nth-child(3) strong').textContent;
             
             // Find the delivery in window.deliveryHistory
-            const delivery = window.deliveryHistory.find(d => d.drNumber === drNumber);
+            const delivery = window.deliveryHistory.find(d => (d.drNumber || d.dr_number) === drNumber);
             if (delivery) {
-                // Find signature if available
-                const ePodRecord = ePodRecords.find(record => record.drNumber === drNumber);
+                // Find signature if available - FIXED: Use correct field names
+                const ePodRecord = ePodRecords.find(record => (record.dr_number || record.drNumber) === drNumber);
                 selectedDeliveries.push({
                     ...delivery,
-                    signature: ePodRecord ? ePodRecord.signature : null
+                    signature: ePodRecord ? (ePodRecord.signature_data || ePodRecord.signature) : null
                 });
             }
         });

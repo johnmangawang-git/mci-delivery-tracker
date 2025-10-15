@@ -414,18 +414,18 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
             // Parse route information
             const [origin, destination] = signatureInfo.deliveryRoute.split(' to ');
             
-            // Create E-POD record
+            // Create E-POD record with field names matching Supabase schema
             const ePodRecord = {
-                drNumber: drNum,
-                customerName: signatureInfo.customerName,
-                customerContact: signatureInfo.customerContact,
-                truckPlate: signatureInfo.truckPlate,
+                dr_number: drNum,  // Use drNum instead of signatureInfo.drNumber
+                customer_name: signatureInfo.customerName,
+                customer_contact: signatureInfo.customerContact,
+                vendor_number: signatureInfo.customerContact,  // For compatibility
+                truck_plate: signatureInfo.truckPlate,
                 origin: origin || 'Unknown Origin',
                 destination: destination || 'Unknown Destination',
-                signature: signatureInfo.signatureData,
+                signature_data: signatureInfo.signatureData,
                 status: 'Completed',
-                signedAt: timestamp,
-                timestamp: timestamp
+                signed_at: timestamp
             };
             
             ePodRecords.push(ePodRecord);
@@ -500,18 +500,18 @@ function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i c
         // Parse route information
         const [origin, destination] = signatureInfo.deliveryRoute.split(' to ');
         
-        // Create E-POD record
+        // Create E-POD record with field names matching Supabase schema
         const ePodRecord = {
-            drNumber: signatureInfo.drNumber,
-            customerName: signatureInfo.customerName,
-            customerContact: signatureInfo.customerContact,
-            truckPlate: signatureInfo.truckPlate,
+            dr_number: signatureInfo.drNumber,
+            customer_name: signatureInfo.customerName,
+            customer_contact: signatureInfo.customerContact,
+            vendor_number: signatureInfo.customerContact,  // For compatibility
+            truck_plate: signatureInfo.truckPlate,
             origin: origin || 'Unknown Origin',
             destination: destination || 'Unknown Destination',
-            signature: signatureInfo.signatureData,
+            signature_data: signatureInfo.signatureData,
             status: 'Completed',
-            signedAt: timestamp,
-            timestamp: timestamp
+            signed_at: timestamp
         };
         
         console.log('Created EPOD record:', ePodRecord);
@@ -549,7 +549,7 @@ function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i c
                 console.log('Current EPOD records in localStorage:', ePodRecords.length);
                 
                 // Check if record already exists
-                const existingIndex = ePodRecords.findIndex(r => r.drNumber === ePodRecord.drNumber);
+                const existingIndex = ePodRecords.findIndex(r => r.dr_number === ePodRecord.dr_number);
                 if (existingIndex >= 0) {
                     ePodRecords[existingIndex] = ePodRecord;
                     console.log('Updated existing EPOD record in localStorage');

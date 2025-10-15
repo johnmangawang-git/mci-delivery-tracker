@@ -846,7 +846,7 @@ function loadDeliveryHistory() {
     
     filteredHistory = currentHistorySearchTerm ? 
         currentDeliveryHistory.filter(delivery => 
-            delivery.drNumber.toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
+            (delivery.drNumber || delivery.dr_number || '').toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
         ) : 
         [...currentDeliveryHistory];
     
@@ -900,8 +900,9 @@ function loadDeliveryHistory() {
         deliveryHistoryTableBody.innerHTML = filteredHistory.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
             
-            // Check if this delivery has been signed
-            const isSigned = ePodRecords.some(record => record.drNumber === delivery.drNumber);
+            // Check if this delivery has been signed - FIXED: Use correct field names for both delivery and EPOD records
+            const deliveryDrNumber = delivery.drNumber || delivery.dr_number || '';
+            const isSigned = ePodRecords.some(record => (record.dr_number || record.drNumber || '') === deliveryDrNumber);
             
             // Build status display
             let statusDisplay = `
@@ -922,14 +923,14 @@ function loadDeliveryHistory() {
             return `
                 <tr>
                     <td>
-                        <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${delivery.drNumber}">
+                        <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
                     <td>${delivery.completedDate || 'N/A'}</td>
-                    <td><strong>${delivery.drNumber}</strong></td>
-                    <td>${delivery.customerName}</td>
-                    <td>${delivery.vendorNumber}</td>
-                    <td>${delivery.origin}</td>
-                    <td>${delivery.destination}</td>
+                    <td><strong>${deliveryDrNumber}</strong></td>
+                    <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
+                    <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
+                    <td>${delivery.origin || 'N/A'}</td>
+                    <td>${delivery.destination || 'N/A'}</td>
                     <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
                         ${statusDisplay}

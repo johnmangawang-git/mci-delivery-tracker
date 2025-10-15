@@ -29,7 +29,7 @@ console.log('🔧 Loading Delivery History Fix...');
             }
             
             // Find delivery in active deliveries
-            const deliveryIndex = window.activeDeliveries.findIndex(d => d.drNumber === drNumber);
+            const deliveryIndex = window.activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
             console.log(`📍 Found delivery at index: ${deliveryIndex}`);
             
             if (deliveryIndex !== -1) {
@@ -45,27 +45,34 @@ console.log('🔧 Loading Delivery History Fix...');
                 delivery.completedTime = new Date().toLocaleTimeString();
                 delivery.signedAt = new Date().toISOString();
                 
-                console.log(`✅ Updated delivery: ${delivery.drNumber} -> ${newStatus}`);
+                console.log(`✅ Updated delivery: ${delivery.drNumber || delivery.dr_number} -> ${newStatus}`);
                 
                 // If completed, move to history
                 if (newStatus === 'Completed') {
                     console.log('📦 Moving delivery to history...');
                     
-                    // Create clean copy for history
+                    // Create clean copy for history with proper field names
+                    const deliveryDrNumber = delivery.drNumber || delivery.dr_number || '';
                     const historyCopy = {
                         ...delivery,
                         id: delivery.id,
-                        drNumber: delivery.drNumber,
-                        customerName: delivery.customerName,
-                        vendorNumber: delivery.vendorNumber,
-                        truckPlateNumber: delivery.truckPlateNumber,
-                        origin: delivery.origin,
-                        destination: delivery.destination,
+                        drNumber: deliveryDrNumber,
+                        dr_number: deliveryDrNumber,
+                        customerName: delivery.customerName || delivery.customer_name || '',
+                        customer_name: delivery.customerName || delivery.customer_name || '',
+                        vendorNumber: delivery.vendorNumber || delivery.vendor_number || '',
+                        vendor_number: delivery.vendorNumber || delivery.vendor_number || '',
+                        truckPlateNumber: delivery.truckPlateNumber || delivery.truck_plate_number || '',
+                        truck_plate_number: delivery.truckPlateNumber || delivery.truck_plate_number || '',
+                        truckType: delivery.truckType || delivery.truck_type || '',
+                        truck_type: delivery.truckType || delivery.truck_type || '',
+                        origin: delivery.origin || '',
+                        destination: delivery.destination || '',
                         status: 'Completed',
                         completedDate: delivery.completedDate,
                         completedTime: delivery.completedTime,
                         signedAt: delivery.signedAt,
-                        createdDate: delivery.createdDate
+                        createdDate: delivery.createdDate || delivery.created_date || delivery.timestamp || ''
                     };
                     
                     // Remove signature data to avoid conflicts
@@ -107,7 +114,7 @@ console.log('🔧 Loading Delivery History Fix...');
                 }
             } else {
                 console.error(`❌ Delivery ${drNumber} not found in activeDeliveries`);
-                console.log('Available deliveries:', window.activeDeliveries.map(d => d.drNumber));
+                console.log('Available deliveries:', window.activeDeliveries.map(d => d.drNumber || d.dr_number));
                 return false;
             }
             
@@ -180,8 +187,9 @@ console.log('🔧 Loading Delivery History Fix...');
         const tableRows = currentDeliveryHistory.map(delivery => {
             const statusInfo = getStatusInfo(delivery.status);
             
-            // Check if this delivery has been signed
-            const isSigned = ePodRecords.some(record => record.drNumber === delivery.drNumber);
+            // Check if this delivery has been signed - FIXED: Use correct field names
+            const deliveryDrNumber = delivery.drNumber || delivery.dr_number || '';
+            const isSigned = ePodRecords.some(record => (record.dr_number || record.drNumber || '') === deliveryDrNumber);
             
             // Build status display
             let statusDisplay = `
@@ -202,18 +210,18 @@ console.log('🔧 Loading Delivery History Fix...');
             return `
                 <tr>
                     <td>
-                        <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${delivery.drNumber}">
+                        <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
                     <td>${delivery.completedDate || 'N/A'}</td>
-                    <td><strong>${delivery.drNumber}</strong></td>
-                    <td>${delivery.customerName}</td>
-                    <td>${delivery.vendorNumber || 'N/A'}</td>
-                    <td>${delivery.origin}</td>
-                    <td>${delivery.destination}</td>
-                    <td>${delivery.truckPlateNumber} (${delivery.truckType || 'N/A'})</td>
+                    <td><strong>${deliveryDrNumber}</strong></td>
+                    <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
+                    <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
+                    <td>${delivery.origin || 'N/A'}</td>
+                    <td>${delivery.destination || 'N/A'}</td>
+                    <td>${delivery.truckPlateNumber || delivery.truck_plate_number || 'N/A'} (${delivery.truckType || delivery.truck_type || 'N/A'})</td>
                     <td>${statusDisplay}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${delivery.drNumber}')">
+                        <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">
                             <i class="bi bi-eye"></i> View
                         </button>
                     </td>
