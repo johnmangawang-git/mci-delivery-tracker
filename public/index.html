@@ -155,6 +155,9 @@
     <!-- DISABLE MANUAL BOOKING - REDIRECT TO EXCEL UPLOAD -->
     <script src="assets/js/disable-manual-booking.js"></script>
     
+    <!-- DASHBOARD STATISTICS - REAL DATA WILDCARDS -->
+    <script src="assets/js/dashboard-stats.js"></script>
+    
     <!-- Application JavaScript Files -->
     <script src="assets/js/field-mapper.js"></script>
     <script src="assets/js/modal-utils.js"></script>
@@ -862,14 +865,35 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title"><i class="bi bi-currency-exchange"></i> Revenue</h5>
+                        <h5 class="card-title"><i class="bi bi-check-circle"></i> Completed Deliveries</h5>
                     </div>
                     <div class="card-body">
-                        <div class="stat-value">
-                            <span class="coming-soon-tag">In Development</span>
-                            <div class="crossed-out">₱14,280</div>
+                        <div class="stat-value" id="completedDeliveriesCount">0</div>
+                        <div class="stat-desc" id="completedDeliveriesChange">
+                            <i class="bi bi-arrow-up text-success"></i> Calculating...
                         </div>
-                        <div class="stat-desc"><i class="bi bi-arrow-up text-success"></i> 22% from last week</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-pie-chart"></i> Status Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="status-breakdown" id="statusBreakdown">
+                            <div class="status-item">
+                                <span class="status-label">In Transit:</span>
+                                <span class="status-count" id="inTransitCount">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">On Schedule:</span>
+                                <span class="status-count" id="onScheduleCount">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Delayed:</span>
+                                <span class="status-count text-warning" id="delayedCount">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
