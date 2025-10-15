@@ -148,6 +148,9 @@ function updateDashboardStats() {
         if (onScheduleEl) onScheduleEl.textContent = statusStats['On Schedule'];
         if (delayedEl) delayedEl.textContent = statusStats['Delayed'];
         
+        // Also update Analytics Dashboard if visible
+        updateAnalyticsDashboard(completedStats, statusStats);
+        
         console.log('✅ Dashboard statistics updated');
         
     } catch (error) {
@@ -196,6 +199,7 @@ function initDashboardStats() {
     
     // Setup auto-update system
     setupStatsAutoUpdate();
+    setupAnalyticsAutoUpdate();
     
     // Update stats when data loads
     setTimeout(updateDashboardStats, 2000);
@@ -219,3 +223,76 @@ console.log('📊 DASHBOARD STATS: Loaded');
 console.log('🎯 Wildcards will show:');
 console.log('   ✅ Completed Deliveries (monthly with % change)');
 console.log('   📊 Status Breakdown (In Transit, On Schedule, Delayed)');
+// =
+============================================================================
+// 6. UPDATE ANALYTICS DASHBOARD
+// =============================================================================
+
+function updateAnalyticsDashboard(completedStats, statusStats) {
+    try {
+        // Update Analytics Completed Deliveries
+        const analyticsCompletedEl = document.getElementById('analyticsCompletedCount');
+        const analyticsCompletedChangeEl = document.getElementById('analyticsCompletedChange');
+        
+        if (analyticsCompletedEl) {
+            analyticsCompletedEl.textContent = completedStats.count;
+        }
+        
+        if (analyticsCompletedChangeEl) {
+            const arrow = completedStats.direction === 'up' ? 'bi-arrow-up' : 'bi-arrow-down';
+            analyticsCompletedChangeEl.className = `metric-change ${completedStats.direction === 'up' ? 'positive' : 'negative'}`;
+            analyticsCompletedChangeEl.innerHTML = `
+                <i class="bi ${arrow}"></i> ${completedStats.change}% from last month
+            `;
+        }
+        
+        // Update Analytics Delayed Deliveries
+        const analyticsDelayedEl = document.getElementById('analyticsDelayedCount');
+        const analyticsDelayedChangeEl = document.getElementById('analyticsDelayedChange');
+        
+        if (analyticsDelayedEl) {
+            analyticsDelayedEl.textContent = statusStats['Delayed'] || 0;
+        }
+        
+        if (analyticsDelayedChangeEl) {
+            const delayedCount = statusStats['Delayed'] || 0;
+            const totalActive = (statusStats['In Transit'] || 0) + (statusStats['On Schedule'] || 0) + (statusStats['Delayed'] || 0);
+            const delayedPercentage = totalActive > 0 ? Math.round((delayedCount / totalActive) * 100) : 0;
+            
+            analyticsDelayedChangeEl.className = delayedCount > 0 ? 'metric-change negative' : 'metric-change positive';
+            analyticsDelayedChangeEl.innerHTML = `
+                <i class="bi ${delayedCount > 0 ? 'bi-exclamation-triangle' : 'bi-check-circle'}"></i> 
+                ${delayedPercentage}% of active deliveries
+            `;
+        }
+        
+        console.log('✅ Analytics Dashboard updated');
+        
+    } catch (error) {
+        console.error('❌ Error updating Analytics Dashboard:', error);
+    }
+}
+
+// Update analytics when switching to analytics view
+function setupAnalyticsAutoUpdate() {
+    const analyticsViewObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const analyticsView = document.getElementById('analyticsView');
+                if (analyticsView && analyticsView.classList.contains('active')) {
+                    setTimeout(() => {
+                        const completedStats = calculateCompletedDeliveries();
+                        const statusStats = calculateStatusBreakdown();
+                        updateAnalyticsDashboard(completedStats, statusStats);
+                    }, 500);
+                }
+            }
+        });
+    });
+    
+    const analyticsView = document.getElementById('analyticsView');
+    if (analyticsView) {
+        analyticsViewObserver.observe(analyticsView, { attributes: true });
+        console.log('✅ Analytics Dashboard auto-update enabled');
+    }
+}
