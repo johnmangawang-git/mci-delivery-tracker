@@ -84,7 +84,8 @@ class DataService {
                     }
                 }
             } else {
-                console.warn(`Supabase operation failed for ${tableName}, using fallback:`, error);
+                console.warn(`⚠️ Supabase operation failed for ${tableName}, using fallback:`, error);
+                console.warn('📝 Fallback data for debugging:', localStorageOperation.toString());
             }
             
             this.isOnline = false;
@@ -350,12 +351,19 @@ class DataService {
     async saveEPodRecord(epodRecord) {
         const supabaseOp = async () => {
             const client = window.supabaseClient();
+            
+            // Log the EPOD record being saved for debugging
+            console.log('📝 Saving EPOD record to Supabase:', epodRecord);
+            
             const { data, error } = await client
                 .from('epod_records')
                 .insert(epodRecord)
                 .select();
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Supabase EPOD save error:', error);
+                throw error;
+            }
             return data[0];
         };
 
@@ -377,7 +385,10 @@ class DataService {
                 .select('*')
                 .order('signed_at', { ascending: false });
             
-            if (error) throw error;
+            if (error) {
+                console.error('❌ Supabase EPOD fetch error:', error);
+                throw error;
+            }
             return data || [];
         };
 

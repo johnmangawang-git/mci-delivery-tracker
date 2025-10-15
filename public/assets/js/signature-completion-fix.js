@@ -69,6 +69,20 @@ function enhancedUpdateDeliveryStatus(drNumber, newStatus) {
                 
                 return true; // Success
             }
+            
+            // For non-completed status updates
+            try {
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                console.log('💾 Saved active deliveries to localStorage');
+                updateDeliveryUI(drNumber, newStatus);
+                setTimeout(() => {
+                    refreshAllViews();
+                }, 100);
+                return true; // Success
+            } catch (storageError) {
+                console.error('❌ Error saving to localStorage:', storageError);
+                return false; // Failure
+            }
         } else {
             console.error(`❌ Delivery ${drNumber} not found in activeDeliveries`);
             console.log('Current activeDeliveries:', window.activeDeliveries.map(d => d.drNumber));
@@ -159,32 +173,34 @@ function refreshAllViews() {
 // Enhanced signature save function
 function enhancedSaveSignature(signatureInfo) {
     console.log('🖊️ Enhanced signature save process starting...');
+    console.log('📝 Signature info received:', signatureInfo);
     
     try {
         const timestamp = new Date().toISOString();
         
-        // Create E-POD record
+        // Create E-POD record with field names matching Supabase schema exactly
         const ePodRecord = {
-            drNumber: signatureInfo.drNumber,
-            customerName: signatureInfo.customerName,
-            customerContact: signatureInfo.customerContact,
-            truckPlate: signatureInfo.truckPlate,
+            dr_number: signatureInfo.drNumber,
+            customer_name: signatureInfo.customerName,
+            customer_contact: signatureInfo.customerContact,
+            vendor_number: signatureInfo.customerContact,  // For compatibility
+            truck_plate: signatureInfo.truckPlate,
             origin: signatureInfo.origin || 'Unknown Origin',
             destination: signatureInfo.destination || 'Unknown Destination',
-            signature: signatureInfo.signatureData,
+            signature_data: signatureInfo.signatureData,
             status: 'Completed',
-            signedAt: timestamp,
-            timestamp: timestamp
+            signed_at: timestamp
         };
         
         console.log('📝 Created EPOD record:', ePodRecord);
         
         // Save EPOD record to localStorage
         try {
+            console.log('📝 EPOD record to save:', ePodRecord);
             let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
             
             // Check if record already exists
-            const existingIndex = ePodRecords.findIndex(r => r.drNumber === ePodRecord.drNumber);
+            const existingIndex = ePodRecords.findIndex(r => r.dr_number === ePodRecord.dr_number);
             if (existingIndex >= 0) {
                 ePodRecords[existingIndex] = ePodRecord;
                 console.log('📝 Updated existing EPOD record');
@@ -195,6 +211,20 @@ function enhancedSaveSignature(signatureInfo) {
             
             localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
             console.log(`💾 EPOD record saved. Total records: ${ePodRecords.length}`);
+            
+            // Also save to Supabase if dataService is available
+            if (typeof window.dataService !== 'undefined' && window.dataService !== null) {
+                console.log('🚀 Saving EPOD record to Supabase...');
+                window.dataService.saveEPodRecord(ePodRecord)
+                    .then(result => {
+                        console.log('✅ EPOD record saved to Supabase:', result);
+                    })
+                    .catch(supabaseError => {
+                        console.error('❌ Error saving EPOD record to Supabase:', supabaseError);
+                    });
+            } else {
+                console.log('⚠️ dataService not available, skipping Supabase save');
+            }
             
         } catch (ePodError) {
             console.error('❌ Error saving EPOD record:', ePodError);

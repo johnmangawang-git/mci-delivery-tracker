@@ -586,6 +586,17 @@ function saveSingleSignature(signatureInfo, saveBtn = null, originalText = '<i c
                     } else {
                         showError('Failed to complete signature process. Please try again.');
                     }
+                } else if (typeof window.enhancedUpdateDeliveryStatus === 'function') {
+                    // Use the enhanced updateDeliveryStatus function from signature-completion-fix.js
+                    console.log('🚀 Using enhanced updateDeliveryStatus function');
+                    const success = window.enhancedUpdateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+                    
+                    if (success) {
+                        showToast('E-POD saved successfully!', 'success');
+                        refreshDeliveryViews();
+                    } else {
+                        showError('Failed to complete signature process. Please try again.');
+                    }
                 } else {
                     // Fallback to original method
                     console.log('⚠️ Using fallback signature completion');
