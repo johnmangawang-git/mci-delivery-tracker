@@ -85,12 +85,27 @@ function calculateStatusBreakdown() {
         const activeDeliveries = window.activeDeliveries || 
                                 JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
         
+        // Get completed deliveries (this month)
+        const deliveryHistory = window.deliveryHistory || 
+                               JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+        
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        const thisMonthCompleted = deliveryHistory.filter(delivery => {
+            const deliveryDate = new Date(delivery.created_at || delivery.timestamp || delivery.deliveryDate);
+            return deliveryDate.getMonth() === currentMonth && 
+                   deliveryDate.getFullYear() === currentYear &&
+                   (delivery.status === 'Completed' || delivery.status === 'Signed');
+        });
+        
         // Count by status
         const statusCounts = {
             'In Transit': 0,
             'On Schedule': 0,
             'Delayed': 0,
-            'Active': 0
+            'Active': 0,
+            'Completed': thisMonthCompleted.length
         };
         
         activeDeliveries.forEach(delivery => {
@@ -102,13 +117,13 @@ function calculateStatusBreakdown() {
             }
         });
         
-        console.log('📊 Status breakdown:', statusCounts);
+        console.log('📊 Status breakdown (including completed):', statusCounts);
         
         return statusCounts;
         
     } catch (error) {
         console.error('❌ Error calculating status breakdown:', error);
-        return { 'In Transit': 0, 'On Schedule': 0, 'Delayed': 0, 'Active': 0 };
+        return { 'In Transit': 0, 'On Schedule': 0, 'Delayed': 0, 'Active': 0, 'Completed': 0 };
     }
 }
 
@@ -120,35 +135,20 @@ function updateDashboardStats() {
     console.log('🔄 Updating dashboard statistics...');
     
     try {
-        // Update Completed Deliveries
-        const completedStats = calculateCompletedDeliveries();
-        const completedCountEl = document.getElementById('completedDeliveriesCount');
-        const completedChangeEl = document.getElementById('completedDeliveriesChange');
-        
-        if (completedCountEl) {
-            completedCountEl.textContent = completedStats.count;
-        }
-        
-        if (completedChangeEl) {
-            const arrow = completedStats.direction === 'up' ? 'bi-arrow-up' : 'bi-arrow-down';
-            completedChangeEl.innerHTML = `
-                <i class="bi ${arrow} ${completedStats.class}"></i> 
-                ${completedStats.change}% from last month
-            `;
-        }
-        
-        // Update Status Breakdown
+        // Update Status Breakdown (now includes completed deliveries)
         const statusStats = calculateStatusBreakdown();
         
         const inTransitEl = document.getElementById('inTransitCount');
         const onScheduleEl = document.getElementById('onScheduleCount');
         const delayedEl = document.getElementById('delayedCount');
+        const completedEl = document.getElementById('completedCount');
         
         if (inTransitEl) inTransitEl.textContent = statusStats['In Transit'];
         if (onScheduleEl) onScheduleEl.textContent = statusStats['On Schedule'];
         if (delayedEl) delayedEl.textContent = statusStats['Delayed'];
+        if (completedEl) completedEl.textContent = statusStats['Completed'];
         
-        console.log('✅ Dashboard statistics updated');
+        console.log('✅ Dashboard statistics updated (including completed deliveries)');
         
     } catch (error) {
         console.error('❌ Error updating dashboard stats:', error);

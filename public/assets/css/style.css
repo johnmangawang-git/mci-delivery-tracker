@@ -1103,6 +1103,10 @@ body {
     color: var(--warning) !important;
 }
 
+.status-count.text-success {
+    color: var(--success) !important;
+}
+
 /* Dashboard Cards Responsive Layout */
 .dashboard-cards {
     display: grid;
