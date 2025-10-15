@@ -290,21 +290,11 @@ function processDataByDay(deliveries) {
     deliveries.forEach(delivery => {
         if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
             delivery.additionalCostItems.forEach(item => {
-                const description = item.description.toLowerCase();
                 const amount = item.amount;
                 
-                // Map descriptions to categories
-                if (description.includes('gas') || description.includes('fuel')) {
-                    costBreakdown['Fuel Surcharge'] += amount;
-                } else if (description.includes('toll')) {
-                    costBreakdown['Toll Fees'] += amount;
-                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
-                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
-                } else if (description.includes('special') || description.includes('handling')) {
-                    costBreakdown['Special Handling'] += amount;
-                } else {
-                    costBreakdown['Other'] += amount;
-                }
+                // Use the enhanced categorization function
+                const category = categorizeCostDescription(item.description);
+                costBreakdown[category] = (costBreakdown[category] || 0) + amount;
             });
         } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
             // Fallback to old method if individual items not available
@@ -392,21 +382,11 @@ function processDataByWeek(deliveries) {
     deliveries.forEach(delivery => {
         if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
             delivery.additionalCostItems.forEach(item => {
-                const description = item.description.toLowerCase();
                 const amount = item.amount;
                 
-                // Map descriptions to categories
-                if (description.includes('gas') || description.includes('fuel')) {
-                    costBreakdown['Fuel Surcharge'] += amount;
-                } else if (description.includes('toll')) {
-                    costBreakdown['Toll Fees'] += amount;
-                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
-                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
-                } else if (description.includes('special') || description.includes('handling')) {
-                    costBreakdown['Special Handling'] += amount;
-                } else {
-                    costBreakdown['Other'] += amount;
-                }
+                // Use the enhanced categorization function
+                const category = categorizeCostDescription(item.description);
+                costBreakdown[category] = (costBreakdown[category] || 0) + amount;
             });
         } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
             // Fallback to old method if individual items not available
@@ -479,21 +459,11 @@ function processDataByMonth(deliveries) {
     deliveries.forEach(delivery => {
         if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
             delivery.additionalCostItems.forEach(item => {
-                const description = item.description.toLowerCase();
                 const amount = item.amount;
                 
-                // Map descriptions to categories
-                if (description.includes('gas') || description.includes('fuel')) {
-                    costBreakdown['Fuel Surcharge'] += amount;
-                } else if (description.includes('toll')) {
-                    costBreakdown['Toll Fees'] += amount;
-                } else if (description.includes('helper') || description.includes('urgent') || description.includes('delivery')) {
-                    costBreakdown['Helper'] += amount; // Changed from 'Urgent Delivery'
-                } else if (description.includes('special') || description.includes('handling')) {
-                    costBreakdown['Special Handling'] += amount;
-                } else {
-                    costBreakdown['Other'] += amount;
-                }
+                // Use the enhanced categorization function
+                const category = categorizeCostDescription(item.description);
+                costBreakdown[category] = (costBreakdown[category] || 0) + amount;
             });
         } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
             // Fallback to old method if individual items not available
