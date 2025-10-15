@@ -1,0 +1,270 @@
+/**
+ * CUSTOMER SUPABASE SCHEMA FIX
+ * Fixes the 400 error by ensuring proper field mapping between JavaScript and Supabase schema
+ * Addresses the mismatch between 'contactPerson' (JS) and 'name' (Supabase)
+ */
+
+console.log('🔧 Loading Customer Supabase Schema Fix...');
+
+(function() {
+    'use strict';
+    
+    /**
+     * Map JavaScript customer fields to Supabase schema fields
+     */
+    function mapToSupabaseSchema(customer) {
+        if (!customer) return customer;
+        
+        // Create a clean object with only Supabase schema fields
+        const supabaseCustomer = {
+            // Core fields that match Supabase schema exactly
+            name: customer.contactPerson || customer.name || '',  // JS uses contactPerson, Supabase uses name
+            email: customer.email || null,  // Allow null for optional fields
+            phone: customer.phone || null,
+            address: customer.address || null,
+            vendor_number: customer.vendorNumber || customer.vendor_number || customer.phone || null,
+            
+            // Timestamps - Supabase handles these automatically but we can set them
+            created_at: customer.created_at || customer.createdAt || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            
+            // User ID for RLS (Row Level Security)
+            user_id: customer.user_id || null
+        };
+        
+        // Only include ID if it's a valid UUID format (for updates)
+        if (customer.id && customer.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            supabaseCustomer.id = customer.id;
+        }
+        
+        // Remove any null/undefined values to avoid 400 errors
+        Object.keys(supabaseCustomer).forEach(key => {
+            if (supabaseCustomer[key] === null || supabaseCustomer[key] === undefined || supabaseCustomer[key] === '') {
+                delete supabaseCustomer[key];
+            }
+        });
+        
+        console.log('📝 Mapped to Supabase schema:', supabaseCustomer);
+        return supabaseCustomer;
+    }
+    
+    /**
+     * Map Supabase customer data back to JavaScript format
+     */
+    function mapFromSupabaseSchema(supabaseCustomer) {
+        if (!supabaseCustomer) return supabaseCustomer;
+        
+        return {
+            id: supabaseCustomer.id,
+            contactPerson: supabaseCustomer.name || '',  // Map Supabase 'name' to JS 'contactPerson'
+            name: supabaseCustomer.name || '',  // Keep both for compatibility
+            phone: supabaseCustomer.phone || '',
+            email: supabaseCustomer.email || '',
+            address: supabaseCustomer.address || '',
+            vendorNumber: supabaseCustomer.vendor_number || supabaseCustomer.phone || '',
+            vendor_number: supabaseCustomer.vendor_number || supabaseCustomer.phone || '',
+            accountType: 'Individual',  // Default since not in Supabase schema
+            account_type: 'Individual',
+            status: 'active',  // Default since not in Supabase schema
+            notes: 'Loaded from Supabase',  // Default since not in Supabase schema
+            bookingsCount: 0,  // Default since not in Supabase schema
+            bookings_count: 0,
+            lastDelivery: '',  // Default since not in Supabase schema
+            last_delivery: '',
+            createdAt: supabaseCustomer.created_at,
+            created_at: supabaseCustomer.created_at,
+            updatedAt: supabaseCustomer.updated_at,
+            updated_at: supabaseCustomer.updated_at,
+            user_id: supabaseCustomer.user_id
+        };
+    }
+    
+    /**
+     * Enhanced dataService customer operations with proper schema mapping
+     */
+    const originalDataService = window.dataService;
+    
+    if (originalDataService) {
+        // Override saveCustomer method
+        const originalSaveCustomer = originalDataService.saveCustomer.bind(originalDataService);
+        originalDataService.saveCustomer = async function(customer) {
+            console.log('🔄 Enhanced saveCustomer with schema mapping...');
+            console.log('📝 Original customer data:', customer);
+            
+            const supabaseOp = async () => {
+                const client = window.supabaseClient();
+                if (!client) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                // Map to Supabase schema
+                const mappedCustomer = mapToSupabaseSchema(customer);
+                console.log('📤 Sending to Supabase:', mappedCustomer);
+                
+                const { data, error } = await client
+                    .from('customers')
+                    .upsert(mappedCustomer)
+                    .select();
+                
+                if (error) {
+                    console.error('❌ Supabase customer save error:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Supabase response:', data);
+                
+                // Map back to JavaScript format
+                return mapFromSupabaseSchema(data[0]);
+            };
+
+            const localStorageOp = async () => {
+                const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
+                const existingIndex = customers.findIndex(c => c.id === customer.id);
+                
+                if (existingIndex >= 0) {
+                    customers[existingIndex] = customer;
+                } else {
+                    customers.push(customer);
+                }
+                
+                localStorage.setItem('mci-customers', JSON.stringify(customers));
+                window.customers = customers;
+                
+                return customer;
+            };
+
+            return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        };
+        
+        // Override getCustomers method
+        const originalGetCustomers = originalDataService.getCustomers.bind(originalDataService);
+        originalDataService.getCustomers = async function() {
+            console.log('🔄 Enhanced getCustomers with schema mapping...');
+            
+            const supabaseOp = async () => {
+                const client = window.supabaseClient();
+                if (!client) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                console.log('📤 Fetching customers from Supabase...');
+                const { data, error } = await client
+                    .from('customers')
+                    .select('*')
+                    .order('name', { ascending: true });
+                
+                if (error) {
+                    console.error('❌ Supabase customer fetch error:', error);
+                    throw error;
+                }
+                
+                console.log('✅ Supabase customers response:', data);
+                
+                // Map all customers back to JavaScript format
+                return (data || []).map(customer => mapFromSupabaseSchema(customer));
+            };
+
+            const localStorageOp = async () => {
+                const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
+                return customers;
+            };
+
+            return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        };
+        
+        console.log('✅ Enhanced dataService customer methods with schema mapping');
+    }
+    
+    /**
+     * Test customer operations to verify fix
+     */
+    async function testCustomerOperations() {
+        console.log('🧪 Testing customer operations...');
+        
+        try {
+            // Test fetching customers
+            console.log('📥 Testing customer fetch...');
+            const customers = await window.dataService.getCustomers();
+            console.log('✅ Customer fetch test passed:', customers.length, 'customers');
+            
+            // Test saving a customer
+            console.log('💾 Testing customer save...');
+            const testCustomer = {
+                id: 'TEST-' + Date.now(),
+                contactPerson: 'Test Customer',
+                phone: '+63 999 999 9999',
+                email: 'test@example.com',
+                address: 'Test Address',
+                vendorNumber: '+63 999 999 9999',
+                accountType: 'Individual',
+                status: 'active',
+                notes: 'Test customer for schema fix',
+                bookingsCount: 0,
+                lastDelivery: '',
+                createdAt: new Date().toISOString()
+            };
+            
+            const savedCustomer = await window.dataService.saveCustomer(testCustomer);
+            console.log('✅ Customer save test passed:', savedCustomer);
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Customer operations test failed:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Initialize the fix
+     */
+    function initializeSchemaFix() {
+        console.log('🚀 Initializing Customer Supabase Schema Fix...');
+        
+        // Wait for dataService to be available
+        if (window.dataService) {
+            console.log('✅ DataService found, applying schema fix');
+            
+            // Test the fix after a short delay
+            setTimeout(() => {
+                testCustomerOperations().then(success => {
+                    if (success) {
+                        console.log('🎉 Customer Supabase Schema Fix applied successfully!');
+                        
+                        // Reload customers to test the fix
+                        if (typeof window.loadCustomers === 'function') {
+                            window.loadCustomers();
+                        }
+                    } else {
+                        console.warn('⚠️ Customer operations test failed, but fix is still applied');
+                    }
+                });
+            }, 1000);
+        } else {
+            console.log('⏳ DataService not yet available, retrying...');
+            setTimeout(initializeSchemaFix, 500);
+        }
+    }
+    
+    // Export utility functions
+    window.mapToSupabaseSchema = mapToSupabaseSchema;
+    window.mapFromSupabaseSchema = mapFromSupabaseSchema;
+    window.testCustomerOperations = testCustomerOperations;
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeSchemaFix);
+    } else {
+        initializeSchemaFix();
+    }
+    
+    console.log('✅ Customer Supabase Schema Fix loaded successfully');
+    
+})();
+
+// Export for external access
+window.customerSupabaseSchemaFix = {
+    version: '1.0.0',
+    loaded: true,
+    timestamp: new Date().toISOString()
+};
