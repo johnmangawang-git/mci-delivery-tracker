@@ -315,21 +315,8 @@ console.log('   📊 Status Breakdown (In Transit, On Schedule, Delayed)');
 
 function updateAnalyticsDashboard(completedStats, statusStats) {
     try {
-        // Update Analytics Completed Deliveries
-        const analyticsCompletedEl = document.getElementById('analyticsCompletedCount');
-        const analyticsCompletedChangeEl = document.getElementById('analyticsCompletedChange');
-        
-        if (analyticsCompletedEl) {
-            analyticsCompletedEl.textContent = completedStats.count;
-        }
-        
-        if (analyticsCompletedChangeEl) {
-            const arrow = completedStats.direction === 'up' ? 'bi-arrow-up' : 'bi-arrow-down';
-            analyticsCompletedChangeEl.className = `metric-change ${completedStats.direction === 'up' ? 'positive' : 'negative'}`;
-            analyticsCompletedChangeEl.innerHTML = `
-                <i class="bi ${arrow}"></i> ${completedStats.change}% from last month
-            `;
-        }
+        // Completed Deliveries wildcard removed as requested
+        // No longer updating analyticsCompletedCount and analyticsCompletedChange elements
         
         // Update Analytics Delayed Deliveries
         const analyticsDelayedEl = document.getElementById('analyticsDelayedCount');
