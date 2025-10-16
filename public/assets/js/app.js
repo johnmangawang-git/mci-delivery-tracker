@@ -1199,7 +1199,7 @@ function toggleDeliveryHistorySelection() {
 }
 
 // Export Delivery History to PDF with signatures
-function exportDeliveryHistoryToPdf() {
+async function exportDeliveryHistoryToPdf() {
     try {
         // Show loading state
         const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
@@ -1207,12 +1207,51 @@ function exportDeliveryHistoryToPdf() {
         exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
         exportBtn.disabled = true;
 
-        // Get EPOD records from localStorage to find signatures
+        // ENHANCED: Get EPOD records from BOTH localStorage AND Supabase to find signatures
         let ePodRecords = [];
+        
+        // Original localStorage logic (commented but preserved)
+        // try {
+        //     const ePodData = localStorage.getItem('ePodRecords');
+        //     if (ePodData) {
+        //         ePodRecords = JSON.parse(ePodData);
+        //     }
+        // } catch (error) {
+        //     console.error('Error loading EPOD records:', error);
+        // }
+        
+        // ENHANCED: Load from both localStorage and Supabase
         try {
+            // First, get from localStorage (fallback/legacy)
             const ePodData = localStorage.getItem('ePodRecords');
             if (ePodData) {
                 ePodRecords = JSON.parse(ePodData);
+                console.log('📄 Loaded E-POD records from localStorage:', ePodRecords.length);
+            }
+            
+            // Then, try to get from Supabase (primary source)
+            if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
+                try {
+                    const supabaseRecords = await window.dataService.getEPodRecords();
+                    if (supabaseRecords && supabaseRecords.length > 0) {
+                        // Merge Supabase records with localStorage records (Supabase takes priority)
+                        const mergedRecords = [...ePodRecords];
+                        supabaseRecords.forEach(supabaseRecord => {
+                            const existingIndex = mergedRecords.findIndex(localRecord => 
+                                (localRecord.dr_number || localRecord.drNumber) === (supabaseRecord.dr_number || supabaseRecord.drNumber)
+                            );
+                            if (existingIndex >= 0) {
+                                mergedRecords[existingIndex] = supabaseRecord; // Replace with Supabase version
+                            } else {
+                                mergedRecords.push(supabaseRecord); // Add new Supabase record
+                            }
+                        });
+                        ePodRecords = mergedRecords;
+                        console.log('📄 Merged E-POD records from Supabase and localStorage:', ePodRecords.length);
+                    }
+                } catch (supabaseError) {
+                    console.warn('⚠️ Could not load E-POD records from Supabase, using localStorage only:', supabaseError);
+                }
             }
         } catch (error) {
             console.error('Error loading EPOD records:', error);
@@ -1236,11 +1275,30 @@ function exportDeliveryHistoryToPdf() {
             // Find the delivery in window.deliveryHistory
             const delivery = window.deliveryHistory.find(d => d.drNumber === drNumber);
             if (delivery) {
-                // Find signature if available
-                const ePodRecord = ePodRecords.find(record => record.drNumber === drNumber);
+                // ENHANCED: Find signature with multiple field name support
+                // Original logic (commented but preserved)
+                // const ePodRecord = ePodRecords.find(record => record.drNumber === drNumber);
+                // selectedDeliveries.push({
+                //     ...delivery,
+                //     signature: ePodRecord ? ePodRecord.signature : null
+                // });
+                
+                // ENHANCED: Support both field name variations and DR number variations
+                const ePodRecord = ePodRecords.find(record => {
+                    const recordDrNumber = record.dr_number || record.drNumber || '';
+                    return recordDrNumber === drNumber;
+                });
+                
+                let signatureData = null;
+                if (ePodRecord) {
+                    // Check for signature in multiple field names
+                    signatureData = ePodRecord.signature_data || ePodRecord.signature || ePodRecord.signatureData || null;
+                    console.log(`📄 Found E-POD record for DR ${drNumber}, signature available:`, !!signatureData);
+                }
+                
                 selectedDeliveries.push({
                     ...delivery,
-                    signature: ePodRecord ? ePodRecord.signature : null
+                    signature: signatureData
                 });
             }
         });
