@@ -926,30 +926,127 @@ async function getCostBreakdownData(period) {
             drCostBreakdown = [];
         }
         
-        // Get additional costs from active deliveries and delivery history
-        const activeDeliveries = window.activeDeliveries || [];
-        const deliveryHistory = window.deliveryHistory || [];
-        const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+        // ENHANCED: Get delivery data from Supabase first, then localStorage fallback
+        let allDeliveries = [];
+        
+        // Try to get deliveries from Supabase first for consistency
+        if (window.dataService && typeof window.dataService.getDeliveries === 'function') {
+            try {
+                const supabaseDeliveries = await window.dataService.getDeliveries();
+                if (supabaseDeliveries && supabaseDeliveries.length > 0) {
+                    allDeliveries = supabaseDeliveries;
+                    console.log('📊 Using Supabase deliveries for cost breakdown:', allDeliveries.length);
+                } else {
+                    // Fallback to localStorage if Supabase has no data
+                    const activeDeliveries = window.activeDeliveries || [];
+                    const deliveryHistory = window.deliveryHistory || [];
+                    allDeliveries = [...activeDeliveries, ...deliveryHistory];
+                    console.log('📊 Fallback to localStorage deliveries for cost breakdown:', allDeliveries.length);
+                }
+            } catch (supabaseDeliveryError) {
+                console.warn('⚠️ Could not load deliveries from Supabase, using localStorage:', supabaseDeliveryError);
+                // Fallback to localStorage
+                const activeDeliveries = window.activeDeliveries || [];
+                const deliveryHistory = window.deliveryHistory || [];
+                allDeliveries = [...activeDeliveries, ...deliveryHistory];
+            }
+        } else {
+            // Original localStorage logic (preserved as final fallback)
+            const activeDeliveries = window.activeDeliveries || [];
+            const deliveryHistory = window.deliveryHistory || [];
+            allDeliveries = [...activeDeliveries, ...deliveryHistory];
+            console.log('📊 Using localStorage deliveries (dataService not available):', allDeliveries.length);
+        }
         
         // Combine cost data
         const costMap = new Map();
         
-        // Add DR upload cost breakdown
-        drCostBreakdown.forEach(cost => {
-            if (costMap.has(cost.description)) {
-                costMap.set(cost.description, costMap.get(cost.description) + cost.amount);
-            } else {
-                costMap.set(cost.description, cost.amount);
-            }
-        });
+        // ENHANCED: Add cost breakdown data with priority handling
+        // If we have Supabase cost items, use them as primary source
+        if (drCostBreakdown.length > 0) {
+            console.log('📊 Using Supabase cost items as primary source');
+            drCostBreakdown.forEach(cost => {
+                if (costMap.has(cost.description)) {
+                    costMap.set(cost.description, costMap.get(cost.description) + cost.amount);
+                } else {
+                    costMap.set(cost.description, cost.amount);
+                }
+            });
+        } else {
+            console.log('📊 No Supabase cost items, will extract from delivery records');
+        }
         
-        // ENHANCED: Add costs from regular bookings with multiple field format support
-        allDeliveries.forEach(delivery => {
-            // ENHANCED: Check for new additional_cost_items field first (from DR upload modal)
-            if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
-                delivery.additional_cost_items.forEach(cost => {
-                    const description = cost.description || 'Unknown Cost';
-                    const amount = parseFloat(cost.amount) || 0;
+        // ENHANCED: Add costs from delivery records ONLY if no Supabase cost items
+        // This prevents double-counting when both sources have the same data
+        if (drCostBreakdown.length === 0) {
+            console.log('📊 Processing delivery records for cost breakdown (no Supabase data)');
+            allDeliveries.forEach(delivery => {
+                // ENHANCED: Check for new additional_cost_items field first (from DR upload modal)
+                if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
+                    delivery.additional_cost_items.forEach(cost => {
+                        const description = cost.description || 'Unknown Cost';
+                        const amount = parseFloat(cost.amount) || 0;
+                        
+                        if (amount > 0) {
+                            if (costMap.has(description)) {
+                                costMap.set(description, costMap.get(description) + amount);
+                            } else {
+                                costMap.set(description, amount);
+                            }
+                            console.log(`📊 Added cost from delivery ${delivery.dr_number}: ${description} = ₱${amount}`);
+                        }
+                    });
+                    }
+                // Check for additionalCostItems field (camelCase)
+                else if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+                    delivery.additionalCostItems.forEach(cost => {
+                        const description = cost.description || cost.desc || 'Unknown Cost';
+                        const amount = parseFloat(cost.amount) || 0;
+                        
+                        if (amount > 0) {
+                            if (costMap.has(description)) {
+                                costMap.set(description, costMap.get(description) + amount);
+                            } else {
+                                costMap.set(description, amount);
+                            }
+                        }
+                    });
+                }
+                // Check for additionalCostBreakdown field (original)
+                else if (delivery.additionalCostBreakdown && Array.isArray(delivery.additionalCostBreakdown)) {
+                    delivery.additionalCostBreakdown.forEach(cost => {
+                        const description = cost.description || cost.desc || 'Unknown Cost';
+                        const amount = parseFloat(cost.amount) || 0;
+                        
+                        if (amount > 0) {
+                            if (costMap.has(description)) {
+                                costMap.set(description, costMap.get(description) + amount);
+                            } else {
+                                costMap.set(description, amount);
+                            }
+                        }
+                    });
+                }
+                // Check for additional_cost_breakdown field (snake_case)
+                else if (delivery.additional_cost_breakdown && Array.isArray(delivery.additional_cost_breakdown)) {
+                    delivery.additional_cost_breakdown.forEach(cost => {
+                        const description = cost.description || cost.desc || 'Unknown Cost';
+                        const amount = parseFloat(cost.amount) || 0;
+                        
+                        if (amount > 0) {
+                            if (costMap.has(description)) {
+                                costMap.set(description, costMap.get(description) + amount);
+                            } else {
+                                costMap.set(description, amount);
+                            }
+                        }
+                    });
+                }
+                // Handle legacy additional costs without breakdown (fallback)
+                else if ((delivery.additionalCosts && delivery.additionalCosts > 0) || 
+                         (delivery.additional_costs && delivery.additional_costs > 0)) {
+                    const amount = parseFloat(delivery.additionalCosts || delivery.additional_costs) || 0;
+                    const description = 'Other Costs';
                     
                     if (amount > 0) {
                         if (costMap.has(description)) {
@@ -957,71 +1054,12 @@ async function getCostBreakdownData(period) {
                         } else {
                             costMap.set(description, amount);
                         }
-                        console.log(`📊 Added cost from delivery ${delivery.dr_number}: ${description} = ₱${amount}`);
-                    }
-                });
-            }
-            // Check for additionalCostItems field (camelCase)
-            else if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
-                delivery.additionalCostItems.forEach(cost => {
-                    const description = cost.description || cost.desc || 'Unknown Cost';
-                    const amount = parseFloat(cost.amount) || 0;
-                    
-                    if (amount > 0) {
-                        if (costMap.has(description)) {
-                            costMap.set(description, costMap.get(description) + amount);
-                        } else {
-                            costMap.set(description, amount);
-                        }
-                    }
-                });
-            }
-            // Check for additionalCostBreakdown field (original)
-            else if (delivery.additionalCostBreakdown && Array.isArray(delivery.additionalCostBreakdown)) {
-                delivery.additionalCostBreakdown.forEach(cost => {
-                    const description = cost.description || cost.desc || 'Unknown Cost';
-                    const amount = parseFloat(cost.amount) || 0;
-                    
-                    if (amount > 0) {
-                        if (costMap.has(description)) {
-                            costMap.set(description, costMap.get(description) + amount);
-                        } else {
-                            costMap.set(description, amount);
-                        }
-                    }
-                });
-            }
-            // Check for additional_cost_breakdown field (snake_case)
-            else if (delivery.additional_cost_breakdown && Array.isArray(delivery.additional_cost_breakdown)) {
-                delivery.additional_cost_breakdown.forEach(cost => {
-                    const description = cost.description || cost.desc || 'Unknown Cost';
-                    const amount = parseFloat(cost.amount) || 0;
-                    
-                    if (amount > 0) {
-                        if (costMap.has(description)) {
-                            costMap.set(description, costMap.get(description) + amount);
-                        } else {
-                            costMap.set(description, amount);
-                        }
-                    }
-                });
-            }
-            // Handle legacy additional costs without breakdown (fallback)
-            else if ((delivery.additionalCosts && delivery.additionalCosts > 0) || 
-                     (delivery.additional_costs && delivery.additional_costs > 0)) {
-                const amount = parseFloat(delivery.additionalCosts || delivery.additional_costs) || 0;
-                const description = 'Other Costs';
-                
-                if (amount > 0) {
-                    if (costMap.has(description)) {
-                        costMap.set(description, costMap.get(description) + amount);
-                    } else {
-                        costMap.set(description, amount);
                     }
                 }
-            }
-
-        });
+            });
+        } else {
+            console.log('📊 Skipping delivery record processing (using Supabase cost items)');
+        }
         
         // Convert to chart data format
         if (costMap.size === 0) {
