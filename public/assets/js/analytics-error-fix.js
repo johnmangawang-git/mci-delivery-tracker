@@ -214,6 +214,26 @@ console.log('🔧 Loading Analytics Error Fix...');
                     plugins: {
                         legend: {
                             position: 'bottom'
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            // ENHANCED: Show percentages instead of raw values
+                            callbacks: {
+                                label: function(context) {
+                                    const dataset = context.dataset;
+                                    const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                                    const currentValue = dataset.data[context.dataIndex];
+                                    const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(1) : 0;
+                                    return `${context.label}: ${percentage}% (₱${currentValue.toLocaleString()})`;
+                                }
+                            }
                         }
                     }
                 }
@@ -402,6 +422,26 @@ console.log('🔧 Loading Analytics Error Fix...');
                         plugins: {
                             legend: {
                                 position: 'bottom'
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 14
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                // ENHANCED: Show percentages instead of raw values
+                                callbacks: {
+                                    label: function(context) {
+                                        const dataset = context.dataset;
+                                        const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                                        const currentValue = dataset.data[context.dataIndex];
+                                        const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(1) : 0;
+                                        return `${context.label}: ${percentage}% (₱${currentValue.toLocaleString()})`;
+                                    }
+                                }
                             }
                         }
                     }

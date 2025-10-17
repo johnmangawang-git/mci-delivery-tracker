@@ -241,6 +241,16 @@ async function initAnalyticsCharts(period = 'day') {
                         },
                         bodyFont: {
                             size: 13
+                        },
+                        // ENHANCED: Show percentages instead of raw values
+                        callbacks: {
+                            label: function(context) {
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                                const currentValue = dataset.data[context.dataIndex];
+                                const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${percentage}% (₱${currentValue.toLocaleString()})`;
+                            }
                         }
                     }
                 }
