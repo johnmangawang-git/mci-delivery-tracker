@@ -875,10 +875,47 @@ window.categorizeCostDescription = categorizeCostDescription;
 window.testCostCategorization = testCostCategorization;
 
 // Get cost breakdown data from DR uploads and regular bookings
-function getCostBreakdownData(period) {
+async function getCostBreakdownData(period) {
     try {
-        // Get cost breakdown data from localStorage (populated by DR uploads)
-        const drCostBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+        // ENHANCED: Get cost breakdown data from BOTH localStorage AND Supabase
+        let drCostBreakdown = [];
+        
+        // Original localStorage logic (commented but preserved)
+        // const drCostBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+        
+        // ENHANCED: Load from both localStorage and Supabase
+        try {
+            // First, get from localStorage (fallback/legacy)
+            const localCostData = localStorage.getItem('analytics-cost-breakdown');
+            if (localCostData) {
+                drCostBreakdown = JSON.parse(localCostData);
+                console.log('📊 Loaded cost breakdown from localStorage:', drCostBreakdown.length);
+            }
+            
+            // Then, try to get from Supabase (primary source)
+            if (window.dataService && typeof window.dataService.getAdditionalCostItems === 'function') {
+                try {
+                    const supabaseCostItems = await window.dataService.getAdditionalCostItems();
+                    if (supabaseCostItems && supabaseCostItems.length > 0) {
+                        // Convert Supabase format to expected format and merge
+                        const supabaseFormatted = supabaseCostItems.map(item => ({
+                            description: item.description,
+                            amount: parseFloat(item.amount) || 0,
+                            category: item.category
+                        }));
+                        
+                        // Merge with localStorage data (Supabase takes priority)
+                        drCostBreakdown = [...drCostBreakdown, ...supabaseFormatted];
+                        console.log('📊 Merged cost breakdown from Supabase and localStorage:', drCostBreakdown.length);
+                    }
+                } catch (supabaseError) {
+                    console.warn('⚠️ Could not load cost breakdown from Supabase, using localStorage only:', supabaseError);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading cost breakdown data:', error);
+            drCostBreakdown = [];
+        }
         
         // Get additional costs from active deliveries and delivery history
         const activeDeliveries = window.activeDeliveries || [];
@@ -897,23 +934,51 @@ function getCostBreakdownData(period) {
             }
         });
         
-        // Add costs from regular bookings
+        // ENHANCED: Add costs from regular bookings with multiple field format support
         allDeliveries.forEach(delivery => {
-            if (delivery.additionalCostBreakdown && Array.isArray(delivery.additionalCostBreakdown)) {
-                delivery.additionalCostBreakdown.forEach(cost => {
-                    if (costMap.has(cost.description)) {
-                        costMap.set(cost.description, costMap.get(cost.description) + cost.amount);
+            // Original logic (commented but preserved)
+            // if (delivery.additionalCostBreakdown && Array.isArray(delivery.additionalCostBreakdown)) {
+            //     delivery.additionalCostBreakdown.forEach(cost => {
+            //         if (costMap.has(cost.description)) {
+            //             costMap.set(cost.description, costMap.get(cost.description) + cost.amount);
+            //         } else {
+            //             costMap.set(cost.description, cost.amount);
+            //         }
+            //     });
+            // } else if (delivery.additionalCosts && delivery.additionalCosts > 0) {
+            //     // Handle legacy additional costs without breakdown
+            //     const description = 'Other Costs';
+            //     if (costMap.has(description)) {
+            //         costMap.set(description, costMap.get(description) + delivery.additionalCosts);
+            //     } else {
+            //         costMap.set(description, delivery.additionalCosts);
+            //     }
+            // }
+            
+            // ENHANCED: Support multiple field name formats
+            const costBreakdown = delivery.additionalCostBreakdown || delivery.additional_cost_breakdown || delivery.additionalCostItems || [];
+            
+            if (Array.isArray(costBreakdown) && costBreakdown.length > 0) {
+                costBreakdown.forEach(cost => {
+                    const description = cost.description || cost.desc || 'Other';
+                    const amount = parseFloat(cost.amount) || 0;
+                    
+                    if (costMap.has(description)) {
+                        costMap.set(description, costMap.get(description) + amount);
                     } else {
-                        costMap.set(cost.description, cost.amount);
+                        costMap.set(description, amount);
                     }
                 });
-            } else if (delivery.additionalCosts && delivery.additionalCosts > 0) {
-                // Handle legacy additional costs without breakdown
-                const description = 'Other Costs';
-                if (costMap.has(description)) {
-                    costMap.set(description, costMap.get(description) + delivery.additionalCosts);
-                } else {
-                    costMap.set(description, delivery.additionalCosts);
+            } else {
+                // Handle legacy additional costs without breakdown - support both field formats
+                const additionalCosts = delivery.additionalCosts || delivery.additional_costs || 0;
+                if (additionalCosts > 0) {
+                    const description = 'Other Costs';
+                    if (costMap.has(description)) {
+                        costMap.set(description, costMap.get(description) + additionalCosts);
+                    } else {
+                        costMap.set(description, additionalCosts);
+                    }
                 }
             }
         });
