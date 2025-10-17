@@ -171,6 +171,31 @@ console.log('🔧 Loading Analytics Error Fix...');
                 return null;
             }
             
+            // ENHANCED: Destroy existing chart to prevent "Canvas already in use" error
+            try {
+                // Check for existing chart on this canvas
+                const existingChart = Chart.getChart(canvas);
+                if (existingChart) {
+                    console.log('🔄 Destroying existing chart to prevent canvas reuse error');
+                    existingChart.destroy();
+                }
+                
+                // Also clear global reference
+                if (window.costBreakdownChart) {
+                    console.log('🔄 Clearing global chart reference');
+                    try {
+                        if (typeof window.costBreakdownChart.destroy === 'function') {
+                            window.costBreakdownChart.destroy();
+                        }
+                    } catch (destroyError) {
+                        console.warn('⚠️ Error destroying global chart:', destroyError.message);
+                    }
+                    window.costBreakdownChart = null;
+                }
+            } catch (cleanupError) {
+                console.warn('⚠️ Error during chart cleanup:', cleanupError.message);
+            }
+            
             const chartConfig = {
                 type: 'pie',
                 data: {
@@ -275,8 +300,14 @@ console.log('🔧 Loading Analytics Error Fix...');
                             costBreakdownChart.data.datasets[0].backgroundColor = costBreakdownData.colors;
                         }
                         
-                        costBreakdownChart.update('none'); // Update without animation to prevent errors
-                        console.log('✅ Cost breakdown chart updated successfully');
+                        // ENHANCED: Validate chart has update method before calling
+                        if (typeof costBreakdownChart.update === 'function') {
+                            costBreakdownChart.update('none'); // Update without animation to prevent errors
+                            console.log('✅ Cost breakdown chart updated successfully');
+                        } else {
+                            console.warn('⚠️ Chart object missing update method, recreating chart...');
+                            recreateCostBreakdownChart(costBreakdownData);
+                        }
                     } else {
                         console.warn('⚠️ Invalid cost breakdown data structure:', costBreakdownData);
                     }
@@ -320,36 +351,70 @@ console.log('🔧 Loading Analytics Error Fix...');
             return;
         }
         
-        // Destroy existing chart if it exists
-        const existingChart = Chart.getChart(canvas);
-        if (existingChart) {
-            existingChart.destroy();
+        // ENHANCED: Comprehensive chart cleanup
+        try {
+            // Method 1: Use Chart.getChart to find and destroy
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) {
+                console.log('🔄 Destroying existing chart via Chart.getChart');
+                existingChart.destroy();
+            }
+            
+            // Method 2: Clear global reference
+            if (window.costBreakdownChart) {
+                console.log('🔄 Destroying global chart reference');
+                try {
+                    if (typeof window.costBreakdownChart.destroy === 'function') {
+                        window.costBreakdownChart.destroy();
+                    }
+                } catch (destroyError) {
+                    console.warn('⚠️ Error destroying global chart:', destroyError.message);
+                }
+                window.costBreakdownChart = null;
+            }
+            
+            // Method 3: Clear canvas context (nuclear option)
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+        } catch (cleanupError) {
+            console.warn('⚠️ Error during comprehensive cleanup:', cleanupError.message);
         }
         
-        // Create new chart
-        const newChart = new Chart(canvas, {
-            type: 'pie',
-            data: {
-                labels: data.labels || ['No Data'],
-                datasets: [{
-                    data: data.values || [1],
-                    backgroundColor: data.colors || ['rgba(149, 165, 166, 0.8)']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right'
+        // Small delay to ensure cleanup is complete
+        setTimeout(() => {
+            try {
+                // Create new chart
+                const newChart = new Chart(canvas, {
+                    type: 'pie',
+                    data: {
+                        labels: data.labels || ['No Data'],
+                        datasets: [{
+                            data: data.values || [1],
+                            backgroundColor: data.colors || ['rgba(149, 165, 166, 0.8)']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
                     }
-                }
+                });
+                
+                // Store chart reference globally
+                window.costBreakdownChart = newChart;
+                console.log('✅ Cost breakdown chart recreated successfully');
+                
+            } catch (createError) {
+                console.error('❌ Error creating new chart:', createError);
             }
-        });
-        
-        // Store chart reference globally
-        window.costBreakdownChart = newChart;
-        console.log('✅ Cost breakdown chart recreated successfully');
+        }, 100);
     }
     
     /**

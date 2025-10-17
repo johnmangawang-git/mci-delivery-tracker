@@ -13,16 +13,16 @@ function categorizeCostDescription(description) {
     if (!description || typeof description !== 'string') {
         return 'Other';
     }
-    
+
     const desc = description.toLowerCase().trim();
-    
+
     // Fuel-related keywords
-    if (desc.includes('gas') || desc.includes('fuel') || 
+    if (desc.includes('gas') || desc.includes('fuel') ||
         desc.includes('gasoline') || desc.includes('petrol') ||
         desc.includes('diesel') || desc.includes('gasolina')) {
         return 'Fuel Surcharge';
     }
-    
+
     // Toll-related keywords
     if (desc.includes('toll') || desc.includes('highway') ||
         desc.includes('expressway') || desc.includes('bridge') ||
@@ -30,22 +30,22 @@ function categorizeCostDescription(description) {
         desc.includes('nlex') || desc.includes('cavitex')) {
         return 'Toll Fees';
     }
-    
+
     // Helper/Labor-related keywords
-    if (desc.includes('helper') || desc.includes('urgent') || 
+    if (desc.includes('helper') || desc.includes('urgent') ||
         desc.includes('assist') || desc.includes('labor') ||
         desc.includes('manpower') || desc.includes('overtime') ||
         desc.includes('rush') || desc.includes('kasama')) {
         return 'Helper';
     }
-    
+
     // Special handling keywords
     if (desc.includes('special') || desc.includes('handling') ||
         desc.includes('fragile') || desc.includes('careful') ||
         desc.includes('delicate') || desc.includes('premium')) {
         return 'Special Handling';
     }
-    
+
     return 'Other';
 }
 
@@ -112,21 +112,21 @@ window.createBookingFromDR = async function (bookingData) {
         // ENHANCED: Capture individual cost items from DR upload modal
         const additionalCostItems = [];
         let totalAdditionalCosts = 0;
-        
+
         // Collect individual cost items from DR modal (dr-cost-description + dr-cost-amount)
         try {
             const costDescriptions = document.querySelectorAll('.dr-cost-description');
             const costAmounts = document.querySelectorAll('.dr-cost-amount');
-            
+
             console.log('📊 Collecting cost items from DR modal...', {
                 descriptions: costDescriptions.length,
                 amounts: costAmounts.length
             });
-            
+
             for (let i = 0; i < Math.min(costDescriptions.length, costAmounts.length); i++) {
                 const description = costDescriptions[i].value?.trim();
                 const amount = parseFloat(costAmounts[i].value) || 0;
-                
+
                 if (description && amount > 0) {
                     additionalCostItems.push({
                         description: description,
@@ -137,7 +137,7 @@ window.createBookingFromDR = async function (bookingData) {
                     console.log(`✅ Added cost item: ${description} = ₱${amount}`);
                 }
             }
-            
+
             console.log('📊 Total cost items collected:', additionalCostItems.length, 'Total amount:', totalAdditionalCosts);
         } catch (error) {
             console.warn('⚠️ Could not collect cost items from modal:', error.message);
