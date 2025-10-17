@@ -156,6 +156,59 @@ console.log('🔧 Loading Analytics Error Fix...');
     }
     
     /**
+     * Create cost breakdown chart if it doesn't exist
+     */
+    function createCostBreakdownChart(costBreakdownData) {
+        try {
+            const canvas = document.getElementById('costBreakdownChart');
+            if (!canvas) {
+                console.error('❌ Canvas element costBreakdownChart not found');
+                return null;
+            }
+            
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js library not loaded');
+                return null;
+            }
+            
+            const chartConfig = {
+                type: 'pie',
+                data: {
+                    labels: costBreakdownData.labels || [],
+                    datasets: [{
+                        data: costBreakdownData.values || [],
+                        backgroundColor: costBreakdownData.colors || [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            };
+            
+            const chart = new Chart(canvas, chartConfig);
+            
+            // Store in global scope for future updates
+            window.costBreakdownChart = chart;
+            
+            console.log('✅ Cost breakdown chart created successfully');
+            return chart;
+            
+        } catch (error) {
+            console.error('❌ Error creating cost breakdown chart:', error);
+            return null;
+        }
+    }
+
+    /**
      * Safe chart update function
      */
     function safeUpdateCostBreakdownChart(period) {
@@ -163,23 +216,58 @@ console.log('🔧 Loading Analytics Error Fix...');
         
         getSafeCostBreakdownData(period).then(costBreakdownData => {
             try {
-                // Find the chart instance
+                // Find the chart instance with enhanced debugging
                 let costBreakdownChart = null;
                 
                 // Try to get the chart from global scope
                 if (window.costBreakdownChart) {
                     costBreakdownChart = window.costBreakdownChart;
+                    console.log('📊 Found chart in global scope:', !!costBreakdownChart);
                 } else {
                     // Try to find the chart by canvas element
                     const canvas = document.getElementById('costBreakdownChart');
+                    console.log('📊 Canvas element found:', !!canvas);
+                    
                     if (canvas && Chart.getChart) {
                         costBreakdownChart = Chart.getChart(canvas);
+                        console.log('📊 Chart from canvas:', !!costBreakdownChart);
                     }
                 }
                 
+                // Debug chart structure
+                if (costBreakdownChart) {
+                    console.log('📊 Chart structure check:', {
+                        hasData: !!costBreakdownChart.data,
+                        hasDatasets: !!(costBreakdownChart.data && costBreakdownChart.data.datasets),
+                        datasetCount: costBreakdownChart.data && costBreakdownChart.data.datasets ? costBreakdownChart.data.datasets.length : 0
+                    });
+                }
+                
                 if (costBreakdownChart && costBreakdownData) {
-                    // Safely update chart data
+                    // Safely update chart data with proper null checks
                     if (costBreakdownData.labels && costBreakdownData.values) {
+                        // Ensure chart has proper data structure
+                        if (!costBreakdownChart.data) {
+                            console.warn('⚠️ Chart data object is undefined, initializing...');
+                            costBreakdownChart.data = {
+                                labels: [],
+                                datasets: [{
+                                    data: [],
+                                    backgroundColor: []
+                                }]
+                            };
+                        }
+                        
+                        // Ensure datasets array exists
+                        if (!costBreakdownChart.data.datasets || !costBreakdownChart.data.datasets[0]) {
+                            console.warn('⚠️ Chart datasets undefined, initializing...');
+                            costBreakdownChart.data.datasets = [{
+                                data: [],
+                                backgroundColor: []
+                            }];
+                        }
+                        
+                        // Now safely update the chart data
                         costBreakdownChart.data.labels = costBreakdownData.labels;
                         costBreakdownChart.data.datasets[0].data = costBreakdownData.values;
                         
@@ -190,10 +278,19 @@ console.log('🔧 Loading Analytics Error Fix...');
                         costBreakdownChart.update('none'); // Update without animation to prevent errors
                         console.log('✅ Cost breakdown chart updated successfully');
                     } else {
-                        console.warn('⚠️ Invalid cost breakdown data structure');
+                        console.warn('⚠️ Invalid cost breakdown data structure:', costBreakdownData);
                     }
                 } else {
-                    console.warn('⚠️ Cost breakdown chart not found or no data available');
+                    console.warn('⚠️ Cost breakdown chart not found or no data available', {
+                        chartFound: !!costBreakdownChart,
+                        dataAvailable: !!costBreakdownData
+                    });
+                    
+                    // Try to create the chart if it doesn't exist but we have data
+                    if (!costBreakdownChart && costBreakdownData && costBreakdownData.labels && costBreakdownData.values) {
+                        console.log('🔧 Attempting to create cost breakdown chart...');
+                        createCostBreakdownChart(costBreakdownData);
+                    }
                 }
                 
             } catch (chartError) {
@@ -309,6 +406,7 @@ console.log('🔧 Loading Analytics Error Fix...');
     // Export functions to global scope
     window.getSafeCostBreakdownData = getSafeCostBreakdownData;
     window.safeUpdateCostBreakdownChart = safeUpdateCostBreakdownChart;
+    window.createCostBreakdownChart = createCostBreakdownChart;
     window.categorizeCostDescriptionSafe = categorizeCostDescriptionSafe;
     
     // Initialize when DOM is ready

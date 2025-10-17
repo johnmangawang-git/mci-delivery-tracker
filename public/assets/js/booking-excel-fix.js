@@ -11,24 +11,24 @@ console.log('🔧 BOOKING & EXCEL FIX: Loading...');
 
 function setupConfirmBookingButton() {
     console.log('🔧 Setting up confirm booking button...');
-    
+
     const confirmBtn = document.getElementById('confirmBookingBtn');
     if (!confirmBtn) {
         console.log('⚠️ Confirm booking button not found');
         return;
     }
-    
+
     // Remove existing listeners by cloning
     const newBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
-    
+
     // Add our definitive event listener
-    newBtn.addEventListener('click', async function(event) {
+    newBtn.addEventListener('click', async function (event) {
         event.preventDefault();
         event.stopPropagation();
-        
+
         console.log('🔘 Confirm booking clicked - using definitive save');
-        
+
         try {
             // Use our definitive booking save function
             if (typeof window.definitiveBookingSave === 'function') {
@@ -44,7 +44,7 @@ function setupConfirmBookingButton() {
             alert('Failed to save booking: ' + error.message);
         }
     });
-    
+
     console.log('✅ Confirm booking button set up with definitive handler');
 }
 
@@ -55,16 +55,16 @@ function setupConfirmBookingButton() {
 // Override the createBookingFromDR function to ensure Supabase saves
 const originalCreateBookingFromDR = window.createBookingFromDR;
 
-window.createBookingFromDR = async function(bookingData) {
+window.createBookingFromDR = async function (bookingData) {
     console.log('🎯 ENHANCED createBookingFromDR:', bookingData.drNumber);
-    
+
     try {
         // Ensure we have a definitive data service
         if (!window.dataService && window.DefinitiveDataService) {
             window.dataService = new window.DefinitiveDataService();
             console.log('✅ Created DefinitiveDataService for Excel upload');
         }
-        
+
         // Create delivery object with proper Supabase field mapping
         const delivery = {
             dr_number: bookingData.drNumber,
@@ -81,18 +81,18 @@ window.createBookingFromDR = async function(bookingData) {
             updated_at: new Date().toISOString(),
             additional_costs: parseFloat(bookingData.additionalCosts) || 0.00
         };
-        
+
         console.log('📦 Prepared delivery for Supabase:', delivery);
-        
+
         // Save to Supabase with retry logic
         let saveSuccess = false;
         let retryCount = 0;
-        
+
         while (!saveSuccess && retryCount < 3) {
             try {
                 retryCount++;
                 console.log(`💾 Supabase save attempt ${retryCount}/3 for ${delivery.dr_number}`);
-                
+
                 if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
                     const result = await window.dataService.saveDelivery(delivery);
                     console.log('✅ Excel booking saved to Supabase:', result);
@@ -100,16 +100,16 @@ window.createBookingFromDR = async function(bookingData) {
                 } else {
                     throw new Error('DataService not available');
                 }
-                
+
             } catch (error) {
                 console.error(`❌ Save attempt ${retryCount} failed:`, error);
-                
+
                 if (retryCount >= 3) {
                     console.log('💾 Falling back to localStorage for', delivery.dr_number);
-                    
+
                     // Fallback to localStorage
                     window.activeDeliveries = window.activeDeliveries || [];
-                    
+
                     const localDelivery = {
                         id: `DEL-${Date.now()}-${delivery.dr_number}`,
                         drNumber: delivery.dr_number,
@@ -124,10 +124,10 @@ window.createBookingFromDR = async function(bookingData) {
                         timestamp: delivery.created_at,
                         source: 'Excel Upload (Fallback)'
                     };
-                    
+
                     window.activeDeliveries.push(localDelivery);
                     localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                    
+
                     console.log('✅ Saved to localStorage as fallback');
                 } else {
                     // Wait before retry
@@ -135,12 +135,12 @@ window.createBookingFromDR = async function(bookingData) {
                 }
             }
         }
-        
+
         console.log(`🎉 Excel booking processed: ${delivery.dr_number} (Supabase: ${saveSuccess})`);
-        
+
     } catch (error) {
         console.error('❌ Enhanced createBookingFromDR failed:', error);
-        
+
         // Final fallback - call original function if it exists
         if (originalCreateBookingFromDR) {
             console.log('🔄 Falling back to original createBookingFromDR');
@@ -159,7 +159,7 @@ window.createBookingFromDR = async function(bookingData) {
 function monitorPendingBookings() {
     if (typeof window.pendingDRBookings !== 'undefined') {
         console.log('📊 Current pendingDRBookings:', window.pendingDRBookings?.length || 0);
-        
+
         if (window.pendingDRBookings && window.pendingDRBookings.length > 0) {
             console.log('📋 Sample pending booking:', window.pendingDRBookings[0]);
         }
@@ -175,14 +175,14 @@ function monitorPendingBookings() {
 // Override showError to provide better feedback
 const originalShowError = window.showError;
 
-window.showError = function(message) {
+window.showError = function (message) {
     console.error('🚨 Error shown to user:', message);
-    
+
     // If it's the "No bookings to create" error, provide more helpful info
     if (message.includes('No bookings to create')) {
         console.log('🔍 Debugging "No bookings to create" error...');
         monitorPendingBookings();
-        
+
         // Check if Excel file was processed
         const drFileInput = document.getElementById('drFileInput');
         if (drFileInput && drFileInput.files.length > 0) {
@@ -192,7 +192,7 @@ window.showError = function(message) {
             message += '\n\nPlease select an Excel file first using the "Select DR File" button.';
         }
     }
-    
+
     // Call original showError or use alert
     if (originalShowError) {
         originalShowError(message);
@@ -207,13 +207,13 @@ window.showError = function(message) {
 
 function initBookingExcelFix() {
     console.log('🔧 Initializing Booking & Excel Fix...');
-    
+
     // Setup confirm booking button
     setupConfirmBookingButton();
-    
+
     // Monitor for Excel upload issues
     setInterval(monitorPendingBookings, 5000);
-    
+
     console.log('✅ Booking & Excel Fix initialized');
 }
 
