@@ -140,7 +140,53 @@ class DataService {
                         .select();
                     
                     if (error) throw error;
-                    return data[0];
+                    
+                    // ENHANCED: Also update individual cost items in additional_cost_items table
+                    const updatedDelivery = data[0];
+                    if (updatedDelivery && supabaseData.additional_cost_items && Array.isArray(supabaseData.additional_cost_items)) {
+                        console.log('💾 Updating individual cost items in additional_cost_items table...');
+                        
+                        try {
+                            // First, delete existing cost items for this delivery
+                            const { error: deleteError } = await client
+                                .from('additional_cost_items')
+                                .delete()
+                                .eq('delivery_id', updatedDelivery.id);
+                            
+                            if (deleteError) {
+                                console.warn('⚠️ Could not delete existing cost items:', deleteError);
+                            } else {
+                                console.log('🗑️ Deleted existing cost items for delivery:', updatedDelivery.id);
+                            }
+                            
+                            // Then, insert new cost items if any
+                            if (supabaseData.additional_cost_items.length > 0) {
+                                const costItemsToInsert = supabaseData.additional_cost_items.map(item => ({
+                                    delivery_id: updatedDelivery.id,
+                                    description: item.description || 'Unknown Cost',
+                                    amount: parseFloat(item.amount) || 0,
+                                    category: item.category || 'Other',
+                                    created_at: new Date().toISOString(),
+                                    updated_at: new Date().toISOString()
+                                }));
+                                
+                                const { data: costItemsData, error: costItemsError } = await client
+                                    .from('additional_cost_items')
+                                    .insert(costItemsToInsert)
+                                    .select();
+                                
+                                if (costItemsError) {
+                                    console.warn('⚠️ Could not insert updated cost items:', costItemsError);
+                                } else {
+                                    console.log('✅ Successfully updated cost items in additional_cost_items table:', costItemsData?.length || 0);
+                                }
+                            }
+                        } catch (costItemsException) {
+                            console.warn('⚠️ Exception updating cost items:', costItemsException.message);
+                        }
+                    }
+                    
+                    return updatedDelivery;
                 }
             }
             
@@ -151,7 +197,42 @@ class DataService {
                 .select();
             
             if (error) throw error;
-            return data[0];
+            
+            // ENHANCED: Also save individual cost items to additional_cost_items table
+            const savedDelivery = data[0];
+            if (savedDelivery && supabaseData.additional_cost_items && Array.isArray(supabaseData.additional_cost_items) && supabaseData.additional_cost_items.length > 0) {
+                console.log('💾 Saving individual cost items to additional_cost_items table...', supabaseData.additional_cost_items.length);
+                
+                try {
+                    // Prepare cost items for insertion
+                    const costItemsToInsert = supabaseData.additional_cost_items.map(item => ({
+                        delivery_id: savedDelivery.id,
+                        description: item.description || 'Unknown Cost',
+                        amount: parseFloat(item.amount) || 0,
+                        category: item.category || 'Other',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }));
+                    
+                    // Insert cost items to dedicated table
+                    const { data: costItemsData, error: costItemsError } = await client
+                        .from('additional_cost_items')
+                        .insert(costItemsToInsert)
+                        .select();
+                    
+                    if (costItemsError) {
+                        console.warn('⚠️ Could not save cost items to additional_cost_items table:', costItemsError);
+                        // Don't fail the whole operation, just log the warning
+                    } else {
+                        console.log('✅ Successfully saved cost items to additional_cost_items table:', costItemsData?.length || 0);
+                    }
+                } catch (costItemsException) {
+                    console.warn('⚠️ Exception saving cost items:', costItemsException.message);
+                    // Don't fail the whole operation
+                }
+            }
+            
+            return savedDelivery;
         };
 
         const localStorageOp = async () => {
