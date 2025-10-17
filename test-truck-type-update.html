@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Truck Type Update</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .dropdown-demo { margin: 15px 0; padding: 15px; border: 1px solid #eee; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚛 Truck Type Update Test</h1>
+        
+        <div class="alert alert-info">
+            <h5>Test Purpose</h5>
+            <p>This page tests the updated truck type dropdown options for both booking modal and DR upload modal.</p>
+            <p><strong>New Options:</strong> L300, Canter, 3PL - AC Logistics, 3PL - Linkasia, 3PL - Crest, 3PL - JRS, 3PL - AIR21, 3PL - Lalamove, 3PL - Transportify</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test Controls</h3>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <button onclick="testTruckTypeUpdate()" class="btn btn-primary w-100">🔄 Test Update Function</button>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="showTruckTypes()" class="btn btn-success w-100">📋 Show Current Options</button>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="createTestDropdown()" class="btn btn-info w-100">➕ Create Test Dropdown</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚛 Truck Type Dropdowns Demo</h3>
+            
+            <!-- Booking Modal Style Dropdown -->
+            <div class="dropdown-demo">
+                <h6>Booking Modal Style</h6>
+                <div class="col-md-6">
+                    <label for="testTruckType1" class="form-label">Truck Type</label>
+                    <select class="form-select" id="testTruckType1" required>
+                        <option value="">Select truck type</option>
+                        <option value="L300">L300</option>
+                        <option value="Canter">Canter</option>
+                        <option value="3PL">3PL</option>
+                    </select>
+                    <div class="form-text">This simulates the booking modal dropdown</div>
+                </div>
+            </div>
+            
+            <!-- DR Upload Modal Style Dropdown -->
+            <div class="dropdown-demo">
+                <h6>DR Upload Modal Style</h6>
+                <div class="col-md-6">
+                    <label for="testTruckType2" class="form-label">Truck Type</label>
+                    <select class="form-select" id="testTruckType2" required>
+                        <option value="">Select truck type</option>
+                        <option value="L300">L300</option>
+                        <option value="Canter">Canter</option>
+                        <option value="3PL">3PL</option>
+                    </select>
+                    <div class="form-text">This simulates the DR upload modal dropdown</div>
+                </div>
+            </div>
+            
+            <!-- Dynamic Test Dropdown Container -->
+            <div id="dynamicDropdownContainer">
+                <!-- Dynamic dropdowns will be added here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Expected vs Actual Options</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Expected Options:</h6>
+                    <ul id="expectedOptions">
+                        <li>L300</li>
+                        <li>Canter</li>
+                        <li>3PL - AC Logistics</li>
+                        <li>3PL - Linkasia</li>
+                        <li>3PL - Crest</li>
+                        <li>3PL - JRS</li>
+                        <li>3PL - AIR21</li>
+                        <li>3PL - Lalamove</li>
+                        <li>3PL - Transportify</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Actual Options:</h6>
+                    <ul id="actualOptions">
+                        <li class="text-muted">Click "Show Current Options" to see actual options</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="testResults" class="alert alert-secondary">
+                Click "Test Update Function" to see results...
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the truck type update fix -->
+    <script src="public/assets/js/truck-type-update-fix.js"></script>
+
+    <script>
+        function log(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            
+            resultsDiv.innerHTML += `${timestamp} ${icon} ${message}<br>`;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = 'Results cleared...<br>';
+        }
+        
+        function testTruckTypeUpdate() {
+            log('🧪 Testing truck type update function...', 'info');
+            clearResults();
+            
+            try {
+                if (typeof window.updateAllTruckTypeDropdowns !== 'function') {
+                    log('❌ updateAllTruckTypeDropdowns function not available', 'error');
+                    return;
+                }
+                
+                const updatedCount = window.updateAllTruckTypeDropdowns();
+                log(`✅ Updated ${updatedCount} truck type dropdowns`, 'success');
+                
+                // Verify the updates
+                const testDropdown1 = document.getElementById('testTruckType1');
+                const testDropdown2 = document.getElementById('testTruckType2');
+                
+                if (testDropdown1) {
+                    const optionCount1 = testDropdown1.options.length - 1; // Exclude placeholder
+                    log(`Dropdown 1 now has ${optionCount1} options`, 'info');
+                }
+                
+                if (testDropdown2) {
+                    const optionCount2 = testDropdown2.options.length - 1; // Exclude placeholder
+                    log(`Dropdown 2 now has ${optionCount2} options`, 'info');
+                }
+                
+                // Show current options
+                setTimeout(() => showTruckTypes(), 500);
+                
+            } catch (error) {
+                log(`❌ Error testing truck type update: ${error.message}`, 'error');
+            }
+        }
+        
+        function showTruckTypes() {
+            log('📋 Showing current truck type options...', 'info');
+            
+            const actualList = document.getElementById('actualOptions');
+            actualList.innerHTML = '';
+            
+            const testDropdown = document.getElementById('testTruckType1');
+            if (testDropdown) {
+                Array.from(testDropdown.options).forEach((option, index) => {
+                    if (option.value) { // Skip placeholder
+                        const li = document.createElement('li');
+                        li.textContent = `${option.value} (${option.textContent})`;
+                        li.className = 'text-success';
+                        actualList.appendChild(li);
+                    }
+                });
+                
+                const totalOptions = testDropdown.options.length - 1;
+                log(`✅ Found ${totalOptions} truck type options in dropdown`, 'success');
+            } else {
+                log('❌ Test dropdown not found', 'error');
+            }
+        }
+        
+        function createTestDropdown() {
+            log('➕ Creating dynamic test dropdown...', 'info');
+            
+            const container = document.getElementById('dynamicDropdownContainer');
+            const dropdownCount = container.children.length + 1;
+            
+            const dropdownDiv = document.createElement('div');
+            dropdownDiv.className = 'dropdown-demo';
+            dropdownDiv.innerHTML = `
+                <h6>Dynamic Test Dropdown ${dropdownCount}</h6>
+                <div class="col-md-6">
+                    <label for="dynamicTruckType${dropdownCount}" class="form-label">Truck Type</label>
+                    <select class="form-select" id="dynamicTruckType${dropdownCount}" required>
+                        <option value="">Select truck type</option>
+                        <option value="L300">L300</option>
+                        <option value="Canter">Canter</option>
+                        <option value="3PL">3PL</option>
+                    </select>
+                    <div class="form-text">This tests dynamic dropdown detection</div>
+                </div>
+            `;
+            
+            container.appendChild(dropdownDiv);
+            log(`✅ Created dynamic dropdown ${dropdownCount}`, 'success');
+            
+            // The monitoring system should automatically update this dropdown
+            setTimeout(() => {
+                const newDropdown = document.getElementById(`dynamicTruckType${dropdownCount}`);
+                if (newDropdown) {
+                    const optionCount = newDropdown.options.length - 1;
+                    log(`Dynamic dropdown ${dropdownCount} has ${optionCount} options after auto-update`, 'info');
+                }
+            }, 1000);
+        }
+        
+        // Test the truck types array
+        function testTruckTypesArray() {
+            if (typeof window.getTruckTypes === 'function') {
+                const truckTypes = window.getTruckTypes();
+                log(`✅ Truck types array available with ${truckTypes.length} items`, 'success');
+                truckTypes.forEach((type, index) => {
+                    log(`  ${index + 1}. ${type.label}`, 'info');
+                });
+            } else {
+                log('❌ getTruckTypes function not available', 'error');
+            }
+        }
+        
+        // Initialize test
+        window.addEventListener('load', () => {
+            log('🔧 Truck Type Update Test initialized', 'info');
+            
+            // Wait for the fix to load, then test
+            setTimeout(() => {
+                if (window.truckTypeUpdateFix && window.truckTypeUpdateFix.loaded) {
+                    log('✅ Truck Type Update Fix loaded successfully', 'success');
+                    log(`Version: ${window.truckTypeUpdateFix.version}`, 'info');
+                    
+                    // Show available truck types
+                    testTruckTypesArray();
+                    
+                    log('💡 Click "Test Update Function" to update dropdowns', 'info');
+                } else {
+                    log('❌ Truck Type Update Fix not loaded', 'error');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
