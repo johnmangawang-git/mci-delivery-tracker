@@ -883,33 +883,32 @@ async function getCostBreakdownData(period) {
         // Original localStorage logic (commented but preserved)
         // const drCostBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
         
-        // ENHANCED: Load from both localStorage and Supabase
+        // ENHANCED: Load from Supabase (localStorage DISCONNECTED)
         try {
-            // First, get from localStorage (fallback/legacy)
-            const localCostData = localStorage.getItem('analytics-cost-breakdown');
-            if (localCostData) {
-                drCostBreakdown = JSON.parse(localCostData);
-                console.log('📊 Loaded cost breakdown from localStorage:', drCostBreakdown.length);
-            }
+            // DISCONNECTED: No longer read from localStorage analytics-cost-breakdown
+            // const localCostData = localStorage.getItem('analytics-cost-breakdown');
+            // if (localCostData) {
+            //     drCostBreakdown = JSON.parse(localCostData);
+            //     console.log('📊 Loaded cost breakdown from localStorage:', drCostBreakdown.length);
+            // }
             
-            // Then, try to get from Supabase (primary source)
+            // Primary source: Get from Supabase additional_cost_items table
             if (window.dataService && typeof window.dataService.getAdditionalCostItems === 'function') {
                 try {
                     const supabaseCostItems = await window.dataService.getAdditionalCostItems();
                     if (supabaseCostItems && supabaseCostItems.length > 0) {
-                        // Convert Supabase format to expected format and merge
-                        const supabaseFormatted = supabaseCostItems.map(item => ({
+                        // Convert Supabase format to expected format
+                        drCostBreakdown = supabaseCostItems.map(item => ({
                             description: item.description,
                             amount: parseFloat(item.amount) || 0,
-                            category: item.category
+                            category: item.category || 'Other'
                         }));
                         
-                        // Merge with localStorage data (Supabase takes priority)
-                        drCostBreakdown = [...drCostBreakdown, ...supabaseFormatted];
-                        console.log('📊 Merged cost breakdown from Supabase and localStorage:', drCostBreakdown.length);
+                        console.log('📊 Loaded cost breakdown from Supabase additional_cost_items:', drCostBreakdown.length);
                     }
                 } catch (supabaseError) {
-                    console.warn('⚠️ Could not load cost breakdown from Supabase, using localStorage only:', supabaseError);
+                    console.warn('⚠️ Could not load cost breakdown from Supabase:', supabaseError);
+                    // Fallback will be handled by delivery records processing below
                 }
             }
         } catch (error) {

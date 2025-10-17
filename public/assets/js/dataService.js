@@ -504,6 +504,91 @@ class DataService {
     }
 
     /**
+     * ADDITIONAL COST ITEMS OPERATIONS
+     */
+
+    async getAdditionalCostItems(filters = {}) {
+        const supabaseOp = async () => {
+            const client = window.supabaseClient();
+            let query = client.from('additional_cost_items').select('*');
+            
+            if (filters.delivery_id) {
+                query = query.eq('delivery_id', filters.delivery_id);
+            }
+            
+            if (filters.category) {
+                query = query.eq('category', filters.category);
+            }
+            
+            const { data, error } = await query.order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            return data || [];
+        };
+
+        const localStorageOp = async () => {
+            // DISCONNECTED: No longer read from localStorage for cost breakdown
+            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+            // return costBreakdown;
+            
+            // Instead, extract from delivery records' additional_cost_items field
+            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+            const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+            
+            const costItems = [];
+            
+            allDeliveries.forEach(delivery => {
+                if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
+                    delivery.additional_cost_items.forEach(item => {
+                        costItems.push({
+                            id: `local-${Date.now()}-${Math.random()}`,
+                            delivery_id: delivery.id,
+                            description: item.description,
+                            amount: parseFloat(item.amount) || 0,
+                            category: item.category || 'Other',
+                            created_at: delivery.created_at || new Date().toISOString()
+                        });
+                    });
+                }
+            });
+            
+            return costItems;
+        };
+
+        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+    }
+
+    async saveAdditionalCostItem(costItem) {
+        const supabaseOp = async () => {
+            const client = window.supabaseClient();
+            const { data, error } = await client
+                .from('additional_cost_items')
+                .insert({
+                    ...costItem,
+                    updated_at: new Date().toISOString()
+                })
+                .select();
+            
+            if (error) throw error;
+            return data[0];
+        };
+
+        const localStorageOp = async () => {
+            // DISCONNECTED: No longer save to localStorage analytics-cost-breakdown
+            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+            // costBreakdown.push(costItem);
+            // localStorage.setItem('analytics-cost-breakdown', JSON.stringify(costBreakdown));
+            
+            // Instead, this should be handled by the delivery save process
+            console.warn('⚠️ Cost item save fallback - should be handled by delivery save process');
+            return costItem;
+        };
+
+        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+    }
+
+    /**
      * USER PROFILE OPERATIONS
      */
 
