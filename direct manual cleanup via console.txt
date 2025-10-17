@@ -1,0 +1,50 @@
+// DIRECT MANUAL CLEANUP
+console.log('🧹 Starting direct manual cleanup...');
+
+// Clear localStorage
+localStorage.clear();
+console.log('✅ localStorage cleared');
+
+// Clear global variables
+if (window.activeDeliveries) window.activeDeliveries = [];
+if (window.deliveryHistory) window.deliveryHistory = [];
+if (window.customers) window.customers = [];
+console.log('✅ Global variables cleared');
+
+// Clear Supabase (if client available)
+if (window.supabaseClient) {
+    const client = window.supabaseClient();
+    
+    console.log('🗑️ Clearing Supabase tables...');
+    
+    try {
+        // Clear in correct order
+        await client.from('additional_cost_items').delete().neq('id', 0);
+        console.log('✅ Cleared additional_cost_items');
+        
+        await client.from('epod_records').delete().neq('id', 0);
+        console.log('✅ Cleared epod_records');
+        
+        await client.from('deliveries').delete().neq('id', 0);
+        console.log('✅ Cleared deliveries');
+        
+        await client.from('customers').delete().neq('id', 0);
+        console.log('✅ Cleared customers');
+        
+        await client.from('user_profiles').delete().neq('id', 0);
+        console.log('✅ Cleared user_profiles');
+        
+        console.log('🎉 MANUAL CLEANUP COMPLETED');
+        
+    } catch (error) {
+        console.error('❌ Supabase cleanup error:', error);
+    }
+} else {
+    console.log('❌ Supabase client not available');
+}
+
+// Force reload
+setTimeout(() => {
+    console.log('🔄 Reloading page...');
+    location.reload(true);
+}, 2000);
