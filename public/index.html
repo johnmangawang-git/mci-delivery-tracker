@@ -447,6 +447,46 @@
             console.log('⚡ INLINE UPLOAD: Processing', data.length, 'records for upload');
             
             try {
+                // ENHANCED: Collect additional cost items from DR modal
+                const collectAdditionalCostItems = () => {
+                    const costItems = [];
+                    let totalCost = 0;
+                    
+                    try {
+                        const costDescriptions = document.querySelectorAll('.dr-cost-description');
+                        const costAmounts = document.querySelectorAll('.dr-cost-amount');
+                        
+                        console.log('📊 Collecting cost items from DR modal...', {
+                            descriptions: costDescriptions.length,
+                            amounts: costAmounts.length
+                        });
+                        
+                        for (let i = 0; i < Math.min(costDescriptions.length, costAmounts.length); i++) {
+                            const description = costDescriptions[i].value?.trim();
+                            const amount = parseFloat(costAmounts[i].value) || 0;
+                            
+                            if (description && amount > 0) {
+                                costItems.push({
+                                    description: description,
+                                    amount: amount,
+                                    category: window.categorizeCostDescription ? window.categorizeCostDescription(description) : 'Other'
+                                });
+                                totalCost += amount;
+                                console.log(`✅ Collected cost item: ${description} = ₱${amount}`);
+                            }
+                        }
+                        
+                        console.log('📊 Total cost items collected:', costItems.length, 'Total amount:', totalCost);
+                    } catch (error) {
+                        console.warn('⚠️ Could not collect cost items from modal:', error.message);
+                    }
+                    
+                    return { costItems, totalCost };
+                };
+                
+                // Collect cost items once for all deliveries
+                const { costItems, totalCost } = collectAdditionalCostItems();
+                
                 // Convert data to delivery format
                 const deliveries = data.map((row, index) => {
                     const getColumnValue = (possibleNames) => {
@@ -470,7 +510,10 @@
                         status: 'Active',
                         created_date: new Date().toLocaleDateString(),
                         created_by: 'Excel Upload',
-                        created_at: new Date().toISOString()
+                        created_at: new Date().toISOString(),
+                        // ENHANCED: Add additional cost items from DR modal
+                        additional_costs: totalCost, // Total amount for backward compatibility
+                        additional_cost_items: costItems // Individual cost items for analytics breakdown
                     };
                 });
                 
