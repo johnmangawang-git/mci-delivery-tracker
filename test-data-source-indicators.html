@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Data Source Indicators</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .chart-container { width: 300px; height: 300px; margin: 20px; position: relative; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
+        .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Data Source Indicators Demo</h1>
+        
+        <div class="alert alert-info">
+            <h5>Demo Purpose</h5>
+            <p>This page demonstrates the visual indicators that show users whether their Additional Cost Breakdown data comes from:</p>
+            <ul>
+                <li>☁️ <strong>Cloud Data</strong> - Synced across all browsers</li>
+                <li>💾 <strong>Local Data</strong> - Only available in current browser</li>
+                <li>🔄 <strong>Mixed Data</strong> - Partial sync between cloud and local</li>
+                <li>📭 <strong>No Data</strong> - No cost data available</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Demo Controls</h3>
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <button onclick="showSupabaseIndicator()" class="btn btn-success w-100">☁️ Cloud Data</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="showLocalIndicator()" class="btn btn-warning w-100">💾 Local Data</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="showMixedIndicator()" class="btn btn-info w-100">🔄 Mixed Data</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="showEmptyIndicator()" class="btn btn-secondary w-100">📭 No Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Chart Examples with Data Source Indicators</h3>
+            <div class="demo-grid">
+                <!-- Supabase Data Chart -->
+                <div class="chart-container" id="supabaseChart">
+                    <h6>Supabase Data Example</h6>
+                    <canvas id="chart1"></canvas>
+                </div>
+                
+                <!-- Local Data Chart -->
+                <div class="chart-container" id="localChart">
+                    <h6>Local Storage Data Example</h6>
+                    <canvas id="chart2"></canvas>
+                </div>
+                
+                <!-- Mixed Data Chart -->
+                <div class="chart-container" id="mixedChart">
+                    <h6>Mixed Data Example</h6>
+                    <canvas id="chart3"></canvas>
+                </div>
+                
+                <!-- Empty Data Chart -->
+                <div class="chart-container" id="emptyChart">
+                    <h6>No Data Example</h6>
+                    <canvas id="chart4"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>💡 What Users See</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>☁️ Cloud Data (Supabase)</h6>
+                    <ul>
+                        <li>✅ Data syncs across all browsers</li>
+                        <li>✅ Reliable and persistent</li>
+                        <li>✅ Shows item count from database</li>
+                        <li>✅ Green indicator with cloud icon</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>💾 Local Data (localStorage)</h6>
+                    <ul>
+                        <li>⚠️ Only available in current browser</li>
+                        <li>⚠️ May be lost if browser data cleared</li>
+                        <li>⚠️ Shows "Sync to Cloud" button</li>
+                        <li>⚠️ Yellow indicator with hard drive icon</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the data source indicator fix -->
+    <script src="public/assets/js/data-source-indicator-fix.js"></script>
+
+    <script>
+        let charts = {};
+        
+        function createSampleChart(canvasId, data) {
+            const canvas = document.getElementById(canvasId);
+            
+            // Destroy existing chart
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+            
+            charts[canvasId] = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.values,
+                        backgroundColor: data.colors || [
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(155, 89, 182, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showSupabaseIndicator() {
+            const container = document.getElementById('supabaseChart');
+            window.addDataSourceIndicator(container, 'supabase', { itemCount: 15 });
+            
+            // Create sample chart
+            createSampleChart('chart1', {
+                labels: ['Fuel Surcharge', 'Toll Fees', 'Helper', 'Special Handling'],
+                values: [150, 75, 100, 50]
+            });
+        }
+        
+        function showLocalIndicator() {
+            const container = document.getElementById('localChart');
+            window.addDataSourceIndicator(container, 'localStorage', { itemCount: 8 });
+            
+            // Create sample chart
+            createSampleChart('chart2', {
+                labels: ['Fuel Surcharge', 'Other'],
+                values: [200, 125]
+            });
+        }
+        
+        function showMixedIndicator() {
+            const container = document.getElementById('mixedChart');
+            window.addDataSourceIndicator(container, 'mixed', { supabaseItems: 10, localItems: 5 });
+            
+            // Create sample chart
+            createSampleChart('chart3', {
+                labels: ['Fuel Surcharge', 'Toll Fees', 'Helper'],
+                values: [180, 90, 80]
+            });
+        }
+        
+        function showEmptyIndicator() {
+            const container = document.getElementById('emptyChart');
+            window.addDataSourceIndicator(container, 'empty');
+            
+            // Create empty chart
+            createSampleChart('chart4', {
+                labels: ['No Data'],
+                values: [1],
+                colors: ['rgba(149, 165, 166, 0.3)']
+            });
+        }
+        
+        // Mock sync function for demo
+        window.syncToSupabase = function() {
+            alert('Demo: This would sync your local data to the cloud, making it available across all browsers.');
+        };
+        
+        // Initialize demo
+        window.addEventListener('load', () => {
+            console.log('🔧 Data Source Indicators Demo loaded');
+            
+            // Wait for the fix to load, then show examples
+            setTimeout(() => {
+                if (window.addDataSourceIndicator) {
+                    showSupabaseIndicator();
+                    showLocalIndicator();
+                    showMixedIndicator();
+                    showEmptyIndicator();
+                    
+                    console.log('✅ All demo indicators displayed');
+                } else {
+                    console.error('❌ Data source indicator function not available');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

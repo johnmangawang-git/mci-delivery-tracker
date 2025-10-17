@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Supabase Verification</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .log { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow-y: auto; font-size: 11px; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Complete Supabase Verification</h1>
+        
+        <div class="alert alert-info">
+            <h5>Verification Purpose</h5>
+            <p>This comprehensive test verifies that:</p>
+            <ul>
+                <li>✅ DR uploads with costs are saved to Supabase</li>
+                <li>✅ Cost items are saved to additional_cost_items table</li>
+                <li>✅ Data loads properly in all browsers (cross-browser sync)</li>
+                <li>✅ Analytics charts display the correct data</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 System Status</h3>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Supabase Connection</h6>
+                            <div id="supabaseStatus">
+                                <span class="status-indicator status-offline"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Required Tables</h6>
+                            <div id="tablesStatus">
+                                <span class="status-indicator status-offline"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Data Service</h6>
+                            <div id="dataServiceStatus">
+                                <span class="status-indicator status-offline"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Analytics Functions</h6>
+                            <div id="analyticsStatus">
+                                <span class="status-indicator status-offline"></span>
+                                <span>Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Comprehensive Tests</h3>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <button onclick="runFullVerification()" class="btn btn-primary w-100 mb-2">🚨 Run Full Verification</button>
+                    <small class="text-muted">Complete end-to-end test</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="testDataSaving()" class="btn btn-success w-100 mb-2">💾 Test Data Saving</button>
+                    <small class="text-muted">Verify Supabase saves work</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="testCrossBrowserSync()" class="btn btn-info w-100 mb-2">🔄 Test Cross-Browser Sync</button>
+                    <small class="text-muted">Verify data loads in all browsers</small>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <button onclick="testCostItemsIntegration()" class="btn btn-warning w-100 mb-2">📊 Test Cost Items</button>
+                    <small class="text-muted">Verify cost breakdown works</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="simulateDRUpload()" class="btn btn-secondary w-100 mb-2">📤 Simulate DR Upload</button>
+                    <small class="text-muted">Create test DR with costs</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="clearLog()" class="btn btn-outline-secondary w-100 mb-2">🗑️ Clear Log</button>
+                    <small class="text-muted">Clear test results</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Verification Results</h3>
+            <div id="verificationLog" class="log">Click "Run Full Verification" to start comprehensive testing...\n</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🛠️ Quick Fixes</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <button onclick="fixSupabaseConnection()" class="btn btn-danger w-100 mb-2">🔧 Fix Supabase Connection</button>
+                    <small class="text-muted">Reinitialize Supabase client</small>
+                </div>
+                <div class="col-md-6">
+                    <button onclick="createMissingTables()" class="btn btn-warning w-100 mb-2">🏗️ Create Missing Tables</button>
+                    <small class="text-muted">Create additional_cost_items table</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include all required scripts -->
+    <script src="public/assets/js/supabase.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/analytics.js"></script>
+    <script src="public/assets/js/additional-costs-supabase-fix.js"></script>
+    <script src="public/assets/js/cost-breakdown-analytics-fix.js"></script>
+
+    <script>
+        let verificationResults = {};
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('verificationLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            const icon = icons[type] || 'ℹ️';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `${timestamp} ${icon} ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const indicator = element.querySelector('.status-indicator');
+            const text = element.querySelector('span:last-child');
+            
+            indicator.className = `status-indicator status-${status}`;
+            text.textContent = message;
+        }
+        
+        function clearLog() {
+            document.getElementById('verificationLog').innerHTML = 'Log cleared...\n';
+        }
+        
+        async function checkSupabaseConnection() {
+            log('🔍 Checking Supabase connection...', 'info');
+            
+            try {
+                if (typeof window.supabaseClient !== 'function') {
+                    updateStatus('supabaseStatus', 'offline', 'Client Missing');
+                    return false;
+                }
+                
+                const client = window.supabaseClient();
+                if (!client) {
+                    updateStatus('supabaseStatus', 'offline', 'Client Null');
+                    return false;
+                }
+                
+                // Test basic query
+                const { data, error } = await client.from('deliveries').select('count').limit(1);
+                
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+                
+                updateStatus('supabaseStatus', 'online', 'Connected');
+                log('✅ Supabase connection successful', 'success');
+                return true;
+                
+            } catch (error) {
+                updateStatus('supabaseStatus', 'offline', 'Error');
+                log(`❌ Supabase connection failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function checkRequiredTables() {
+            log('🔍 Checking required tables...', 'info');
+            
+            try {
+                const client = window.supabaseClient();
+                if (!client) {
+                    updateStatus('tablesStatus', 'offline', 'No Client');
+                    return false;
+                }
+                
+                let tablesOk = 0;
+                let totalTables = 3;
+                
+                // Check deliveries table
+                try {
+                    const { error: deliveriesError } = await client.from('deliveries').select('id').limit(1);
+                    if (!deliveriesError || deliveriesError.code === 'PGRST116') {
+                        tablesOk++;
+                        log('✅ deliveries table accessible', 'success');
+                    }
+                } catch (e) {
+                    log('❌ deliveries table error', 'error');
+                }
+                
+                // Check additional_cost_items table
+                try {
+                    const { error: costItemsError } = await client.from('additional_cost_items').select('id').limit(1);
+                    if (!costItemsError || costItemsError.code === 'PGRST116') {
+                        tablesOk++;
+                        log('✅ additional_cost_items table accessible', 'success');
+                    }
+                } catch (e) {
+                    log('❌ additional_cost_items table missing or inaccessible', 'error');
+                }
+                
+                // Check customers table
+                try {
+                    const { error: customersError } = await client.from('customers').select('id').limit(1);
+                    if (!customersError || customersError.code === 'PGRST116') {
+                        tablesOk++;
+                        log('✅ customers table accessible', 'success');
+                    }
+                } catch (e) {
+                    log('❌ customers table error', 'error');
+                }
+                
+                if (tablesOk === totalTables) {
+                    updateStatus('tablesStatus', 'online', 'All Present');
+                    return true;
+                } else {
+                    updateStatus('tablesStatus', 'warning', `${tablesOk}/${totalTables} OK`);
+                    return false;
+                }
+                
+            } catch (error) {
+                updateStatus('tablesStatus', 'offline', 'Error');
+                log(`❌ Table check failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function checkDataService() {
+            log('🔍 Checking DataService...', 'info');
+            
+            try {
+                if (!window.dataService) {
+                    updateStatus('dataServiceStatus', 'offline', 'Not Available');
+                    log('❌ DataService not available', 'error');
+                    return false;
+                }
+                
+                const isSupabaseAvailable = window.dataService.isSupabaseAvailable();
+                
+                if (isSupabaseAvailable) {
+                    updateStatus('dataServiceStatus', 'online', 'Supabase Ready');
+                    log('✅ DataService with Supabase ready', 'success');
+                } else {
+                    updateStatus('dataServiceStatus', 'warning', 'LocalStorage Only');
+                    log('⚠️ DataService using localStorage fallback', 'warning');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                updateStatus('dataServiceStatus', 'offline', 'Error');
+                log(`❌ DataService check failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function checkAnalyticsFunctions() {
+            log('🔍 Checking analytics functions...', 'info');
+            
+            try {
+                let functionsOk = 0;
+                let totalFunctions = 3;
+                
+                // Check getCostBreakdownData
+                if (typeof window.getCostBreakdownData === 'function') {
+                    functionsOk++;
+                    log('✅ getCostBreakdownData function available', 'success');
+                } else {
+                    log('❌ getCostBreakdownData function missing', 'error');
+                }
+                
+                // Check getEnhancedCostBreakdownData
+                if (typeof window.getEnhancedCostBreakdownData === 'function') {
+                    functionsOk++;
+                    log('✅ getEnhancedCostBreakdownData function available', 'success');
+                } else {
+                    log('❌ getEnhancedCostBreakdownData function missing', 'error');
+                }
+                
+                // Check updateCostBreakdownChart
+                if (typeof window.updateCostBreakdownChart === 'function') {
+                    functionsOk++;
+                    log('✅ updateCostBreakdownChart function available', 'success');
+                } else {
+                    log('❌ updateCostBreakdownChart function missing', 'error');
+                }
+                
+                if (functionsOk === totalFunctions) {
+                    updateStatus('analyticsStatus', 'online', 'All Available');
+                    return true;
+                } else {
+                    updateStatus('analyticsStatus', 'warning', `${functionsOk}/${totalFunctions} OK`);
+                    return false;
+                }
+                
+            } catch (error) {
+                updateStatus('analyticsStatus', 'offline', 'Error');
+                log(`❌ Analytics check failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testDataSaving() {
+            log('💾 Testing data saving to Supabase...', 'info');
+            
+            try {
+                if (!window.dataService) {
+                    log('❌ DataService not available for testing', 'error');
+                    return false;
+                }
+                
+                const testDelivery = {
+                    dr_number: `DR-VERIFY-${Date.now()}`,
+                    customer_name: 'Verification Test Customer',
+                    vendor_number: '+63 917 123 4567',
+                    origin: 'Test Origin',
+                    destination: 'Test Destination',
+                    status: 'Active',
+                    created_date: new Date().toISOString().split('T')[0],
+                    created_by: 'Verification Test',
+                    additional_costs: 325.75,
+                    additional_cost_items: [
+                        { description: 'Gas for delivery', amount: 150.00, category: 'Fuel Surcharge' },
+                        { description: 'SLEX toll fee', amount: 75.75, category: 'Toll Fees' },
+                        { description: 'Helper assistance', amount: 100.00, category: 'Helper' }
+                    ]
+                };
+                
+                log(`Creating test delivery: ${testDelivery.dr_number}`, 'info');
+                
+                const result = await window.dataService.saveDelivery(testDelivery);
+                
+                if (result && result.id) {
+                    log(`✅ Delivery saved successfully: ${result.id}`, 'success');
+                    
+                    // Verify cost items were saved
+                    if (typeof window.getAdditionalCostItems === 'function') {
+                        const costItems = await window.getAdditionalCostItems(result.id);
+                        log(`✅ Cost items saved: ${costItems.length} items`, 'success');
+                    }
+                    
+                    // Store for cross-browser test
+                    window.testDeliveryId = result.id;
+                    window.testDrNumber = result.dr_number || testDelivery.dr_number;
+                    
+                    return true;
+                } else {
+                    log('❌ No result returned from saveDelivery', 'error');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ Data saving test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testCrossBrowserSync() {
+            log('🔄 Testing cross-browser data sync...', 'info');
+            
+            try {
+                if (!window.dataService) {
+                    log('❌ DataService not available', 'error');
+                    return false;
+                }
+                
+                // Get all deliveries from Supabase
+                const deliveries = await window.dataService.getDeliveries();
+                log(`📦 Retrieved ${deliveries.length} deliveries from Supabase`, 'info');
+                
+                // Check for deliveries with cost items
+                const deliveriesWithCosts = deliveries.filter(d => 
+                    (d.additional_cost_items && Array.isArray(d.additional_cost_items) && d.additional_cost_items.length > 0) ||
+                    (d.additional_costs && d.additional_costs > 0)
+                );
+                
+                log(`💰 Found ${deliveriesWithCosts.length} deliveries with costs`, 'info');
+                
+                if (deliveriesWithCosts.length > 0) {
+                    log('✅ Cross-browser sync data available', 'success');
+                    
+                    // Show sample data
+                    const sample = deliveriesWithCosts[0];
+                    log(`Sample: ${sample.dr_number} - ₱${sample.additional_costs}`, 'info');
+                    
+                    return true;
+                } else {
+                    log('⚠️ No cost data found for cross-browser sync test', 'warning');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ Cross-browser sync test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testCostItemsIntegration() {
+            log('📊 Testing cost items integration...', 'info');
+            
+            try {
+                // Test enhanced cost breakdown function
+                if (typeof window.getEnhancedCostBreakdownData === 'function') {
+                    const result = await window.getEnhancedCostBreakdownData('month');
+                    
+                    if (result && result.labels && result.values) {
+                        log(`✅ Cost breakdown returned ${result.labels.length} categories`, 'success');
+                        
+                        if (result.labels.length > 0) {
+                            result.labels.forEach((label, index) => {
+                                log(`   ${label}: ₱${result.values[index] || 0}`, 'info');
+                            });
+                            return true;
+                        } else {
+                            log('⚠️ No cost categories found', 'warning');
+                            return false;
+                        }
+                    } else {
+                        log('❌ Invalid cost breakdown data structure', 'error');
+                        return false;
+                    }
+                } else {
+                    log('❌ Enhanced cost breakdown function not available', 'error');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ Cost items integration test failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function simulateDRUpload() {
+            log('📤 Simulating DR upload with costs...', 'info');
+            
+            try {
+                // This simulates what happens during Excel DR upload
+                const mockDRData = {
+                    drNumber: `DR-MOCK-${Date.now()}`,
+                    customerName: 'Mock Customer for Testing',
+                    vendorNumber: '+63 917 555 0123',
+                    origin: 'Manila',
+                    destination: 'Cebu',
+                    truckType: '10-Wheeler',
+                    truckPlateNumber: 'ABC-1234',
+                    bookedDate: new Date().toISOString().split('T')[0],
+                    additionalCosts: '275.50'
+                };
+                
+                // Simulate cost items from DR modal
+                const mockCostItems = [
+                    { description: 'Gasoline for truck', amount: 150.00 },
+                    { description: 'Toll fee NLEX', amount: 125.50 }
+                ];
+                
+                // Use the enhanced createBookingFromDR function
+                if (typeof window.createBookingFromDR === 'function') {
+                    await window.createBookingFromDR(mockDRData);
+                    log('✅ DR upload simulation completed', 'success');
+                    return true;
+                } else {
+                    log('❌ createBookingFromDR function not available', 'error');
+                    return false;
+                }
+                
+            } catch (error) {
+                log(`❌ DR upload simulation failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function runFullVerification() {
+            log('🚨 Starting full verification...', 'info');
+            log('=====================================', 'info');
+            
+            verificationResults = {
+                supabase: await checkSupabaseConnection(),
+                tables: await checkRequiredTables(),
+                dataService: await checkDataService(),
+                analytics: await checkAnalyticsFunctions(),
+                dataSaving: await testDataSaving(),
+                crossBrowser: await testCrossBrowserSync(),
+                costItems: await testCostItemsIntegration()
+            };
+            
+            log('=====================================', 'info');
+            log('📋 VERIFICATION SUMMARY:', 'info');
+            
+            Object.entries(verificationResults).forEach(([test, result]) => {
+                const status = result ? '✅ PASS' : '❌ FAIL';
+                const type = result ? 'success' : 'error';
+                log(`${test.toUpperCase()}: ${status}`, type);
+            });
+            
+            const passedTests = Object.values(verificationResults).filter(r => r).length;
+            const totalTests = Object.keys(verificationResults).length;
+            
+            log('=====================================', 'info');
+            log(`OVERALL RESULT: ${passedTests}/${totalTests} tests passed`, passedTests === totalTests ? 'success' : 'error');
+            
+            if (passedTests === totalTests) {
+                log('🎉 ALL SYSTEMS GO! Supabase integration is working perfectly.', 'success');
+                log('✅ DR uploads will save to Supabase and load in all browsers.', 'success');
+            } else {
+                log('⚠️ Some issues detected. Check individual test results above.', 'warning');
+                provideTroubleshootingAdvice();
+            }
+        }
+        
+        function provideTroubleshootingAdvice() {
+            log('=====================================', 'info');
+            log('💡 TROUBLESHOOTING ADVICE:', 'info');
+            
+            if (!verificationResults.supabase) {
+                log('1. Check Supabase URL and API key in supabase.js', 'error');
+                log('2. Verify Supabase project is active and accessible', 'error');
+            }
+            
+            if (!verificationResults.tables) {
+                log('1. Run the additional_cost_items table creation script', 'error');
+                log('2. Check RLS policies are properly configured', 'error');
+            }
+            
+            if (!verificationResults.dataSaving) {
+                log('1. Check network connectivity to Supabase', 'error');
+                log('2. Verify user authentication status', 'error');
+            }
+            
+            if (!verificationResults.crossBrowser) {
+                log('1. Upload a DR with costs to create test data', 'warning');
+                log('2. Check if user is logged in with same account', 'warning');
+            }
+        }
+        
+        async function fixSupabaseConnection() {
+            log('🔧 Attempting to fix Supabase connection...', 'info');
+            
+            try {
+                // Reinitialize Supabase
+                if (typeof window.initSupabase === 'function') {
+                    window.initSupabase();
+                    log('✅ Supabase reinitialized', 'success');
+                }
+                
+                // Recreate DataService
+                if (window.DataService) {
+                    window.dataService = new window.DataService();
+                    log('✅ DataService recreated', 'success');
+                }
+                
+                // Recheck connection
+                setTimeout(() => {
+                    checkSupabaseConnection();
+                }, 1000);
+                
+            } catch (error) {
+                log(`❌ Fix attempt failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function createMissingTables() {
+            log('🏗️ This would create missing tables...', 'info');
+            log('💡 Please run the SQL scripts in your Supabase dashboard:', 'warning');
+            log('   - supabase/add-additional-cost-items-table.sql', 'info');
+            log('   - supabase/schema-fixed.sql', 'info');
+        }
+        
+        // Initialize verification
+        window.addEventListener('load', () => {
+            log('🔧 Complete Supabase Verification loaded', 'info');
+            log('Browser: ' + navigator.userAgent.split(' ').pop(), 'info');
+            
+            // Auto-check system status
+            setTimeout(async () => {
+                await checkSupabaseConnection();
+                await checkRequiredTables();
+                await checkDataService();
+                await checkAnalyticsFunctions();
+                
+                log('💡 System status checked. Click "Run Full Verification" for complete test.', 'info');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

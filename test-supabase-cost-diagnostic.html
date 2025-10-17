@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Cost Integration Diagnostic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .diagnostic-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .log { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; font-size: 12px; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Supabase Cost Integration Diagnostic</h1>
+        
+        <div class="alert alert-warning">
+            <h5>Diagnostic Purpose</h5>
+            <p>This page will help identify why the Additional Cost Breakdown is showing empty charts or "Other" category only.</p>
+            <p><strong>Open browser console (F12) to see detailed error messages.</strong></p>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>🔧 Quick Diagnostic Tests</h3>
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <button onclick="testSupabaseConnection()" class="btn btn-primary w-100">1. Test Supabase Connection</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="testTableExists()" class="btn btn-info w-100">2. Check Tables</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="testCostItemsData()" class="btn btn-success w-100">3. Check Cost Data</button>
+                </div>
+                <div class="col-md-3">
+                    <button onclick="testAnalyticsFunction()" class="btn btn-warning w-100">4. Test Analytics</button>
+                </div>
+            </div>
+            <button onclick="runFullDiagnostic()" class="btn btn-danger">🚨 Run Full Diagnostic</button>
+            <button onclick="clearLog()" class="btn btn-secondary">Clear Log</button>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>📋 Diagnostic Results</h3>
+            <div id="diagnosticLog" class="log">Click "Run Full Diagnostic" to start comprehensive testing...\n</div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>🛠️ Quick Fixes</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <button onclick="createTestCostData()" class="btn btn-success w-100 mb-2">Create Test Cost Data</button>
+                    <small class="text-muted">Creates sample cost items for testing</small>
+                </div>
+                <div class="col-md-6">
+                    <button onclick="fixAnalyticsFunction()" class="btn btn-warning w-100 mb-2">Fix Analytics Function</button>
+                    <small class="text-muted">Applies analytics fix for cost breakdown</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="public/assets/js/supabase.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/analytics.js"></script>
+    <script src="public/assets/js/additional-costs-supabase-fix.js"></script>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('diagnosticLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+            const icon = icons[type] || 'ℹ️';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `${timestamp} ${icon} ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            // Also log to console for debugging
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('diagnosticLog').innerHTML = 'Log cleared...\n';
+        }
+        
+        async function testSupabaseConnection() {
+            log('🔍 Testing Supabase connection...', 'info');
+            
+            try {
+                // Check if supabase client exists
+                if (typeof window.supabaseClient !== 'function') {
+                    log('❌ supabaseClient function not found', 'error');
+                    return false;
+                }
+                
+                const client = window.supabaseClient();
+                if (!client) {
+                    log('❌ Supabase client is null/undefined', 'error');
+                    return false;
+                }
+                
+                log('✅ Supabase client created successfully', 'success');
+                
+                // Test basic query
+                const { data, error } = await client.from('deliveries').select('count').limit(1);
+                
+                if (error) {
+                    log(`❌ Supabase query failed: ${error.message}`, 'error');
+                    return false;
+                }
+                
+                log('✅ Supabase connection working', 'success');
+                return true;
+                
+            } catch (error) {
+                log(`❌ Supabase connection error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testTableExists() {
+            log('🔍 Checking if required tables exist...', 'info');
+            
+            try {
+                const client = window.supabaseClient();
+                if (!client) {
+                    log('❌ No Supabase client available', 'error');
+                    return false;
+                }
+                
+                // Test deliveries table
+                const { data: deliveriesData, error: deliveriesError } = await client
+                    .from('deliveries')
+                    .select('id')
+                    .limit(1);
+                
+                if (deliveriesError) {
+                    log(`❌ deliveries table error: ${deliveriesError.message}`, 'error');
+                } else {
+                    log('✅ deliveries table exists and accessible', 'success');
+                }
+                
+                // Test additional_cost_items table
+                const { data: costItemsData, error: costItemsError } = await client
+                    .from('additional_cost_items')
+                    .select('id')
+                    .limit(1);
+                
+                if (costItemsError) {
+                    log(`❌ additional_cost_items table error: ${costItemsError.message}`, 'error');
+                    log('💡 You may need to run the additional_cost_items table creation script', 'warning');
+                } else {
+                    log('✅ additional_cost_items table exists and accessible', 'success');
+                }
+                
+                // Test cost_breakdown_analytics view
+                const { data: analyticsData, error: analyticsError } = await client
+                    .from('cost_breakdown_analytics')
+                    .select('*')
+                    .limit(1);
+                
+                if (analyticsError) {
+                    log(`❌ cost_breakdown_analytics view error: ${analyticsError.message}`, 'error');
+                    log('💡 You may need to run the analytics view creation script', 'warning');
+                } else {
+                    log('✅ cost_breakdown_analytics view exists and accessible', 'success');
+                }
+                
+                return !deliveriesError && !costItemsError;
+                
+            } catch (error) {
+                log(`❌ Table check error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testCostItemsData() {
+            log('🔍 Checking for existing cost items data...', 'info');
+            
+            try {
+                const client = window.supabaseClient();
+                if (!client) {
+                    log('❌ No Supabase client available', 'error');
+                    return false;
+                }
+                
+                // Check deliveries with additional costs
+                const { data: deliveries, error: deliveriesError } = await client
+                    .from('deliveries')
+                    .select('id, dr_number, additional_costs, additional_cost_items')
+                    .gt('additional_costs', 0);
+                
+                if (deliveriesError) {
+                    log(`❌ Error querying deliveries: ${deliveriesError.message}`, 'error');
+                    return false;
+                }
+                
+                log(`📊 Found ${deliveries.length} deliveries with additional costs`, 'info');
+                
+                if (deliveries.length > 0) {
+                    deliveries.forEach((delivery, index) => {
+                        log(`${index + 1}. ${delivery.dr_number}: ₱${delivery.additional_costs}`, 'info');
+                        
+                        if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
+                            log(`   Items: ${delivery.additional_cost_items.length} cost items in JSONB`, 'info');
+                        }
+                    });
+                }
+                
+                // Check additional_cost_items table
+                const { data: costItems, error: costItemsError } = await client
+                    .from('additional_cost_items')
+                    .select('*');
+                
+                if (costItemsError) {
+                    log(`❌ Error querying cost items: ${costItemsError.message}`, 'error');
+                } else {
+                    log(`📊 Found ${costItems.length} individual cost items in dedicated table`, 'info');
+                    
+                    if (costItems.length > 0) {
+                        const categories = {};
+                        costItems.forEach(item => {
+                            categories[item.category] = (categories[item.category] || 0) + parseFloat(item.amount);
+                        });
+                        
+                        Object.entries(categories).forEach(([category, total]) => {
+                            log(`   ${category}: ₱${total.toFixed(2)}`, 'info');
+                        });
+                    }
+                }
+                
+                return deliveries.length > 0 || costItems.length > 0;
+                
+            } catch (error) {
+                log(`❌ Cost data check error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testAnalyticsFunction() {
+            log('🔍 Testing analytics functions...', 'info');
+            
+            try {
+                // Test getCostBreakdownData function
+                if (typeof window.getCostBreakdownData === 'function') {
+                    log('✅ getCostBreakdownData function exists', 'success');
+                    
+                    const result = await window.getCostBreakdownData('month');
+                    
+                    if (result && result.labels && result.values) {
+                        log(`📊 Analytics returned ${result.labels.length} categories`, 'success');
+                        
+                        if (result.labels.length > 0) {
+                            result.labels.forEach((label, index) => {
+                                log(`   ${label}: ₱${result.values[index] || 0}`, 'info');
+                            });
+                        } else {
+                            log('⚠️ Analytics returned empty data', 'warning');
+                        }
+                    } else {
+                        log('❌ Analytics returned invalid data structure', 'error');
+                    }
+                } else {
+                    log('❌ getCostBreakdownData function not found', 'error');
+                }
+                
+                // Test getCostBreakdownAnalytics function
+                if (typeof window.getCostBreakdownAnalytics === 'function') {
+                    log('✅ getCostBreakdownAnalytics function exists', 'success');
+                    
+                    const analyticsResult = await window.getCostBreakdownAnalytics('month');
+                    
+                    if (analyticsResult) {
+                        log(`📊 Supabase analytics returned ${analyticsResult.labels?.length || 0} categories`, 'success');
+                    }
+                } else {
+                    log('❌ getCostBreakdownAnalytics function not found', 'error');
+                }
+                
+                return true;
+                
+            } catch (error) {
+                log(`❌ Analytics test error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function runFullDiagnostic() {
+            log('🚨 Starting full diagnostic...', 'info');
+            log('=====================================', 'info');
+            
+            const results = {
+                supabase: await testSupabaseConnection(),
+                tables: await testTableExists(),
+                data: await testCostItemsData(),
+                analytics: await testAnalyticsFunction()
+            };
+            
+            log('=====================================', 'info');
+            log('📋 DIAGNOSTIC SUMMARY:', 'info');
+            log(`Supabase Connection: ${results.supabase ? '✅ OK' : '❌ FAILED'}`, results.supabase ? 'success' : 'error');
+            log(`Required Tables: ${results.tables ? '✅ OK' : '❌ FAILED'}`, results.tables ? 'success' : 'error');
+            log(`Cost Data: ${results.data ? '✅ FOUND' : '⚠️ EMPTY'}`, results.data ? 'success' : 'warning');
+            log(`Analytics Functions: ${results.analytics ? '✅ OK' : '❌ FAILED'}`, results.analytics ? 'success' : 'error');
+            
+            // Provide recommendations
+            log('=====================================', 'info');
+            log('💡 RECOMMENDATIONS:', 'info');
+            
+            if (!results.supabase) {
+                log('1. Check Supabase configuration in supabase.js', 'error');
+                log('2. Verify Supabase URL and API key are correct', 'error');
+            }
+            
+            if (!results.tables) {
+                log('1. Run the additional_cost_items table creation script', 'error');
+                log('2. Check RLS policies are properly configured', 'error');
+            }
+            
+            if (!results.data) {
+                log('1. Upload a DR with cost items to create test data', 'warning');
+                log('2. Or click "Create Test Cost Data" button', 'warning');
+            }
+            
+            if (!results.analytics) {
+                log('1. Click "Fix Analytics Function" button', 'error');
+                log('2. Check if analytics.js is properly loaded', 'error');
+            }
+        }
+        
+        async function createTestCostData() {
+            log('🛠️ Creating test cost data...', 'info');
+            
+            try {
+                if (!window.dataService) {
+                    log('❌ DataService not available', 'error');
+                    return;
+                }
+                
+                const testDelivery = {
+                    dr_number: `DR-DIAGNOSTIC-${Date.now()}`,
+                    customer_name: 'Diagnostic Test Customer',
+                    vendor_number: '+63 917 123 4567',
+                    origin: 'Test Origin',
+                    destination: 'Test Destination',
+                    status: 'Active',
+                    created_date: new Date().toISOString().split('T')[0],
+                    created_by: 'Diagnostic Test',
+                    additional_costs: 325.50,
+                    additional_cost_items: [
+                        { description: 'Gas for truck', amount: 150.00, category: 'Fuel Surcharge' },
+                        { description: 'Toll fee SLEX', amount: 75.50, category: 'Toll Fees' },
+                        { description: 'Helper assistance', amount: 100.00, category: 'Helper' }
+                    ]
+                };
+                
+                const result = await window.dataService.saveDelivery(testDelivery);
+                
+                if (result) {
+                    log(`✅ Test delivery created: ${result.dr_number || testDelivery.dr_number}`, 'success');
+                    log('✅ Test cost data should now appear in analytics', 'success');
+                    log('💡 Refresh the main app to see the cost breakdown chart', 'info');
+                } else {
+                    log('❌ Failed to create test delivery', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error creating test data: ${error.message}`, 'error');
+            }
+        }
+        
+        function fixAnalyticsFunction() {
+            log('🛠️ Applying analytics function fix...', 'info');
+            
+            // Override getCostBreakdownData with enhanced version
+            window.getCostBreakdownData = async function(period = 'month') {
+                log('📊 Enhanced getCostBreakdownData called', 'info');
+                
+                try {
+                    const client = window.supabaseClient();
+                    if (!client) {
+                        throw new Error('Supabase client not available');
+                    }
+                    
+                    // Get cost items from dedicated table
+                    const { data: costItems, error } = await client
+                        .from('additional_cost_items')
+                        .select('category, amount');
+                    
+                    if (error) {
+                        throw error;
+                    }
+                    
+                    // Process data for chart
+                    const categoryTotals = {};
+                    
+                    (costItems || []).forEach(item => {
+                        const category = item.category || 'Other';
+                        categoryTotals[category] = (categoryTotals[category] || 0) + parseFloat(item.amount || 0);
+                    });
+                    
+                    const result = {
+                        labels: Object.keys(categoryTotals),
+                        values: Object.values(categoryTotals),
+                        colors: [
+                            'rgba(243, 156, 18, 0.8)',
+                            'rgba(52, 152, 219, 0.8)',
+                            'rgba(46, 204, 113, 0.8)',
+                            'rgba(155, 89, 182, 0.8)',
+                            'rgba(149, 165, 166, 0.8)'
+                        ]
+                    };
+                    
+                    log(`📊 Analytics processed ${costItems.length} cost items into ${result.labels.length} categories`, 'success');
+                    return result;
+                    
+                } catch (error) {
+                    log(`❌ Analytics error: ${error.message}`, 'error');
+                    return { labels: [], values: [], colors: [] };
+                }
+            };
+            
+            log('✅ Analytics function fix applied', 'success');
+            log('💡 The cost breakdown chart should now work properly', 'info');
+        }
+        
+        // Initialize diagnostic
+        window.addEventListener('load', () => {
+            log('🔧 Supabase Cost Integration Diagnostic loaded', 'info');
+            log('Click "Run Full Diagnostic" to identify issues', 'info');
+            
+            // Auto-check basic connectivity
+            setTimeout(() => {
+                log('🔍 Auto-checking basic connectivity...', 'info');
+                testSupabaseConnection();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
