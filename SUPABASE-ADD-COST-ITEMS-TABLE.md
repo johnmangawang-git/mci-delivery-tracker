@@ -7,17 +7,25 @@
 2. Navigate to **SQL Editor** in the left sidebar
 3. Click **New Query**
 
-### Step 2: Run the Schema
-1. Copy the entire contents of `supabase/add-additional-cost-items-table.sql`
+### Step 2: Run the Basic Schema (RECOMMENDED)
+**If you got a syntax error, use this simpler version:**
+
+1. Copy the entire contents of `supabase/add-cost-items-basic.sql`
 2. Paste it into the SQL Editor
 3. Click **Run** button
 
 ### Step 3: Verify Success
-You should see a success message:
+You should see:
 ```
-SUCCESS: Additional cost items table and related objects created successfully!
-You can now use the additional_cost_items table for detailed cost breakdown analytics.
+SUCCESS: Basic additional_cost_items table created!
 ```
+
+### Alternative: Full Schema (Advanced)
+If the basic version works, you can optionally run `supabase/add-additional-cost-items-table.sql` for advanced features like auto-updating totals.
+
+## 🔧 If You Still Get Errors
+
+Try running each section separately from `supabase/add-cost-items-simple.sql`
 
 ## 🎯 What This Creates
 

@@ -54,7 +54,7 @@ CREATE TRIGGER update_additional_cost_items_updated_at BEFORE UPDATE ON public.a
 
 -- Create a function to automatically update the total additional_costs in deliveries table
 CREATE OR REPLACE FUNCTION update_delivery_total_costs()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     -- Update the total additional_costs in the deliveries table
     UPDATE public.deliveries 
@@ -68,7 +68,7 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create triggers to automatically update total costs
 CREATE TRIGGER trigger_update_delivery_costs_on_insert
