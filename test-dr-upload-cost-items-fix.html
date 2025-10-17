@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DR Upload Cost Items Fix Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        .log-output {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .status-good { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>DR Upload Cost Items Fix Test</h1>
+        <p class="text-muted">This page tests that additional cost items from DR uploads are properly saved to Supabase.</p>
+        
+        <div class="alert alert-info">
+            <h5>Test Purpose</h5>
+            <p>This test verifies that when you upload a DR file with additional costs, the individual cost items (descriptions and amounts) are saved to both:</p>
+            <ul>
+                <li>The <code>deliveries</code> table (as JSONB array)</li>
+                <li>The <code>additional_cost_items</code> table (as separate records)</li>
+            </ul>
+            <p><strong>Expected Result:</strong> Cost breakdown analytics should work across all browsers after this fix.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>1. Test DR Additional Costs Function</h3>
+            <button class="btn btn-primary" onclick="testGetDRAdditionalCosts()">Test getDRAdditionalCosts</button>
+            <div id="testCostsResults" class="log-output mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test Cost Categorization</h3>
+            <button class="btn btn-primary" onclick="testCostCategorization()">Test Cost Categories</button>
+            <div id="testCategoriesResults" class="log-output mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Test Enhanced createBookingFromDR</h3>
+            <button class="btn btn-primary" onclick="testEnhancedCreateBooking()">Test Enhanced Function</button>
+            <div id="testBookingResults" class="log-output mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Test Supabase Cost Items Save</h3>
+            <button class="btn btn-primary" onclick="testSupabaseCostItemsSave()">Test Supabase Save</button>
+            <div id="testSupabaseResults" class="log-output mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Simulate DR Upload with Costs</h3>
+            <div class="mb-3">
+                <label class="form-label">Cost Description:</label>
+                <input type="text" class="form-control" id="testCostDescription" value="Fuel Surcharge" placeholder="Enter cost description">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Cost Amount:</label>
+                <input type="number" class="form-control" id="testCostAmount" value="150" placeholder="Enter amount">
+            </div>
+            <button class="btn btn-success" onclick="simulateDRUploadWithCosts()">Simulate DR Upload</button>
+            <div id="simulateResults" class="log-output mt-3"></div>
+        </div>
+
+        <!-- Hidden DR cost item template for testing -->
+        <div id="testDRCostContainer" style="display: none;">
+            <div class="dr-cost-item">
+                <input type="text" class="dr-cost-description" value="Test Fuel Cost">
+                <input type="number" class="dr-cost-amount" value="100">
+            </div>
+            <div class="dr-cost-item">
+                <input type="text" class="dr-cost-description" value="Toll Fee">
+                <input type="number" class="dr-cost-amount" value="50">
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Supabase Configuration -->
+    <script>
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    
+    <!-- Load Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Load application scripts -->
+    <script src="assets/js/supabase.js"></script>
+    <script src="assets/js/dataService.js"></script>
+    <script src="assets/js/booking.js"></script>
+    <script src="assets/js/dr-upload-cost-items-fix.js"></script>
+
+    <script>
+        function log(message, type = 'info', targetId) {
+            const className = type === 'success' ? 'status-good' : 
+                            type === 'warning' ? 'status-warning' : 
+                            type === 'error' ? 'status-error' : '';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}\n`;
+            
+            if (targetId) {
+                const element = document.getElementById(targetId);
+                if (element) {
+                    element.innerHTML += `<span class="${className}">${logMessage}</span>`;
+                    element.scrollTop = element.scrollHeight;
+                }
+            }
+            
+            console.log(message);
+        }
+
+        function testGetDRAdditionalCosts() {
+            const resultsDiv = document.getElementById('testCostsResults');
+            resultsDiv.innerHTML = '';
+            
+            log('Testing getDRAdditionalCosts function...', 'info', 'testCostsResults');
+            
+            try {
+                // Check if function exists
+                if (typeof window.getDRAdditionalCosts === 'function') {
+                    log('✓ getDRAdditionalCosts function found', 'success', 'testCostsResults');
+                    
+                    // Create test DOM elements
+                    const testContainer = document.getElementById('testDRCostContainer');
+                    document.body.appendChild(testContainer);
+                    testContainer.style.display = 'block';
+                    
+                    // Test the function
+                    const costs = window.getDRAdditionalCosts();
+                    log(`✓ Function returned ${costs.length} cost items`, 'success', 'testCostsResults');
+                    log(`Cost items: ${JSON.stringify(costs, null, 2)}`, 'info', 'testCostsResults');
+                    
+                    // Hide test container
+                    testContainer.style.display = 'none';
+                    
+                } else {
+                    log('✗ getDRAdditionalCosts function not found', 'error', 'testCostsResults');
+                }
+                
+            } catch (error) {
+                log(`✗ Error testing getDRAdditionalCosts: ${error.message}`, 'error', 'testCostsResults');
+            }
+        }
+
+        function testCostCategorization() {
+            const resultsDiv = document.getElementById('testCategoriesResults');
+            resultsDiv.innerHTML = '';
+            
+            log('Testing cost categorization...', 'info', 'testCategoriesResults');
+            
+            const testCosts = [
+                'Fuel Surcharge',
+                'Gas Money',
+                'Toll Fee',
+                'Highway Toll',
+                'Helper Fee',
+                'Urgent Delivery',
+                'Special Handling',
+                'Fragile Items',
+                'Random Cost'
+            ];
+            
+            try {
+                if (typeof window.categorizeCostDescription === 'function') {
+                    log('✓ categorizeCostDescription function found', 'success', 'testCategoriesResults');
+                    
+                    testCosts.forEach(cost => {
+                        const category = window.categorizeCostDescription(cost);
+                        log(`"${cost}" → "${category}"`, 'info', 'testCategoriesResults');
+                    });
+                    
+                } else {
+                    log('✗ categorizeCostDescription function not found', 'error', 'testCategoriesResults');
+                }
+                
+            } catch (error) {
+                log(`✗ Error testing categorization: ${error.message}`, 'error', 'testCategoriesResults');
+            }
+        }
+
+        function testEnhancedCreateBooking() {
+            const resultsDiv = document.getElementById('testBookingResults');
+            resultsDiv.innerHTML = '';
+            
+            log('Testing enhanced createBookingFromDR...', 'info', 'testBookingResults');
+            
+            try {
+                if (typeof window.createBookingFromDR === 'function') {
+                    log('✓ createBookingFromDR function found', 'success', 'testBookingResults');
+                    
+                    // Check if it's been enhanced
+                    const funcString = window.createBookingFromDR.toString();
+                    if (funcString.includes('additional_cost_items')) {
+                        log('✓ Function appears to be enhanced (contains additional_cost_items)', 'success', 'testBookingResults');
+                    } else {
+                        log('⚠ Function may not be enhanced yet', 'warning', 'testBookingResults');
+                    }
+                    
+                } else {
+                    log('✗ createBookingFromDR function not found', 'error', 'testBookingResults');
+                }
+                
+            } catch (error) {
+                log(`✗ Error testing enhanced function: ${error.message}`, 'error', 'testBookingResults');
+            }
+        }
+
+        function testSupabaseCostItemsSave() {
+            const resultsDiv = document.getElementById('testSupabaseResults');
+            resultsDiv.innerHTML = '';
+            
+            log('Testing Supabase cost items save...', 'info', 'testSupabaseResults');
+            
+            try {
+                // Check Supabase availability
+                if (window.dataService) {
+                    log('✓ dataService found', 'success', 'testSupabaseResults');
+                    
+                    if (window.dataService.isSupabaseAvailable()) {
+                        log('✓ Supabase is available', 'success', 'testSupabaseResults');
+                    } else {
+                        log('⚠ Supabase not available, will use localStorage', 'warning', 'testSupabaseResults');
+                    }
+                } else {
+                    log('✗ dataService not found', 'error', 'testSupabaseResults');
+                }
+                
+                // Check if additional_cost_items table exists
+                if (window.supabaseClient) {
+                    const client = window.supabaseClient();
+                    if (client) {
+                        log('✓ Supabase client available', 'success', 'testSupabaseResults');
+                        
+                        // Test table access
+                        client.from('additional_cost_items').select('count', { count: 'exact', head: true })
+                            .then(({ data, error, count }) => {
+                                if (error) {
+                                    if (error.code === 'PGRST116') {
+                                        log('⚠ additional_cost_items table does not exist yet', 'warning', 'testSupabaseResults');
+                                        log('Run the SQL schema from supabase/add-additional-cost-items-table.sql', 'info', 'testSupabaseResults');
+                                    } else {
+                                        log(`✗ Error accessing table: ${error.message}`, 'error', 'testSupabaseResults');
+                                    }
+                                } else {
+                                    log(`✓ additional_cost_items table exists with ${count || 0} records`, 'success', 'testSupabaseResults');
+                                }
+                            })
+                            .catch(err => {
+                                log(`✗ Error testing table: ${err.message}`, 'error', 'testSupabaseResults');
+                            });
+                    }
+                }
+                
+            } catch (error) {
+                log(`✗ Error testing Supabase: ${error.message}`, 'error', 'testSupabaseResults');
+            }
+        }
+
+        async function simulateDRUploadWithCosts() {
+            const resultsDiv = document.getElementById('simulateResults');
+            resultsDiv.innerHTML = '';
+            
+            log('Simulating DR upload with costs...', 'info', 'simulateResults');
+            
+            try {
+                const description = document.getElementById('testCostDescription').value;
+                const amount = parseFloat(document.getElementById('testCostAmount').value) || 0;
+                
+                if (!description || amount <= 0) {
+                    log('✗ Please enter valid cost description and amount', 'error', 'simulateResults');
+                    return;
+                }
+                
+                // Create test DR cost items in DOM
+                const testContainer = document.createElement('div');
+                testContainer.innerHTML = `
+                    <div class="dr-cost-item">
+                        <input type="text" class="dr-cost-description" value="${description}">
+                        <input type="number" class="dr-cost-amount" value="${amount}">
+                    </div>
+                `;
+                document.body.appendChild(testContainer);
+                
+                // Test booking data
+                const testBookingData = {
+                    drNumber: 'TEST-DR-' + Date.now(),
+                    customerName: 'Test Customer',
+                    vendorNumber: 'V001',
+                    origin: 'Test Origin',
+                    destination: 'Test Destination',
+                    truckType: 'L300',
+                    truckPlateNumber: 'TEST-123',
+                    deliveryDate: new Date().toISOString().split('T')[0],
+                    bookedDate: new Date().toISOString().split('T')[0]
+                };
+                
+                log(`Test booking data: ${JSON.stringify(testBookingData, null, 2)}`, 'info', 'simulateResults');
+                log(`Test cost: ${description} - ₱${amount}`, 'info', 'simulateResults');
+                
+                // Test the enhanced function
+                if (typeof window.createBookingFromDR === 'function') {
+                    log('Calling enhanced createBookingFromDR...', 'info', 'simulateResults');
+                    
+                    const result = await window.createBookingFromDR(testBookingData);
+                    
+                    if (result) {
+                        log('✓ Booking created successfully', 'success', 'simulateResults');
+                        log(`Result: ${JSON.stringify(result, null, 2)}`, 'info', 'simulateResults');
+                        
+                        // Check if cost items were saved
+                        if (result.additional_cost_items && result.additional_cost_items.length > 0) {
+                            log('✓ Cost items found in result', 'success', 'simulateResults');
+                        } else {
+                            log('⚠ No cost items found in result', 'warning', 'simulateResults');
+                        }
+                    } else {
+                        log('⚠ Function returned no result', 'warning', 'simulateResults');
+                    }
+                } else {
+                    log('✗ createBookingFromDR function not available', 'error', 'simulateResults');
+                }
+                
+                // Clean up
+                document.body.removeChild(testContainer);
+                
+            } catch (error) {
+                log(`✗ Error simulating DR upload: ${error.message}`, 'error', 'simulateResults');
+                console.error('Simulation error:', error);
+            }
+        }
+
+        // Auto-run tests after page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                log('Page loaded, running initial tests...', 'info', 'testCostsResults');
+                testGetDRAdditionalCosts();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

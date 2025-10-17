@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Browser Cost Breakdown Diagnostic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .diagnostic-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        .data-display {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .browser-info {
+            background-color: #e3f2fd;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 1rem;
+        }
+        .status-good { color: #28a745; }
+        .status-warning { color: #ffc107; }
+        .status-error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Cross-Browser Cost Breakdown Diagnostic</h1>
+        <p class="text-muted">This diagnostic will help identify why the Additional Cost Breakdown pie chart shows different data across browsers.</p>
+        
+        <div class="browser-info">
+            <strong>Current Browser:</strong> <span id="browserInfo"></span><br>
+            <strong>User Agent:</strong> <span id="userAgent"></span><br>
+            <strong>Timestamp:</strong> <span id="timestamp"></span>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>1. Data Source Analysis</h3>
+            <div id="dataSourceResults"></div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>2. localStorage Data</h3>
+            <div id="localStorageResults"></div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>3. Global Variables</h3>
+            <div id="globalVariablesResults"></div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>4. Cost Breakdown Processing</h3>
+            <div id="costBreakdownResults"></div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>5. Chart Data Analysis</h3>
+            <div id="chartDataResults"></div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>6. Supabase Connection Status</h3>
+            <div id="supabaseResults"></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="runDiagnostic()">Run Full Diagnostic</button>
+        <button class="btn btn-secondary" onclick="exportResults()">Export Results</button>
+    </div>
+
+    <script>
+        // Browser detection
+        function getBrowserInfo() {
+            const ua = navigator.userAgent;
+            let browser = 'Unknown';
+            
+            if (ua.includes('Edg/')) browser = 'Microsoft Edge';
+            else if (ua.includes('Chrome/')) browser = 'Google Chrome';
+            else if (ua.includes('Vivaldi/')) browser = 'Vivaldi';
+            else if (ua.includes('Firefox/')) browser = 'Mozilla Firefox';
+            else if (ua.includes('Safari/')) browser = 'Safari';
+            
+            return browser;
+        }
+
+        // Initialize browser info
+        document.getElementById('browserInfo').textContent = getBrowserInfo();
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+
+        function log(message, type = 'info') {
+            const className = type === 'success' ? 'status-good' : 
+                            type === 'warning' ? 'status-warning' : 
+                            type === 'error' ? 'status-error' : '';
+            return `<div class="${className}">${message}</div>`;
+        }
+
+        function runDiagnostic() {
+            console.log('🔍 Starting cross-browser cost breakdown diagnostic...');
+            
+            // 1. Data Source Analysis
+            analyzeDataSources();
+            
+            // 2. localStorage Analysis
+            analyzeLocalStorage();
+            
+            // 3. Global Variables Analysis
+            analyzeGlobalVariables();
+            
+            // 4. Cost Breakdown Processing
+            analyzeCostBreakdownProcessing();
+            
+            // 5. Chart Data Analysis
+            analyzeChartData();
+            
+            // 6. Supabase Analysis
+            analyzeSupabaseConnection();
+        }
+
+        function analyzeDataSources() {
+            let results = '';
+            
+            try {
+                // Check what data sources are available
+                const hasLocalStorage = typeof localStorage !== 'undefined';
+                const hasSupabase = typeof window.supabase !== 'undefined';
+                const hasGlobalDeliveries = typeof window.activeDeliveries !== 'undefined';
+                const hasGlobalHistory = typeof window.deliveryHistory !== 'undefined';
+                
+                results += log(`✓ localStorage available: ${hasLocalStorage}`, 'success');
+                results += log(`✓ Supabase library loaded: ${hasSupabase}`, hasSupabase ? 'success' : 'warning');
+                results += log(`✓ Global activeDeliveries: ${hasGlobalDeliveries}`, hasGlobalDeliveries ? 'success' : 'warning');
+                results += log(`✓ Global deliveryHistory: ${hasGlobalHistory}`, hasGlobalHistory ? 'success' : 'warning');
+                
+                // Check Supabase client initialization
+                if (hasSupabase) {
+                    const hasSupabaseClient = window.supabaseClientInitialized === true;
+                    results += log(`✓ Supabase client initialized: ${hasSupabaseClient}`, hasSupabaseClient ? 'success' : 'warning');
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing data sources: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('dataSourceResults').innerHTML = results;
+        }
+
+        function analyzeLocalStorage() {
+            let results = '';
+            
+            try {
+                // Check localStorage keys
+                const activeDeliveriesKey = 'mci-active-deliveries';
+                const deliveryHistoryKey = 'mci-delivery-history';
+                
+                const activeData = localStorage.getItem(activeDeliveriesKey);
+                const historyData = localStorage.getItem(deliveryHistoryKey);
+                
+                results += log(`Active deliveries in localStorage: ${activeData ? 'Found' : 'Not found'}`, activeData ? 'success' : 'warning');
+                results += log(`Delivery history in localStorage: ${historyData ? 'Found' : 'Not found'}`, historyData ? 'success' : 'warning');
+                
+                if (activeData) {
+                    const parsed = JSON.parse(activeData);
+                    results += log(`Active deliveries count: ${parsed.length}`, 'info');
+                    
+                    // Check for additional costs
+                    const withCosts = parsed.filter(d => d.additionalCosts > 0 || (d.additionalCostItems && d.additionalCostItems.length > 0));
+                    results += log(`Deliveries with additional costs: ${withCosts.length}`, withCosts.length > 0 ? 'success' : 'warning');
+                    
+                    // Show sample data
+                    if (withCosts.length > 0) {
+                        results += '<div class="data-display">';
+                        results += 'Sample delivery with costs:\n';
+                        results += JSON.stringify(withCosts[0], null, 2);
+                        results += '</div>';
+                    }
+                }
+                
+                if (historyData) {
+                    const parsed = JSON.parse(historyData);
+                    results += log(`History deliveries count: ${parsed.length}`, 'info');
+                    
+                    const withCosts = parsed.filter(d => d.additionalCosts > 0 || (d.additionalCostItems && d.additionalCostItems.length > 0));
+                    results += log(`History deliveries with additional costs: ${withCosts.length}`, withCosts.length > 0 ? 'success' : 'warning');
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing localStorage: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('localStorageResults').innerHTML = results;
+        }
+
+        function analyzeGlobalVariables() {
+            let results = '';
+            
+            try {
+                const activeDeliveries = window.activeDeliveries || [];
+                const deliveryHistory = window.deliveryHistory || [];
+                
+                results += log(`Global activeDeliveries count: ${activeDeliveries.length}`, 'info');
+                results += log(`Global deliveryHistory count: ${deliveryHistory.length}`, 'info');
+                
+                // Check for additional costs in global variables
+                const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+                const withCosts = allDeliveries.filter(d => d.additionalCosts > 0 || (d.additionalCostItems && d.additionalCostItems.length > 0));
+                
+                results += log(`Total deliveries with costs: ${withCosts.length}`, withCosts.length > 0 ? 'success' : 'warning');
+                
+                // Analyze cost structure
+                let totalOldFormat = 0;
+                let totalNewFormat = 0;
+                let itemsCount = 0;
+                
+                withCosts.forEach(delivery => {
+                    if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
+                        totalOldFormat += delivery.additionalCosts;
+                    }
+                    if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+                        delivery.additionalCostItems.forEach(item => {
+                            totalNewFormat += item.amount || 0;
+                            itemsCount++;
+                        });
+                    }
+                });
+                
+                results += log(`Old format total costs: ₱${totalOldFormat.toLocaleString()}`, 'info');
+                results += log(`New format total costs: ₱${totalNewFormat.toLocaleString()}`, 'info');
+                results += log(`Individual cost items count: ${itemsCount}`, 'info');
+                
+                // Show sample data structure
+                if (withCosts.length > 0) {
+                    results += '<div class="data-display">';
+                    results += 'Sample delivery structure:\n';
+                    const sample = {
+                        drNumber: withCosts[0].drNumber,
+                        additionalCosts: withCosts[0].additionalCosts,
+                        additionalCostItems: withCosts[0].additionalCostItems,
+                        timestamp: withCosts[0].timestamp
+                    };
+                    results += JSON.stringify(sample, null, 2);
+                    results += '</div>';
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing global variables: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('globalVariablesResults').innerHTML = results;
+        }
+
+        function analyzeCostBreakdownProcessing() {
+            let results = '';
+            
+            try {
+                // Test the cost breakdown processing logic
+                const activeDeliveries = window.activeDeliveries || [];
+                const deliveryHistory = window.deliveryHistory || [];
+                const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+                
+                // Simulate the cost breakdown processing
+                const costBreakdown = {
+                    'Fuel Surcharge': 0,
+                    'Toll Fees': 0,
+                    'Helper': 0,
+                    'Special Handling': 0,
+                    'Other': 0
+                };
+                
+                let processedDeliveries = 0;
+                let processedItems = 0;
+                let fallbackCosts = 0;
+                
+                allDeliveries.forEach(delivery => {
+                    if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
+                        processedDeliveries++;
+                        delivery.additionalCostItems.forEach(item => {
+                            processedItems++;
+                            const amount = item.amount || 0;
+                            
+                            // Simple categorization (without the full function)
+                            const desc = (item.description || '').toLowerCase();
+                            let category = 'Other';
+                            
+                            if (desc.includes('fuel') || desc.includes('gas')) category = 'Fuel Surcharge';
+                            else if (desc.includes('toll') || desc.includes('highway')) category = 'Toll Fees';
+                            else if (desc.includes('helper') || desc.includes('urgent')) category = 'Helper';
+                            else if (desc.includes('special') || desc.includes('handling')) category = 'Special Handling';
+                            
+                            costBreakdown[category] += amount;
+                        });
+                    } else if (typeof delivery.additionalCosts === 'number' && delivery.additionalCosts > 0) {
+                        fallbackCosts += delivery.additionalCosts;
+                        costBreakdown['Other'] += delivery.additionalCosts;
+                    }
+                });
+                
+                results += log(`Deliveries processed with new format: ${processedDeliveries}`, 'info');
+                results += log(`Individual cost items processed: ${processedItems}`, 'info');
+                results += log(`Fallback costs (old format): ₱${fallbackCosts.toLocaleString()}`, 'info');
+                
+                // Show breakdown
+                results += '<div class="data-display">';
+                results += 'Cost Breakdown Results:\n';
+                Object.entries(costBreakdown).forEach(([category, amount]) => {
+                    results += `${category}: ₱${amount.toLocaleString()}\n`;
+                });
+                results += '</div>';
+                
+                // Check if all values are zero
+                const totalCosts = Object.values(costBreakdown).reduce((sum, val) => sum + val, 0);
+                if (totalCosts === 0) {
+                    results += log(`⚠️ No cost data found - this explains the "No Data" message`, 'warning');
+                } else {
+                    results += log(`✓ Total costs found: ₱${totalCosts.toLocaleString()}`, 'success');
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing cost breakdown processing: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('costBreakdownResults').innerHTML = results;
+        }
+
+        function analyzeChartData() {
+            let results = '';
+            
+            try {
+                // Check if analytics functions are available
+                const hasInitAnalytics = typeof window.initAnalyticsCharts === 'function';
+                const hasLoadAnalytics = typeof window.loadAnalyticsData === 'function';
+                
+                results += log(`initAnalyticsCharts function: ${hasInitAnalytics ? 'Available' : 'Missing'}`, hasInitAnalytics ? 'success' : 'error');
+                
+                // Try to get chart data
+                if (hasInitAnalytics) {
+                    // Check if Chart.js is loaded
+                    const hasChartJs = typeof Chart !== 'undefined';
+                    results += log(`Chart.js library: ${hasChartJs ? 'Loaded' : 'Missing'}`, hasChartJs ? 'success' : 'error');
+                    
+                    // Check if chart canvas exists
+                    const chartCanvas = document.getElementById('costBreakdownChart');
+                    results += log(`Cost breakdown chart canvas: ${chartCanvas ? 'Found in DOM' : 'Not found'}`, chartCanvas ? 'success' : 'warning');
+                }
+                
+                // Test data loading
+                const activeDeliveries = window.activeDeliveries || [];
+                const deliveryHistory = window.deliveryHistory || [];
+                
+                if (activeDeliveries.length === 0 && deliveryHistory.length === 0) {
+                    results += log(`⚠️ No delivery data available for charts`, 'warning');
+                } else {
+                    results += log(`✓ Delivery data available for processing`, 'success');
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing chart data: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('chartDataResults').innerHTML = results;
+        }
+
+        function analyzeSupabaseConnection() {
+            let results = '';
+            
+            try {
+                const hasSupabase = typeof window.supabase !== 'undefined';
+                
+                if (!hasSupabase) {
+                    results += log(`Supabase library not loaded - using localStorage only`, 'warning');
+                    document.getElementById('supabaseResults').innerHTML = results;
+                    return;
+                }
+                
+                const isInitialized = window.supabaseClientInitialized === true;
+                results += log(`Supabase client initialized: ${isInitialized}`, isInitialized ? 'success' : 'warning');
+                
+                if (isInitialized && window.globalSupabaseClient) {
+                    results += log(`Attempting to test Supabase connection...`, 'info');
+                    
+                    // Test connection
+                    window.globalSupabaseClient
+                        .from('deliveries')
+                        .select('count', { count: 'exact', head: true })
+                        .then(({ data, error }) => {
+                            if (error && error.code !== 'PGRST116') {
+                                results += log(`❌ Supabase connection error: ${error.message}`, 'error');
+                            } else {
+                                results += log(`✓ Supabase connection successful`, 'success');
+                            }
+                            document.getElementById('supabaseResults').innerHTML = results;
+                        })
+                        .catch(err => {
+                            results += log(`❌ Supabase test failed: ${err.message}`, 'error');
+                            document.getElementById('supabaseResults').innerHTML = results;
+                        });
+                } else {
+                    results += log(`Supabase client not properly initialized`, 'warning');
+                }
+                
+            } catch (error) {
+                results += log(`❌ Error analyzing Supabase: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('supabaseResults').innerHTML = results;
+        }
+
+        function exportResults() {
+            const browserInfo = getBrowserInfo();
+            const timestamp = new Date().toISOString();
+            
+            let report = `Cross-Browser Cost Breakdown Diagnostic Report\n`;
+            report += `Browser: ${browserInfo}\n`;
+            report += `Timestamp: ${timestamp}\n`;
+            report += `User Agent: ${navigator.userAgent}\n\n`;
+            
+            // Get all diagnostic results
+            const sections = [
+                'dataSourceResults',
+                'localStorageResults', 
+                'globalVariablesResults',
+                'costBreakdownResults',
+                'chartDataResults',
+                'supabaseResults'
+            ];
+            
+            sections.forEach(sectionId => {
+                const element = document.getElementById(sectionId);
+                if (element) {
+                    report += `${sectionId.replace('Results', '').toUpperCase()}:\n`;
+                    report += element.textContent + '\n\n';
+                }
+            });
+            
+            // Download as text file
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cost-breakdown-diagnostic-${browserInfo.replace(/\s+/g, '-')}-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Auto-run diagnostic on page load
+        window.addEventListener('load', function() {
+            setTimeout(runDiagnostic, 1000);
+        });
+    </script>
+</body>
+</html>
