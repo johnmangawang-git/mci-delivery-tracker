@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase-Only Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .log { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 4px; 
+            padding: 15px; 
+            font-family: monospace; 
+            font-size: 12px; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            white-space: pre-wrap;
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            border: 1px solid #dee2e6; 
+            border-radius: 8px; 
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🧪 Supabase-Only Analytics Test</h1>
+        <p class="text-muted">This page tests analytics with localStorage fallback disabled to verify Supabase data flow.</p>
+        
+        <div class="alert alert-warning">
+            <h5>⚠️ Test Purpose</h5>
+            <p>This test disables localStorage fallback for analytics, forcing the system to use ONLY Supabase data. This helps identify if DR uploads are properly saving cost data to Supabase.</p>
+            <ul>
+                <li><strong>If analytics show data:</strong> Supabase integration is working correctly</li>
+                <li><strong>If analytics show "No Data":</strong> DR uploads are not saving to Supabase properly</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Data Source Status</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Supabase Connection</h6>
+                    <div id="supabaseStatus">
+                        <span class="status-indicator status-warning"></span>Checking...
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6>localStorage Fallback</h6>
+                    <div id="localStorageStatus">
+                        <span class="status-indicator status-error"></span>Disabled (Supabase-Only Mode)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Analytics Data Test</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <button onclick="testSupabaseCostItems()" class="btn btn-primary w-100 mb-2">1. Test Cost Items Table</button>
+                    <small class="text-muted">Check additional_cost_items table</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="testSupabaseDeliveries()" class="btn btn-primary w-100 mb-2">2. Test Deliveries Table</button>
+                    <small class="text-muted">Check deliveries with cost data</small>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="testAnalyticsChart()" class="btn btn-success w-100 mb-2">3. Test Analytics Chart</button>
+                    <small class="text-muted">Test cost breakdown chart</small>
+                </div>
+            </div>
+            <div id="analyticsTestResults" class="log mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Quick DR Upload Test</h3>
+            <p>Simulate a DR upload with costs to test the complete flow:</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Cost Description:</label>
+                    <input type="text" class="form-control" id="testCostDesc" value="Gasoline for delivery truck" placeholder="Enter cost description">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Cost Amount:</label>
+                    <input type="number" class="form-control" id="testCostAmount" value="200" placeholder="Enter amount">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button onclick="simulateDRUpload()" class="btn btn-warning w-100">Simulate Upload</button>
+                </div>
+            </div>
+            <div id="uploadTestResults" class="log mt-3"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔄 Control Panel</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <button onclick="refreshAnalytics()" class="btn btn-info w-100 mb-2">🔄 Refresh Analytics</button>
+                    <small class="text-muted">Reload analytics with current data</small>
+                </div>
+                <div class="col-md-6">
+                    <button onclick="enableLocalStorageFallback()" class="btn btn-secondary w-100 mb-2">🔄 Enable localStorage Fallback</button>
+                    <small class="text-muted">Restore normal operation (page reload)</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Log</h3>
+            <div id="testLog" class="log">Ready to test Supabase-only analytics...\n</div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Application scripts -->
+    <script src="public/assets/js/supabase.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/analytics.js"></script>
+    <script src="public/assets/js/cost-breakdown-analytics-fix.js"></script>
+    
+    <!-- DISABLE LOCALSTORAGE FALLBACK - This is the key script -->
+    <script src="public/assets/js/disable-localstorage-analytics-fallback.js"></script>
+
+    <script>
+        // Logging function
+        function log(message, type = 'info', targetId = 'testLog') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById(targetId);
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logElement.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Test Supabase cost items table
+        async function testSupabaseCostItems() {
+            log('Testing Supabase additional_cost_items table...', 'info', 'analyticsTestResults');
+            
+            try {
+                if (!window.supabaseClient) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                const client = window.supabaseClient();
+                const { data: costItems, error } = await client
+                    .from('additional_cost_items')
+                    .select('*');
+                
+                if (error) {
+                    throw error;
+                }
+                
+                if (costItems && costItems.length > 0) {
+                    log(`✅ Found ${costItems.length} cost items in additional_cost_items table`, 'success', 'analyticsTestResults');
+                    costItems.forEach((item, index) => {
+                        log(`  ${index + 1}. ${item.description}: ₱${item.amount} (${item.category || 'No category'})`, 'info', 'analyticsTestResults');
+                    });
+                } else {
+                    log('⚠️ No cost items found in additional_cost_items table', 'warning', 'analyticsTestResults');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing cost items table: ${error.message}`, 'error', 'analyticsTestResults');
+            }
+        }
+
+        // Test Supabase deliveries table
+        async function testSupabaseDeliveries() {
+            log('Testing Supabase deliveries table for cost data...', 'info', 'analyticsTestResults');
+            
+            try {
+                if (!window.supabaseClient) {
+                    throw new Error('Supabase client not available');
+                }
+                
+                const client = window.supabaseClient();
+                const { data: deliveries, error } = await client
+                    .from('deliveries')
+                    .select('dr_number, additional_cost_items, additional_costs')
+                    .gt('additional_costs', 0);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                if (deliveries && deliveries.length > 0) {
+                    log(`✅ Found ${deliveries.length} deliveries with costs in deliveries table`, 'success', 'analyticsTestResults');
+                    deliveries.forEach((delivery, index) => {
+                        log(`  ${index + 1}. DR ${delivery.dr_number}: ₱${delivery.additional_costs}`, 'info', 'analyticsTestResults');
+                        if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
+                            delivery.additional_cost_items.forEach(item => {
+                                log(`    - ${item.description}: ₱${item.amount}`, 'info', 'analyticsTestResults');
+                            });
+                        }
+                    });
+                } else {
+                    log('⚠️ No deliveries with costs found in deliveries table', 'warning', 'analyticsTestResults');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing deliveries table: ${error.message}`, 'error', 'analyticsTestResults');
+            }
+        }
+
+        // Test analytics chart function
+        async function testAnalyticsChart() {
+            log('Testing analytics chart with Supabase-only data...', 'info', 'analyticsTestResults');
+            
+            try {
+                if (typeof window.getEnhancedCostBreakdownData === 'function') {
+                    const chartData = await window.getEnhancedCostBreakdownData('month');
+                    
+                    if (chartData && chartData.labels && chartData.values) {
+                        log('✅ Analytics chart data generated successfully', 'success', 'analyticsTestResults');
+                        log(`Labels: ${chartData.labels.join(', ')}`, 'info', 'analyticsTestResults');
+                        log(`Values: ${chartData.values.map(v => `₱${v}`).join(', ')}`, 'info', 'analyticsTestResults');
+                        
+                        const totalCosts = chartData.values.reduce((a, b) => a + b, 0);
+                        log(`Total costs: ₱${totalCosts}`, 'info', 'analyticsTestResults');
+                        
+                        if (totalCosts > 0) {
+                            log('🎉 SUCCESS: Cost data is available from Supabase!', 'success', 'analyticsTestResults');
+                        } else {
+                            log('⚠️ WARNING: No cost data found - check if DR uploads are saving to Supabase', 'warning', 'analyticsTestResults');
+                        }
+                    } else {
+                        log('⚠️ No chart data returned', 'warning', 'analyticsTestResults');
+                    }
+                } else {
+                    log('❌ getEnhancedCostBreakdownData function not available', 'error', 'analyticsTestResults');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing analytics chart: ${error.message}`, 'error', 'analyticsTestResults');
+            }
+        }
+
+        // Simulate DR upload
+        async function simulateDRUpload() {
+            const description = document.getElementById('testCostDesc').value;
+            const amount = parseFloat(document.getElementById('testCostAmount').value) || 0;
+            
+            log('Simulating DR upload with costs...', 'info', 'uploadTestResults');
+            
+            if (!description || amount <= 0) {
+                log('❌ Please enter valid cost description and amount', 'error', 'uploadTestResults');
+                return;
+            }
+            
+            try {
+                if (!window.dataService) {
+                    throw new Error('DataService not available');
+                }
+                
+                const testDelivery = {
+                    dr_number: `DR-TEST-${Date.now()}`,
+                    customer_name: 'Test Customer (Supabase Only)',
+                    vendor_number: '+63 917 555 0123',
+                    origin: 'Manila',
+                    destination: 'Cebu',
+                    status: 'Active',
+                    created_date: new Date().toISOString().split('T')[0],
+                    created_by: 'Supabase-Only Test',
+                    additional_costs: amount,
+                    additional_cost_items: [{
+                        description: description,
+                        amount: amount,
+                        category: window.categorizeCostDescription ? window.categorizeCostDescription(description) : 'Other'
+                    }]
+                };
+                
+                log(`Creating test delivery: ${testDelivery.dr_number}`, 'info', 'uploadTestResults');
+                log(`Cost: ${description} = ₱${amount}`, 'info', 'uploadTestResults');
+                
+                const result = await window.dataService.saveDelivery(testDelivery);
+                
+                if (result) {
+                    log('✅ Test delivery created successfully', 'success', 'uploadTestResults');
+                    log('🔄 Now test the analytics to see if the cost appears...', 'info', 'uploadTestResults');
+                } else {
+                    throw new Error('Failed to save test delivery');
+                }
+                
+            } catch (error) {
+                log(`❌ Error simulating DR upload: ${error.message}`, 'error', 'uploadTestResults');
+            }
+        }
+
+        // Refresh analytics
+        function refreshAnalytics() {
+            log('Refreshing analytics with Supabase-only data...', 'info');
+            
+            if (typeof window.initAnalyticsCharts === 'function') {
+                window.initAnalyticsCharts('month');
+                log('✅ Analytics charts refreshed', 'success');
+            }
+            
+            if (typeof window.updateDashboardMetrics === 'function') {
+                window.updateDashboardMetrics();
+                log('✅ Dashboard metrics refreshed', 'success');
+            }
+        }
+
+        // Enable localStorage fallback (calls the global function)
+        function enableLocalStorageFallback() {
+            if (typeof window.enableLocalStorageFallback === 'function') {
+                window.enableLocalStorageFallback();
+            } else {
+                alert('Function not available. Please reload the page manually to restore localStorage fallback.');
+            }
+        }
+
+        // Check Supabase status
+        async function checkSupabaseStatus() {
+            try {
+                if (window.supabaseClient) {
+                    const client = window.supabaseClient();
+                    const { data, error } = await client.from('deliveries').select('count').limit(1);
+                    
+                    if (!error) {
+                        document.getElementById('supabaseStatus').innerHTML = 
+                            '<span class="status-indicator status-success"></span>Connected';
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    throw new Error('Supabase client not available');
+                }
+            } catch (error) {
+                document.getElementById('supabaseStatus').innerHTML = 
+                    '<span class="status-indicator status-error"></span>Disconnected: ' + error.message;
+            }
+        }
+
+        // Initialize page
+        window.addEventListener('load', () => {
+            log('🔧 Supabase-Only Analytics Test initialized', 'info');
+            log('localStorage fallback is DISABLED for this test', 'warning');
+            log('All analytics data will come from Supabase only', 'info');
+            
+            setTimeout(checkSupabaseStatus, 2000);
+        });
+    </script>
+</body>
+</html>
