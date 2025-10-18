@@ -236,6 +236,7 @@ class DataService {
         };
 
         const localStorageOp = async () => {
+            console.log('📦 Using localStorage fallback for saveDelivery');
             const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
             const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
@@ -248,8 +249,8 @@ class DataService {
             );
             
             // Add to appropriate array based on status
-            if (delivery.status === 'Completed') {
-                // For completed deliveries, ensure we're not duplicating in active
+            if (delivery.status === 'Completed' || delivery.status === 'Signed') {
+                // For completed deliveries, add to history
                 filteredHistory.unshift(delivery);
                 localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
@@ -258,14 +259,9 @@ class DataService {
                 window.deliveryHistory = filteredHistory;
                 window.activeDeliveries = filteredActive;
                 
-                // Update analytics dashboard stats
-                if (typeof window.updateDashboardStats === 'function') {
-                    setTimeout(() => {
-                        window.updateDashboardStats();
-                    }, 100);
-                }
+                console.log(`📦 localStorage: Saved completed delivery ${delivery.dr_number} to history`);
             } else {
-                // For active deliveries, ensure we're not duplicating in history
+                // For active deliveries (including 'Active' status)
                 filteredActive.push(delivery);
                 localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
                 localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
@@ -274,12 +270,14 @@ class DataService {
                 window.activeDeliveries = filteredActive;
                 window.deliveryHistory = filteredHistory;
                 
-                // Update analytics dashboard stats
-                if (typeof window.updateDashboardStats === 'function') {
-                    setTimeout(() => {
-                        window.updateDashboardStats();
-                    }, 100);
-                }
+                console.log(`📦 localStorage: Saved active delivery ${delivery.dr_number} to active list`);
+            }
+            
+            // Update analytics dashboard stats
+            if (typeof window.updateDashboardStats === 'function') {
+                setTimeout(() => {
+                    window.updateDashboardStats();
+                }, 100);
             }
             
             return delivery;
@@ -304,30 +302,47 @@ class DataService {
         };
 
         const localStorageOp = async () => {
+            console.log('📦 Using localStorage fallback for getDeliveries');
             const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
             const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
-            let allDeliveries = [...activeDeliveries, ...deliveryHistory];
+            // FIXED: Don't mix data sources - use appropriate array based on filter
+            let deliveries = [];
             
-            // Ensure we're using the correct field name for status filtering
             if (filters.status) {
-                if (filters.status === 'Completed') {
-                    // For completed status, filter by both field name formats
-                    allDeliveries = allDeliveries.filter(d => 
-                        (d.status === 'Completed') || 
-                        (d.status === 'Signed') ||
-                        (d.status === 'Completed' && (d.dr_number || d.drNumber))
+                if (filters.status === 'Completed' || filters.status === 'Signed') {
+                    // Return only completed deliveries
+                    deliveries = deliveryHistory.filter(d => 
+                        d.status === 'Completed' || d.status === 'Signed'
+                    );
+                } else if (filters.status === 'Active') {
+                    // Return only active deliveries
+                    deliveries = activeDeliveries.filter(d => 
+                        d.status === 'Active' || (!d.status || d.status === '')
                     );
                 } else {
-                    // For other statuses, exclude completed deliveries
-                    allDeliveries = allDeliveries.filter(d => 
-                        (d.status !== 'Completed') && 
-                        (d.status !== 'Signed')
-                    );
+                    // Return deliveries with specific status from both arrays
+                    const fromActive = activeDeliveries.filter(d => d.status === filters.status);
+                    const fromHistory = deliveryHistory.filter(d => d.status === filters.status);
+                    deliveries = [...fromActive, ...fromHistory];
                 }
+            } else {
+                // No filter - return all deliveries but avoid duplicates
+                const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+                const uniqueDeliveries = new Map();
+                
+                allDeliveries.forEach(delivery => {
+                    const key = delivery.dr_number || delivery.drNumber || delivery.id;
+                    if (key && !uniqueDeliveries.has(key)) {
+                        uniqueDeliveries.set(key, delivery);
+                    }
+                });
+                
+                deliveries = Array.from(uniqueDeliveries.values());
             }
             
-            return allDeliveries;
+            console.log(`📦 localStorage: Returning ${deliveries.length} deliveries for filter:`, filters);
+            return deliveries;
         };
 
         return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
