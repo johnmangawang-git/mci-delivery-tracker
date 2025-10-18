@@ -73,7 +73,6 @@ console.log('🔧 Loading Data Source Indicator Fix...');
                     <div class="indicator-content">
                         <i class="bi bi-inbox"></i>
                         <span>No Data</span>
-                        <small>Upload a DR with additional costs to see breakdown</small>
                     </div>
                 `;
                 break;

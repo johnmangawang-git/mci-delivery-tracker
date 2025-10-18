@@ -85,13 +85,182 @@
         .fallback-hidden {
             display: none;
         }
+
+        /* Customer Delivery Tracking Styles */
+        .tracking-section {
+            margin-top: 2rem;
+        }
+
+        .tracking-card {
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            border: none;
+            overflow: hidden;
+        }
+
+        .tracking-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .tracking-body {
+            padding: 1.5rem;
+        }
+
+        .tracking-input {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .tracking-input:focus {
+            border-color: #28a745;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        }
+
+        .btn-track {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-track:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .tracking-result {
+            margin-top: 1rem;
+            border-radius: 10px;
+            padding: 1rem;
+            display: none;
+        }
+
+        .tracking-result.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .tracking-result.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .result-body .row {
+            margin-bottom: 0.5rem;
+        }
+
+        .result-body strong {
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-order-confirmed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-out-for-delivery {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-delivered {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .result-footer {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .contact-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .contact-info strong {
+            color: #28a745;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .tracking-section {
+                margin-top: 1rem;
+            }
+            
+            .tracking-header {
+                padding: 1rem;
+            }
+            
+            .tracking-body {
+                padding: 1rem;
+            }
+        }
+
+        /* Animation for loading spinner */
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
+            <div class="col-lg-10">
+                <div class="row">
+                    <!-- Staff Login Section -->
+                    <div class="col-md-6">
                 <div class="card login-card">
                     <div class="login-header">
                         <div class="logo-icon">
@@ -166,6 +335,60 @@
                         </div>
                     </div>
                 </div>
+                    </div>
+
+                    <!-- Customer Tracking Section -->
+                    <div class="col-md-6">
+                        <div class="card tracking-card">
+                            <div class="tracking-header">
+                                <div class="logo-icon">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <h3>Track Your Delivery</h3>
+                                <p class="mb-0">Enter your DR number to check status</p>
+                            </div>
+                            <div class="card-body tracking-body">
+                                <form id="trackingForm">
+                                    <div class="mb-3">
+                                        <label for="trackingDRNumber" class="form-label">DR Number</label>
+                                        <input type="text" class="form-control tracking-input" id="trackingDRNumber" 
+                                               placeholder="e.g., DR-2024-001234" required>
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle"></i>
+                                            Find your DR number on your delivery receipt
+                                        </div>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-track btn-success" id="trackingButton">
+                                            <i class="bi bi-search me-2"></i>Track Delivery
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <!-- Tracking Result Area -->
+                                <div id="trackingResult" class="tracking-result">
+                                    <!-- Results will be displayed here -->
+                                </div>
+
+                                <!-- Contact Information -->
+                                <div class="contact-info">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <i class="bi bi-telephone-fill text-success"></i><br>
+                                            <strong>Call Us</strong><br>
+                                            <small>+63 917 123 4567</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <i class="bi bi-envelope-fill text-success"></i><br>
+                                            <strong>Email Us</strong><br>
+                                            <small>support@mci.com</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -182,6 +405,7 @@
 
     <!-- Application JavaScript Files -->
     <script src="assets/js/supabase.js"></script>
+    <script src="assets/js/delivery-tracking.js"></script>
 
     <script>
         // Add event listeners when DOM is loaded
