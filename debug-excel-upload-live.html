@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Live Excel Upload Debug</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 400px;
+            max-height: 90vh;
+            background: white;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 9999;
+            overflow: hidden;
+        }
+        .debug-header {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+        }
+        .debug-content {
+            padding: 10px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .debug-log {
+            font-family: monospace;
+            font-size: 11px;
+            background: #f8f9fa;
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #007bff;
+        }
+        .debug-log.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .debug-log.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .debug-log.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .data-summary {
+            background: #e9ecef;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .toggle-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug Panel -->
+    <div id="debugPanel" class="debug-panel">
+        <div class="debug-header">
+            🔍 Live Excel Upload Debug
+            <button class="toggle-btn" onclick="toggleDebugPanel()">−</button>
+        </div>
+        <div id="debugContent" class="debug-content">
+            <div class="data-summary">
+                <strong>Current Data State:</strong><br>
+                Active Deliveries: <span id="activeCount">0</span><br>
+                Delivery History: <span id="historyCount">0</span><br>
+                Customers: <span id="customerCount">0</span>
+            </div>
+            <div id="debugLogs"></div>
+        </div>
+    </div>
+
+    <script>
+        let debugLogs = [];
+        let isMinimized = false;
+
+        function toggleDebugPanel() {
+            const content = document.getElementById('debugContent');
+            const btn = document.querySelector('.toggle-btn');
+            isMinimized = !isMinimized;
+            content.style.display = isMinimized ? 'none' : 'block';
+            btn.textContent = isMinimized ? '+' : '−';
+        }
+
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const log = {
+                timestamp,
+                message,
+                type
+            };
+            
+            debugLogs.push(log);
+            
+            // Keep only last 50 logs
+            if (debugLogs.length > 50) {
+                debugLogs = debugLogs.slice(-50);
+            }
+            
+            updateDebugDisplay();
+        }
+
+        function updateDebugDisplay() {
+            const logsContainer = document.getElementById('debugLogs');
+            logsContainer.innerHTML = '';
+            
+            debugLogs.slice(-20).forEach(log => {
+                const logDiv = document.createElement('div');
+                logDiv.className = `debug-log ${log.type}`;
+                logDiv.innerHTML = `<strong>${log.timestamp}</strong><br>${log.message}`;
+                logsContainer.appendChild(logDiv);
+            });
+            
+            // Scroll to bottom
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateDataCounts() {
+            document.getElementById('activeCount').textContent = window.activeDeliveries?.length || 0;
+            document.getElementById('historyCount').textContent = window.deliveryHistory?.length || 0;
+            document.getElementById('customerCount').textContent = window.customers?.length || 0;
+        }
+
+        // Intercept console methods
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        console.log = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('Excel') || message.includes('DR') || message.includes('delivery') || message.includes('customer')) {
+                addDebugLog(message, 'info');
+            }
+            originalConsoleLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            const message = args.join(' ');
+            addDebugLog(`ERROR: ${message}`, 'error');
+            originalConsoleError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            addDebugLog(`WARN: ${message}`, 'warning');
+            originalConsoleWarn.apply(console, args);
+        };
+
+        // Monitor key functions
+        function monitorFunction(obj, funcName, context = '') {
+            if (obj && typeof obj[funcName] === 'function') {
+                const originalFunc = obj[funcName];
+                obj[funcName] = function(...args) {
+                    addDebugLog(`🔧 ${context}${funcName} called with: ${JSON.stringify(args).substring(0, 100)}...`, 'info');
+                    
+                    const result = originalFunc.apply(this, args);
+                    
+                    if (result && typeof result.then === 'function') {
+                        return result.then(res => {
+                            addDebugLog(`✅ ${context}${funcName} completed successfully`, 'success');
+                            updateDataCounts();
+                            return res;
+                        }).catch(err => {
+                            addDebugLog(`❌ ${context}${funcName} failed: ${err.message}`, 'error');
+                            return Promise.reject(err);
+                        });
+                    } else {
+                        addDebugLog(`✅ ${context}${funcName} completed`, 'success');
+                        updateDataCounts();
+                        return result;
+                    }
+                };
+            }
+        }
+
+        // Monitor dataService functions
+        function monitorDataService() {
+            if (window.dataService) {
+                monitorFunction(window.dataService, 'saveDelivery', 'dataService.');
+                monitorFunction(window.dataService, 'getDeliveries', 'dataService.');
+                monitorFunction(window.dataService, 'saveCustomer', 'dataService.');
+                monitorFunction(window.dataService, 'getCustomers', 'dataService.');
+                addDebugLog('✅ DataService monitoring enabled', 'success');
+            } else {
+                addDebugLog('❌ DataService not available for monitoring', 'error');
+            }
+        }
+
+        // Monitor Excel upload functions
+        function monitorExcelFunctions() {
+            monitorFunction(window, 'createBookingFromDR', '');
+            monitorFunction(window, 'confirmDRUpload', '');
+            monitorFunction(window, 'autoCreateCustomer', '');
+            monitorFunction(window, 'loadActiveDeliveries', '');
+            monitorFunction(window, 'loadDeliveryHistory', '');
+            monitorFunction(window, 'loadCustomers', '');
+            addDebugLog('✅ Excel upload functions monitoring enabled', 'success');
+        }
+
+        // Deep monitoring of data changes
+        function monitorDataChanges() {
+            // Monitor activeDeliveries changes
+            let lastActiveCount = 0;
+            let lastHistoryCount = 0;
+            let lastCustomerCount = 0;
+
+            setInterval(() => {
+                const currentActiveCount = window.activeDeliveries?.length || 0;
+                const currentHistoryCount = window.deliveryHistory?.length || 0;
+                const currentCustomerCount = window.customers?.length || 0;
+
+                if (currentActiveCount !== lastActiveCount) {
+                    addDebugLog(`📊 Active Deliveries changed: ${lastActiveCount} → ${currentActiveCount}`, 'info');
+                    lastActiveCount = currentActiveCount;
+                }
+
+                if (currentHistoryCount !== lastHistoryCount) {
+                    addDebugLog(`📊 Delivery History changed: ${lastHistoryCount} → ${currentHistoryCount}`, 'info');
+                    lastHistoryCount = currentHistoryCount;
+                }
+
+                if (currentCustomerCount !== lastCustomerCount) {
+                    addDebugLog(`📊 Customers changed: ${lastCustomerCount} → ${currentCustomerCount}`, 'info');
+                    lastCustomerCount = currentCustomerCount;
+                }
+
+                updateDataCounts();
+            }, 1000);
+        }
+
+        // Monitor Supabase operations
+        function monitorSupabase() {
+            if (window.supabaseClient && typeof window.supabaseClient === 'function') {
+                const originalClient = window.supabaseClient;
+                window.supabaseClient = function() {
+                    const client = originalClient();
+                    const originalFrom = client.from;
+                    
+                    client.from = function(table) {
+                        addDebugLog(`🗄️ Supabase query on table: ${table}`, 'info');
+                        const query = originalFrom.call(this, table);
+                        
+                        // Monitor select operations
+                        const originalSelect = query.select;
+                        query.select = function(...args) {
+                            addDebugLog(`🔍 Supabase SELECT on ${table}: ${args.join(', ')}`, 'info');
+                            return originalSelect.apply(this, args);
+                        };
+                        
+                        // Monitor insert operations
+                        const originalInsert = query.insert;
+                        query.insert = function(data) {
+                            addDebugLog(`💾 Supabase INSERT on ${table}: ${JSON.stringify(data).substring(0, 100)}...`, 'info');
+                            return originalInsert.call(this, data);
+                        };
+                        
+                        return query;
+                    };
+                    
+                    return client;
+                };
+                addDebugLog('✅ Supabase monitoring enabled', 'success');
+            }
+        }
+
+        // Initialize monitoring
+        function initializeMonitoring() {
+            addDebugLog('🚀 Initializing live Excel upload debugging...', 'info');
+            
+            // Wait for dependencies
+            let attempts = 0;
+            const checkDependencies = () => {
+                attempts++;
+                
+                if (window.dataService || attempts > 50) {
+                    monitorDataService();
+                    monitorExcelFunctions();
+                    monitorSupabase();
+                    monitorDataChanges();
+                    
+                    addDebugLog('✅ All monitoring systems active', 'success');
+                    addDebugLog('📋 Ready to debug Excel uploads', 'info');
+                    
+                    updateDataCounts();
+                } else {
+                    setTimeout(checkDependencies, 100);
+                }
+            };
+            
+            checkDependencies();
+        }
+
+        // Start monitoring when page loads
+        document.addEventListener('DOMContentLoaded', initializeMonitoring);
+        
+        // Also try to start immediately if DOM is already ready
+        if (document.readyState !== 'loading') {
+            initializeMonitoring();
+        }
+
+        // Global function to manually trigger data refresh
+        window.debugRefreshData = async function() {
+            addDebugLog('🔄 Manual data refresh triggered', 'info');
+            
+            try {
+                if (window.loadActiveDeliveries) {
+                    await window.loadActiveDeliveries();
+                }
+                if (window.loadDeliveryHistory) {
+                    await window.loadDeliveryHistory();
+                }
+                if (window.loadCustomers) {
+                    await window.loadCustomers();
+                }
+                addDebugLog('✅ Manual data refresh completed', 'success');
+            } catch (error) {
+                addDebugLog(`❌ Manual data refresh failed: ${error.message}`, 'error');
+            }
+        };
+
+        // Global function to check current data state
+        window.debugCheckDataState = function() {
+            addDebugLog('📊 Current data state check:', 'info');
+            addDebugLog(`Active Deliveries: ${window.activeDeliveries?.length || 0}`, 'info');
+            addDebugLog(`Delivery History: ${window.deliveryHistory?.length || 0}`, 'info');
+            addDebugLog(`Customers: ${window.customers?.length || 0}`, 'info');
+            
+            if (window.activeDeliveries?.length > 0) {
+                addDebugLog(`Sample Active Delivery: ${JSON.stringify(window.activeDeliveries[0]).substring(0, 200)}...`, 'info');
+            }
+            
+            if (window.deliveryHistory?.length > 0) {
+                addDebugLog(`Sample History Delivery: ${JSON.stringify(window.deliveryHistory[0]).substring(0, 200)}...`, 'info');
+            }
+        };
+
+        addDebugLog('🔍 Live Excel Upload Debug loaded - monitoring all operations', 'success');
+    </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Excel Upload Fix</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .fix-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            z-index: 9999;
+        }
+        .fix-status.error {
+            background: #dc3545;
+        }
+        .instructions {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="fixStatus" class="fix-status">
+        🔧 Loading Excel Upload Fixes...
+    </div>
+
+    <div class="container py-4">
+        <h1 class="mb-4">🧪 Excel Upload Fix Test Page</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li><strong>Include this script in your main HTML file:</strong>
+                    <pre><code>&lt;script src="public/assets/js/excel-upload-emergency-fix.js"&gt;&lt;/script&gt;</code></pre>
+                </li>
+                <li><strong>Add it AFTER your existing scripts but BEFORE closing &lt;/body&gt; tag</strong></li>
+                <li><strong>Test your Excel upload - it should now work correctly</strong></li>
+                <li><strong>Use the debug panel (debug-excel-upload-live.html) for real-time monitoring</strong></li>
+            </ol>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🔧 Fix Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="fixDetails"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📊 Current Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="dataStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Functions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary me-2" onclick="testDataService()">Test DataService</button>
+                        <button class="btn btn-success me-2" onclick="testStatusFiltering()">Test Status Filtering</button>
+                        <button class="btn btn-warning me-2" onclick="forceDataRefresh()">Force Data Refresh</button>
+                        <button class="btn btn-info me-2" onclick="checkDataState()">Check Data State</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the emergency fix -->
+    <script src="public/assets/js/excel-upload-emergency-fix.js"></script>
+
+    <script>
+        function updateFixStatus() {
+            const statusDiv = document.getElementById('fixStatus');
+            const detailsDiv = document.getElementById('fixDetails');
+            
+            const fixes = {
+                dataService: typeof window.dataService !== 'undefined',
+                createBookingFromDR: typeof window.createBookingFromDR === 'function',
+                confirmDRUpload: typeof window.confirmDRUpload === 'function',
+                emergencyFix: typeof window.emergencyExcelFix !== 'undefined'
+            };
+            
+            const allFixed = Object.values(fixes).every(Boolean);
+            
+            if (allFixed) {
+                statusDiv.textContent = '✅ Excel Upload Fixes Active';
+                statusDiv.className = 'fix-status';
+            } else {
+                statusDiv.textContent = '❌ Some Fixes Missing';
+                statusDiv.className = 'fix-status error';
+            }
+            
+            detailsDiv.innerHTML = Object.entries(fixes)
+                .map(([key, value]) => `<div>${value ? '✅' : '❌'} ${key}</div>`)
+                .join('');
+        }
+        
+        function updateDataStatus() {
+            const dataDiv = document.getElementById('dataStatus');
+            
+            const data = {
+                activeDeliveries: window.activeDeliveries?.length || 0,
+                deliveryHistory: window.deliveryHistory?.length || 0,
+                customers: window.customers?.length || 0
+            };
+            
+            dataDiv.innerHTML = Object.entries(data)
+                .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                .join('');
+        }
+        
+        async function testDataService() {
+            if (!window.dataService) {
+                alert('DataService not available');
+                return;
+            }
+            
+            try {
+                console.log('Testing DataService...');
+                
+                // Test getDeliveries with different filters
+                const activeDeliveries = await window.dataService.getDeliveries({ status: 'Active' });
+                console.log('Active deliveries:', activeDeliveries.length);
+                
+                const historyDeliveries = await window.dataService.getDeliveries({ status: ['Completed', 'Signed'] });
+                console.log('History deliveries:', historyDeliveries.length);
+                
+                const allDeliveries = await window.dataService.getDeliveries();
+                console.log('All deliveries:', allDeliveries.length);
+                
+                alert(`DataService Test Results:\nActive: ${activeDeliveries.length}\nHistory: ${historyDeliveries.length}\nAll: ${allDeliveries.length}`);
+                
+            } catch (error) {
+                console.error('DataService test failed:', error);
+                alert('DataService test failed: ' + error.message);
+            }
+        }
+        
+        async function testStatusFiltering() {
+            if (!window.dataService) {
+                alert('DataService not available');
+                return;
+            }
+            
+            try {
+                console.log('Testing status filtering...');
+                
+                // Test single status
+                const singleResult = await window.dataService.getDeliveries({ status: 'Active' });
+                console.log('Single status filter result:', singleResult.length);
+                
+                // Test array status
+                const arrayResult = await window.dataService.getDeliveries({ status: ['Completed', 'Signed'] });
+                console.log('Array status filter result:', arrayResult.length);
+                
+                alert(`Status Filtering Test:\nSingle ('Active'): ${singleResult.length}\nArray (['Completed', 'Signed']): ${arrayResult.length}`);
+                
+            } catch (error) {
+                console.error('Status filtering test failed:', error);
+                alert('Status filtering test failed: ' + error.message);
+            }
+        }
+        
+        async function forceDataRefresh() {
+            try {
+                console.log('Forcing data refresh...');
+                
+                if (window.loadActiveDeliveries) {
+                    await window.loadActiveDeliveries();
+                    console.log('Active deliveries refreshed');
+                }
+                
+                if (window.loadDeliveryHistory) {
+                    await window.loadDeliveryHistory();
+                    console.log('Delivery history refreshed');
+                }
+                
+                if (window.loadCustomers) {
+                    await window.loadCustomers();
+                    console.log('Customers refreshed');
+                }
+                
+                updateDataStatus();
+                alert('Data refresh completed');
+                
+            } catch (error) {
+                console.error('Data refresh failed:', error);
+                alert('Data refresh failed: ' + error.message);
+            }
+        }
+        
+        function checkDataState() {
+            const state = {
+                activeDeliveries: window.activeDeliveries?.length || 0,
+                deliveryHistory: window.deliveryHistory?.length || 0,
+                customers: window.customers?.length || 0,
+                dataService: typeof window.dataService !== 'undefined',
+                supabaseClient: typeof window.supabaseClient === 'function'
+            };
+            
+            console.log('Current data state:', state);
+            
+            let message = 'Current Data State:\n';
+            Object.entries(state).forEach(([key, value]) => {
+                message += `${key}: ${value}\n`;
+            });
+            
+            alert(message);
+        }
+        
+        // Update status every 2 seconds
+        setInterval(() => {
+            updateFixStatus();
+            updateDataStatus();
+        }, 2000);
+        
+        // Initial update
+        setTimeout(() => {
+            updateFixStatus();
+            updateDataStatus();
+        }, 1000);
+    </script>
+</body>
+</html>
