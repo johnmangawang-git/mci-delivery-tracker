@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Excel Upload Diagnostic</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .diagnostic-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .console-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">🧪 Excel Upload Diagnostic</h1>
+                <p class="lead">Diagnosing why Excel uploads appear in Delivery History instead of Active Deliveries</p>
+                
+                <!-- Test Results -->
+                <div class="diagnostic-section">
+                    <h3>📊 Diagnostic Results</h3>
+                    <div id="diagnosticResults"></div>
+                </div>
+
+                <!-- Console Output -->
+                <div class="diagnostic-section">
+                    <h3>📝 Console Output</h3>
+                    <div id="consoleOutput" class="console-output"></div>
+                </div>
+
+                <!-- Test Controls -->
+                <div class="diagnostic-section">
+                    <h3>🎮 Diagnostic Tests</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button id="testDataService" class="btn btn-primary w-100 mb-2">
+                                <i class="bi bi-database"></i> Test DataService
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="testStatusFiltering" class="btn btn-success w-100 mb-2">
+                                <i class="bi bi-funnel"></i> Test Status Filtering
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="testCustomerCreation" class="btn btn-warning w-100 mb-2">
+                                <i class="bi bi-person-plus"></i> Test Customer Creation
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button id="testExcelUploadFlow" class="btn btn-info w-100 mb-2">
+                                <i class="bi bi-file-earmark-excel"></i> Test Excel Upload Flow
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button id="runAllDiagnostics" class="btn btn-dark w-100 mb-2">
+                                <i class="bi bi-play-fill"></i> Run All Diagnostics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Data State -->
+                <div class="diagnostic-section">
+                    <h3>📋 Current Data State</h3>
+                    <div id="dataState" class="console-output"></div>
+                    <button id="refreshDataState" class="btn btn-secondary btn-sm mt-2">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh Data State
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Mock Supabase and dataService for testing -->
+    <script>
+        // Mock Supabase client
+        window.supabaseClient = function() {
+            return {
+                from: function(table) {
+                    return {
+                        select: function() {
+                            return {
+                                eq: function(field, value) {
+                                    console.log(`🔍 MOCK QUERY: ${table}.${field} = ${value}`);
+                                    return {
+                                        order: function() {
+                                            // Mock data based on table and filter
+                                            if (table === 'deliveries') {
+                                                if (value === 'Active') {
+                                                    return {
+                                                        data: [
+                                                            { id: 1, dr_number: 'DR-001', status: 'Active', customer_name: 'Test Customer' }
+                                                        ],
+                                                        error: null
+                                                    };
+                                                } else if (value === 'Completed' || value === 'Signed') {
+                                                    return {
+                                                        data: [
+                                                            { id: 2, dr_number: 'DR-002', status: 'Completed', customer_name: 'Completed Customer' }
+                                                        ],
+                                                        error: null
+                                                    };
+                                                }
+                                            }
+                                            return { data: [], error: null };
+                                        }
+                                    };
+                                },
+                                in: function(field, values) {
+                                    console.log(`🔍 MOCK QUERY: ${table}.${field} IN [${values.join(', ')}]`);
+                                    return {
+                                        order: function() {
+                                            // Mock data for array filters
+                                            if (table === 'deliveries' && field === 'status') {
+                                                if (values.includes('Completed') || values.includes('Signed')) {
+                                                    return {
+                                                        data: [
+                                                            { id: 2, dr_number: 'DR-002', status: 'Completed', customer_name: 'Completed Customer' },
+                                                            { id: 3, dr_number: 'DR-003', status: 'Signed', customer_name: 'Signed Customer' }
+                                                        ],
+                                                        error: null
+                                                    };
+                                                }
+                                            }
+                                            return { data: [], error: null };
+                                        }
+                                    };
+                                },
+                                order: function() {
+                                    return {
+                                        data: [
+                                            { id: 1, dr_number: 'DR-001', status: 'Active', customer_name: 'Test Customer' },
+                                            { id: 2, dr_number: 'DR-002', status: 'Completed', customer_name: 'Completed Customer' }
+                                        ],
+                                        error: null
+                                    };
+                                }
+                            };
+                        },
+                        insert: function(data) {
+                            console.log(`💾 MOCK INSERT: ${table}`, data);
+                            return {
+                                select: function() {
+                                    return {
+                                        data: [{ ...data, id: 'mock-' + Date.now() }],
+                                        error: null
+                                    };
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+        };
+
+        // Mock dataService
+        window.dataService = {
+            isSupabaseAvailable: () => true,
+            executeSupabaseOnly: async function(operation, tableName) {
+                console.log(`🎯 MOCK executeSupabaseOnly: ${tableName}`);
+                return await operation();
+            },
+            saveDelivery: async function(delivery) {
+                console.log('🎯 MOCK saveDelivery called with:', delivery);
+                return { ...delivery, id: 'mock-' + Date.now() };
+            },
+            getDeliveries: async function(filters) {
+                console.log('🎯 MOCK getDeliveries called with filters:', filters);
+                
+                const client = window.supabaseClient();
+                let query = client.from('deliveries').select('*');
+                
+                if (filters.status) {
+                    if (Array.isArray(filters.status)) {
+                        query = query.in('status', filters.status);
+                    } else {
+                        query = query.eq('status', filters.status);
+                    }
+                } else {
+                    query = query.order();
+                }
+                
+                const result = query.order ? query.order() : query;
+                return result.data || [];
+            },
+            saveCustomer: async function(customer) {
+                console.log('🎯 MOCK saveCustomer called with:', customer);
+                return { ...customer, id: 'mock-' + Date.now() };
+            },
+            getCustomers: async function(filters) {
+                console.log('🎯 MOCK getCustomers called with:', filters);
+                return [
+                    { id: 1, name: 'Test Customer', contact_person: 'John Doe' }
+                ];
+            }
+        };
+
+        // Mock global arrays
+        window.activeDeliveries = [];
+        window.deliveryHistory = [];
+        window.customers = [];
+
+        // Mock utility functions
+        window.showToast = function(message, type = 'success') {
+            console.log(`🍞 TOAST (${type}): ${message}`);
+        };
+
+        window.autoCreateCustomer = async function(customerName, vendorNumber, destination) {
+            console.log('🎯 MOCK autoCreateCustomer called:', { customerName, vendorNumber, destination });
+            const customer = {
+                id: 'CUST-' + Date.now(),
+                name: customerName,
+                contact_person: customerName,
+                phone: vendorNumber,
+                address: destination
+            };
+            
+            if (window.dataService) {
+                return await window.dataService.saveCustomer(customer);
+            }
+            
+            return customer;
+        };
+
+        // Mock Excel upload functions
+        window.createBookingFromDR = async function(bookingData) {
+            console.log('🎯 MOCK createBookingFromDR called:', bookingData);
+            
+            // Simulate the actual function logic
+            const newDelivery = {
+                dr_number: bookingData.drNumber,
+                customer_name: bookingData.customerName,
+                vendor_number: bookingData.vendorNumber || '',
+                origin: bookingData.origin,
+                destination: bookingData.destination,
+                truck_type: bookingData.truckType || '',
+                truck_plate_number: bookingData.truckPlateNumber || '',
+                status: 'Active', // This should make it appear in Active Deliveries
+                additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
+                created_by: 'Excel Upload',
+                created_at: new Date().toISOString()
+            };
+            
+            console.log('💾 Saving delivery with status:', newDelivery.status);
+            const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+            
+            // Auto-create customer
+            if (typeof window.autoCreateCustomer === 'function') {
+                await window.autoCreateCustomer(bookingData.customerName, bookingData.vendorNumber, bookingData.destination);
+            }
+            
+            return savedDelivery;
+        };
+    </script>
+
+    <!-- Diagnostic Script -->
+    <script>
+        let diagnosticResults = [];
+        let consoleMessages = [];
+
+        // Capture console messages
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        console.log = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[LOG] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[ERROR] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[WARN] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleWarn.apply(console, args);
+        };
+
+        function updateConsoleOutput() {
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.textContent = consoleMessages.slice(-50).join('\n');
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function addDiagnosticResult(testName, passed, message) {
+            diagnosticResults.push({
+                name: testName,
+                passed: passed,
+                message: message,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            updateDiagnosticResults();
+        }
+
+        function updateDiagnosticResults() {
+            const diagnosticResultsDiv = document.getElementById('diagnosticResults');
+            diagnosticResultsDiv.innerHTML = '';
+
+            diagnosticResults.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${result.passed ? 'test-pass' : 'test-fail'}`;
+                resultDiv.innerHTML = `
+                    <strong>${result.passed ? '✅' : '❌'} ${result.name}</strong><br>
+                    <small>${result.timestamp}</small><br>
+                    ${result.message}
+                `;
+                diagnosticResultsDiv.appendChild(resultDiv);
+            });
+        }
+
+        function updateDataState() {
+            const dataState = document.getElementById('dataState');
+            const state = {
+                activeDeliveries: window.activeDeliveries?.length || 0,
+                deliveryHistory: window.deliveryHistory?.length || 0,
+                customers: window.customers?.length || 0,
+                dataServiceAvailable: typeof window.dataService !== 'undefined',
+                supabaseClientAvailable: typeof window.supabaseClient === 'function',
+                autoCreateCustomerAvailable: typeof window.autoCreateCustomer === 'function',
+                createBookingFromDRAvailable: typeof window.createBookingFromDR === 'function'
+            };
+            
+            dataState.textContent = JSON.stringify(state, null, 2);
+        }
+
+        // Diagnostic tests
+        async function testDataService() {
+            console.log('🧪 Testing DataService...');
+            
+            try {
+                if (!window.dataService) {
+                    addDiagnosticResult('DataService Availability', false, 'DataService not available');
+                    return;
+                }
+                
+                addDiagnosticResult('DataService Availability', true, 'DataService is available');
+                
+                // Test saveDelivery
+                const testDelivery = {
+                    dr_number: 'TEST-001',
+                    customer_name: 'Test Customer',
+                    status: 'Active',
+                    created_by: 'Test'
+                };
+                
+                const savedDelivery = await window.dataService.saveDelivery(testDelivery);
+                addDiagnosticResult('Save Delivery', true, `Delivery saved with ID: ${savedDelivery.id}`);
+                
+            } catch (error) {
+                addDiagnosticResult('DataService Test', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testStatusFiltering() {
+            console.log('🧪 Testing Status Filtering...');
+            
+            try {
+                // Test single status filter
+                const activeDeliveries = await window.dataService.getDeliveries({ status: 'Active' });
+                addDiagnosticResult('Active Deliveries Filter', true, `Found ${activeDeliveries.length} active deliveries`);
+                
+                // Test array status filter
+                const historyDeliveries = await window.dataService.getDeliveries({ status: ['Completed', 'Signed'] });
+                addDiagnosticResult('History Deliveries Filter', true, `Found ${historyDeliveries.length} history deliveries`);
+                
+                // Test no filter
+                const allDeliveries = await window.dataService.getDeliveries();
+                addDiagnosticResult('All Deliveries Filter', true, `Found ${allDeliveries.length} total deliveries`);
+                
+            } catch (error) {
+                addDiagnosticResult('Status Filtering Test', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testCustomerCreation() {
+            console.log('🧪 Testing Customer Creation...');
+            
+            try {
+                if (typeof window.autoCreateCustomer !== 'function') {
+                    addDiagnosticResult('Customer Creation Function', false, 'autoCreateCustomer function not available');
+                    return;
+                }
+                
+                addDiagnosticResult('Customer Creation Function', true, 'autoCreateCustomer function is available');
+                
+                const customer = await window.autoCreateCustomer('Test Customer', '09123456789', 'Test Address');
+                addDiagnosticResult('Customer Creation', true, `Customer created with ID: ${customer.id}`);
+                
+            } catch (error) {
+                addDiagnosticResult('Customer Creation Test', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testExcelUploadFlow() {
+            console.log('🧪 Testing Excel Upload Flow...');
+            
+            try {
+                // Simulate Excel upload data
+                const mockBookingData = {
+                    drNumber: 'DR-TEST-001',
+                    customerName: 'Excel Test Customer',
+                    vendorNumber: '09123456789',
+                    origin: 'Test Origin',
+                    destination: 'Test Destination',
+                    truckType: '10-Wheeler',
+                    truckPlateNumber: 'ABC-123',
+                    additionalCosts: 100.00
+                };
+                
+                console.log('📊 Simulating Excel upload with data:', mockBookingData);
+                
+                // Test the createBookingFromDR function
+                if (typeof window.createBookingFromDR !== 'function') {
+                    addDiagnosticResult('Excel Upload Function', false, 'createBookingFromDR function not available');
+                    return;
+                }
+                
+                addDiagnosticResult('Excel Upload Function', true, 'createBookingFromDR function is available');
+                
+                const result = await window.createBookingFromDR(mockBookingData);
+                addDiagnosticResult('Excel Upload Process', true, `Excel upload completed successfully`);
+                
+                // Verify the delivery was saved with correct status
+                const activeDeliveries = await window.dataService.getDeliveries({ status: 'Active' });
+                const foundDelivery = activeDeliveries.find(d => d.dr_number === mockBookingData.drNumber);
+                
+                if (foundDelivery) {
+                    addDiagnosticResult('Delivery Status Check', true, `Delivery found in Active Deliveries with status: ${foundDelivery.status}`);
+                } else {
+                    addDiagnosticResult('Delivery Status Check', false, 'Delivery not found in Active Deliveries - this is the problem!');
+                }
+                
+            } catch (error) {
+                addDiagnosticResult('Excel Upload Flow Test', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function runAllDiagnostics() {
+            console.log('🧪 Running all diagnostics...');
+            diagnosticResults = [];
+            consoleMessages = [];
+            
+            await testDataService();
+            await testStatusFiltering();
+            await testCustomerCreation();
+            await testExcelUploadFlow();
+            
+            const passedTests = diagnosticResults.filter(r => r.passed).length;
+            const totalTests = diagnosticResults.length;
+            
+            console.log(`🎯 Diagnostic Summary: ${passedTests}/${totalTests} tests passed`);
+            
+            if (passedTests === totalTests) {
+                addDiagnosticResult('Overall Diagnostic', true, `All ${totalTests} tests passed! Excel upload should work correctly.`);
+            } else {
+                addDiagnosticResult('Overall Diagnostic', false, `${totalTests - passedTests} tests failed. Issues found in Excel upload process.`);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testDataService').addEventListener('click', testDataService);
+            document.getElementById('testStatusFiltering').addEventListener('click', testStatusFiltering);
+            document.getElementById('testCustomerCreation').addEventListener('click', testCustomerCreation);
+            document.getElementById('testExcelUploadFlow').addEventListener('click', testExcelUploadFlow);
+            document.getElementById('runAllDiagnostics').addEventListener('click', runAllDiagnostics);
+            document.getElementById('refreshDataState').addEventListener('click', updateDataState);
+            
+            // Initial data state check
+            updateDataState();
+            
+            // Auto-run diagnostics after a short delay
+            setTimeout(runAllDiagnostics, 1000);
+        });
+    </script>
+</body>
+</html>

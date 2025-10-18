@@ -242,7 +242,13 @@ class DataService {
             let query = client.from('deliveries').select('*');
             
             if (filters.status) {
-                query = query.eq('status', filters.status);
+                if (Array.isArray(filters.status)) {
+                    // Handle array of status values (e.g., ['Completed', 'Signed'])
+                    query = query.in('status', filters.status);
+                } else {
+                    // Handle single status value (e.g., 'Active')
+                    query = query.eq('status', filters.status);
+                }
             }
             
             const { data, error } = await query.order('created_at', { ascending: false });
