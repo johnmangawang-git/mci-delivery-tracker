@@ -306,33 +306,11 @@ console.log('🔧 Loading Disable localStorage Analytics Fallback...');
     }
     
     /**
-     * Add visual indicator that localStorage fallback is disabled
+     * Add visual indicator that localStorage fallback is disabled (DISABLED)
      */
     function addVisualIndicator() {
-        // Add a banner to indicate localStorage is disabled
-        const banner = document.createElement('div');
-        banner.id = 'supabase-only-banner';
-        banner.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            color: white;
-            text-align: center;
-            padding: 8px;
-            font-weight: bold;
-            z-index: 9999;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        `;
-        banner.innerHTML = '🚫 SUPABASE-ONLY MODE: localStorage fallback disabled for analytics testing';
-        
-        document.body.insertBefore(banner, document.body.firstChild);
-        
-        // Adjust body padding to account for banner
-        document.body.style.paddingTop = '40px';
-        
-        console.log('✅ Visual indicator added');
+        // Visual indicator disabled - no banner will be shown
+        console.log('✅ Visual indicator disabled - no banner shown');
     }
     
     /**
@@ -363,7 +341,7 @@ console.log('🔧 Loading Disable localStorage Analytics Fallback...');
         // Wait for other scripts to load
         setTimeout(() => {
             disableLocalStorageFallback();
-            addVisualIndicator();
+            // addVisualIndicator(); // Disabled - no banner shown
             
             // Export control functions globally
             window.enableLocalStorageFallback = enableLocalStorageFallback;
