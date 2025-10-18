@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete localStorage Removal Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .status { font-weight: bold; padding: 5px 10px; border-radius: 3px; }
+        .status.online { background: #d4edda; color: #155724; }
+        .status.offline { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Complete localStorage Removal Test</h1>
+        <p><strong>Purpose:</strong> Verify that dataService.js is now 100% Supabase-only with no localStorage interference</p>
+        
+        <div class="test-section info">
+            <h3>📊 System Status</h3>
+            <p><strong>Supabase Status:</strong> <span id="supabase-status" class="status">Checking...</span></p>
+            <p><strong>DataService Mode:</strong> <span id="dataservice-mode" class="status">Checking...</span></p>
+            <p><strong>localStorage Operations:</strong> <span id="localstorage-status" class="status">Checking...</span></p>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 1: Verify No localStorage Operations</h3>
+            <button class="btn-primary" onclick="testNoLocalStorageOperations()">Run Test</button>
+            <div id="test1-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 2: Test Supabase-Only Delivery Save</h3>
+            <button class="btn-primary" onclick="testSupabaseOnlyDeliverySave()">Run Test</button>
+            <div id="test2-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 3: Test Supabase-Only Customer Operations</h3>
+            <button class="btn-primary" onclick="testSupabaseOnlyCustomerOps()">Run Test</button>
+            <div id="test3-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 4: Test Error Handling (Offline Mode)</h3>
+            <button class="btn-warning" onclick="testOfflineErrorHandling()">Run Test</button>
+            <div id="test4-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test 5: Verify Migration/Sync Disabled</h3>
+            <button class="btn-primary" onclick="testMigrationSyncDisabled()">Run Test</button>
+            <div id="test5-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Test Results Summary</h3>
+            <div id="summary-results"></div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/js/supabase.js"></script>
+    <script src="assets/js/dataService.js"></script>
+
+    <script>
+        let testResults = [];
+
+        // Initialize status check
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSystemStatus();
+        });
+
+        function checkSystemStatus() {
+            // Check Supabase status
+            const supabaseStatus = document.getElementById('supabase-status');
+            const dataServiceMode = document.getElementById('dataservice-mode');
+            const localStorageStatus = document.getElementById('localstorage-status');
+
+            try {
+                const isSupabaseAvailable = window.dataService && window.dataService.isSupabaseAvailable();
+                supabaseStatus.textContent = isSupabaseAvailable ? 'Online' : 'Offline';
+                supabaseStatus.className = `status ${isSupabaseAvailable ? 'online' : 'offline'}`;
+
+                // Check if dataService has executeSupabaseOnly method
+                const hasSupabaseOnly = window.dataService && typeof window.dataService.executeSupabaseOnly === 'function';
+                dataServiceMode.textContent = hasSupabaseOnly ? 'Supabase-Only Mode' : 'Legacy Mode';
+                dataServiceMode.className = `status ${hasSupabaseOnly ? 'online' : 'offline'}`;
+
+                // Check for localStorage operations in dataService
+                const dataServiceCode = window.dataService.toString();
+                const hasLocalStorage = dataServiceCode.includes('localStorage.getItem') || dataServiceCode.includes('localStorage.setItem');
+                localStorageStatus.textContent = hasLocalStorage ? 'Found localStorage Operations' : 'No localStorage Operations';
+                localStorageStatus.className = `status ${hasLocalStorage ? 'offline' : 'online'}`;
+
+            } catch (error) {
+                console.error('Status check error:', error);
+                supabaseStatus.textContent = 'Error';
+                supabaseStatus.className = 'status offline';
+            }
+        }
+
+        function testNoLocalStorageOperations() {
+            const resultsDiv = document.getElementById('test1-results');
+            resultsDiv.innerHTML = '<p>🔍 Checking dataService for localStorage operations...</p>';
+
+            try {
+                // Get the dataService source code
+                const dataServiceCode = window.dataService.constructor.toString();
+                
+                // Check for localStorage operations
+                const localStorageGetCalls = (dataServiceCode.match(/localStorage\.getItem/g) || []).length;
+                const localStorageSetCalls = (dataServiceCode.match(/localStorage\.setItem/g) || []).length;
+                const executeWithFallbackCalls = (dataServiceCode.match(/executeWithFallback/g) || []).length;
+                const executeSupabaseOnlyCalls = (dataServiceCode.match(/executeSupabaseOnly/g) || []).length;
+
+                let results = `
+                    <div class="success">
+                        <h4>✅ localStorage Operations Check</h4>
+                        <ul>
+                            <li><strong>localStorage.getItem calls:</strong> ${localStorageGetCalls}</li>
+                            <li><strong>localStorage.setItem calls:</strong> ${localStorageSetCalls}</li>
+                            <li><strong>executeWithFallback calls:</strong> ${executeWithFallbackCalls}</li>
+                            <li><strong>executeSupabaseOnly calls:</strong> ${executeSupabaseOnlyCalls}</li>
+                        </ul>
+                `;
+
+                if (localStorageGetCalls === 0 && localStorageSetCalls === 0 && executeWithFallbackCalls === 0 && executeSupabaseOnlyCalls > 0) {
+                    results += '<p><strong>✅ PASS:</strong> No localStorage operations found, using Supabase-only mode</p>';
+                    testResults.push({ test: 'localStorage Removal', status: 'PASS' });
+                } else {
+                    results += '<p><strong>❌ FAIL:</strong> localStorage operations still present</p>';
+                    testResults.push({ test: 'localStorage Removal', status: 'FAIL' });
+                }
+
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error"><h4>❌ Test Error</h4><p>${error.message}</p></div>`;
+                testResults.push({ test: 'localStorage Removal', status: 'ERROR' });
+            }
+
+            updateSummary();
+        }
+
+        async function testSupabaseOnlyDeliverySave() {
+            const resultsDiv = document.getElementById('test2-results');
+            resultsDiv.innerHTML = '<p>🔍 Testing Supabase-only delivery save...</p>';
+
+            try {
+                // Create test delivery
+                const testDelivery = {
+                    dr_number: `TEST-DR-${Date.now()}`,
+                    customer_name: 'Test Customer',
+                    pickup_address: 'Test Pickup Address',
+                    delivery_address: 'Test Delivery Address',
+                    status: 'Active',
+                    truck_type: 'Small Truck',
+                    created_at: new Date().toISOString()
+                };
+
+                console.log('🧪 Attempting to save test delivery:', testDelivery);
+
+                // Clear localStorage before test
+                localStorage.removeItem('mci-active-deliveries');
+                localStorage.removeItem('mci-delivery-history');
+
+                // Save delivery using dataService
+                const savedDelivery = await window.dataService.saveDelivery(testDelivery);
+
+                // Check if localStorage was NOT updated
+                const localActiveDeliveries = localStorage.getItem('mci-active-deliveries');
+                const localDeliveryHistory = localStorage.getItem('mci-delivery-history');
+
+                let results = `
+                    <div class="success">
+                        <h4>✅ Supabase-Only Delivery Save Test</h4>
+                        <p><strong>Saved Delivery ID:</strong> ${savedDelivery.id}</p>
+                        <p><strong>DR Number:</strong> ${savedDelivery.dr_number}</p>
+                        <p><strong>localStorage Active Deliveries:</strong> ${localActiveDeliveries ? 'Updated (BAD)' : 'Not Updated (GOOD)'}</p>
+                        <p><strong>localStorage Delivery History:</strong> ${localDeliveryHistory ? 'Updated (BAD)' : 'Not Updated (GOOD)'}</p>
+                `;
+
+                if (!localActiveDeliveries && !localDeliveryHistory && savedDelivery.id) {
+                    results += '<p><strong>✅ PASS:</strong> Delivery saved to Supabase only, no localStorage interference</p>';
+                    testResults.push({ test: 'Supabase-Only Delivery Save', status: 'PASS' });
+                } else {
+                    results += '<p><strong>❌ FAIL:</strong> localStorage was updated or Supabase save failed</p>';
+                    testResults.push({ test: 'Supabase-Only Delivery Save', status: 'FAIL' });
+                }
+
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+
+            } catch (error) {
+                console.error('Delivery save test error:', error);
+                resultsDiv.innerHTML = `<div class="error"><h4>❌ Test Error</h4><p>${error.message}</p><pre>${error.stack}</pre></div>`;
+                testResults.push({ test: 'Supabase-Only Delivery Save', status: 'ERROR' });
+            }
+
+            updateSummary();
+        }
+
+        async function testSupabaseOnlyCustomerOps() {
+            const resultsDiv = document.getElementById('test3-results');
+            resultsDiv.innerHTML = '<p>🔍 Testing Supabase-only customer operations...</p>';
+
+            try {
+                // Create test customer
+                const testCustomer = {
+                    name: `Test Customer ${Date.now()}`,
+                    phone: `555-${Math.floor(Math.random() * 10000)}`,
+                    email: 'test@example.com',
+                    address: 'Test Address'
+                };
+
+                console.log('🧪 Attempting to save test customer:', testCustomer);
+
+                // Clear localStorage before test
+                localStorage.removeItem('mci-customers');
+
+                // Save customer using dataService
+                const savedCustomer = await window.dataService.saveCustomer(testCustomer);
+
+                // Check if localStorage was NOT updated
+                const localCustomers = localStorage.getItem('mci-customers');
+
+                let results = `
+                    <div class="success">
+                        <h4>✅ Supabase-Only Customer Operations Test</h4>
+                        <p><strong>Saved Customer ID:</strong> ${savedCustomer.id}</p>
+                        <p><strong>Customer Name:</strong> ${savedCustomer.name}</p>
+                        <p><strong>localStorage Customers:</strong> ${localCustomers ? 'Updated (BAD)' : 'Not Updated (GOOD)'}</p>
+                `;
+
+                if (!localCustomers && savedCustomer.id) {
+                    results += '<p><strong>✅ PASS:</strong> Customer saved to Supabase only, no localStorage interference</p>';
+                    testResults.push({ test: 'Supabase-Only Customer Ops', status: 'PASS' });
+                } else {
+                    results += '<p><strong>❌ FAIL:</strong> localStorage was updated or Supabase save failed</p>';
+                    testResults.push({ test: 'Supabase-Only Customer Ops', status: 'FAIL' });
+                }
+
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+
+            } catch (error) {
+                console.error('Customer ops test error:', error);
+                resultsDiv.innerHTML = `<div class="error"><h4>❌ Test Error</h4><p>${error.message}</p><pre>${error.stack}</pre></div>`;
+                testResults.push({ test: 'Supabase-Only Customer Ops', status: 'ERROR' });
+            }
+
+            updateSummary();
+        }
+
+        async function testOfflineErrorHandling() {
+            const resultsDiv = document.getElementById('test4-results');
+            resultsDiv.innerHTML = '<p>🔍 Testing offline error handling...</p>';
+
+            try {
+                // Temporarily disable Supabase
+                const originalIsSupabaseAvailable = window.dataService.isSupabaseAvailable;
+                window.dataService.isSupabaseAvailable = () => false;
+
+                let errorCaught = false;
+                let errorMessage = '';
+
+                try {
+                    const testDelivery = {
+                        dr_number: `OFFLINE-TEST-${Date.now()}`,
+                        customer_name: 'Offline Test Customer',
+                        status: 'Active'
+                    };
+
+                    await window.dataService.saveDelivery(testDelivery);
+                } catch (error) {
+                    errorCaught = true;
+                    errorMessage = error.message;
+                }
+
+                // Restore original function
+                window.dataService.isSupabaseAvailable = originalIsSupabaseAvailable;
+
+                let results = `
+                    <div class="success">
+                        <h4>✅ Offline Error Handling Test</h4>
+                        <p><strong>Error Caught:</strong> ${errorCaught ? 'Yes (GOOD)' : 'No (BAD)'}</p>
+                        <p><strong>Error Message:</strong> ${errorMessage}</p>
+                `;
+
+                if (errorCaught && errorMessage.includes('Supabase connection required')) {
+                    results += '<p><strong>✅ PASS:</strong> Proper error handling when Supabase is offline</p>';
+                    testResults.push({ test: 'Offline Error Handling', status: 'PASS' });
+                } else {
+                    results += '<p><strong>❌ FAIL:</strong> No proper error handling or fallback to localStorage</p>';
+                    testResults.push({ test: 'Offline Error Handling', status: 'FAIL' });
+                }
+
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+
+            } catch (error) {
+                console.error('Offline test error:', error);
+                resultsDiv.innerHTML = `<div class="error"><h4>❌ Test Error</h4><p>${error.message}</p></div>`;
+                testResults.push({ test: 'Offline Error Handling', status: 'ERROR' });
+            }
+
+            updateSummary();
+        }
+
+        async function testMigrationSyncDisabled() {
+            const resultsDiv = document.getElementById('test5-results');
+            resultsDiv.innerHTML = '<p>🔍 Testing migration and sync methods are disabled...</p>';
+
+            try {
+                // Test migration method
+                const migrationResult = await window.dataService.migrateLocalStorageToSupabase();
+                
+                // Test sync method
+                const syncResult = await window.dataService.syncData();
+
+                let results = `
+                    <div class="success">
+                        <h4>✅ Migration/Sync Disabled Test</h4>
+                        <p><strong>Migration Result:</strong> ${migrationResult === false ? 'Disabled (GOOD)' : 'Still Active (BAD)'}</p>
+                        <p><strong>Sync Result:</strong> ${syncResult === undefined ? 'Disabled (GOOD)' : 'Still Active (BAD)'}</p>
+                `;
+
+                if (migrationResult === false && syncResult === undefined) {
+                    results += '<p><strong>✅ PASS:</strong> Migration and sync methods are properly disabled</p>';
+                    testResults.push({ test: 'Migration/Sync Disabled', status: 'PASS' });
+                } else {
+                    results += '<p><strong>❌ FAIL:</strong> Migration or sync methods are still active</p>';
+                    testResults.push({ test: 'Migration/Sync Disabled', status: 'FAIL' });
+                }
+
+                results += '</div>';
+                resultsDiv.innerHTML = results;
+
+            } catch (error) {
+                console.error('Migration/sync test error:', error);
+                resultsDiv.innerHTML = `<div class="error"><h4>❌ Test Error</h4><p>${error.message}</p></div>`;
+                testResults.push({ test: 'Migration/Sync Disabled', status: 'ERROR' });
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary-results');
+            
+            if (testResults.length === 0) {
+                summaryDiv.innerHTML = '<p>No tests completed yet.</p>';
+                return;
+            }
+
+            const passCount = testResults.filter(r => r.status === 'PASS').length;
+            const failCount = testResults.filter(r => r.status === 'FAIL').length;
+            const errorCount = testResults.filter(r => r.status === 'ERROR').length;
+
+            let summaryClass = 'success';
+            if (failCount > 0 || errorCount > 0) {
+                summaryClass = 'error';
+            }
+
+            let summary = `
+                <div class="${summaryClass}">
+                    <h4>📊 Test Summary</h4>
+                    <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                    <p><strong>Passed:</strong> ${passCount}</p>
+                    <p><strong>Failed:</strong> ${failCount}</p>
+                    <p><strong>Errors:</strong> ${errorCount}</p>
+                    <h5>Test Details:</h5>
+                    <ul>
+            `;
+
+            testResults.forEach(result => {
+                const icon = result.status === 'PASS' ? '✅' : result.status === 'FAIL' ? '❌' : '⚠️';
+                summary += `<li>${icon} ${result.test}: ${result.status}</li>`;
+            });
+
+            summary += '</ul>';
+
+            if (passCount === testResults.length) {
+                summary += '<p><strong>🎉 ALL TESTS PASSED!</strong> localStorage has been completely removed from dataService.js</p>';
+            } else {
+                summary += '<p><strong>⚠️ Some tests failed.</strong> Please review the results above.</p>';
+            }
+
+            summary += '</div>';
+            summaryDiv.innerHTML = summary;
+        }
+
+        // Run all tests button
+        function runAllTests() {
+            testResults = [];
+            testNoLocalStorageOperations();
+            setTimeout(() => testSupabaseOnlyDeliverySave(), 1000);
+            setTimeout(() => testSupabaseOnlyCustomerOps(), 2000);
+            setTimeout(() => testOfflineErrorHandling(), 3000);
+            setTimeout(() => testMigrationSyncDisabled(), 4000);
+        }
+    </script>
+
+    <div style="text-align: center; margin: 20px;">
+        <button class="btn-success" onclick="runAllTests()" style="font-size: 16px; padding: 15px 30px;">
+            🚀 Run All Tests
+        </button>
+    </div>
+</body>
+</html>

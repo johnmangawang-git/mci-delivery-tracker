@@ -9,25 +9,9 @@ if (typeof window.deliveryHistory === 'undefined') {
     console.log('✅ Initialized window.deliveryHistory array');
 }
 
-// Load data from localStorage if available
-try {
-    const savedActiveDeliveries = localStorage.getItem('mci-active-deliveries');
-    const savedDeliveryHistory = localStorage.getItem('mci-delivery-history');
-    
-    if (savedActiveDeliveries) {
-        window.activeDeliveries = JSON.parse(savedActiveDeliveries);
-        console.log(`✅ Loaded ${window.activeDeliveries.length} active deliveries from localStorage`);
-    }
-    
-    if (savedDeliveryHistory) {
-        window.deliveryHistory = JSON.parse(savedDeliveryHistory);
-        console.log(`✅ Loaded ${window.deliveryHistory.length} delivery history from localStorage`);
-    }
-} catch (error) {
-    console.error('Error loading delivery data from localStorage:', error);
-    window.activeDeliveries = [];
-    window.deliveryHistory = [];
-}
+// ✅ REMOVED: localStorage data loading - Supabase-only mode
+// Data is now loaded via dataService.getDeliveries() only
+console.log('✅ Using Supabase-only mode - data loaded via dataService');
 
 // Main application initialization
 document.addEventListener('DOMContentLoaded', function () {

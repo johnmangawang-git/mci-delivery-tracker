@@ -1,6 +1,6 @@
 /**
- * Data Service Layer
- * Provides unified interface for all data operations with Supabase/localStorage fallback
+ * Data Service Layer - SUPABASE-ONLY MODE
+ * Provides unified interface for all data operations with Supabase (localStorage completely removed)
  */
 
 console.log('🔧 Loading Data Service...');
@@ -28,16 +28,16 @@ class DataService {
     }
 
     /**
-     * Execute operation with fallback
+     * Execute Supabase-only operation (localStorage completely removed)
      */
-    async executeWithFallback(supabaseOperation, localStorageOperation, tableName = '') {
+    async executeSupabaseOnly(supabaseOperation, tableName = '') {
         if (!this.isSupabaseAvailable()) {
-            console.log(`Using localStorage fallback for ${tableName}`);
-            return await localStorageOperation();
+            throw new Error(`Supabase connection required for ${tableName} operations. Please check your internet connection.`);
         }
 
         try {
             const result = await supabaseOperation();
+            console.log(`✅ SUPABASE-ONLY: ${tableName} operation successful`);
             return result;
         } catch (error) {
             // Handle specific error types
@@ -92,13 +92,10 @@ class DataService {
                         console.warn('Could not fetch existing record:', fetchError);
                     }
                 }
-            } else {
-                console.warn(`⚠️ Supabase operation failed for ${tableName}, using fallback:`, error);
-                console.warn('📝 Fallback data for debugging:', localStorageOperation.toString());
             }
             
-            this.isOnline = false;
-            return await localStorageOperation();
+            console.error(`❌ SUPABASE-ONLY: ${tableName} operation failed:`, error);
+            throw error;
         }
     }
 
@@ -235,55 +232,8 @@ class DataService {
             return savedDelivery;
         };
 
-        const localStorageOp = async () => {
-            console.log('📦 Using localStorage fallback for saveDelivery');
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            
-            // Remove from both arrays first using both id and dr_number for robustness
-            const filteredActive = activeDeliveries.filter(d => 
-                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
-            );
-            const filteredHistory = deliveryHistory.filter(d => 
-                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
-            );
-            
-            // Add to appropriate array based on status
-            if (delivery.status === 'Completed' || delivery.status === 'Signed') {
-                // For completed deliveries, add to history
-                filteredHistory.unshift(delivery);
-                localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-                
-                // Update global arrays
-                window.deliveryHistory = filteredHistory;
-                window.activeDeliveries = filteredActive;
-                
-                console.log(`📦 localStorage: Saved completed delivery ${delivery.dr_number} to history`);
-            } else {
-                // For active deliveries (including 'Active' status)
-                filteredActive.push(delivery);
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-                localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-                
-                // Update global arrays
-                window.activeDeliveries = filteredActive;
-                window.deliveryHistory = filteredHistory;
-                
-                console.log(`📦 localStorage: Saved active delivery ${delivery.dr_number} to active list`);
-            }
-            
-            // Update analytics dashboard stats
-            if (typeof window.updateDashboardStats === 'function') {
-                setTimeout(() => {
-                    window.updateDashboardStats();
-                }, 100);
-            }
-            
-            return delivery;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'deliveries');
     }
 
     async getDeliveries(filters = {}) {
@@ -301,51 +251,8 @@ class DataService {
             return data || [];
         };
 
-        const localStorageOp = async () => {
-            console.log('📦 Using localStorage fallback for getDeliveries');
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            
-            // FIXED: Don't mix data sources - use appropriate array based on filter
-            let deliveries = [];
-            
-            if (filters.status) {
-                if (filters.status === 'Completed' || filters.status === 'Signed') {
-                    // Return only completed deliveries
-                    deliveries = deliveryHistory.filter(d => 
-                        d.status === 'Completed' || d.status === 'Signed'
-                    );
-                } else if (filters.status === 'Active') {
-                    // Return only active deliveries
-                    deliveries = activeDeliveries.filter(d => 
-                        d.status === 'Active' || (!d.status || d.status === '')
-                    );
-                } else {
-                    // Return deliveries with specific status from both arrays
-                    const fromActive = activeDeliveries.filter(d => d.status === filters.status);
-                    const fromHistory = deliveryHistory.filter(d => d.status === filters.status);
-                    deliveries = [...fromActive, ...fromHistory];
-                }
-            } else {
-                // No filter - return all deliveries but avoid duplicates
-                const allDeliveries = [...activeDeliveries, ...deliveryHistory];
-                const uniqueDeliveries = new Map();
-                
-                allDeliveries.forEach(delivery => {
-                    const key = delivery.dr_number || delivery.drNumber || delivery.id;
-                    if (key && !uniqueDeliveries.has(key)) {
-                        uniqueDeliveries.set(key, delivery);
-                    }
-                });
-                
-                deliveries = Array.from(uniqueDeliveries.values());
-            }
-            
-            console.log(`📦 localStorage: Returning ${deliveries.length} deliveries for filter:`, filters);
-            return deliveries;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'deliveries');
     }
 
     async updateDeliveryStatusInSupabase(drNumber, newStatus) {
@@ -368,20 +275,8 @@ class DataService {
             return data;
         };
 
-        // This operation is critical for Supabase, so the fallback is just to log an error.
-        const localStorageOp = async () => {
-            console.warn(`Supabase is offline. Could not update status for DR ${drNumber} to ${newStatus}.`);
-            // We can try to update the local storage as a fallback, but the source of truth is Supabase
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
-            if (deliveryIndex !== -1) {
-                activeDeliveries[deliveryIndex].status = newStatus;
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-            }
-            return null; // Indicate that the primary operation failed.
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'deliveries');
     }
 
     async deleteDelivery(deliveryId) {
@@ -396,29 +291,8 @@ class DataService {
             return true;
         };
 
-        const localStorageOp = async () => {
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            
-            // Filter using both id and dr_number/drNumber for robustness
-            const filteredActive = activeDeliveries.filter(d => 
-                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
-            );
-            const filteredHistory = deliveryHistory.filter(d => 
-                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
-            );
-            
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-            
-            // Update global arrays
-            window.activeDeliveries = filteredActive;
-            window.deliveryHistory = filteredHistory;
-            
-            return true;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'deliveries');
     }
 
     /**
@@ -440,25 +314,8 @@ class DataService {
             return data[0];
         };
 
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            const existingIndex = customers.findIndex(c => c.id === customer.id);
-            
-            if (existingIndex >= 0) {
-                customers[existingIndex] = customer;
-            } else {
-                customers.push(customer);
-            }
-            
-            localStorage.setItem('mci-customers', JSON.stringify(customers));
-            
-            // Update global array
-            window.customers = customers;
-            
-            return customer;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'customers');
     }
 
     async getCustomers() {
@@ -473,12 +330,8 @@ class DataService {
             return data || [];
         };
 
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            return customers;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'customers');
     }
 
     async deleteCustomer(customerId) {
@@ -493,19 +346,8 @@ class DataService {
             return true;
         };
 
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            const filtered = customers.filter(c => c.id !== customerId);
-            
-            localStorage.setItem('mci-customers', JSON.stringify(filtered));
-            
-            // Update global array
-            window.customers = filtered;
-            
-            return true;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'customers');
     }
 
     /**
@@ -551,14 +393,8 @@ class DataService {
             return data[0];
         };
 
-        const localStorageOp = async () => {
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            epodRecords.push(epodRecord);
-            localStorage.setItem('ePodRecords', JSON.stringify(epodRecords));
-            return epodRecord;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'epod_records');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'epod_records');
     }
 
     async getEPodRecords() {
@@ -591,12 +427,8 @@ class DataService {
             return data || [];
         };
 
-        const localStorageOp = async () => {
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            return epodRecords;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'epod_records');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'epod_records');
     }
 
     /**
@@ -622,37 +454,8 @@ class DataService {
             return data || [];
         };
 
-        const localStorageOp = async () => {
-            // DISCONNECTED: No longer read from localStorage for cost breakdown
-            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
-            // return costBreakdown;
-            
-            // Instead, extract from delivery records' additional_cost_items field
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            const allDeliveries = [...activeDeliveries, ...deliveryHistory];
-            
-            const costItems = [];
-            
-            allDeliveries.forEach(delivery => {
-                if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
-                    delivery.additional_cost_items.forEach(item => {
-                        costItems.push({
-                            id: `local-${Date.now()}-${Math.random()}`,
-                            delivery_id: delivery.id,
-                            description: item.description,
-                            amount: parseFloat(item.amount) || 0,
-                            category: item.category || 'Other',
-                            created_at: delivery.created_at || new Date().toISOString()
-                        });
-                    });
-                }
-            });
-            
-            return costItems;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'additional_cost_items');
     }
 
     async saveAdditionalCostItem(costItem) {
@@ -670,18 +473,8 @@ class DataService {
             return data[0];
         };
 
-        const localStorageOp = async () => {
-            // DISCONNECTED: No longer save to localStorage analytics-cost-breakdown
-            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
-            // costBreakdown.push(costItem);
-            // localStorage.setItem('analytics-cost-breakdown', JSON.stringify(costBreakdown));
-            
-            // Instead, this should be handled by the delivery save process
-            console.warn('⚠️ Cost item save fallback - should be handled by delivery save process');
-            return costItem;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'additional_cost_items');
     }
 
     /**
@@ -703,12 +496,8 @@ class DataService {
             return data[0];
         };
 
-        const localStorageOp = async () => {
-            localStorage.setItem('mci-user-profile', JSON.stringify(profile));
-            return profile;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'user_profiles');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'user_profiles');
     }
 
     async getUserProfile(userId) {
@@ -724,99 +513,29 @@ class DataService {
             return data;
         };
 
-        const localStorageOp = async () => {
-            const profile = localStorage.getItem('mci-user-profile');
-            return profile ? JSON.parse(profile) : null;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'user_profiles');
+        // REMOVED: All localStorage operations - Supabase-only mode
+        return this.executeSupabaseOnly(supabaseOp, 'user_profiles');
     }
 
     /**
-     * MIGRATION OPERATIONS
+     * MIGRATION OPERATIONS - DISABLED IN SUPABASE-ONLY MODE
      */
 
     async migrateLocalStorageToSupabase() {
-        if (!this.isSupabaseAvailable()) {
-            console.warn('Supabase not available, cannot migrate data');
-            return false;
-        }
-
-        try {
-            console.log('🔄 Starting data migration to Supabase...');
-            
-            // Migrate active deliveries
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            for (const delivery of activeDeliveries) {
-                await this.saveDelivery(delivery);
-            }
-            console.log(`✅ Migrated ${activeDeliveries.length} active deliveries`);
-            
-            // Migrate delivery history
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            for (const delivery of deliveryHistory) {
-                await this.saveDelivery(delivery);
-            }
-            console.log(`✅ Migrated ${deliveryHistory.length} delivery history items`);
-            
-            // Migrate customers
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            for (const customer of customers) {
-                await this.saveCustomer(customer);
-            }
-            console.log(`✅ Migrated ${customers.length} customers`);
-            
-            // Migrate E-POD records
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            for (const record of epodRecords) {
-                await this.saveEPodRecord(record);
-            }
-            console.log(`✅ Migrated ${epodRecords.length} E-POD records`);
-            
-            console.log('🎉 Data migration completed successfully!');
-            return true;
-            
-        } catch (error) {
-            console.error('❌ Data migration failed:', error);
-            return false;
-        }
+        console.warn('🚫 Migration disabled - System is now Supabase-only mode');
+        console.warn('📝 All data operations go directly to Supabase');
+        return false;
     }
 
     /**
-     * SYNC OPERATIONS
+     * SYNC OPERATIONS - DISABLED IN SUPABASE-ONLY MODE
      */
 
     async syncData() {
-        if (!this.isSupabaseAvailable()) {
-            console.log('Supabase not available, skipping sync');
-            return;
-        }
-
-        try {
-            console.log('🔄 Syncing data with Supabase...');
-            
-            // Load fresh data from Supabase
-            const deliveries = await this.getDeliveries();
-            const customers = await this.getCustomers();
-            
-            // Update local storage and global arrays
-            const activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
-            const deliveryHistory = deliveries.filter(d => d.status === 'Completed');
-            
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
-            localStorage.setItem('mci-customers', JSON.stringify(customers));
-            
-            // Update global arrays
-            window.activeDeliveries = activeDeliveries;
-            window.deliveryHistory = deliveryHistory;
-            window.customers = customers;
-            
-            console.log('✅ Data sync completed');
-            
-        } catch (error) {
-            console.error('❌ Data sync failed:', error);
-        }
+        console.warn('🚫 Sync disabled - System is now Supabase-only mode');
+        console.warn('📝 All data is fetched directly from Supabase in real-time');
+        console.warn('💡 No localStorage sync needed - data is always fresh from database');
+        return;
     }
 }
 

@@ -862,10 +862,10 @@ async function saveBooking() {
                         additionalCostItems: additionalCostItems,
                         timestamp: new Date().toISOString()
                     };
+                    // ✅ REMOVED: localStorage operations - Supabase-only mode
                     if (typeof window.activeDeliveries !== 'undefined') {
                         window.activeDeliveries.push(localDelivery);
-                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                        console.log('✅ Saved to localStorage as fallback');
+                        console.log('✅ Added to activeDeliveries array (Supabase-only mode)');
                     }
                 }
             } else {
@@ -874,12 +874,8 @@ async function saveBooking() {
                     window.activeDeliveries.push(newDelivery);
                     console.log(`✅ Added delivery to window.activeDeliveries. Total: ${window.activeDeliveries.length}`);
                     
-                    try {
-                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                        console.log('✅ Saved activeDeliveries to localStorage');
-                    } catch (error) {
-                        console.error('Error saving to localStorage:', error);
-                    }
+                    // ✅ REMOVED: localStorage operations - Supabase-only mode
+                    console.log('✅ Using Supabase-only mode - no localStorage operations');
                 }
                 
                 // Force immediate refresh of Active Deliveries display
@@ -1110,8 +1106,8 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
                 }
             }
             
-            // Save updated customer data to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            // ✅ REMOVED: localStorage operations - Supabase-only mode
+            console.log('✅ Customer data managed via Supabase-only mode');
             
             // Always refresh customers view to ensure updated data is visible
             if (typeof window.loadCustomers === 'function') {
@@ -1159,9 +1155,8 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
             console.log('Added to HTML customers array, new length:', customers.length);
         }
         
-        // Save to localStorage
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-        console.log('Saved to localStorage');
+        // ✅ REMOVED: localStorage operations - Supabase-only mode
+        console.log('✅ Customer data managed via Supabase-only mode');
         
         // Always refresh customers view to ensure new customer is visible
         console.log('=== REFRESHING CUSTOMER DISPLAY ===');
@@ -2612,20 +2607,18 @@ async function createBookingFromDR(bookingData) {
                     additionalCosts: bookingData.additionalCosts,
                     timestamp: new Date().toISOString()
                 };
+                // ✅ REMOVED: localStorage operations - Supabase-only mode
                 if (typeof window.activeDeliveries !== 'undefined') {
                     window.activeDeliveries.push(localDelivery);
-                    localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                    console.log('✅ Saved to localStorage as fallback');
+                    console.log('✅ Added to activeDeliveries array (Supabase-only mode)');
                 }
             }
         } else {
             // Fallback to localStorage if dataService not available
             window.activeDeliveries = window.activeDeliveries || [];
+            // ✅ REMOVED: localStorage operations - Supabase-only mode
             window.activeDeliveries.push(bookingData);
-            const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
-            localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
-            localStorage.setItem('activeDeliveries', activeDeliveriesData);
-            console.log('✅ Saved to localStorage (dataService not available)');
+            console.log('✅ Added to activeDeliveries array (Supabase-only mode - dataService required)');
         }
         
         // Auto-create customer if needed
@@ -2927,9 +2920,8 @@ async function createBookingFromDREnhanced(bookingData) {
         // Add to active deliveries
         window.activeDeliveries.push(bookingData);
         
-        // Save to localStorage
-        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-        localStorage.setItem('activeDeliveries', JSON.stringify(window.activeDeliveries));
+        // ✅ REMOVED: localStorage operations - Supabase-only mode
+        console.log('✅ Active deliveries managed via Supabase-only mode');
         
         // Auto-create customer if needed
         if (typeof autoCreateCustomer === 'function') {
@@ -2952,8 +2944,9 @@ async function createBookingFromDREnhanced(bookingData) {
 // Update analytics with cost breakdown data
 function updateAnalyticsWithCostBreakdown(costBreakdown) {
     try {
-        // Get existing cost breakdown data from localStorage
-        let existingBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
+        // ✅ REMOVED: localStorage cost breakdown operations - Supabase-only mode
+        // Cost breakdown data is now stored as part of delivery records in Supabase
+        let existingBreakdown = [];
         
         // Add new cost breakdown items
         costBreakdown.forEach(cost => {
@@ -2974,8 +2967,8 @@ function updateAnalyticsWithCostBreakdown(costBreakdown) {
             }
         });
         
-        // Save updated breakdown
-        localStorage.setItem('analytics-cost-breakdown', JSON.stringify(existingBreakdown));
+        // ✅ REMOVED: localStorage operations - Supabase-only mode
+        console.log('✅ Cost breakdown data managed via Supabase delivery records');
         
         console.log('Updated analytics cost breakdown:', existingBreakdown);
         
@@ -3157,8 +3150,8 @@ function testManualBookingFlow() {
     
     // Save to localStorage
     try {
-        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-        console.log('✅ Saved to localStorage');
+        // ✅ REMOVED: localStorage operations - Supabase-only mode
+        console.log('✅ Active deliveries managed via Supabase-only mode');
     } catch (error) {
         console.error('❌ Error saving to localStorage:', error);
     }

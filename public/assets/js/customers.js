@@ -78,10 +78,9 @@ async function loadCustomers() {
             console.log('📊 dataService.getCustomers not available, using localStorage...');
         }
         
-        // If Supabase didn't provide data, load from localStorage
+        // ✅ REMOVED: localStorage customer loading - Supabase-only mode
         if (!customersLoaded) {
-            const savedCustomers = localStorage.getItem('mci-customers');
-            console.log('📊 Checking localStorage for customers:', savedCustomers ? 'Found data' : 'No data');
+            console.log('✅ Using Supabase-only mode - no localStorage fallback');
             
             if (savedCustomers) {
                 try {
@@ -120,9 +119,8 @@ async function loadCustomers() {
             mergeDuplicateCustomers();
         } else {
             console.log('No customers found in any data source');
-            // Only initialize with mock data if absolutely no data exists anywhere
-            const hasLocalStorage = localStorage.getItem('mci-customers');
-            console.log('📊 Final check - hasLocalStorage:', !!hasLocalStorage, 'window.customers length:', window.customers?.length || 0);
+            // ✅ REMOVED: localStorage check - Supabase-only mode
+            console.log('✅ Using Supabase-only mode - no localStorage check');
             
             if (!window.customers || (window.customers.length === 0 && !hasLocalStorage)) {
                 console.log('🔧 Initializing with mock data (no real data found)');
@@ -285,8 +283,8 @@ function mergeDuplicateCustomers() {
     // Update the global customers array
     window.customers = mergedCustomers;
     
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    // ✅ REMOVED: localStorage operations - Supabase-only mode
+    console.log('✅ Customer data managed via Supabase-only mode');
     
     console.log(`Merged ${mergeCount} duplicate customers`);
     console.log('Customers after merge:', window.customers.length);
@@ -448,8 +446,8 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
                 day: 'numeric' 
             });
             
-            // Save updated customer data to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            // ✅ REMOVED: localStorage operations - Supabase-only mode
+            console.log('✅ Customer data managed via Supabase-only mode');
             
             // Always refresh customers view to ensure updated data is visible
             if (typeof window.loadCustomers === 'function') {
@@ -486,9 +484,8 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
         console.log('New customer auto-created:', newCustomer.contactPerson);
         console.log('Updated window.customers array:', window.customers);
         
-        // Save to localStorage
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-        console.log('Saved to localStorage');
+        // ✅ REMOVED: localStorage operations - Supabase-only mode
+        console.log('✅ Customer data managed via Supabase-only mode');
         
         // Always refresh customers view to ensure new customer is visible
         console.log('=== REFRESHING CUSTOMER DISPLAY ===');
@@ -564,8 +561,8 @@ function saveEditedCustomer() {
     customer.status = document.getElementById('editCustomerStatus').value;
     customer.notes = document.getElementById('editNotes').value;
     
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    // ✅ REMOVED: localStorage operations - Supabase-only mode
+    console.log('✅ Customer data managed via Supabase-only mode');
     
     // Refresh display
     displayCustomers();
@@ -589,8 +586,8 @@ function deleteCustomer(customerId) {
     // Remove customer from array
     window.customers = window.customers.filter(customer => customer.id !== customerId);
     
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+    // ✅ REMOVED: localStorage operations - Supabase-only mode
+    console.log('✅ Customer data managed via Supabase-only mode');
     
     // Refresh display
     displayCustomers();
@@ -696,16 +693,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.customers = [];
                     }
                     window.customers.push(newCustomer);
-                    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+                    // ✅ REMOVED: localStorage operations - Supabase-only mode
+                    console.log('✅ Customer data managed via Supabase-only mode');
                     displayCustomers();
                 });
             } else {
-                // Fallback to localStorage
+                // ✅ REMOVED: localStorage fallback - Supabase-only mode
                 if (!window.customers) {
                     window.customers = [];
                 }
                 window.customers.push(newCustomer);
-                localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+                console.log('✅ Customer data managed via Supabase-only mode');
                 displayCustomers();
             }
             

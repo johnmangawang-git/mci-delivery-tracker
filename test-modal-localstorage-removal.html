@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Modal localStorage Removal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .console-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">🧪 Modal localStorage Removal Test</h1>
+                <p class="lead">Testing that all modal functions now use Supabase-only operations</p>
+                
+                <!-- Test Results -->
+                <div class="test-section">
+                    <h3>📊 Test Results</h3>
+                    <div id="testResults"></div>
+                </div>
+
+                <!-- Console Output -->
+                <div class="test-section">
+                    <h3>📝 Console Output</h3>
+                    <div id="consoleOutput" class="console-output"></div>
+                </div>
+
+                <!-- Test Controls -->
+                <div class="test-section">
+                    <h3>🎮 Test Controls</h3>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button id="testBookingModal" class="btn btn-primary w-100 mb-2">
+                                <i class="bi bi-calendar-plus"></i> Test Booking Modal
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="testCustomerModal" class="btn btn-success w-100 mb-2">
+                                <i class="bi bi-person-plus"></i> Test Customer Modal
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button id="testStatusChange" class="btn btn-warning w-100 mb-2">
+                                <i class="bi bi-arrow-repeat"></i> Test Status Change
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button id="testEPodModal" class="btn btn-info w-100 mb-2">
+                                <i class="bi bi-file-earmark-text"></i> Test E-POD Modal
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button id="runAllTests" class="btn btn-dark w-100 mb-2">
+                                <i class="bi bi-play-fill"></i> Run All Tests
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- localStorage Monitor -->
+                <div class="test-section">
+                    <h3>👁️ localStorage Monitor</h3>
+                    <div id="localStorageMonitor" class="console-output"></div>
+                    <button id="refreshLocalStorage" class="btn btn-secondary btn-sm mt-2">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh localStorage
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Mock Supabase and dataService -->
+    <script>
+        // Mock Supabase client
+        window.supabase = {
+            from: function(table) {
+                return {
+                    select: function() {
+                        return {
+                            data: [],
+                            error: null
+                        };
+                    },
+                    insert: function() {
+                        return {
+                            data: [{ id: 'mock-' + Date.now() }],
+                            error: null
+                        };
+                    },
+                    update: function() {
+                        return {
+                            data: [{ id: 'mock-' + Date.now() }],
+                            error: null
+                        };
+                    },
+                    delete: function() {
+                        return {
+                            data: [],
+                            error: null
+                        };
+                    }
+                };
+            }
+        };
+
+        // Mock dataService
+        window.dataService = {
+            isSupabaseAvailable: () => true,
+            saveDelivery: async (delivery) => {
+                console.log('🎯 MOCK: saveDelivery called with:', delivery);
+                return { ...delivery, id: 'mock-' + Date.now() };
+            },
+            getDeliveries: async (filters) => {
+                console.log('🎯 MOCK: getDeliveries called with:', filters);
+                return [];
+            },
+            saveCustomer: async (customer) => {
+                console.log('🎯 MOCK: saveCustomer called with:', customer);
+                return { ...customer, id: 'mock-' + Date.now() };
+            },
+            getCustomers: async (filters) => {
+                console.log('🎯 MOCK: getCustomers called with:', filters);
+                return [];
+            },
+            deleteCustomer: async (customerId) => {
+                console.log('🎯 MOCK: deleteCustomer called with:', customerId);
+                return true;
+            },
+            getEPodRecords: async (filters) => {
+                console.log('🎯 MOCK: getEPodRecords called with:', filters);
+                return [];
+            },
+            saveEPodRecord: async (record) => {
+                console.log('🎯 MOCK: saveEPodRecord called with:', record);
+                return { ...record, id: 'mock-' + Date.now() };
+            }
+        };
+
+        // Mock global arrays
+        window.activeDeliveries = [];
+        window.deliveryHistory = [];
+        window.customers = [];
+
+        // Mock utility functions
+        window.showToast = function(message, type = 'success') {
+            console.log(`🍞 TOAST (${type}): ${message}`);
+        };
+
+        window.showError = function(message) {
+            console.log(`❌ ERROR: ${message}`);
+        };
+
+        window.showModal = function(modalId) {
+            console.log(`📱 SHOW MODAL: ${modalId}`);
+        };
+
+        window.hideModal = function(modalId) {
+            console.log(`📱 HIDE MODAL: ${modalId}`);
+        };
+
+        // Mock display functions
+        window.displayCustomers = function() {
+            console.log('🔄 DISPLAY: displayCustomers called');
+        };
+
+        window.loadActiveDeliveries = function() {
+            console.log('🔄 LOAD: loadActiveDeliveries called');
+        };
+
+        window.loadDeliveryHistory = function() {
+            console.log('🔄 LOAD: loadDeliveryHistory called');
+        };
+
+        window.updateDashboardMetrics = function() {
+            console.log('🔄 UPDATE: updateDashboardMetrics called');
+        };
+
+        // Mock form elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create mock form elements
+            const mockElements = [
+                { id: 'drNumber', value: 'DR-TEST-001' },
+                { id: 'customerName', value: 'Test Customer' },
+                { id: 'vendorNumber', value: 'VN001' },
+                { id: 'originSelect', value: 'Warehouse A' },
+                { id: 'truckType', value: '10-Wheeler' },
+                { id: 'truckPlateNumber', value: 'ABC-123' },
+                { id: 'deliveryDate', value: '2024-01-15' },
+                { id: 'contactPerson', value: 'John Doe' },
+                { id: 'phone', value: '09123456789' },
+                { id: 'email', value: 'john@example.com' },
+                { id: 'address', value: '123 Test Street' },
+                { id: 'accountType', value: 'Regular' },
+                { id: 'customerStatus', value: 'Active' },
+                { id: 'editCustomerId', value: 'CUST-001' },
+                { id: 'editCustomerName', value: 'Updated Customer' },
+                { id: 'editCustomerPhone', value: '09987654321' },
+                { id: 'editCustomerEmail', value: 'updated@example.com' },
+                { id: 'editCustomerAddress', value: '456 Updated Street' },
+                { id: 'editCustomerAccountType', value: 'Premium' },
+                { id: 'editCustomerStatus', value: 'Active' },
+                { id: 'editNotes', value: 'Updated notes' }
+            ];
+
+            mockElements.forEach(element => {
+                const el = document.createElement('input');
+                el.id = element.id;
+                el.value = element.value;
+                el.style.display = 'none';
+                document.body.appendChild(el);
+            });
+
+            // Create mock forms
+            const bookingForm = document.createElement('form');
+            bookingForm.id = 'bookingForm';
+            bookingForm.reset = function() { console.log('📝 FORM: bookingForm reset'); };
+            document.body.appendChild(bookingForm);
+
+            const addCustomerForm = document.createElement('form');
+            addCustomerForm.id = 'addCustomerForm';
+            addCustomerForm.reset = function() { console.log('📝 FORM: addCustomerForm reset'); };
+            document.body.appendChild(addCustomerForm);
+
+            // Create mock elements with classes
+            const drNumberInput = document.createElement('input');
+            drNumberInput.className = 'dr-number-input';
+            drNumberInput.value = 'DR-TEST-002';
+            document.body.appendChild(drNumberInput);
+
+            const destinationInput = document.createElement('input');
+            destinationInput.className = 'destination-input';
+            destinationInput.value = 'Test Destination';
+            document.body.appendChild(destinationInput);
+        });
+    </script>
+
+    <!-- Include the modal localStorage removal scripts -->
+    <script src="public/assets/js/booking-modal-localstorage-removal.js"></script>
+    <script src="public/assets/js/customer-modal-localstorage-removal.js"></script>
+    <script src="public/assets/js/app-modal-localstorage-removal.js"></script>
+
+    <!-- Test Script -->
+    <script>
+        let testResults = [];
+        let consoleMessages = [];
+
+        // Capture console messages
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        console.log = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[LOG] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[ERROR] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[WARN] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsoleWarn.apply(console, args);
+        };
+
+        function updateConsoleOutput() {
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.textContent = consoleMessages.slice(-50).join('\n');
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function addTestResult(testName, passed, message) {
+            testResults.push({
+                name: testName,
+                passed: passed,
+                message: message,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            updateTestResults();
+        }
+
+        function updateTestResults() {
+            const testResultsDiv = document.getElementById('testResults');
+            testResultsDiv.innerHTML = '';
+
+            testResults.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${result.passed ? 'test-pass' : 'test-fail'}`;
+                resultDiv.innerHTML = `
+                    <strong>${result.passed ? '✅' : '❌'} ${result.name}</strong><br>
+                    <small>${result.timestamp}</small><br>
+                    ${result.message}
+                `;
+                testResultsDiv.appendChild(resultDiv);
+            });
+        }
+
+        function updateLocalStorageMonitor() {
+            const monitor = document.getElementById('localStorageMonitor');
+            const keys = Object.keys(localStorage);
+            
+            if (keys.length === 0) {
+                monitor.textContent = '✅ localStorage is empty (as expected in Supabase-only mode)';
+            } else {
+                let content = '⚠️ localStorage contains data:\n';
+                keys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    content += `${key}: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}\n`;
+                });
+                monitor.textContent = content;
+            }
+        }
+
+        // Monitor localStorage changes
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function(key, value) {
+            console.warn(`🚨 localStorage.setItem detected: ${key}`);
+            addTestResult('localStorage Usage', false, `Detected localStorage.setItem for key: ${key}`);
+            originalSetItem.apply(localStorage, arguments);
+            updateLocalStorageMonitor();
+        };
+
+        // Test functions
+        async function testBookingModal() {
+            console.log('🧪 Testing Booking Modal...');
+            
+            try {
+                if (typeof window.saveBooking === 'function') {
+                    await window.saveBooking();
+                    addTestResult('Booking Modal', true, 'saveBooking function executed without localStorage operations');
+                } else {
+                    addTestResult('Booking Modal', false, 'saveBooking function not found');
+                }
+            } catch (error) {
+                addTestResult('Booking Modal', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testCustomerModal() {
+            console.log('🧪 Testing Customer Modal...');
+            
+            try {
+                // Test saveEditedCustomer
+                if (typeof window.saveEditedCustomer === 'function') {
+                    await window.saveEditedCustomer();
+                    addTestResult('Customer Edit Modal', true, 'saveEditedCustomer function executed without localStorage operations');
+                } else {
+                    addTestResult('Customer Edit Modal', false, 'saveEditedCustomer function not found');
+                }
+
+                // Test deleteCustomer
+                if (typeof window.deleteCustomer === 'function') {
+                    // Mock confirm to return true
+                    const originalConfirm = window.confirm;
+                    window.confirm = () => true;
+                    
+                    await window.deleteCustomer('CUST-001');
+                    addTestResult('Customer Delete Modal', true, 'deleteCustomer function executed without localStorage operations');
+                    
+                    window.confirm = originalConfirm;
+                } else {
+                    addTestResult('Customer Delete Modal', false, 'deleteCustomer function not found');
+                }
+
+                // Test loadCustomers
+                if (typeof window.loadCustomers === 'function') {
+                    await window.loadCustomers();
+                    addTestResult('Customer Load', true, 'loadCustomers function executed without localStorage operations');
+                } else {
+                    addTestResult('Customer Load', false, 'loadCustomers function not found');
+                }
+            } catch (error) {
+                addTestResult('Customer Modal', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testStatusChange() {
+            console.log('🧪 Testing Status Change...');
+            
+            try {
+                if (typeof window.handleStatusChange === 'function') {
+                    await window.handleStatusChange('DR-TEST-001', 'Completed');
+                    addTestResult('Status Change', true, 'handleStatusChange function executed without localStorage operations');
+                } else {
+                    addTestResult('Status Change', false, 'handleStatusChange function not found');
+                }
+            } catch (error) {
+                addTestResult('Status Change', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function testEPodModal() {
+            console.log('🧪 Testing E-POD Modal...');
+            
+            try {
+                if (typeof window.showEPodModal === 'function') {
+                    await window.showEPodModal('DR-TEST-001');
+                    addTestResult('E-POD Modal', true, 'showEPodModal function executed without localStorage operations');
+                } else {
+                    addTestResult('E-POD Modal', false, 'showEPodModal function not found');
+                }
+
+                if (typeof window.showESignatureModal === 'function') {
+                    await window.showESignatureModal('DR-TEST-001');
+                    addTestResult('E-Signature Modal', true, 'showESignatureModal function executed without localStorage operations');
+                } else {
+                    addTestResult('E-Signature Modal', false, 'showESignatureModal function not found');
+                }
+            } catch (error) {
+                addTestResult('E-POD Modal', false, `Error: ${error.message}`);
+            }
+        }
+
+        async function runAllTests() {
+            console.log('🧪 Running all tests...');
+            testResults = [];
+            consoleMessages = [];
+            
+            await testBookingModal();
+            await testCustomerModal();
+            await testStatusChange();
+            await testEPodModal();
+            
+            const passedTests = testResults.filter(r => r.passed).length;
+            const totalTests = testResults.length;
+            
+            console.log(`🎯 Test Summary: ${passedTests}/${totalTests} tests passed`);
+            
+            if (passedTests === totalTests) {
+                addTestResult('Overall Result', true, `All ${totalTests} tests passed! Modal localStorage removal is complete.`);
+            } else {
+                addTestResult('Overall Result', false, `${totalTests - passedTests} tests failed. Some localStorage operations may still exist.`);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('testBookingModal').addEventListener('click', testBookingModal);
+            document.getElementById('testCustomerModal').addEventListener('click', testCustomerModal);
+            document.getElementById('testStatusChange').addEventListener('click', testStatusChange);
+            document.getElementById('testEPodModal').addEventListener('click', testEPodModal);
+            document.getElementById('runAllTests').addEventListener('click', runAllTests);
+            document.getElementById('refreshLocalStorage').addEventListener('click', updateLocalStorageMonitor);
+            
+            // Initial localStorage check
+            updateLocalStorageMonitor();
+            
+            // Auto-run tests after a short delay
+            setTimeout(runAllTests, 1000);
+        });
+    </script>
+</body>
+</html>

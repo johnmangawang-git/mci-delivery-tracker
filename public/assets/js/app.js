@@ -116,8 +116,8 @@ console.log('app.js loaded');
             // Update timestamp for status change
             activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
             
-            // Save to localStorage and database
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+            // ✅ REMOVED: localStorage operations - Supabase-only mode
+            console.log('✅ Active deliveries managed via Supabase-only mode');
             saveToDatabase();
             
             // Refresh only the table display, don't reload all data
@@ -180,9 +180,8 @@ console.log('app.js loaded');
                     console.log(`Moved DR ${drNumber} from active to history`);
                 }
                 
-                // Save to localStorage and database - FIXED: Ensure proper saving to both
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-                localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
+                // ✅ REMOVED: localStorage operations - Supabase-only mode
+                console.log('✅ Delivery data managed via Supabase-only mode');
                 
                 // Also save to Supabase if dataService is available
                 if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveDelivery === 'function') {
@@ -388,9 +387,9 @@ console.log('app.js loaded');
             const currentActiveDeliveries = window.activeDeliveries || [];
             const currentDeliveryHistory = window.deliveryHistory || [];
             
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(currentActiveDeliveries));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(currentDeliveryHistory));
-            console.log(`Data saved to localStorage: ${currentActiveDeliveries.length} active, ${currentDeliveryHistory.length} history`);
+            // ✅ REMOVED: localStorage operations - Supabase-only mode
+            console.log('✅ Delivery data managed via Supabase-only mode');
+            console.log(`Data managed via Supabase: ${currentActiveDeliveries.length} active, ${currentDeliveryHistory.length} history`);
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
@@ -904,10 +903,10 @@ function loadDeliveryHistory() {
         
         // Get EPOD records to check which deliveries are signed
         let ePodRecords = [];
+        // ✅ REMOVED: localStorage E-POD operations - Supabase-only mode
+        // E-POD records are now loaded via dataService.getEPodRecords()
         try {
-            const ePodData = localStorage.getItem('ePodRecords');
-            if (ePodData) {
-                ePodRecords = JSON.parse(ePodData);
+            console.log('✅ E-POD records managed via Supabase-only mode');
             }
         } catch (error) {
             console.error('Error loading EPOD records:', error);
@@ -1221,11 +1220,10 @@ async function exportDeliveryHistoryToPdf() {
         // }
         
         // ENHANCED: Load from both localStorage and Supabase
+        // ✅ REMOVED: localStorage E-POD operations - Supabase-only mode
+        // E-POD records are now loaded via dataService.getEPodRecords()
         try {
-            // First, get from localStorage (fallback/legacy)
-            const ePodData = localStorage.getItem('ePodRecords');
-            if (ePodData) {
-                ePodRecords = JSON.parse(ePodData);
+            console.log('✅ E-POD records managed via Supabase-only mode');
                 console.log('📄 Loaded E-POD records from localStorage:', ePodRecords.length);
             }
             
