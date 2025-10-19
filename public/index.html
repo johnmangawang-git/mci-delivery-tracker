@@ -909,12 +909,6 @@
                         <span class="nav-text">Warehouse Map</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-view="customer-tracking">
-                        <i class="bi bi-search"></i>
-                        <span class="nav-text">Customer Tracking</span>
-                    </a>
-                </li>
 
                 <li class="nav-item">
                     <a href="#" class="nav-link" data-view="settings">
@@ -1416,93 +1410,6 @@
             </div>
         </div>
 
-        <!-- Customer Tracking View -->
-        <div id="customerTrackingView" class="view">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title"><i class="bi bi-search"></i> Customer Delivery Tracking</h5>
-                    <p class="text-muted mb-0">Allow customers to search and track their deliveries</p>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8 mx-auto">
-                            <div class="card border-primary">
-                                <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0"><i class="bi bi-truck me-2"></i>Track Your Delivery</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label for="trackingSearch" class="form-label">Enter DR Number, Customer Name, or Destination</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="trackingSearch" 
-                                                   placeholder="e.g., DR-2024-001, John Doe, or Manila City">
-                                            <button class="btn btn-primary" type="button" id="searchTrackingBtn">
-                                                <i class="bi bi-search me-1"></i>Search
-                                            </button>
-                                        </div>
-                                        <div class="form-text">
-                                            <i class="bi bi-info-circle me-1"></i>
-                                            Search by DR number for fastest results, or use customer name/destination
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Search Results -->
-                                    <div id="trackingResults" style="display: none;">
-                                        <hr>
-                                        <h6><i class="bi bi-list-check me-2"></i>Search Results</h6>
-                                        <div id="trackingResultsContent">
-                                            <!-- Results will be populated here -->
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- No Results Message -->
-                                    <div id="noTrackingResults" style="display: none;">
-                                        <hr>
-                                        <div class="alert alert-warning">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>
-                                            <strong>No deliveries found</strong><br>
-                                            Please check your search terms and try again. Make sure to use the correct DR number, customer name, or destination.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Instructions Card -->
-                            <div class="card mt-4">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-question-circle me-2"></i>How to Track Your Delivery</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-4 text-center mb-3">
-                                            <div class="text-primary mb-2">
-                                                <i class="bi bi-1-circle-fill" style="font-size: 2rem;"></i>
-                                            </div>
-                                            <h6>Enter Details</h6>
-                                            <p class="small text-muted">Type your DR number, name, or delivery destination</p>
-                                        </div>
-                                        <div class="col-md-4 text-center mb-3">
-                                            <div class="text-primary mb-2">
-                                                <i class="bi bi-2-circle-fill" style="font-size: 2rem;"></i>
-                                            </div>
-                                            <h6>Search</h6>
-                                            <p class="small text-muted">Click the search button to find your deliveries</p>
-                                        </div>
-                                        <div class="col-md-4 text-center mb-3">
-                                            <div class="text-primary mb-2">
-                                                <i class="bi bi-3-circle-fill" style="font-size: 2rem;"></i>
-                                            </div>
-                                            <h6>Track Status</h6>
-                                            <p class="small text-muted">View real-time delivery status and details</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Settings View -->
         <div id="settingsView" class="view">
