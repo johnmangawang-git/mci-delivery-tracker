@@ -295,11 +295,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const newLogoutBtn = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
         
-        newLogoutBtn.addEventListener('click', function () {
-            // Call the logout function
+        newLogoutBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
             logout();
         });
     }
+    
+    // Additional fallback using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target && (e.target.id === 'logoutBtn' || e.target.closest('#logoutBtn'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            logout();
+        }
+    });
 });
 
 // Global functions
@@ -1943,6 +1953,7 @@ function updateUIWithUserData(userData) {
 
 // Enhanced logout function
 async function logout() {
+    console.log('Logout function called');
     try {
         // Use Supabase logout if available (check for supabase client, not window.logout to avoid recursion)
         if (window.supabase && typeof window.supabase.auth.signOut === 'function') {
