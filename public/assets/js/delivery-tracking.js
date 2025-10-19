@@ -23,11 +23,6 @@ function setupDeliveryTracking() {
             performDeliverySearch();
         });
         
-        // Handle input formatting
-        trackingInput.addEventListener('input', function(e) {
-            formatDRNumber(e.target);
-        });
-        
         // Handle button click
         trackingButton.addEventListener('click', function(e) {
             e.preventDefault();
@@ -38,20 +33,10 @@ function setupDeliveryTracking() {
     }
 }
 
-// Format DR number input
-function formatDRNumber(input) {
-    let value = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    
-    // Only auto-format if user has typed something substantial (3+ characters)
-    if (value.length >= 3 && !value.startsWith('DR-')) {
-        if (value.startsWith('DR')) {
-            value = value.replace('DR', 'DR-');
-        } else if (/^\d/.test(value)) {
-            // Only add DR- prefix if it starts with a number
-            value = 'DR-' + value;
-        }
-    }
-    
+// Clean input - just remove special characters but don't auto-format
+function cleanInput(input) {
+    // Only clean the input, don't auto-format
+    let value = input.value.replace(/[<>'"&]/g, ''); // Remove potentially harmful characters
     input.value = value;
 }
 
@@ -75,7 +60,7 @@ async function performDeliverySearch() {
     
     // Validate DR number format
     if (!isValidDRNumber(drNumber)) {
-        showTrackingError('Please enter a valid delivery number (at least 5 characters)');
+        showTrackingError('Please enter a valid delivery number (at least 3 characters)');
         return;
     }
     
@@ -98,25 +83,14 @@ async function performDeliverySearch() {
     }
 }
 
-// Validate DR number format
+// Validate delivery number - very flexible
 function isValidDRNumber(drNumber) {
-    // Accept various DR number formats
-    if (!drNumber || drNumber.length < 3) return false;
+    // Accept any reasonable delivery number format
+    if (!drNumber || drNumber.trim().length < 3) return false;
     
-    // Standard format: DR-2024-001
-    const standardPattern = /^DR-\d{4}-\d{3,}$/i;
-    if (standardPattern.test(drNumber)) return true;
-    
-    // Compact format: DR2024001
-    const compactPattern = /^DR\d{7,}$/i;
-    if (compactPattern.test(drNumber)) return true;
-    
-    // Number only: 2024001
-    const numberPattern = /^\d{5,}$/;
-    if (numberPattern.test(drNumber)) return true;
-    
-    // Any format with at least 5 characters
-    return drNumber.length >= 5;
+    // Accept any alphanumeric string with at least 3 characters
+    const flexiblePattern = /^[A-Za-z0-9-_]+$/;
+    return flexiblePattern.test(drNumber.trim()) && drNumber.trim().length >= 3;
 }
 
 // Search for delivery in data sources
