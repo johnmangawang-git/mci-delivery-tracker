@@ -85,13 +85,55 @@
         .fallback-hidden {
             display: none;
         }
+        
+        /* Customer Tracking Styles */
+        .tracking-result {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid #007bff;
+        }
+        
+        .delivery-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .delivery-header h5 {
+            margin: 0;
+            color: #333;
+            flex: 1;
+        }
+        
+        .delivery-details p {
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        
+        .delivery-contact {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 991.98px) {
+            .col-lg-6 {
+                min-height: 50vh;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-5">
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Staff Login Section -->
+            <div class="col-lg-6 d-flex align-items-center justify-content-center bg-light">
+                <div class="w-100" style="max-width: 400px;">
                 <div class="card login-card">
                     <div class="login-header">
                         <div class="logo-icon">
@@ -167,6 +209,52 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Customer Delivery Tracking Section -->
+            <div class="col-lg-6 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="w-100 text-white" style="max-width: 400px;">
+                    <div class="text-center mb-4">
+                        <div class="logo-icon mb-3">
+                            <i class="bi bi-search" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h2>Track Your Delivery</h2>
+                        <p class="mb-0">Enter your DR number to check delivery status</p>
+                    </div>
+                    
+                    <div class="card" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+                        <div class="card-body">
+                            <form id="trackingForm">
+                                <div class="mb-3">
+                                    <label for="trackingInput" class="form-label text-dark">DR Number</label>
+                                    <input type="text" class="form-control" id="trackingInput" 
+                                           placeholder="e.g., DR-2024-001" required>
+                                    <div class="form-text text-muted">
+                                        Enter your delivery receipt number
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary" id="trackingButton">
+                                        <i class="bi bi-search me-2"></i>Track Delivery
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- Tracking Results -->
+                            <div id="trackingResults" style="display: none;" class="mt-4">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <p class="small mb-1">Need help?</p>
+                        <p class="small">
+                            <i class="bi bi-telephone me-1"></i>
+                            Call us at <strong>+63 912 345 6789</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -182,6 +270,9 @@
 
     <!-- Application JavaScript Files -->
     <script src="assets/js/supabase.js"></script>
+    
+    <!-- Customer Delivery Tracking -->
+    <script src="assets/js/delivery-tracking.js"></script>
 
     <script>
         // Add event listeners when DOM is loaded
