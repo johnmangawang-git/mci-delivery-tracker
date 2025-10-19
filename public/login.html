@@ -17,12 +17,9 @@
     <!-- Custom styles -->
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
         }
 
         .login-card {
@@ -119,10 +116,43 @@
             border-top: 1px solid #dee2e6;
         }
         
+        /* Staff Login Section Styling */
+        .staff-login-section {
+            background: #f8f9fa;
+            padding: 2rem 1rem;
+        }
+        
+        .staff-login-section .login-card {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: none;
+        }
+        
+        .staff-login-section .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        /* Customer Tracking Section Styling */
+        .customer-tracking-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem 1rem;
+        }
+        
+        .tracking-card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
         /* Mobile responsiveness */
         @media (max-width: 991.98px) {
             .col-lg-6 {
                 min-height: 50vh;
+            }
+            
+            .staff-login-section,
+            .customer-tracking-section {
+                padding: 1.5rem 1rem;
             }
         }
     </style>
@@ -132,9 +162,9 @@
     <div class="container-fluid">
         <div class="row min-vh-100">
             <!-- Staff Login Section -->
-            <div class="col-lg-6 d-flex align-items-center justify-content-center bg-light">
+            <div class="col-lg-6 d-flex align-items-center justify-content-center staff-login-section">
                 <div class="w-100" style="max-width: 400px;">
-                <div class="card login-card">
+                    <div class="card login-card">
                     <div class="login-header">
                         <div class="logo-icon">
                             <i class="bi bi-truck"></i>
@@ -208,10 +238,11 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
             
             <!-- Customer Delivery Tracking Section -->
-            <div class="col-lg-6 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="col-lg-6 d-flex align-items-center justify-content-center customer-tracking-section">
                 <div class="w-100 text-white" style="max-width: 400px;">
                     <div class="text-center mb-4">
                         <div class="logo-icon mb-3">
@@ -221,7 +252,7 @@
                         <p class="mb-0">Enter your DR number to check delivery status</p>
                     </div>
                     
-                    <div class="card" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+                    <div class="card tracking-card">
                         <div class="card-body">
                             <form id="trackingForm">
                                 <div class="mb-3">
