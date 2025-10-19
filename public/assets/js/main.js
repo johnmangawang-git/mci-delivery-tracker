@@ -288,23 +288,53 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Logout button with proper event listener cleanup
+    // Logout button with debugging
+    console.log('🔍 Looking for logout button...');
     const logoutBtn = document.getElementById('logoutBtn');
+    console.log('🔍 Logout button found:', logoutBtn);
+    
     if (logoutBtn) {
+        console.log('✅ Attaching logout event listener');
         // Remove existing event listeners by cloning
         const newLogoutBtn = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
         
         newLogoutBtn.addEventListener('click', function (e) {
+            console.log('🔴 LOGOUT BUTTON CLICKED!');
             e.preventDefault();
             e.stopPropagation();
             logout();
         });
+    } else {
+        console.log('❌ Logout button NOT found, will retry...');
+        // Retry after a delay in case the button is created later
+        setTimeout(function() {
+            console.log('🔄 Retrying logout button attachment...');
+            const retryLogoutBtn = document.getElementById('logoutBtn');
+            console.log('🔄 Retry - Logout button found:', retryLogoutBtn);
+            
+            if (retryLogoutBtn) {
+                console.log('✅ Retry - Attaching logout event listener');
+                const newRetryLogoutBtn = retryLogoutBtn.cloneNode(true);
+                retryLogoutBtn.parentNode.replaceChild(newRetryLogoutBtn, retryLogoutBtn);
+                
+                newRetryLogoutBtn.addEventListener('click', function (e) {
+                    console.log('🔴 LOGOUT BUTTON CLICKED (RETRY)!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    logout();
+                });
+            } else {
+                console.log('❌ Retry - Logout button still NOT found');
+            }
+        }, 1000);
     }
     
     // Additional fallback using event delegation
     document.addEventListener('click', function(e) {
+        console.log('🔍 Click detected on:', e.target);
         if (e.target && (e.target.id === 'logoutBtn' || e.target.closest('#logoutBtn'))) {
+            console.log('🔴 LOGOUT BUTTON CLICKED VIA DELEGATION!');
             e.preventDefault();
             e.stopPropagation();
             logout();
@@ -448,7 +478,7 @@ function setupClearSignatureButton() {
 }
 
 // Function to setup the save signature button event listener
-function setupSaveSignatureButton() {
+async function setupSaveSignatureButton() {
     const saveSignatureBtn = document.getElementById('saveSignatureBtn');
     if (saveSignatureBtn) {
         // Remove any existing event listeners to prevent duplicates
@@ -1953,7 +1983,7 @@ function updateUIWithUserData(userData) {
 
 // Enhanced logout function
 async function logout() {
-    console.log('Logout function called');
+    console.log('🔴 LOGOUT FUNCTION CALLED!');
     try {
         // Use Supabase logout if available (check for supabase client, not window.logout to avoid recursion)
         if (window.supabase && typeof window.supabase.auth.signOut === 'function') {
@@ -2344,6 +2374,10 @@ window.switchToActiveDeliveriesView = switchToActiveDeliveriesView;
 
 // Make functions available globally
 window.logout = logout;
+window.testLogout = function() {
+    console.log('🧪 TEST LOGOUT CALLED');
+    logout();
+};
 window.saveProfileSettings = saveProfileSettings;
 window.getInitials = getInitials;
 window.updateUIWithUserData = updateUIWithUserData;
