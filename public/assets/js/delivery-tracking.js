@@ -42,11 +42,12 @@ function setupDeliveryTracking() {
 function formatDRNumber(input) {
     let value = input.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
     
-    // Auto-format DR number (e.g., DR-2024-001)
-    if (value.length > 0 && !value.startsWith('DR-')) {
+    // Only auto-format if user has typed something substantial (3+ characters)
+    if (value.length >= 3 && !value.startsWith('DR-')) {
         if (value.startsWith('DR')) {
             value = value.replace('DR', 'DR-');
-        } else {
+        } else if (/^\d/.test(value)) {
+            // Only add DR- prefix if it starts with a number
             value = 'DR-' + value;
         }
     }
@@ -74,7 +75,7 @@ async function performDeliverySearch() {
     
     // Validate DR number format
     if (!isValidDRNumber(drNumber)) {
-        showTrackingError('Please enter a valid DR number (e.g., DR-2024-001)');
+        showTrackingError('Please enter a valid delivery number (at least 5 characters)');
         return;
     }
     
@@ -99,9 +100,23 @@ async function performDeliverySearch() {
 
 // Validate DR number format
 function isValidDRNumber(drNumber) {
-    // Basic validation for DR number format
-    const drPattern = /^DR-\d{4}-\d{3,}$/i;
-    return drPattern.test(drNumber) || drNumber.length >= 5;
+    // Accept various DR number formats
+    if (!drNumber || drNumber.length < 3) return false;
+    
+    // Standard format: DR-2024-001
+    const standardPattern = /^DR-\d{4}-\d{3,}$/i;
+    if (standardPattern.test(drNumber)) return true;
+    
+    // Compact format: DR2024001
+    const compactPattern = /^DR\d{7,}$/i;
+    if (compactPattern.test(drNumber)) return true;
+    
+    // Number only: 2024001
+    const numberPattern = /^\d{5,}$/;
+    if (numberPattern.test(drNumber)) return true;
+    
+    // Any format with at least 5 characters
+    return drNumber.length >= 5;
 }
 
 // Search for delivery in data sources
