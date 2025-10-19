@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'delivery-history': document.getElementById('deliveryHistoryView'),
         customers: document.getElementById('customersView'),
         'warehouse-map': document.getElementById('warehouseMapView'),
+        'customer-tracking': document.getElementById('customerTrackingView'),
         settings: document.getElementById('settingsView'),
         'e-pod': document.getElementById('ePodView')
     };
@@ -899,6 +900,65 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveProfileChangesBtn = document.getElementById('saveProfileChangesBtn');
     if (saveProfileChangesBtn) {
         saveProfileChangesBtn.addEventListener('click', saveProfileSettings);
+    }
+
+    // User dropdown functionality - Add logout option to Logistics Manager text
+    const userRole = document.getElementById('userRole');
+    const userDropdown = document.getElementById('userDropdown');
+    const logoutOption = document.getElementById('logoutOption');
+    
+    if (userRole && userDropdown && logoutOption) {
+        // Show dropdown when clicking on user role
+        userRole.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isVisible = userDropdown.style.display === 'block';
+            userDropdown.style.display = isVisible ? 'none' : 'block';
+        });
+        
+        // Handle logout option click
+        logoutOption.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            userDropdown.style.display = 'none';
+            
+            // Call the existing logout function
+            if (typeof logout === 'function') {
+                logout();
+            } else {
+                // Fallback logout
+                localStorage.removeItem('mci-user');
+                localStorage.removeItem('mci-activeDeliveries');
+                localStorage.removeItem('mci-deliveryHistory');
+                localStorage.removeItem('mci-customers');
+                localStorage.removeItem('ePodRecords');
+                window.location.reload();
+            }
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!userRole.contains(e.target)) {
+                userDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    // Customer tracking functionality
+    const searchTrackingBtn = document.getElementById('searchTrackingBtn');
+    const trackingSearch = document.getElementById('trackingSearch');
+    
+    if (searchTrackingBtn && trackingSearch) {
+        // Handle search button click
+        searchTrackingBtn.addEventListener('click', function() {
+            performTrackingSearch();
+        });
+        
+        // Handle Enter key in search input
+        trackingSearch.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performTrackingSearch();
+            }
+        });
     }
 
     console.log('Main.js: Event listeners added');
@@ -2299,3 +2359,178 @@ window.switchToActiveDeliveriesView = switchToActiveDeliveriesView;
 window.saveProfileSettings = saveProfileSettings;
 window.getInitials = getInitials;
 window.updateUIWithUserData = updateUIWithUserData;
+// C
+ustomer tracking search functionality
+function performTrackingSearch() {
+    const searchTerm = document.getElementById('trackingSearch').value.trim();
+    const resultsDiv = document.getElementById('trackingResults');
+    const resultsContent = document.getElementById('trackingResultsContent');
+    const noResultsDiv = document.getElementById('noTrackingResults');
+    
+    if (!searchTerm) {
+        alert('Please enter a search term (DR number, customer name, or destination)');
+        return;
+    }
+    
+    // Show loading state
+    const searchBtn = document.getElementById('searchTrackingBtn');
+    const originalText = searchBtn.innerHTML;
+    searchBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Searching...';
+    searchBtn.disabled = true;
+    
+    try {
+        // Search in both active deliveries and delivery history
+        const activeDeliveries = window.activeDeliveries || [];
+        const deliveryHistory = window.deliveryHistory || [];
+        const allDeliveries = [...activeDeliveries, ...deliveryHistory];
+        
+        // Perform search
+        const searchResults = allDeliveries.filter(delivery => {
+            const searchLower = searchTerm.toLowerCase();
+            
+            // Search in DR number
+            if (delivery.drNumber && delivery.drNumber.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            // Search in customer name
+            if (delivery.customerName && delivery.customerName.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            // Search in destination
+            if (delivery.destination && delivery.destination.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            // Search in origin
+            if (delivery.origin && delivery.origin.toLowerCase().includes(searchLower)) {
+                return true;
+            }
+            
+            return false;
+        });
+        
+        // Display results
+        if (searchResults.length > 0) {
+            displayTrackingResults(searchResults);
+            resultsDiv.style.display = 'block';
+            noResultsDiv.style.display = 'none';
+        } else {
+            resultsDiv.style.display = 'none';
+            noResultsDiv.style.display = 'block';
+        }
+        
+    } catch (error) {
+        console.error('Error performing tracking search:', error);
+        alert('An error occurred while searching. Please try again.');
+    } finally {
+        // Restore button state
+        searchBtn.innerHTML = originalText;
+        searchBtn.disabled = false;
+    }
+}
+
+// Display tracking search results
+function displayTrackingResults(results) {
+    const resultsContent = document.getElementById('trackingResultsContent');
+    
+    if (!resultsContent) return;
+    
+    let html = '';
+    
+    results.forEach((delivery, index) => {
+        const statusClass = getStatusClass(delivery.status);
+        const statusIcon = getStatusIcon(delivery.status);
+        
+        html += `
+            <div class="card mb-3 border-start border-4 ${statusClass}">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="card-title mb-2">
+                                <i class="bi bi-truck me-2"></i>
+                                DR: ${delivery.drNumber || 'N/A'}
+                            </h6>
+                            <p class="card-text mb-1">
+                                <strong>Customer:</strong> ${delivery.customerName || 'N/A'}
+                            </p>
+                            <p class="card-text mb-1">
+                                <strong>From:</strong> ${delivery.origin || 'N/A'}
+                            </p>
+                            <p class="card-text mb-1">
+                                <strong>To:</strong> ${delivery.destination || 'N/A'}
+                            </p>
+                            <p class="card-text mb-1">
+                                <strong>Delivery Date:</strong> ${delivery.deliveryDate || 'N/A'}
+                            </p>
+                            ${delivery.truckType ? `<p class="card-text mb-1"><strong>Truck:</strong> ${delivery.truckType} ${delivery.truckPlateNumber ? '(' + delivery.truckPlateNumber + ')' : ''}</p>` : ''}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <span class="badge ${statusClass} fs-6">
+                                    ${statusIcon} ${delivery.status || 'Unknown'}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                ${delivery.bookedDate ? 'Booked: ' + delivery.bookedDate : ''}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    resultsContent.innerHTML = html;
+}
+
+// Helper function to get status CSS class
+function getStatusClass(status) {
+    if (!status) return 'border-secondary';
+    
+    switch (status.toLowerCase()) {
+        case 'completed':
+        case 'delivered':
+            return 'border-success';
+        case 'on schedule':
+        case 'active':
+        case 'in transit':
+            return 'border-primary';
+        case 'delayed':
+        case 'pending':
+            return 'border-warning';
+        case 'cancelled':
+        case 'failed':
+            return 'border-danger';
+        default:
+            return 'border-secondary';
+    }
+}
+
+// Helper function to get status icon
+function getStatusIcon(status) {
+    if (!status) return '<i class="bi bi-question-circle"></i>';
+    
+    switch (status.toLowerCase()) {
+        case 'completed':
+        case 'delivered':
+            return '<i class="bi bi-check-circle"></i>';
+        case 'on schedule':
+        case 'active':
+        case 'in transit':
+            return '<i class="bi bi-truck"></i>';
+        case 'delayed':
+        case 'pending':
+            return '<i class="bi bi-clock"></i>';
+        case 'cancelled':
+        case 'failed':
+            return '<i class="bi bi-x-circle"></i>';
+        default:
+            return '<i class="bi bi-info-circle"></i>';
+    }
+}
+
+// Make customer tracking functions globally available
+window.performTrackingSearch = performTrackingSearch;
+window.displayTrackingResults = displayTrackingResults;
