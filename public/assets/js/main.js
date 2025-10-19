@@ -90,6 +90,27 @@ document.addEventListener('DOMContentLoaded', function () {
                     initAnalyticsCharts('day');
                 }
 
+                // Special handling for settings view
+                if (viewName === 'settings') {
+                    // Ensure logout button is properly connected when Settings view is shown
+                    setTimeout(function() {
+                        const logoutBtn = document.getElementById('logoutBtn');
+                        console.log('🔍 Settings view active - checking logout button:', logoutBtn);
+                        
+                        if (logoutBtn && !logoutBtn.hasAttribute('data-logout-attached')) {
+                            console.log('✅ Attaching direct logout event listener');
+                            logoutBtn.setAttribute('data-logout-attached', 'true');
+                            
+                            logoutBtn.addEventListener('click', function(e) {
+                                console.log('🔴 LOGOUT BUTTON CLICKED (DIRECT)!');
+                                e.preventDefault();
+                                e.stopPropagation();
+                                logout();
+                            });
+                        }
+                    }, 100);
+                }
+
                 // Special handling for active deliveries view
                 if (viewName === 'active-deliveries') {
                     // Don't reload data, just refresh the display to preserve status changes
@@ -288,58 +309,62 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Logout button with debugging
-    console.log('🔍 Looking for logout button...');
-    const logoutBtn = document.getElementById('logoutBtn');
-    console.log('🔍 Logout button found:', logoutBtn);
+    // Setup logout button functionality using event delegation (more reliable)
+    console.log('🔍 Setting up logout button event delegation...');
     
-    if (logoutBtn) {
-        console.log('✅ Attaching logout event listener');
-        // Remove existing event listeners by cloning
-        const newLogoutBtn = logoutBtn.cloneNode(true);
-        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-        
-        newLogoutBtn.addEventListener('click', function (e) {
+    // Use event delegation on document to catch logout button clicks
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is the logout button
+        if (e.target && e.target.id === 'logoutBtn') {
             console.log('🔴 LOGOUT BUTTON CLICKED!');
             e.preventDefault();
             e.stopPropagation();
-            logout();
-        });
-    } else {
-        console.log('❌ Logout button NOT found, will retry...');
-        // Retry after a delay in case the button is created later
-        setTimeout(function() {
-            console.log('🔄 Retrying logout button attachment...');
-            const retryLogoutBtn = document.getElementById('logoutBtn');
-            console.log('🔄 Retry - Logout button found:', retryLogoutBtn);
             
-            if (retryLogoutBtn) {
-                console.log('✅ Retry - Attaching logout event listener');
-                const newRetryLogoutBtn = retryLogoutBtn.cloneNode(true);
-                retryLogoutBtn.parentNode.replaceChild(newRetryLogoutBtn, retryLogoutBtn);
-                
-                newRetryLogoutBtn.addEventListener('click', function (e) {
-                    console.log('🔴 LOGOUT BUTTON CLICKED (RETRY)!');
-                    e.preventDefault();
-                    e.stopPropagation();
-                    logout();
-                });
-            } else {
-                console.log('❌ Retry - Logout button still NOT found');
+            // Call logout function
+            try {
+                logout();
+            } catch (error) {
+                console.error('Error calling logout function:', error);
             }
-        }, 1000);
-    }
-    
-    // Additional fallback using event delegation
-    document.addEventListener('click', function(e) {
-        console.log('🔍 Click detected on:', e.target);
-        if (e.target && (e.target.id === 'logoutBtn' || e.target.closest('#logoutBtn'))) {
-            console.log('🔴 LOGOUT BUTTON CLICKED VIA DELEGATION!');
-            e.preventDefault();
-            e.stopPropagation();
-            logout();
         }
     });
+    
+    console.log('✅ Logout button event delegation setup complete');
+    
+    // Also try to attach direct listener with retry mechanism
+    function attachLogoutListener() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn && !logoutBtn.hasAttribute('data-logout-attached')) {
+            console.log('✅ Found logout button, attaching direct listener');
+            logoutBtn.setAttribute('data-logout-attached', 'true');
+            
+            logoutBtn.addEventListener('click', function(e) {
+                console.log('🔴 LOGOUT BUTTON CLICKED (DIRECT ATTACH)!');
+                e.preventDefault();
+                e.stopPropagation();
+                logout();
+            });
+            
+            return true; // Success
+        }
+        return false; // Not found yet
+    }
+    
+    // Try immediately
+    if (!attachLogoutListener()) {
+        // If not found, retry periodically
+        const retryInterval = setInterval(function() {
+            if (attachLogoutListener()) {
+                clearInterval(retryInterval);
+                console.log('✅ Logout button listener attached successfully');
+            }
+        }, 500);
+        
+        // Stop trying after 10 seconds
+        setTimeout(function() {
+            clearInterval(retryInterval);
+        }, 10000);
+    }
 });
 
 // Global functions
@@ -486,7 +511,7 @@ async function setupSaveSignatureButton() {
         saveSignatureBtn.parentNode.replaceChild(newSaveBtn, saveSignatureBtn);
         
         // Add click event listener
-        newSaveBtn.addEventListener('click', function(e) {
+        newSaveBtn.addEventListener('click', async function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -2377,6 +2402,20 @@ window.logout = logout;
 window.testLogout = function() {
     console.log('🧪 TEST LOGOUT CALLED');
     logout();
+};
+
+// Add a function to manually test logout button connection
+window.testLogoutButton = function() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    console.log('🧪 TESTING LOGOUT BUTTON');
+    console.log('Button found:', logoutBtn);
+    console.log('Button visible:', logoutBtn ? window.getComputedStyle(logoutBtn).display !== 'none' : false);
+    console.log('Button has listener:', logoutBtn ? logoutBtn.hasAttribute('data-logout-attached') : false);
+    
+    if (logoutBtn) {
+        console.log('🧪 Simulating click...');
+        logoutBtn.click();
+    }
 };
 window.saveProfileSettings = saveProfileSettings;
 window.getInitials = getInitials;
