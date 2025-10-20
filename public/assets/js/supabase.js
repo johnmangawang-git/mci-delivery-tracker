@@ -198,6 +198,19 @@ async function signUp(email, password, fullName) {
         throw new Error('Supabase not available');
     }
 
+    // Define allowed email addresses
+    const allowedEmails = [
+        'pat.opena@smegphilippines.com',
+        'marie.pineda@smegphilippines.com',
+        'mariagresusa.vega@smegphilippines.com',
+        'john.mangawang@smegphilippines.com'
+    ];
+
+    // Check if email is in the allowed list
+    if (!allowedEmails.includes(email.toLowerCase())) {
+        throw new Error('Registration Denied! Please contact your IT admin.');
+    }
+
     try {
         const { data, error } = await supabaseClientInstance.auth.signUp({
             email,
