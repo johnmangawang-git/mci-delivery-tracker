@@ -101,6 +101,9 @@ const originalCreateBookingFromDR = window.createBookingFromDR;
 
 window.createBookingFromDR = async function (bookingData) {
     console.log('🎯 ENHANCED createBookingFromDR:', bookingData.drNumber);
+    
+    // NOTE: Cost assignment logic is handled in confirmDRUpload() function in booking.js
+    // This function processes individual bookings that already have costs assigned (Option C: first DR only)
 
     try {
         // Ensure we have a definitive data service

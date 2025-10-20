@@ -2460,13 +2460,29 @@ async function confirmDRUpload() {
         const bookingCount = pendingDRBookings.length;
         const createdBookings = [];
         
-        for (const booking of pendingDRBookings) {
+        for (let index = 0; index < pendingDRBookings.length; index++) {
+            const booking = pendingDRBookings[index];
             // Complete data mapping - Version 2 of manual booking process
             booking.truckType = truckType;
             booking.truckPlateNumber = truckPlate;
             booking.truck = `${truckType} (${truckPlate})`; // Combined for display
-            booking.additionalCosts = totalAdditionalCost;
-            booking.additionalCostBreakdown = [...additionalCosts]; // Deep copy
+            
+            // OPTION C: Apply costs only to the first DR record to avoid inflating analytics data
+            if (index === 0) {
+                // First DR gets all the costs
+                booking.additionalCosts = totalAdditionalCost;
+                booking.additionalCostBreakdown = [...additionalCosts]; // Deep copy
+                console.log(`💰 Applied costs to first DR (${booking.drNumber}): ₱${totalAdditionalCost}`);
+            } else {
+                // Other DRs get zero costs
+                booking.additionalCosts = 0;
+                booking.additionalCostBreakdown = [];
+                console.log(`💰 Zero costs applied to DR (${booking.drNumber})`);
+            }
+            
+            // ORIGINAL CODE (commented out for easy revert):
+            // booking.additionalCosts = totalAdditionalCost;
+            // booking.additionalCostBreakdown = [...additionalCosts]; // Deep copy
             
             // Ensure all required fields for Active Deliveries display
             booking.bookedDate = booking.deliveryDate;
@@ -2482,6 +2498,17 @@ async function confirmDRUpload() {
         console.log('=== ALL BOOKINGS CREATED SUCCESSFULLY ===');
         console.log('Created bookings:', createdBookings.length);
         console.log('Sample created booking:', createdBookings[0]);
+        
+        // OPTION C ENHANCEMENT: Update analytics dashboard after DR upload
+        setTimeout(() => {
+            console.log('📊 Updating analytics dashboard after DR upload...');
+            if (typeof window.updateDashboardMetrics === 'function') {
+                window.updateDashboardMetrics();
+            }
+            if (typeof window.enhancedUpdateDashboardMetrics === 'function') {
+                window.enhancedUpdateDashboardMetrics();
+            }
+        }, 1000);
         
         // Close modal and clean up properly
         const drUploadModal = bootstrap.Modal.getInstance(document.getElementById('drUploadModal'));
