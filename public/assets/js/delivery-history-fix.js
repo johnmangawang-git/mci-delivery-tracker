@@ -401,10 +401,14 @@ console.log('🔧 Loading Delivery History Fix...');
                                 </ul>
                             </div>
                             <div class="mb-3">
+                                <!-- SECURITY: Hidden fake fields to confuse browser auto-fill -->
+                                <input type="text" style="display: none;" autocomplete="username">
+                                <input type="password" style="display: none;" autocomplete="current-password">
+                                
                                 <label for="adminPassword" class="form-label">
                                     <i class="bi bi-key"></i> Admin Password:
                                 </label>
-                                <input type="password" class="form-control" id="adminPassword" placeholder="Enter admin password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                <input type="password" class="form-control" id="adminPassword" placeholder="Enter admin password" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly');">
                                 <div class="invalid-feedback" id="passwordError" style="display: none;">
                                     Incorrect admin password. Please try again.
                                 </div>
@@ -440,12 +444,37 @@ console.log('🔧 Loading Delivery History Fix...');
         
         // Focus on password input when modal is shown and ensure it's always empty
         document.getElementById('adminPasswordModal').addEventListener('shown.bs.modal', function() {
-            // SECURITY: Always clear password field to prevent auto-fill
+            // SECURITY: Aggressively clear password field to prevent auto-fill
             passwordInput.value = '';
-            passwordInput.focus();
+            passwordInput.setAttribute('value', '');
+            
+            // Clear multiple times with timeouts to override browser auto-fill
+            setTimeout(() => {
+                passwordInput.value = '';
+                passwordInput.setAttribute('value', '');
+            }, 10);
+            
+            setTimeout(() => {
+                passwordInput.value = '';
+                passwordInput.setAttribute('value', '');
+            }, 50);
+            
+            setTimeout(() => {
+                passwordInput.value = '';
+                passwordInput.setAttribute('value', '');
+                passwordInput.focus();
+            }, 100);
+            
             // Also clear any validation states
             passwordInput.classList.remove('is-invalid');
             passwordError.style.display = 'none';
+        });
+        
+        // Handle focus event to remove readonly and clear field
+        passwordInput.addEventListener('focus', function() {
+            this.removeAttribute('readonly');
+            this.value = '';
+            this.setAttribute('value', '');
         });
         
         // Handle Enter key in password input
