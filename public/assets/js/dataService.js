@@ -28,7 +28,36 @@ class DataService {
     }
 
     /**
-     * Execute operation with fallback
+     * Execute operation with auto-sync
+     */
+    async executeWithAutoSync(operation, tableName, data, localStorageKey) {
+        // Use auto-sync service if available
+        if (window.autoSyncService) {
+            console.log(`🔄 Using auto-sync for ${tableName}`);
+            return await window.autoSyncService.syncData(operation, tableName, data, localStorageKey);
+        }
+        
+        // Fallback to original method
+        return await this.executeWithFallback(
+            async () => {
+                const client = window.supabaseClient();
+                const { data: result, error } = await client.from(tableName).upsert(data).select();
+                if (error) throw error;
+                return result;
+            },
+            async () => {
+                // Save to localStorage
+                const existing = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
+                const updated = Array.isArray(data) ? [...existing, ...data] : [...existing, data];
+                localStorage.setItem(localStorageKey, JSON.stringify(updated));
+                return data;
+            },
+            tableName
+        );
+    }
+
+    /**
+     * Execute operation with fallback (legacy method)
      */
     async executeWithFallback(supabaseOperation, localStorageOperation, tableName = '') {
         if (!this.isSupabaseAvailable()) {
@@ -801,6 +830,84 @@ class DataService {
             
         } catch (error) {
             console.error('❌ Data sync failed:', error);
+        }
+    }
+
+    /**
+     * AUTO-SYNC INTEGRATION METHODS
+     */
+    
+    /**
+     * Save delivery with auto-sync
+     */
+    async saveDeliveryWithSync(delivery) {
+        console.log('💾 Saving delivery with auto-sync:', delivery.dr_number);
+        
+        if (window.syncDelivery) {
+            return await window.syncDelivery(delivery);
+        } else {
+            // Fallback to original method
+            return await this.saveDelivery(delivery);
+        }
+    }
+    
+    /**
+     * Save customer with auto-sync
+     */
+    async saveCustomerWithSync(customer) {
+        console.log('💾 Saving customer with auto-sync:', customer.name);
+        
+        if (window.syncCustomer) {
+            return await window.syncCustomer(customer);
+        } else {
+            // Fallback to original method
+            return await this.saveCustomer(customer);
+        }
+    }
+    
+    /**
+     * Save delivery history with auto-sync
+     */
+    async saveDeliveryHistoryWithSync(historyItem) {
+        console.log('💾 Saving delivery history with auto-sync:', historyItem.dr_number);
+        
+        if (window.syncDeliveryHistory) {
+            return await window.syncDeliveryHistory(historyItem);
+        } else {
+            // Fallback to localStorage
+            const history = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+            history.push(historyItem);
+            localStorage.setItem('mci-delivery-history', JSON.stringify(history));
+            return historyItem;
+        }
+    }
+    
+    /**
+     * Force sync all data
+     */
+    async forceSyncAll() {
+        console.log('🚀 Force syncing all data...');
+        
+        if (window.forceSyncAll) {
+            return await window.forceSyncAll();
+        } else {
+            console.warn('⚠️ Auto-sync service not available');
+        }
+    }
+    
+    /**
+     * Get sync status
+     */
+    getSyncStatus() {
+        if (window.getSyncStatus) {
+            return window.getSyncStatus();
+        } else {
+            return { 
+                online: navigator.onLine, 
+                queueLength: 0, 
+                syncInProgress: false,
+                autoSyncAvailable: false
+            };
         }
     }
 }
