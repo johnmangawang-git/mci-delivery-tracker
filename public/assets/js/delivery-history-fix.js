@@ -404,7 +404,7 @@ console.log('🔧 Loading Delivery History Fix...');
                                 <label for="adminPassword" class="form-label">
                                     <i class="bi bi-key"></i> Admin Password:
                                 </label>
-                                <input type="password" class="form-control" id="adminPassword" placeholder="Enter admin password">
+                                <input type="password" class="form-control" id="adminPassword" placeholder="Enter admin password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                                 <div class="invalid-feedback" id="passwordError" style="display: none;">
                                     Incorrect admin password. Please try again.
                                 </div>
@@ -438,9 +438,14 @@ console.log('🔧 Loading Delivery History Fix...');
         const confirmBtn = document.getElementById('confirmDeleteBtn');
         const passwordError = document.getElementById('passwordError');
         
-        // Focus on password input when modal is shown
+        // Focus on password input when modal is shown and ensure it's always empty
         document.getElementById('adminPasswordModal').addEventListener('shown.bs.modal', function() {
+            // SECURITY: Always clear password field to prevent auto-fill
+            passwordInput.value = '';
             passwordInput.focus();
+            // Also clear any validation states
+            passwordInput.classList.remove('is-invalid');
+            passwordError.style.display = 'none';
         });
         
         // Handle Enter key in password input
@@ -456,6 +461,8 @@ console.log('🔧 Loading Delivery History Fix...');
             
             // Check admin password
             if (password === 'adminadmin') {
+                // SECURITY: Clear password immediately after successful authentication
+                passwordInput.value = '';
                 // Password correct, proceed with deletion
                 performDeletion(drNumbers);
                 modal.hide();
@@ -470,6 +477,11 @@ console.log('🔧 Loading Delivery History Fix...');
         
         // Clean up modal when hidden
         document.getElementById('adminPasswordModal').addEventListener('hidden.bs.modal', function() {
+            // SECURITY: Clear password field before removing modal
+            const passwordField = document.getElementById('adminPassword');
+            if (passwordField) {
+                passwordField.value = '';
+            }
             this.remove();
         });
         
