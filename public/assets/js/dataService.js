@@ -28,10 +28,22 @@ class DataService {
     }
 
     /**
-     * Execute operation with auto-sync
+     * Execute operation with storage priority (NEW APPROACH)
      */
-    async executeWithAutoSync(operation, tableName, data, localStorageKey) {
-        // Use auto-sync service if available
+    async executeWithStoragePriority(operation, tableName, data, localStorageKey) {
+        // Use storage priority service if available
+        if (window.storagePriorityService) {
+            console.log(`🔄 Using storage priority service for ${tableName}`);
+            try {
+                const result = await window.storagePriorityService.executeWithPriority(operation, tableName, data);
+                console.log(`✅ Storage priority operation successful:`, result);
+                return result.data;
+            } catch (error) {
+                console.warn(`⚠️ Storage priority operation failed, using fallback:`, error);
+            }
+        }
+        
+        // Fallback to original auto-sync approach
         if (window.autoSyncService) {
             console.log(`🔄 Using auto-sync for ${tableName}`);
             return await window.autoSyncService.syncData(operation, tableName, data, localStorageKey);
@@ -60,75 +72,30 @@ class DataService {
      * Execute operation with fallback (legacy method)
      */
     async executeWithFallback(supabaseOperation, localStorageOperation, tableName = '') {
-        if (!this.isSupabaseAvailable()) {
-            console.log(`Using localStorage fallback for ${tableName}`);
-            return await localStorageOperation();
+        // NEW APPROACH: Try Supabase first as primary storage
+        if (this.isSupabaseAvailable()) {
+            try {
+                console.log(`Attempting Supabase operation for ${tableName} (primary storage)`);
+                const result = await supabaseOperation();
+                // Only save to localStorage as backup after successful Supabase operation
+                try {
+                    await localStorageOperation();
+                    console.log(`✅ Saved to localStorage as backup for ${tableName}`);
+                } catch (localStorageError) {
+                    console.warn(`⚠️ Failed to save to localStorage backup for ${tableName}:`, localStorageError);
+                    // Don't fail the operation if localStorage backup fails
+                }
+                return result;
+            } catch (error) {
+                console.warn(`⚠️ Supabase operation failed for ${tableName}, using localStorage fallback:`, error);
+                this.isOnline = false;
+            }
+        } else {
+            console.log(`Supabase not available for ${tableName}, using localStorage fallback`);
         }
 
-        try {
-            const result = await supabaseOperation();
-            return result;
-        } catch (error) {
-            // Handle specific error types
-            if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
-                console.warn(`⚠️ Duplicate DR number detected for ${tableName}:`, error.message);
-                console.warn('This DR number already exists in the database. Using existing record.');
-                
-                // For duplicate DR numbers, try to fetch the existing record
-                if (tableName === 'deliveries' && error.message?.includes('dr_number')) {
-                    try {
-                        // Extract DR number from error message or details
-                        let drNumber = null;
-                        
-                        // Try to extract from error.details first
-                        if (error.details) {
-                            const detailsMatch = error.details.match(/dr_number.*?=.*?([^,)]+)/);
-                            drNumber = detailsMatch ? detailsMatch[1].replace(/[()'"]/g, '').trim() : null;
-                        }
-                        
-                        // If not found in details, try to extract from error.message
-                        if (!drNumber && error.message) {
-                            // Look for patterns like: "deliveries_dr_number_key" followed by constraint info
-                            // or try to find DR number patterns in the message
-                            const messageMatch = error.message.match(/dr_number[^"]*"([^"]+)"/);
-                            if (messageMatch) {
-                                drNumber = messageMatch[1].trim();
-                            } else {
-                                // Try alternative pattern matching for DR numbers
-                                const drPattern = error.message.match(/DR\d+/i);
-                                drNumber = drPattern ? drPattern[0] : null;
-                            }
-                        }
-                        
-                        console.log('Extracted DR number:', drNumber, 'from error:', { details: error.details, message: error.message });
-                        
-                        if (drNumber && drNumber !== 'undefined' && drNumber !== 'null') {
-                            const client = window.supabaseClient();
-                            const { data: existingRecord } = await client
-                                .from('deliveries')
-                                .select('*')
-                                .eq('dr_number', drNumber)
-                                .single();
-                            
-                            if (existingRecord) {
-                                console.log('✅ Found existing DR record:', existingRecord.dr_number);
-                                return existingRecord;
-                            }
-                        } else {
-                            console.warn('Could not extract valid DR number from error. Details:', error.details, 'Message:', error.message);
-                        }
-                    } catch (fetchError) {
-                        console.warn('Could not fetch existing record:', fetchError);
-                    }
-                }
-            } else {
-                console.warn(`⚠️ Supabase operation failed for ${tableName}, using fallback:`, error);
-                console.warn('📝 Fallback data for debugging:', localStorageOperation.toString());
-            }
-            
-            this.isOnline = false;
-            return await localStorageOperation();
-        }
+        // Fallback to localStorage when Supabase is not available or fails
+        return await localStorageOperation();
     }
 
     /**
@@ -136,6 +103,18 @@ class DataService {
      */
 
     async saveDelivery(delivery) {
+        // NEW APPROACH: Use storage priority service
+        if (window.storagePriorityService) {
+            try {
+                const result = await window.storagePriorityService.executeWithPriority('upsert', 'deliveries', delivery);
+                console.log('✅ Delivery saved with storage priority:', result);
+                return result.data;
+            } catch (error) {
+                console.warn('⚠️ Storage priority save failed:', error);
+            }
+        }
+
+        // Fallback to original approach
         const supabaseOp = async () => {
             const client = window.supabaseClient();
             
@@ -314,7 +293,7 @@ class DataService {
             return delivery;
         };
 
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        return this.executeWithStoragePriority('upsert', 'deliveries', delivery, 'mci-active-deliveries');
     }
 
     async getDeliveries(filters = {}) {

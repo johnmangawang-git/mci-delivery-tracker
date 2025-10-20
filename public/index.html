@@ -163,6 +163,9 @@
     <!-- AUTO-SYNC SERVICE - Automatically syncs localStorage with Supabase -->
     <script src="assets/js/auto-sync-service.js"></script>
     
+    <!-- STORAGE PRIORITY CONFIGURATION - Supabase-primary with offline resilience -->
+    <script src="assets/js/storage-priority-config.js"></script>
+    
     <!-- DISABLE MANUAL BOOKING - REDIRECT TO EXCEL UPLOAD (Must load after calendar.js) -->
     <script src="assets/js/disable-manual-booking.js"></script>
     <script src="assets/js/booking.js"></script>
@@ -2043,29 +2046,14 @@
 
                         </div>
 
-                        <!-- Additional Costs Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="bi bi-currency-exchange"></i> Additional Costs</h5>
-                            <div id="costItemsContainer">
-                                <div class="cost-item">
-                                    <div class="flex-grow-1">
-                                        <input type="text" class="form-control"
-                                            placeholder="Description (e.g., Fuel Surcharge)">
-                                    </div>
-                                    <div>
-                                        <div class="input-group">
-                                            <span class="input-group-text">₱</span>
-                                            <input type="number" class="form-control" placeholder="Amount">
-                                        </div>
-                                    </div>
-                                    <button type="button" class="remove-cost" disabled>
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </div>
+                        <!-- REMOVED: Manual Booking Additional Costs Section -->
+                        <!-- Cost data now comes only from DR uploads for better data integrity -->
+                        <div class="form-section" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> Additional costs are now managed through DR uploads only.
+                                This ensures cost data comes from actual delivery receipts.
                             </div>
-                            <button type="button" class="btn btn-outline-secondary mt-3" id="addCostBtn">
-                                <i class="bi bi-plus-circle me-2"></i>Add Additional Cost
-                            </button>
                         </div>
                     </form>
                 </div>

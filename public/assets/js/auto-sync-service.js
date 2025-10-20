@@ -43,32 +43,97 @@ class AutoSyncService {
     }
     
     /**
-     * Main sync function - saves to localStorage first, then queues for Supabase
+     * Main sync function - attempts Supabase first, then localStorage
      */
     async syncData(operation, table, data, localStorageKey) {
         console.log(`🔄 SYNC: ${operation} on ${table}`, data);
         
         try {
-            // 1. Save to localStorage first (immediate)
+            // NEW APPROACH: Try Supabase first as primary storage
+            if (this.isOnline && window.supabaseClient && window.supabaseClient()) {
+                try {
+                    await this.syncToSupabaseImmediately(operation, table, data);
+                    console.log(`✅ SYNC: ${operation} completed in cloud (primary), updating localStorage backup`);
+                    
+                    // Update localStorage as backup after successful Supabase operation
+                    await this.saveToLocalStorage(localStorageKey, data, operation);
+                    
+                    return { success: true, local: false, cloud: true };
+                } catch (supabaseError) {
+                    console.warn(`⚠️ Supabase operation failed, falling back to localStorage:`, supabaseError);
+                }
+            } else {
+                console.log('Supabase not available, using localStorage');
+            }
+            
+            // Fallback to localStorage when Supabase is not available or fails
             await this.saveToLocalStorage(localStorageKey, data, operation);
+            console.log(`✅ SYNC: ${operation} completed locally (fallback)`);
             
-            // 2. Queue for Supabase sync (background)
-            this.queueForSupabaseSync({
-                operation,
-                table,
-                data,
-                localStorageKey,
-                timestamp: new Date().toISOString(),
-                attempts: 0
-            });
+            // Queue for Supabase sync when connection is restored
+            if (this.isOnline) {
+                this.queueForSupabaseSync({
+                    operation,
+                    table,
+                    data,
+                    localStorageKey,
+                    timestamp: new Date().toISOString(),
+                    attempts: 0
+                });
+            }
             
-            console.log(`✅ SYNC: ${operation} completed locally, queued for cloud sync`);
             return { success: true, local: true, cloud: 'queued' };
             
         } catch (error) {
             console.error(`❌ SYNC: ${operation} failed:`, error);
             throw error;
         }
+    }
+    
+    /**
+     * Sync immediately to Supabase (new function)
+     */
+    async syncToSupabaseImmediately(operation, table, data) {
+        if (!window.supabaseClient || !window.supabaseClient()) {
+            throw new Error('Supabase client not available');
+        }
+        
+        const supabase = window.supabaseClient();
+        let result;
+        
+        console.log(`🌐 SUPABASE IMMEDIATE: ${operation} on ${table}`);
+        
+        switch (operation) {
+            case 'create':
+            case 'upsert':
+                result = await supabase
+                    .from(table)
+                    .upsert(data)
+                    .select();
+                break;
+                
+            case 'update':
+                result = await supabase
+                    .from(table)
+                    .update(data)
+                    .eq('id', data.id)
+                    .select();
+                break;
+                
+            case 'delete':
+                result = await supabase
+                    .from(table)
+                    .delete()
+                    .eq('id', data.id);
+                break;
+        }
+        
+        if (result.error) {
+            throw result.error;
+        }
+        
+        console.log(`✅ SUPABASE IMMEDIATE: ${operation} successful`);
+        return result.data;
     }
     
     /**
@@ -301,26 +366,36 @@ class AutoSyncService {
     }
     
     /**
-     * Merge local and remote data (remote takes precedence)
+     * Merge local and remote data (NEW APPROACH: remote takes precedence)
      */
     mergeData(localData, remoteData) {
-        const merged = [...localData];
+        // NEW APPROACH: Supabase-primary with offline resilience
+        // Remote data takes complete precedence over local data
+        // This ensures cloud data is always prioritized
+        console.log(`🔄 MERGE: Prioritizing ${remoteData.length} remote items over ${localData.length} local items`);
         
+        // Create a map of remote items by ID or DR number for quick lookup
+        const remoteMap = new Map();
         remoteData.forEach(remoteItem => {
-            const localIndex = merged.findIndex(localItem => 
-                localItem.id === remoteItem.id || 
-                localItem.dr_number === remoteItem.dr_number
-            );
-            
-            if (localIndex >= 0) {
-                // Update existing (remote takes precedence)
-                merged[localIndex] = remoteItem;
-            } else {
-                // Add new
-                merged.push(remoteItem);
+            const key = remoteItem.id || remoteItem.dr_number;
+            if (key) {
+                remoteMap.set(key, remoteItem);
             }
         });
         
+        // Start with all remote data (cloud-first approach)
+        const merged = [...remoteData];
+        
+        // Add local items that don't exist in remote (offline-created items)
+        localData.forEach(localItem => {
+            const key = localItem.id || localItem.dr_number;
+            if (key && !remoteMap.has(key)) {
+                console.log(`➕ Adding offline-created item: ${key}`);
+                merged.push(localItem);
+            }
+        });
+        
+        console.log(`✅ MERGE: Result contains ${merged.length} items (cloud-first approach)`);
         return merged;
     }
     

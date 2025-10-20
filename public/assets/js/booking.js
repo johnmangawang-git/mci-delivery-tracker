@@ -528,7 +528,9 @@ function initBookingModal() {
     // Remove the search-related event listeners as they are no longer needed
     // The destination area input now directly opens the map modal
 
-    // Add cost item functionality with proper event listener cleanup
+    // REMOVED: Manual booking cost functionality
+    // Cost data now comes only from DR uploads for better data integrity
+    /*
     const addCostBtn = document.getElementById('addCostBtn');
     const costItemsContainer = document.getElementById('costItemsContainer');
 
@@ -570,8 +572,10 @@ function initBookingModal() {
             }
         });
     }
+    */
 
-    // Remove cost buttons with proper event listener cleanup
+    // REMOVED: Remove cost buttons functionality
+    /*
     document.querySelectorAll('.remove-cost').forEach(button => {
         // Remove existing event listeners by cloning
         const newButton = button.cloneNode(true);
@@ -584,6 +588,7 @@ function initBookingModal() {
             }
         });
     });
+    */
 
     // Confirm booking button with proper event listener cleanup
     const confirmBookingBtn = document.getElementById('confirmBookingBtn');
@@ -2618,10 +2623,45 @@ async function createBookingFromDR(bookingData) {
 
                 console.log('🔧 Converted delivery data for Supabase:', newDelivery);
 
-                // Save to Supabase using dataService (same as manual booking)
-                const savedDelivery = await window.dataService.saveDelivery(newDelivery);
-                console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
-                
+                // Save to Supabase using dataService with storage priority
+                if (window.dataService) {
+                    try {
+                        // NEW APPROACH: Use storage priority service
+                        if (window.storagePriorityService) {
+                            const result = await window.storagePriorityService.executeWithPriority('upsert', 'deliveries', newDelivery);
+                            console.log('✅ Delivery saved with storage priority successfully:', result);
+                        } else {
+                            // Fallback to original dataService approach
+                            const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+                            console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
+                        }
+                    } catch (error) {
+                        console.error('❌ Failed to save with storage priority:', error);
+                        // Fallback to localStorage with original format for compatibility
+                        const localDelivery = {
+                            id: 'DEL-' + Date.now() + '-' + drNumber,
+                            drNumber: drNumber,
+                            customerName: customerName,
+                            vendorNumber: vendorNumber,
+                            origin: origin,
+                            destination: destinations.join('; '),
+                            truckType: truckType,
+                            truckPlateNumber: truckPlateNumber,
+                            status: 'On Schedule',
+                            deliveryDate: deliveryDate,
+                            additionalCosts: additionalCostsTotal,
+                            additionalCostItems: additionalCostItems,
+                            timestamp: new Date().toISOString()
+                        };
+                        if (typeof window.activeDeliveries !== 'undefined') {
+                            window.activeDeliveries.push(localDelivery);
+                            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
+                            console.log('✅ Saved to localStorage as fallback');
+                        }
+                    }
+                } else {
+                    console.error('❌ dataService is not available');
+                }
             } catch (error) {
                 console.error('❌ Failed to save to Supabase:', error);
                 // Fallback to localStorage with original format for compatibility (same as manual booking)

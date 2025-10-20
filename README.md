@@ -19,6 +19,7 @@ A comprehensive delivery management system with e-signature capabilities, real-t
 - **🚛 Vehicle Tracking** - Truck and driver management
 - **📱 Responsive Design** - Mobile-friendly interface
 - **🔐 Data Persistence** - Reliable localStorage with backup
+- **☁️ Cloud-First Storage** - Supabase-primary with offline resilience (NEW)
 
 ## 🛠️ Technology Stack
 
@@ -35,12 +36,14 @@ A comprehensive delivery management system with e-signature capabilities, real-t
 - **Express.js** - Web framework
 - **Local Storage** - Client-side data persistence
 - **File System** - Local file operations
+- **Supabase** - Cloud database (NEW)
 
 ### Libraries & Dependencies
 - **Bootstrap Icons** - Icon library
 - **Signature Pad** - Digital signature capture
 - **XLSX** - Excel file processing
 - **Leaflet** - Map functionality
+- **Supabase Client** - Cloud database integration (NEW)
 
 ## 📁 Project Structure
 
@@ -61,7 +64,11 @@ mci-delivery-tracker/
 │   │       ├── e-signature.js # E-signature functionality
 │   │       ├── delivery-history-fix.js # Delivery history fixes
 │   │       ├── signature-completion-fix.js # Signature completion fixes
-│   │       └── minimal-booking-fix.js # Booking system fixes
+│   │       ├── minimal-booking-fix.js # Booking system fixes
+│   │       ├── storage-priority-config.js # NEW: Storage priority configuration
+│   │       ├── auto-sync-service.js # Auto-sync functionality
+│   │       ├── dataService.js # Data service layer
+│   │       └── disable-manual-booking.js # Manual booking restriction
 │   └── index.html             # Main application page
 ├── docs/                      # Documentation
 ├── tests/                     # Test files
@@ -137,7 +144,17 @@ Create a `.env` file in the root directory:
 ```env
 PORT=8086
 NODE_ENV=development
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+### Storage Priority Implementation (NEW)
+The application now implements a **Supabase-primary with offline resilience** approach:
+
+1. **Primary Storage**: Supabase cloud database
+2. **Fallback Storage**: localStorage for offline capability
+3. **Conflict Resolution**: Cloud data takes precedence
+4. **Sync Strategy**: Immediate cloud operations with background sync
 
 ### Local Storage Keys
 The application uses these localStorage keys:
@@ -157,6 +174,7 @@ npm test
 - `test-final-delivery-history-fix.html` - Delivery history functionality
 - `test-signature-completion-fix.html` - E-signature process
 - `debug-missing-delivery.html` - Diagnostic tools
+- `test-storage-priority.html` - NEW: Storage priority implementation
 
 ### Manual Testing
 1. Open test files in browser
@@ -194,87 +212,10 @@ npm test
 - **Data Caching** - localStorage for offline capability
 - **Efficient Rendering** - Minimal DOM manipulation
 - **Responsive Design** - Mobile-optimized
+- **Cloud-First Approach** - Supabase-primary with offline resilience (NEW)
 
 ### Browser Support
 - Chrome 80+
 - Firefox 75+
 - Safari 13+
 - Edge 80+
-
-## 🔐 Security
-
-### Data Protection
-- Client-side data encryption
-- Secure signature storage
-- Input validation and sanitization
-- XSS protection
-
-### Best Practices
-- Regular security updates
-- Secure coding practices
-- Data backup procedures
-- Access control measures
-
-## 🤝 Contributing
-
-### Development Workflow
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-### Code Standards
-- ES6+ JavaScript
-- Semantic HTML5
-- Mobile-first CSS
-- Comprehensive comments
-- Error handling
-
-## 📝 Changelog
-
-### Version 1.0.0 (Current)
-- ✅ Complete delivery management system
-- ✅ E-signature integration
-- ✅ Real-time dashboard
-- ✅ Export functionality
-- ✅ Mobile responsive design
-- ✅ Comprehensive bug fixes
-
-### Recent Fixes
-- ✅ **Delivery History Fix** - Signed deliveries now properly save to history
-- ✅ **Signature Completion** - Enhanced e-signature process
-- ✅ **Checkbox Persistence** - Selections survive auto-refresh
-- ✅ **Vendor Number Display** - Proper field labeling
-- ✅ **Data Integrity** - Bulletproof data handling
-
-## 📞 Support
-
-### Getting Help
-- **Issues**: [GitHub Issues](https://github.com/johnmangawang-git/mci-delivery-tracker/issues)
-- **Documentation**: Check `/docs` folder
-- **Diagnostics**: Use provided debug tools
-
-### Reporting Bugs
-1. Check existing issues
-2. Provide detailed description
-3. Include browser/OS information
-4. Add steps to reproduce
-5. Include error messages/screenshots
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Bootstrap team for the UI framework
-- Leaflet.js for mapping capabilities
-- All contributors and testers
-- Open source community
-
----
-
-**Built with ❤️ for efficient delivery management**
-
-For more information, visit: [GitHub Repository](https://github.com/johnmangawang-git/mci-delivery-tracker)
