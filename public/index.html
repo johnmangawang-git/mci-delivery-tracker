@@ -1242,6 +1242,13 @@
                             </button>
                             <button class="btn btn-outline-secondary" id="exportDeliveryHistoryBtn"><i
                                     class="bi bi-download"></i> Export</button>
+                            <!-- Delete functionality buttons -->
+                            <button class="btn btn-danger btn-sm" id="toggleDeleteModeBtn" onclick="toggleDeliveryHistoryDeleteMode()">
+                                <i class="bi bi-trash"></i> Delete Records
+                            </button>
+                            <button class="btn btn-danger btn-sm" id="deleteSelectedHistoryBtn" onclick="deleteSelectedDeliveryHistory()" style="display: none;">
+                                <i class="bi bi-trash-fill"></i> Delete Selected
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1264,6 +1271,7 @@
                                     <th>Destination</th>
                                     <th>Additional Costs</th>
                                     <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="deliveryHistoryTableBody">

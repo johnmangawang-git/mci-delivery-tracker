@@ -218,7 +218,7 @@ console.log('🔧 Loading Delivery History Fix...');
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
                     <td>${delivery.origin || 'N/A'}</td>
                     <td>${delivery.destination || 'N/A'}</td>
-                    <td>${delivery.truckPlateNumber || delivery.truck_plate_number || 'N/A'} (${delivery.truckType || delivery.truck_type || 'N/A'})</td>
+                    <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>${statusDisplay}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">
@@ -297,6 +297,271 @@ console.log('🔧 Loading Delivery History Fix...');
     
 })();
 
+// DELETE FUNCTIONALITY FOR DELIVERY HISTORY
+// Add delete functionality with admin password protection
+(function() {
+    'use strict';
+    
+    let deleteMode = false;
+    
+    // Function to toggle delete mode
+    window.toggleDeliveryHistoryDeleteMode = function() {
+        deleteMode = !deleteMode;
+        const checkboxes = document.querySelectorAll('.delivery-history-checkbox');
+        const deleteButton = document.getElementById('deleteSelectedHistoryBtn');
+        const toggleDeleteBtn = document.getElementById('toggleDeleteModeBtn');
+        
+        if (deleteMode) {
+            // Show checkboxes
+            checkboxes.forEach(checkbox => {
+                checkbox.style.display = 'block';
+            });
+            
+            // Update button text
+            if (toggleDeleteBtn) {
+                toggleDeleteBtn.innerHTML = '<i class="bi bi-x-circle"></i> Cancel Delete';
+                toggleDeleteBtn.className = 'btn btn-secondary btn-sm';
+            }
+            
+            // Show delete button
+            if (deleteButton) {
+                deleteButton.style.display = 'inline-block';
+            }
+            
+            console.log('🗑️ Delete mode activated');
+        } else {
+            // Hide checkboxes and uncheck all
+            checkboxes.forEach(checkbox => {
+                checkbox.style.display = 'none';
+                checkbox.checked = false;
+            });
+            
+            // Update button text
+            if (toggleDeleteBtn) {
+                toggleDeleteBtn.innerHTML = '<i class="bi bi-trash"></i> Delete Records';
+                toggleDeleteBtn.className = 'btn btn-danger btn-sm';
+            }
+            
+            // Hide delete button
+            if (deleteButton) {
+                deleteButton.style.display = 'none';
+            }
+            
+            console.log('🗑️ Delete mode deactivated');
+        }
+    };
+    
+    // Function to delete selected delivery history records
+    window.deleteSelectedDeliveryHistory = function() {
+        const selectedCheckboxes = document.querySelectorAll('.delivery-history-checkbox:checked');
+        
+        if (selectedCheckboxes.length === 0) {
+            if (typeof showToast === 'function') {
+                showToast('Please select at least one record to delete.', 'warning');
+            } else {
+                alert('Please select at least one record to delete.');
+            }
+            return;
+        }
+        
+        // Get selected DR numbers
+        const selectedDrNumbers = Array.from(selectedCheckboxes).map(checkbox => 
+            checkbox.getAttribute('data-dr-number')
+        );
+        
+        console.log('🗑️ Selected DR numbers for deletion:', selectedDrNumbers);
+        
+        // Show admin password confirmation modal
+        showAdminPasswordModal(selectedDrNumbers);
+    };
+    
+    // Function to show admin password confirmation modal
+    function showAdminPasswordModal(drNumbers) {
+        // Create modal HTML
+        const modalHtml = `
+            <div class="modal fade" id="adminPasswordModal" tabindex="-1" aria-labelledby="adminPasswordModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="adminPasswordModalLabel">
+                                <i class="bi bi-shield-exclamation"></i> Admin Authentication Required
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Warning:</strong> You are about to permanently delete ${drNumbers.length} delivery record${drNumbers.length > 1 ? 's' : ''}.
+                                This action cannot be undone.
+                            </div>
+                            <div class="mb-3">
+                                <strong>Records to be deleted:</strong>
+                                <ul class="mt-2">
+                                    ${drNumbers.map(dr => `<li>DR Number: <strong>${dr}</strong></li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="mb-3">
+                                <label for="adminPassword" class="form-label">
+                                    <i class="bi bi-key"></i> Admin Password:
+                                </label>
+                                <input type="password" class="form-control" id="adminPassword" placeholder="Enter admin password">
+                                <div class="invalid-feedback" id="passwordError" style="display: none;">
+                                    Incorrect admin password. Please try again.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                                <i class="bi bi-trash"></i> Delete Records
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('adminPasswordModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Initialize modal
+        const modal = new bootstrap.Modal(document.getElementById('adminPasswordModal'));
+        const passwordInput = document.getElementById('adminPassword');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const passwordError = document.getElementById('passwordError');
+        
+        // Focus on password input when modal is shown
+        document.getElementById('adminPasswordModal').addEventListener('shown.bs.modal', function() {
+            passwordInput.focus();
+        });
+        
+        // Handle Enter key in password input
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmBtn.click();
+            }
+        });
+        
+        // Handle confirm delete button
+        confirmBtn.addEventListener('click', function() {
+            const password = passwordInput.value;
+            
+            // Check admin password
+            if (password === 'adminadmin') {
+                // Password correct, proceed with deletion
+                performDeletion(drNumbers);
+                modal.hide();
+            } else {
+                // Password incorrect, show error
+                passwordInput.classList.add('is-invalid');
+                passwordError.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        });
+        
+        // Clean up modal when hidden
+        document.getElementById('adminPasswordModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+        
+        // Show modal
+        modal.show();
+    }
+    
+    // Function to perform the actual deletion
+    function performDeletion(drNumbers) {
+        console.log('🗑️ Performing deletion of DR numbers:', drNumbers);
+        
+        try {
+            // Get current delivery history
+            let currentDeliveryHistory = window.deliveryHistory || [];
+            
+            // Filter out the selected records
+            const originalCount = currentDeliveryHistory.length;
+            currentDeliveryHistory = currentDeliveryHistory.filter(delivery => {
+                const deliveryDrNumber = delivery.drNumber || delivery.dr_number || '';
+                return !drNumbers.includes(deliveryDrNumber);
+            });
+            
+            const deletedCount = originalCount - currentDeliveryHistory.length;
+            
+            // Update global delivery history
+            window.deliveryHistory = currentDeliveryHistory;
+            
+            // Save to localStorage
+            localStorage.setItem('mci-delivery-history', JSON.stringify(currentDeliveryHistory));
+            
+            // Also delete from EPOD records if they exist
+            try {
+                let ePodRecords = [];
+                const ePodData = localStorage.getItem('ePodRecords');
+                if (ePodData) {
+                    ePodRecords = JSON.parse(ePodData);
+                    
+                    // Filter out deleted records from EPOD
+                    const originalEPodCount = ePodRecords.length;
+                    ePodRecords = ePodRecords.filter(record => {
+                        const recordDrNumber = record.dr_number || record.drNumber || '';
+                        return !drNumbers.includes(recordDrNumber);
+                    });
+                    
+                    // Save updated EPOD records
+                    localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                    
+                    const deletedEPodCount = originalEPodCount - ePodRecords.length;
+                    if (deletedEPodCount > 0) {
+                        console.log(`🗑️ Also deleted ${deletedEPodCount} EPOD record(s)`);
+                    }
+                }
+            } catch (epodError) {
+                console.error('Error cleaning up EPOD records:', epodError);
+            }
+            
+            // Refresh the delivery history display
+            if (typeof window.loadDeliveryHistory === 'function') {
+                window.loadDeliveryHistory();
+            } else if (typeof window.forceRefreshDeliveryHistory === 'function') {
+                window.forceRefreshDeliveryHistory();
+            }
+            
+            // Turn off delete mode
+            window.toggleDeliveryHistoryDeleteMode();
+            
+            // Show success message
+            const message = `Successfully deleted ${deletedCount} delivery record${deletedCount > 1 ? 's' : ''}.`;
+            if (typeof showToast === 'function') {
+                showToast(message, 'success');
+            } else {
+                alert(message);
+            }
+            
+            console.log(`✅ Successfully deleted ${deletedCount} delivery records`);
+            
+        } catch (error) {
+            console.error('❌ Error during deletion:', error);
+            
+            const errorMessage = 'Failed to delete records. Please try again.';
+            if (typeof showToast === 'function') {
+                showToast(errorMessage, 'error');
+            } else {
+                alert(errorMessage);
+            }
+        }
+    }
+    
+    console.log('✅ Delivery History Delete functionality loaded');
+    
+})();
+
 // Add to window for external access
 window.forceRefreshDeliveryHistory = function() {
     const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
@@ -311,7 +576,7 @@ window.forceRefreshDeliveryHistory = function() {
     if (currentDeliveryHistory.length === 0) {
         deliveryHistoryTableBody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-5">
+                <td colspan="11" class="text-center py-5">
                     <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                     <h4 class="mt-3">No delivery history found</h4>
                     <p class="text-muted">No completed deliveries yet</p>

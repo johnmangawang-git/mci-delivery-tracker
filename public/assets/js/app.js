@@ -890,7 +890,7 @@ function loadDeliveryHistory() {
         if (filteredHistory.length === 0) {
             deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5">
+                    <td colspan="11" class="text-center py-5">
                         <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No delivery history found</h4>
                         <p class="text-muted">
@@ -951,6 +951,11 @@ function loadDeliveryHistory() {
                     <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
                         ${statusDisplay}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">
+                            <i class="bi bi-eye"></i> View
+                        </button>
                     </td>
                 </tr>
             `;
