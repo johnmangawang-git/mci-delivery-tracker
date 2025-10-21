@@ -80,6 +80,9 @@ function enhancedUpdateDeliveryStatusDROnly(drNumber, newStatus) {
             updateSingleDeliveryStatusDROnly(delivery, newStatus);
         });
         
+        // Remove all completed deliveries from active deliveries in one batch
+        removeCompletedDeliveriesFromActive(matchingDeliveries);
+        
         // Refresh UI
         refreshDeliveryViews();
         
@@ -150,7 +153,7 @@ function updateSingleDeliveryStatusDROnly(delivery, newStatus) {
         delivery.eSignatureDate = new Date().toISOString();
         delivery.completionMethod = 'Enhanced Group Signature (DR-Only)';
         
-        // Move to history if completed
+        // Move to history if completed (but don't remove from active yet - batch removal later)
         if (newStatus === 'Completed') {
             moveDeliveryToHistoryDROnly(delivery);
         }
@@ -212,37 +215,77 @@ function moveDeliveryToHistoryDROnly(delivery) {
             window.deliveryHistory = [];
         }
         
-        // Add to delivery history with enhanced metadata
+        // Create a deep copy to avoid reference issues
         const historyEntry = {
-            ...delivery,
+            ...JSON.parse(JSON.stringify(delivery)),
             movedToHistoryDate: new Date().toISOString(),
             completionMethod: 'Enhanced Group Signature (DR-Only)',
-            groupedWithDR: deliveryDR
+            groupedWithDR: deliveryDR,
+            completedDate: new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            })
         };
         
-        window.deliveryHistory.unshift(historyEntry);
-        console.log(`📚 Added to history: ${deliveryDR} (Serial: ${serialNumber})`);
+        // Check if already in history to prevent duplicates
+        const alreadyInHistory = window.deliveryHistory.some(h => {
+            const hDR = h.drNumber || h.dr_number;
+            const hSerial = h.serialNumber || h.serial_number;
+            return hDR === deliveryDR && hSerial === serialNumber;
+        });
         
-        // Remove from active deliveries
-        if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-            const deliveryIndex = window.activeDeliveries.findIndex(d => {
-                const dDR = d.drNumber || d.dr_number;
-                const dSerial = d.serialNumber || d.serial_number;
-                return dDR === deliveryDR && dSerial === serialNumber;
-            });
+        if (!alreadyInHistory) {
+            window.deliveryHistory.unshift(historyEntry);
+            console.log(`📚 Added to history: ${deliveryDR} (Serial: ${serialNumber})`);
             
-            if (deliveryIndex !== -1) {
-                window.activeDeliveries.splice(deliveryIndex, 1);
-                console.log(`🗑️ Removed from active: ${deliveryDR} (Serial: ${serialNumber})`);
-            }
+            // Save to storage immediately
+            saveDeliveryDataDROnly(historyEntry);
+        } else {
+            console.log(`⚠️ Already in history: ${deliveryDR} (Serial: ${serialNumber})`);
         }
-        
-        // Save to storage
-        saveDeliveryDataDROnly(historyEntry);
         
     } catch (error) {
         console.error(`❌ Error moving delivery to history: ${deliveryDR}`, error);
     }
+}
+
+/**
+ * Remove completed deliveries from active deliveries in batch
+ */
+function removeCompletedDeliveriesFromActive(completedDeliveries) {
+    if (!window.activeDeliveries || !Array.isArray(window.activeDeliveries)) {
+        console.warn('⚠️ activeDeliveries array not available for batch removal');
+        return;
+    }
+    
+    console.log(`🗑️ Batch removing ${completedDeliveries.length} completed deliveries from active list`);
+    
+    // Create a set of completed delivery identifiers for fast lookup
+    const completedIdentifiers = new Set(
+        completedDeliveries.map(d => {
+            const dr = d.drNumber || d.dr_number;
+            const serial = d.serialNumber || d.serial_number;
+            return `${dr}|${serial}`;
+        })
+    );
+    
+    // Filter out completed deliveries
+    const originalCount = window.activeDeliveries.length;
+    window.activeDeliveries = window.activeDeliveries.filter(delivery => {
+        const dr = delivery.drNumber || delivery.dr_number;
+        const serial = delivery.serialNumber || delivery.serial_number;
+        const identifier = `${dr}|${serial}`;
+        
+        const shouldKeep = !completedIdentifiers.has(identifier);
+        if (!shouldKeep) {
+            console.log(`🗑️ Removing from active: ${dr} (Serial: ${serial})`);
+        }
+        return shouldKeep;
+    });
+    
+    const removedCount = originalCount - window.activeDeliveries.length;
+    console.log(`✅ Batch removal complete: ${removedCount} deliveries removed from active list`);
 }
 
 /**
@@ -360,5 +403,6 @@ window.enhancedUpdateDeliveryStatusDROnly = enhancedUpdateDeliveryStatusDROnly;
 window.findMatchingDeliveriesByDR = findMatchingDeliveriesByDR;
 window.setGroupingMode = setGroupingMode;
 window.GROUPING_MODES = GROUPING_MODES;
+window.removeCompletedDeliveriesFromActive = removeCompletedDeliveriesFromActive;
 
 console.log('✅ Enhanced Group Signature (DR-Only Mode) module loaded successfully');
