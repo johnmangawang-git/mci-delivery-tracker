@@ -215,9 +215,10 @@ function moveDeliveryToHistoryDROnly(delivery) {
             window.deliveryHistory = [];
         }
         
-        // Create a deep copy to avoid reference issues
+        // Create a deep copy to avoid reference issues and ensure all fields are preserved
         const historyEntry = {
             ...JSON.parse(JSON.stringify(delivery)),
+            // Enhanced Group Signature metadata
             movedToHistoryDate: new Date().toISOString(),
             completionMethod: 'Enhanced Group Signature (DR-Only)',
             groupedWithDR: deliveryDR,
@@ -225,7 +226,35 @@ function moveDeliveryToHistoryDROnly(delivery) {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
-            })
+            }),
+            // Enhanced timestamp with date and time for precise tracking
+            completedDateTime: new Date().toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }),
+            // ISO timestamp for precise sorting and data integrity
+            completedTimestamp: new Date().toISOString(),
+            // Ensure critical fields are preserved with both naming conventions
+            itemNumber: delivery.itemNumber || delivery.item_number || '',
+            item_number: delivery.item_number || delivery.itemNumber || '',
+            mobileNumber: delivery.mobileNumber || delivery.mobile_number || '',
+            mobile_number: delivery.mobile_number || delivery.mobileNumber || '',
+            itemDescription: delivery.itemDescription || delivery.item_description || '',
+            item_description: delivery.item_description || delivery.itemDescription || '',
+            serialNumber: delivery.serialNumber || delivery.serial_number || '',
+            serial_number: delivery.serial_number || delivery.serialNumber || '',
+            // Preserve other important fields
+            drNumber: delivery.drNumber || delivery.dr_number || '',
+            dr_number: delivery.dr_number || delivery.drNumber || '',
+            customerName: delivery.customerName || delivery.customer_name || '',
+            customer_name: delivery.customer_name || delivery.customerName || '',
+            vendorNumber: delivery.vendorNumber || delivery.vendor_number || '',
+            vendor_number: delivery.vendor_number || delivery.vendorNumber || ''
         };
         
         // Check if already in history to prevent duplicates
@@ -238,6 +267,18 @@ function moveDeliveryToHistoryDROnly(delivery) {
         if (!alreadyInHistory) {
             window.deliveryHistory.unshift(historyEntry);
             console.log(`📚 Added to history: ${deliveryDR} (Serial: ${serialNumber})`);
+            
+            // Log preserved fields for verification
+            console.log(`🔍 Preserved fields for ${deliveryDR}:`, {
+                itemNumber: historyEntry.itemNumber,
+                mobileNumber: historyEntry.mobileNumber,
+                itemDescription: historyEntry.itemDescription,
+                serialNumber: historyEntry.serialNumber,
+                customerName: historyEntry.customerName,
+                completionMethod: historyEntry.completionMethod,
+                completedDateTime: historyEntry.completedDateTime,
+                completedTimestamp: historyEntry.completedTimestamp
+            });
             
             // Save to storage immediately
             saveDeliveryDataDROnly(historyEntry);
