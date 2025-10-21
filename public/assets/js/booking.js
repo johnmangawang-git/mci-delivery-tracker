@@ -2199,22 +2199,29 @@ function mapDRData(data) {
     console.log('🔍 DEBUG: First row (header):', data[0]);
     console.log('🔍 DEBUG: Second row (first data):', data[1]);
     
-    // ENHANCED: Always process with separate entries strategy to preserve unique serial numbers
-    if (window.DRDuplicateHandler) {
-        const analysis = window.DRDuplicateHandler.analyzeDuplicates(data.slice(1)); // Skip header
-        console.log('📊 DUPLICATE ANALYSIS:', analysis);
-        
-        // Always process with separate entries strategy to preserve individual items with unique serial numbers
-        console.log('🔄 Processing all entries individually to preserve unique serial numbers');
-        const processedData = window.DRDuplicateHandler.processDRData(data.slice(1), 'separate_entries'); // Skip header
-        console.log(`✅ Processed ${data.length - 1} rows into ${processedData.length} individual deliveries`);
-        return processedData;
-    } else {
-        console.warn('⚠️ Duplicate handler not available, using original processing');
-    }
+    // COMMENTED OUT: Duplicate handler logic - now using Serial Number as unique identifier
+    // if (window.DRDuplicateHandler) {
+    //     const analysis = window.DRDuplicateHandler.analyzeDuplicates(data.slice(1)); // Skip header
+    //     console.log('📊 DUPLICATE ANALYSIS:', analysis);
+    //     
+    //     // Always process with separate entries strategy to preserve individual items with unique serial numbers
+    //     console.log('🔄 Processing all entries individually to preserve unique serial numbers');
+    //     const processedData = window.DRDuplicateHandler.processDRData(data.slice(1), 'separate_entries'); // Skip header
+    //     console.log(`✅ Processed ${data.length - 1} rows into ${processedData.length} individual deliveries`);
+    //     return processedData;
+    // } else {
+    //     console.warn('⚠️ Duplicate handler not available, using original processing');
+    // }
+    
+    // NEW: Using Serial Number as unique identifier - process all rows individually
+    console.log('🔄 Processing entries using Serial Number as unique identifier');
     
     // Original processing logic (fallback)
     const mappedData = [];
+    
+    // NEW: Track unique Serial Numbers to avoid duplicates
+    const seenSerialNumbers = new Set();
+    let skippedDuplicateSerials = 0;
     
     // CRITICAL DEBUG: Show first 3 rows completely
     for (let debugRow = 0; debugRow < Math.min(3, data.length); debugRow++) {
@@ -2342,6 +2349,13 @@ function mapDRData(data) {
             console.log('  Processed Serial Number:', serialNumber);
         }
         
+        // NEW: Check Serial Number uniqueness first
+        if (serialNumber && seenSerialNumbers.has(serialNumber)) {
+            console.warn(`⚠️ Skipping row ${i + 1}: Duplicate Serial Number "${serialNumber}"`);
+            skippedDuplicateSerials++;
+            continue;
+        }
+        
         // Validate required fields with detailed logging
         if (!drNumber || !customerName || !destination) {
             console.warn(`❌ Skipping row ${i + 1}: Missing required data`);
@@ -2349,6 +2363,12 @@ function mapDRData(data) {
             console.warn(`  Customer Name: "${customerName}" (${customerName ? 'OK' : 'MISSING'})`);
             console.warn(`  Destination: "${destination}" (${destination ? 'OK' : 'MISSING'})`);
             continue;
+        }
+        
+        // NEW: Add Serial Number to seen set (after validation passes)
+        if (serialNumber) {
+            seenSerialNumbers.add(serialNumber);
+            console.log(`📝 Added Serial Number to tracking: "${serialNumber}"`);
         }
         
         console.log(`✅ Row ${i + 1}: Valid data found`);
@@ -2410,6 +2430,8 @@ function mapDRData(data) {
     
     console.log(`🗺️ === MAPDRDATA COMPLETED ===`);
     console.log(`📊 Mapped ${mappedData.length} valid bookings from ${data.length - 1} rows`);
+    console.log(`🔢 Unique Serial Numbers processed: ${seenSerialNumbers.size}`);
+    console.log(`⚠️ Skipped duplicate Serial Numbers: ${skippedDuplicateSerials}`);
     console.log('📋 Sample booking structure:', mappedData[0]);
     console.log('📋 All mapped bookings:', mappedData);
     
