@@ -194,7 +194,7 @@ console.log('🔧 Loading Date Field Mapping Fix...');
         if (deliveryHistory.length === 0) {
             deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5">
+                    <td colspan="14" class="text-center py-5">
                         <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No delivery history found</h4>
                         <p class="text-muted">No completed deliveries yet</p>
@@ -288,6 +288,10 @@ console.log('🔧 Loading Date Field Mapping Fix...');
                     <td>${normalizedDelivery.destination || 'N/A'}</td>
                     <td>${normalizedDelivery.truckPlateNumber || normalizedDelivery.truck_plate_number || 'N/A'} (${normalizedDelivery.truckType || normalizedDelivery.truck_type || 'N/A'})</td>
                     <td>${statusDisplay}</td>
+                    <td>${normalizedDelivery.itemNumber || normalizedDelivery.item_number || ''}</td>
+                    <td>${normalizedDelivery.mobileNumber || normalizedDelivery.mobile_number || ''}</td>
+                    <td>${normalizedDelivery.itemDescription || normalizedDelivery.item_description || ''}</td>
+                    <td>${normalizedDelivery.serialNumber || normalizedDelivery.serial_number || ''}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">
                             <i class="bi bi-eye"></i> View
