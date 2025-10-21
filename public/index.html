@@ -168,6 +168,10 @@
     
     <!-- DISABLE MANUAL BOOKING - REDIRECT TO EXCEL UPLOAD (Must load after calendar.js) -->
     <script src="assets/js/disable-manual-booking.js"></script>
+    <!-- Enhanced DR Preview with improved column mapping -->
+    <script src="assets/js/enhanced-dr-preview.js"></script>
+    <!-- Duplicate DR Handler -->
+    <script src="assets/js/duplicate-dr-handler.js"></script>
     <script src="assets/js/booking.js"></script>
     <script src="assets/js/customers.js"></script>
     <script src="assets/js/analytics.js"></script>
@@ -302,7 +306,7 @@
                             const data = new Uint8Array(e.target.result);
                             const workbook = XLSX.read(data, { type: 'array' });
                             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                             
                             console.log('✅ INLINE: Excel processed:', jsonData.length, 'rows');
                             console.log('📊 INLINE: Sample data:', jsonData[0]);
@@ -393,6 +397,10 @@
                             'Company', 'Customer Company', 'Consignee'
                         ]);
                         
+                        const vendorNumber = getColumnValue(row, [
+                            'Vendor', 'vendor_number', 'Vendor Number'
+                        ]) || '';
+                        
                         const origin = getColumnValue(row, [
                             'Origin', 'origin', 'From', 'Source', 'Pickup', 'Start',
                             'Origin Address', 'Pickup Location'
@@ -403,12 +411,28 @@
                             'Destination Address', 'Delivery Location', 'Drop Location'
                         ]);
                         
+                        // NEW: Extract data from specified columns as per user requirements
+                        // Column J (index 9) == Item number
+                        // Column K (index 10) == Mobile#
+                        // Column L (index 11) == Item Description
+                        // Column O (index 14) == Serial Number
+                        const itemNumber = row[9] !== undefined && row[9] !== null ? String(row[9]).trim() : '';
+                        const mobileNumber = row[10] !== undefined && row[10] !== null ? String(row[10]).trim() : '';
+                        const itemDescription = row[11] !== undefined && row[11] !== null ? String(row[11]).trim() : '';
+                        const serialNumber = row[14] !== undefined && row[14] !== null ? String(row[14]).trim() : '';
+                        
                         tr.innerHTML = `
                             <td>${drNumber}</td>
                             <td>${customer}</td>
+                            <td>${vendorNumber}</td>
                             <td>${origin}</td>
                             <td>${destination}</td>
+                            <td>${new Date().toLocaleDateString()}</td>
                             <td>Active</td>
+                            <td>${itemNumber}</td>
+                            <td>${mobileNumber}</td>
+                            <td>${itemDescription}</td>
+                            <td>${serialNumber}</td>
                         `;
                         previewTable.appendChild(tr);
                         
@@ -517,6 +541,16 @@
                         return '';
                     };
                     
+                    // NEW: Extract data from specified columns as per user requirements
+                    // Column J (index 9) == Item number
+                    // Column K (index 10) == Mobile#
+                    // Column L (index 11) == Item Description
+                    // Column O (index 14) == Serial Number
+                    const itemNumber = row[9] !== undefined && row[9] !== null ? String(row[9]).trim() : '';
+                    const mobileNumber = row[10] !== undefined && row[10] !== null ? String(row[10]).trim() : '';
+                    const itemDescription = row[11] !== undefined && row[11] !== null ? String(row[11]).trim() : '';
+                    const serialNumber = row[14] !== undefined && row[14] !== null ? String(row[14]).trim() : '';
+                    
                     return {
                         id: 'DEL-' + Date.now() + '-' + index,
                         dr_number: getColumnValue(['DR Number', 'dr_number', 'DR_Number', 'drNumber', 'DR']) || 'DR-' + Date.now() + '-' + index,
@@ -526,6 +560,10 @@
                         destination: getColumnValue(['Destination', 'destination', 'To', 'Delivery']) || '',
                         truck_type: getColumnValue(['Truck Type', 'truck_type']) || '',
                         truck_plate_number: getColumnValue(['Truck Plate', 'truck_plate', 'Plate Number']) || '',
+                        item_number: itemNumber || '',
+                        mobile_number: mobileNumber || '',
+                        item_description: itemDescription || '',
+                        serial_number: serialNumber || '',
                         status: 'Active',
                         created_date: new Date().toLocaleDateString(),
                         created_by: 'Excel Upload',
@@ -575,7 +613,11 @@
                     }
                     
                     // Show success message
-                    alert(`🎉 Upload Successful!\\n\\nSaved ${savedCount} deliveries to the system.\\n\\nThe page will refresh to show your new data.`);
+                    alert(`🎉 Upload Successful!
+
+Saved ${savedCount} deliveries to the system.
+
+The page will refresh to show your new data.`);
                     
                     // Refresh the page to show new data
                     setTimeout(() => {
@@ -1204,6 +1246,10 @@
                                     <th>Truck</th>
                                     <th>Status</th>
                                     <th>Booked Date</th>
+                                    <th>Item #</th>
+                                    <th>Mobile#</th>
+                                    <th>Item Description</th>
+                                    <th>Serial Number</th>
                                     <!-- Actions column hidden as requested -->
                                 </tr>
                             </thead>
@@ -1274,6 +1320,10 @@
                                     <th>Destination</th>
                                     <th>Additional Costs</th>
                                     <th>Status</th>
+                                    <th>Item #</th>
+                                    <th>Mobile#</th>
+                                    <th>Item Description</th>
+                                    <th>Serial Number</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2120,6 +2170,10 @@
                                             <th>Destination</th>
                                             <th>Delivery Date</th>
                                             <th>Status</th>
+                                            <th>Item #</th>
+                                            <th>Mobile#</th>
+                                            <th>Item Description</th>
+                                            <th>Serial Number</th>
                                         </tr>
                                     </thead>
                                     <tbody id="drPreviewTableBody">
@@ -2281,6 +2335,9 @@
             }
         });
     </script>
+    
+    <!-- Test data script -->
+    <script src="test-data.js"></script>
 
     <!-- Fallback functions -->
     <script>
@@ -2500,6 +2557,10 @@
                                         <th>Destination</th>
                                         <th>Delivery Date</th>
                                         <th>Status</th>
+                                        <th>Item #</th>
+                                        <th>Mobile#</th>
+                                        <th>Item Description</th>
+                                        <th>Serial Number</th>
                                     </tr>
                                 </thead>
                                 <tbody id="drPreviewTableBody">

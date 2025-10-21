@@ -325,9 +325,30 @@ async function executeWithFallback(operation, fallbackOperation) {
 // Save delivery to Supabase
 async function saveDelivery(delivery) {
     const supabaseOperation = async () => {
+        // Map booking object to Supabase schema
+        const supabaseDelivery = {
+            dr_number: delivery.drNumber,
+            customer_name: delivery.customerName,
+            vendor_number: delivery.vendorNumber,
+            origin: delivery.origin,
+            destination: delivery.destination,
+            truck_type: delivery.truckType,
+            truck_plate_number: delivery.truckPlateNumber,
+            status: delivery.status,
+            distance: delivery.distance,
+            additional_costs: delivery.additionalCosts || 0,
+            created_date: delivery.deliveryDate || delivery.bookedDate,
+            created_by: delivery.createdBy || 'Manual',
+            // NEW: Add the item-related fields
+            item_number: delivery.itemNumber,
+            mobile_number: delivery.mobileNumber,
+            item_description: delivery.itemDescription,
+            serial_number: delivery.serialNumber
+        };
+
         const { data, error } = await supabaseClientInstance
             .from('deliveries')
-            .upsert(delivery)
+            .upsert(supabaseDelivery)
             .select();
         
         if (error) throw error;

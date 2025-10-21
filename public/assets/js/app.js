@@ -441,8 +441,11 @@ console.log('app.js loaded');
             const getDeliveries = typeof window.getDeliveries === 'function' ? window.getDeliveries : null;
             if (getDeliveries) {
                 const deliveries = await getDeliveries();
-                activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
-                deliveryHistory = deliveries.filter(d => d.status === 'Completed');
+                // Use global field mapper to normalize all delivery objects
+                const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(deliveries) : deliveries;
+                activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
+                deliveryHistory = normalizedDeliveries.filter(d => d.status === 'Completed');
                 
                 console.log('Active deliveries loaded from database:', activeDeliveries.length);
                 console.log('Delivery history loaded from database:', deliveryHistory.length);
@@ -468,13 +471,21 @@ console.log('app.js loaded');
             const savedHistory = localStorage.getItem('mci-delivery-history');
             
             if (savedActive) {
-                window.activeDeliveries = JSON.parse(savedActive);
+                let parsedActive = JSON.parse(savedActive);
+                // Use global field mapper to normalize all delivery objects
+                parsedActive = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(parsedActive) : parsedActive;
+                window.activeDeliveries = parsedActive;
                 activeDeliveries = window.activeDeliveries; // Update reference
                 console.log('Active deliveries loaded from localStorage:', activeDeliveries.length);
             }
             
             if (savedHistory) {
-                window.deliveryHistory = JSON.parse(savedHistory);
+                let parsedHistory = JSON.parse(savedHistory);
+                // Use global field mapper to normalize all delivery objects
+                parsedHistory = window.normalizeDeliveryArray ? 
+                    window.normalizeDeliveryArray(parsedHistory) : parsedHistory;
+                window.deliveryHistory = parsedHistory;
                 deliveryHistory = window.deliveryHistory; // Update reference
                 console.log('Delivery history loaded from localStorage:', deliveryHistory.length);
             }
@@ -754,7 +765,7 @@ console.log('app.js loaded');
         if (filteredDeliveries.length === 0) {
             activeDeliveriesTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="text-center py-5">
+                    <td colspan="13" class="text-center py-5">
                         <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No active deliveries found</h4>
                         <p class="text-muted">
@@ -805,6 +816,12 @@ console.log('app.js loaded');
             const deliveryDate = getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
                                getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
             
+            // Get new fields
+            const itemNumber = getField(delivery, 'itemNumber') || getField(delivery, 'item_number') || '';
+            const mobileNumber = getField(delivery, 'mobileNumber') || getField(delivery, 'mobile_number') || '';
+            const itemDescription = getField(delivery, 'itemDescription') || getField(delivery, 'item_description') || '';
+            const serialNumber = getField(delivery, 'serialNumber') || getField(delivery, 'serial_number') || '';
+            
             return `
                 <tr data-delivery-id="${delivery.id}">
                     <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
@@ -829,6 +846,10 @@ console.log('app.js loaded');
                         </div>
                     </td>
                     <td>${deliveryDate}</td>
+                    <td>${itemNumber}</td>
+                    <td>${mobileNumber}</td>
+                    <td>${itemDescription}</td>
+                    <td>${serialNumber}</td>
                 </tr>
             `;
         }).join('');
@@ -890,7 +911,7 @@ function loadDeliveryHistory() {
         if (filteredHistory.length === 0) {
             deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="text-center py-5">
+                    <td colspan="14" class="text-center py-5">
                         <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No delivery history found</h4>
                         <p class="text-muted">
@@ -937,6 +958,13 @@ function loadDeliveryHistory() {
                 `;
             }
             
+            // Get new fields - FIXED: Use the field mapper for consistency
+            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            const itemNumber = getField(delivery, 'itemNumber') || getField(delivery, 'item_number') || '';
+            const mobileNumber = getField(delivery, 'mobileNumber') || getField(delivery, 'mobile_number') || '';
+            const itemDescription = getField(delivery, 'itemDescription') || getField(delivery, 'item_description') || '';
+            const serialNumber = getField(delivery, 'serialNumber') || getField(delivery, 'serial_number') || '';
+            
             return `
                 <tr>
                     <td>
@@ -952,6 +980,10 @@ function loadDeliveryHistory() {
                     <td>
                         ${statusDisplay}
                     </td>
+                    <td>${itemNumber}</td>
+                    <td>${mobileNumber}</td>
+                    <td>${itemDescription}</td>
+                    <td>${serialNumber}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">
                             <i class="bi bi-eye"></i> View
@@ -1491,6 +1523,66 @@ function resetExportButton(button, originalText) {
         button.disabled = false;
     }
 }
+
+// Debug function to verify data flow for new fields
+function debugNewFields() {
+    console.log('=== DEBUG NEW FIELDS ===');
+    
+    // Check localStorage data
+    try {
+        const activeData = localStorage.getItem('mci-active-deliveries');
+        if (activeData) {
+            const parsed = JSON.parse(activeData);
+            console.log('Active deliveries in localStorage:', parsed.length);
+            if (parsed.length > 0) {
+                const sample = parsed[0];
+                console.log('Sample delivery fields:', {
+                    itemNumber: sample.itemNumber,
+                    item_number: sample.item_number,
+                    mobileNumber: sample.mobileNumber,
+                    mobile_number: sample.mobile_number,
+                    itemDescription: sample.itemDescription,
+                    item_description: sample.item_description,
+                    serialNumber: sample.serialNumber,
+                    serial_number: sample.serial_number
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error reading localStorage:', error);
+    }
+    
+    // Check global arrays
+    console.log('Global activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 0);
+    if (window.activeDeliveries && window.activeDeliveries.length > 0) {
+        const sample = window.activeDeliveries[0];
+        console.log('Sample from global array:', {
+            itemNumber: sample.itemNumber,
+            item_number: sample.item_number,
+            mobileNumber: sample.mobileNumber,
+            mobile_number: sample.mobile_number,
+            itemDescription: sample.itemDescription,
+            item_description: sample.item_description,
+            serialNumber: sample.serialNumber,
+            serial_number: sample.serial_number
+        });
+    }
+    
+    // Check field mapper
+    if (window.FIELD_MAPPINGS) {
+        console.log('Field mappings for new fields:', {
+            item_number: window.FIELD_MAPPINGS.item_number,
+            mobile_number: window.FIELD_MAPPINGS.mobile_number,
+            item_description: window.FIELD_MAPPINGS.item_description,
+            serial_number: window.FIELD_MAPPINGS.serial_number
+        });
+    }
+    
+    console.log('=== END DEBUG ===');
+}
+
+// Make debug function globally available
+window.debugNewFields = debugNewFields;
 
 // Debug function to check data state
 function debugActiveDeliveries() {

@@ -2193,12 +2193,28 @@ function readExcelFile(file) {
 // Map DR data from Excel columns - Complete Version 2 of Manual Booking Process
 function mapDRData(data) {
     console.log('🗺️ === STARTING mapDRData FUNCTION ===');
-    const mappedData = [];
     
     console.log('🔍 DEBUG: mapDRData received data:', data);
     console.log('🔍 DEBUG: Data length:', data.length);
     console.log('🔍 DEBUG: First row (header):', data[0]);
     console.log('🔍 DEBUG: Second row (first data):', data[1]);
+    
+    // ENHANCED: Always process with separate entries strategy to preserve unique serial numbers
+    if (window.DRDuplicateHandler) {
+        const analysis = window.DRDuplicateHandler.analyzeDuplicates(data.slice(1)); // Skip header
+        console.log('📊 DUPLICATE ANALYSIS:', analysis);
+        
+        // Always process with separate entries strategy to preserve individual items with unique serial numbers
+        console.log('🔄 Processing all entries individually to preserve unique serial numbers');
+        const processedData = window.DRDuplicateHandler.processDRData(data.slice(1), 'separate_entries'); // Skip header
+        console.log(`✅ Processed ${data.length - 1} rows into ${processedData.length} individual deliveries`);
+        return processedData;
+    } else {
+        console.warn('⚠️ Duplicate handler not available, using original processing');
+    }
+    
+    // Original processing logic (fallback)
+    const mappedData = [];
     
     // CRITICAL DEBUG: Show first 3 rows completely
     for (let debugRow = 0; debugRow < Math.min(3, data.length); debugRow++) {
@@ -2238,8 +2254,48 @@ function mapDRData(data) {
         const customerName = row[7] !== undefined && row[7] !== null ? String(row[7]).trim() : '';    // Column H - Customer/Vendor Name
         const destination = row[8] !== undefined && row[8] !== null ? String(row[8]).trim() : '';     // Column I - Ship To Address (Destination)
         
+        // NEW: Enhanced extraction with flexible column mapping
+        // Use enhanced column mapping if available, otherwise fallback to index-based extraction
+        let itemNumber, mobileNumber, itemDescription, serialNumber;
+        
+        if (window.getEnhancedColumnValue) {
+            // Convert row array to object for enhanced mapping
+            const rowObj = {};
+            row.forEach((value, index) => {
+                rowObj[index] = value;
+            });
+            
+            itemNumber = window.getEnhancedColumnValue(rowObj, [
+                'Item Number', 'Item number', 'item_number', 'Item #', 'Item#',
+                'ItemNumber', 'Item_Number', 'ITEM_NUMBER', 'ItemNo', 'Item No'
+            ], 9);
+            
+            mobileNumber = window.getEnhancedColumnValue(rowObj, [
+                'Mobile#', 'Mobile Number', 'Mobile', 'mobile_number', 'MobileNumber',
+                'Mobile_Number', 'MOBILE_NUMBER', 'Phone', 'Contact', 'Cell'
+            ], 10);
+            
+            itemDescription = window.getEnhancedColumnValue(rowObj, [
+                'Item Description', 'Item description', 'item_description', 'Description',
+                'ItemDescription', 'Item_Description', 'ITEM_DESCRIPTION', 'Desc',
+                'Product Description', 'Product'
+            ], 11);
+            
+            serialNumber = window.getEnhancedColumnValue(rowObj, [
+                'Serial Number', 'Serial number', 'serial_number', 'Serial',
+                'SerialNumber', 'Serial_Number', 'SERIAL_NUMBER', 'SN', 'S/N'
+            ], 14);
+        } else {
+            // Fallback to original index-based extraction
+            itemNumber = row[9] !== undefined && row[9] !== null ? String(row[9]).trim() : '';      // Column J - Item Number
+            mobileNumber = row[10] !== undefined && row[10] !== null ? String(row[10]).trim() : '';  // Column K - Mobile#
+            itemDescription = row[11] !== undefined && row[11] !== null ? String(row[11]).trim() : '';// Column L - Item Description
+            serialNumber = row[14] !== undefined && row[14] !== null ? String(row[14]).trim() : '';  // Column O - Serial Number
+        }
+        
         console.log(`🔍 DEBUG: Raw values - D[3]: "${row[3]}", G[6]: "${row[6]}", H[7]: "${row[7]}", I[8]: "${row[8]}"`);
         console.log(`🔍 DEBUG: Processed values - DR: "${drNumber}", Vendor: "${vendorNumber}", Customer: "${customerName}", Destination: "${destination}"`);
+        console.log(`🔍 DEBUG: New columns - J[9]: "${row[9]}", K[10]: "${row[10]}", L[11]: "${row[11]}", O[14]: "${row[14]}"`);
         
         // DEBUG INFO logged to console instead of alert popup
         if (i === 1) {
@@ -2249,6 +2305,10 @@ function mapDRData(data) {
             console.log(`  G[6] (Vendor): "${row[6]}"`);
             console.log(`  H[7] (Customer): "${row[7]}"`);
             console.log(`  I[8] (Destination): "${row[8]}"`);
+            console.log(`  J[9] (Item Number): "${row[9]}"`);
+            console.log(`  K[10] (Mobile#): "${row[10]}"`);
+            console.log(`  L[11] (Item Description): "${row[11]}"`);
+            console.log(`  O[14] (Serial Number): "${row[14]}"`);
         }
         
         // Show all row values for debugging
@@ -2267,11 +2327,19 @@ function mapDRData(data) {
             console.log('  Column G (index 6) - Customer/Vendor Code:', row[6], typeof row[6]);
             console.log('  Column H (index 7) - Customer/Vendor Name:', row[7], typeof row[7]);
             console.log('  Column I (index 8) - Ship To Address:', row[8], typeof row[8]);
+            console.log('  Column J (index 9) - Item Number:', row[9], typeof row[9]);
+            console.log('  Column K (index 10) - Mobile#:', row[10], typeof row[10]);
+            console.log('  Column L (index 11) - Item Description:', row[11], typeof row[11]);
+            console.log('  Column O (index 14) - Serial Number:', row[14], typeof row[14]);
             console.log('  PROCESSED VALUES:');
             console.log('  Processed DR Number:', drNumber);
             console.log('  Processed Customer Name:', customerName);
             console.log('  Processed Vendor Number:', vendorNumber);
             console.log('  Processed Destination:', destination);
+            console.log('  Processed Item Number:', itemNumber);
+            console.log('  Processed Mobile Number:', mobileNumber);
+            console.log('  Processed Item Description:', itemDescription);
+            console.log('  Processed Serial Number:', serialNumber);
         }
         
         // Validate required fields with detailed logging
@@ -2318,6 +2386,12 @@ function mapDRData(data) {
             
             // Distance
             distance: '',
+            
+            // NEW: Add the new fields to the booking object
+            itemNumber: itemNumber || '',
+            mobileNumber: mobileNumber || '',
+            itemDescription: itemDescription || '',
+            serialNumber: serialNumber || '',
             
             // Additional fields for complete data mapping
             completedDate: null,
@@ -2402,6 +2476,10 @@ function showDRPreview(bookings) {
             <td>${booking.destination || 'MISSING DESTINATION'}</td>
             <td><span class="badge bg-secondary">${booking.deliveryDate || 'MISSING DATE'}</span></td>
             <td><span class="badge bg-warning">Ready to Create</span></td>
+            <td>${booking.itemNumber || ''}</td>
+            <td>${booking.mobileNumber || ''}</td>
+            <td>${booking.itemDescription || ''}</td>
+            <td>${booking.serialNumber || ''}</td>
         `;
         drPreviewTableBody.appendChild(row);
         
@@ -2618,7 +2696,12 @@ async function createBookingFromDR(bookingData) {
                     created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
+                    // NEW: Add the new fields to the Supabase delivery object
+                    item_number: bookingData.itemNumber || '',
+                    mobile_number: bookingData.mobileNumber || '',
+                    item_description: bookingData.itemDescription || '',
+                    serial_number: bookingData.serialNumber || ''
                 };
 
                 console.log('🔧 Converted delivery data for Supabase:', newDelivery);
@@ -2639,19 +2722,28 @@ async function createBookingFromDR(bookingData) {
                         console.error('❌ Failed to save with storage priority:', error);
                         // Fallback to localStorage with original format for compatibility
                         const localDelivery = {
-                            id: 'DEL-' + Date.now() + '-' + drNumber,
-                            drNumber: drNumber,
-                            customerName: customerName,
-                            vendorNumber: vendorNumber,
-                            origin: origin,
-                            destination: destinations.join('; '),
-                            truckType: truckType,
-                            truckPlateNumber: truckPlateNumber,
+                            id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
+                            drNumber: bookingData.drNumber,
+                            customerName: bookingData.customerName,
+                            vendorNumber: bookingData.vendorNumber,
+                            origin: bookingData.origin,
+                            destination: bookingData.destination,
+                            truckType: bookingData.truckType,
+                            truckPlateNumber: bookingData.truckPlateNumber,
                             status: 'On Schedule',
-                            deliveryDate: deliveryDate,
-                            additionalCosts: additionalCostsTotal,
-                            additionalCostItems: additionalCostItems,
-                            timestamp: new Date().toISOString()
+                            deliveryDate: bookingData.deliveryDate,
+                            additionalCosts: bookingData.additionalCosts,
+                            timestamp: new Date().toISOString(),
+                            // NEW: Add the new fields to the localStorage object with both naming conventions
+                            itemNumber: bookingData.itemNumber || '',
+                            mobileNumber: bookingData.mobileNumber || '',
+                            itemDescription: bookingData.itemDescription || '',
+                            serialNumber: bookingData.serialNumber || '',
+                            // Also add snake_case versions for consistency
+                            item_number: bookingData.itemNumber || '',
+                            mobile_number: bookingData.mobileNumber || '',
+                            item_description: bookingData.itemDescription || '',
+                            serial_number: bookingData.serialNumber || ''
                         };
                         if (typeof window.activeDeliveries !== 'undefined') {
                             window.activeDeliveries.push(localDelivery);
@@ -2664,7 +2756,7 @@ async function createBookingFromDR(bookingData) {
                 }
             } catch (error) {
                 console.error('❌ Failed to save to Supabase:', error);
-                // Fallback to localStorage with original format for compatibility (same as manual booking)
+                // Fallback to localStorage with original format for compatibility
                 const localDelivery = {
                     id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
                     drNumber: bookingData.drNumber,
@@ -2677,7 +2769,17 @@ async function createBookingFromDR(bookingData) {
                     status: 'On Schedule',
                     deliveryDate: bookingData.deliveryDate,
                     additionalCosts: bookingData.additionalCosts,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    // NEW: Add the new fields to the localStorage object with both naming conventions
+                    itemNumber: bookingData.itemNumber || '',
+                    mobileNumber: bookingData.mobileNumber || '',
+                    itemDescription: bookingData.itemDescription || '',
+                    serialNumber: bookingData.serialNumber || '',
+                    // Also add snake_case versions for consistency
+                    item_number: bookingData.itemNumber || '',
+                    mobile_number: bookingData.mobileNumber || '',
+                    item_description: bookingData.itemDescription || '',
+                    serial_number: bookingData.serialNumber || ''
                 };
                 if (typeof window.activeDeliveries !== 'undefined') {
                     window.activeDeliveries.push(localDelivery);
@@ -2688,7 +2790,21 @@ async function createBookingFromDR(bookingData) {
         } else {
             // Fallback to localStorage if dataService not available
             window.activeDeliveries = window.activeDeliveries || [];
-            window.activeDeliveries.push(bookingData);
+            // Ensure the bookingData has the new fields with both naming conventions
+            const normalizedBookingData = {
+                ...bookingData,
+                // Ensure new fields are present with both naming conventions
+                itemNumber: bookingData.itemNumber || bookingData.item_number || '',
+                mobileNumber: bookingData.mobileNumber || bookingData.mobile_number || '',
+                itemDescription: bookingData.itemDescription || bookingData.item_description || '',
+                serialNumber: bookingData.serialNumber || bookingData.serial_number || '',
+                // Also ensure snake_case versions for consistency
+                item_number: bookingData.itemNumber || bookingData.item_number || '',
+                mobile_number: bookingData.mobileNumber || bookingData.mobile_number || '',
+                item_description: bookingData.itemDescription || bookingData.item_description || '',
+                serial_number: bookingData.serialNumber || bookingData.serial_number || ''
+            };
+            window.activeDeliveries.push(normalizedBookingData);
             const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
             localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
             localStorage.setItem('activeDeliveries', activeDeliveriesData);

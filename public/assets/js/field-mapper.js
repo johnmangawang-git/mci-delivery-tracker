@@ -15,7 +15,11 @@ window.FIELD_MAPPINGS = {
     'created_date': 'deliveryDate',
     'created_at': 'timestamp',
     'updated_at': 'updatedAt',
-    'additional_costs': 'additionalCosts'
+    'additional_costs': 'additionalCosts',
+    'item_number': 'itemNumber',
+    'mobile_number': 'mobileNumber',
+    'item_description': 'itemDescription',
+    'serial_number': 'serialNumber'
 };
 
 // Reverse mapping (camelCase -> snake_case)
