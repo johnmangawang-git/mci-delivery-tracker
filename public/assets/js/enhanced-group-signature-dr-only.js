@@ -1,5 +1,5 @@
 // Enhanced Group Signature - DR-Only Mode: Complete ALL deliveries with same DR Number
-console.log('=== ENHANCED GROUP SIGNATURE DR-ONLY MODE LOADED ===');
+console.log('=== ENHANCED GROUP SIGNATURE DR-ONLY MODE LOADED v2.1 WITH FIELD PRESERVATION ===');
 
 /**
  * Enhanced delivery completion that groups by DR Number ONLY
