@@ -22,8 +22,25 @@ async function initAnalyticsCharts(period = 'day') {
         originChart = null;
     }
     if (costBreakdownChart) {
-        costBreakdownChart.destroy();
+        try {
+            costBreakdownChart.destroy();
+        } catch (error) {
+            console.warn('Error destroying costBreakdownChart:', error);
+        }
         costBreakdownChart = null;
+    }
+    
+    // Also check for existing chart by canvas ID and destroy it
+    const costBreakdownCanvas = document.getElementById('costBreakdownChart');
+    if (costBreakdownCanvas) {
+        const existingChart = Chart.getChart(costBreakdownCanvas);
+        if (existingChart) {
+            try {
+                existingChart.destroy();
+            } catch (error) {
+                console.warn('Error destroying existing chart:', error);
+            }
+        }
     }
 
     // Update dashboard metrics
