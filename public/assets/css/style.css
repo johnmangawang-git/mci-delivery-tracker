@@ -1120,3 +1120,123 @@ body {
         grid-template-columns: 1fr;
     }
 }
+/
+* Multi-Item Delivery Tracking Styles */
+.dr-group-card {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dr-group-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.dr-header {
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.dr-header:hover {
+    background-color: #e9ecef !important;
+}
+
+.dr-items-list {
+    background-color: #f8f9fa;
+}
+
+.item-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef !important;
+}
+
+.item-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.collapse {
+    display: none;
+}
+
+.collapse.show {
+    display: block;
+}
+
+/* Status badges for items */
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+}
+
+.badge.bg-info {
+    background-color: var(--secondary) !important;
+}
+
+.badge.bg-success {
+    background-color: var(--success) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger) !important;
+}
+
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    .dr-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+    
+    .dr-header .text-end {
+        text-align: left !important;
+        margin-top: 10px;
+    }
+    
+    .item-card .d-flex {
+        flex-direction: column;
+    }
+    
+    .item-status {
+        text-align: left !important;
+        margin-top: 10px;
+    }
+}
+
+/* Animation for chevron rotation */
+.bi-chevron-down, .bi-chevron-up {
+    transition: transform 0.3s ease;
+}
+
+/* Tracking result container */
+.tracking-result {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Contact information styling */
+.delivery-contact {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-left: 4px solid var(--secondary);
+}

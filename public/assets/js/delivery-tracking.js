@@ -68,11 +68,11 @@ async function performDeliverySearch() {
     showTrackingLoading();
     
     try {
-        // Search for delivery
-        const delivery = await searchDelivery(drNumber);
+        // Search for delivery items
+        const deliveryItems = await searchDelivery(drNumber);
         
-        if (delivery) {
-            displayDeliveryInfo(delivery);
+        if (deliveryItems && deliveryItems.length > 0) {
+            displayMultiItemDelivery(deliveryItems);
         } else {
             showTrackingError('Delivery not found. Please check your DR number and try again.');
         }
@@ -123,7 +123,7 @@ async function searchDelivery(drNumber) {
     }
 }
 
-// Search in Supabase
+// Search in Supabase - GET ALL ITEMS for the DR
 async function searchInSupabase(drNumber) {
     try {
         if (!window.supabase) {
@@ -131,19 +131,19 @@ async function searchInSupabase(drNumber) {
             return null;
         }
         
-        // Search in deliveries table
+        // Search in deliveries table - GET ALL ITEMS, not just one
         const { data, error } = await window.supabase
             .from('deliveries')
             .select('*')
             .ilike('dr_number', `%${drNumber}%`)
-            .limit(1);
+            .order('created_at', { ascending: true });
         
         if (error) {
             console.error('❌ Supabase search error:', error);
             return null;
         }
         
-        return data && data.length > 0 ? data[0] : null;
+        return data && data.length > 0 ? data : null; // Return array of all items
         
     } catch (error) {
         console.error('❌ Supabase search exception:', error);
@@ -151,24 +151,26 @@ async function searchInSupabase(drNumber) {
     }
 }
 
-// Search in localStorage
+// Search in localStorage - GET ALL ITEMS for the DR
 function searchInLocalStorage(drNumber) {
     try {
-        // Search in active deliveries
+        let allItems = [];
+        
+        // Search in active deliveries - GET ALL MATCHING ITEMS
         const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-        let delivery = activeDeliveries.find(d => 
+        const activeMatches = activeDeliveries.filter(d => 
             d.drNumber && d.drNumber.toLowerCase().includes(drNumber.toLowerCase())
         );
+        allItems = allItems.concat(activeMatches);
         
-        if (delivery) return delivery;
-        
-        // Search in delivery history
+        // Search in delivery history - GET ALL MATCHING ITEMS
         const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-        delivery = deliveryHistory.find(d => 
+        const historyMatches = deliveryHistory.filter(d => 
             d.drNumber && d.drNumber.toLowerCase().includes(drNumber.toLowerCase())
         );
+        allItems = allItems.concat(historyMatches);
         
-        return delivery || null;
+        return allItems.length > 0 ? allItems : null; // Return array of all items
         
     } catch (error) {
         console.error('❌ localStorage search error:', error);
@@ -176,52 +178,157 @@ function searchInLocalStorage(drNumber) {
     }
 }
 
-// Display delivery information
-function displayDeliveryInfo(delivery) {
+// Group items by DR number
+function groupItemsByDR(deliveryItems) {
+    const grouped = {};
+    
+    deliveryItems.forEach(item => {
+        const drNumber = item.dr_number || item.drNumber;
+        if (!grouped[drNumber]) {
+            grouped[drNumber] = {
+                drNumber: drNumber,
+                customerName: item.customer_name || item.customerName,
+                deliveryDate: item.delivery_date || item.deliveryDate || item.bookedDate,
+                destination: item.destination,
+                origin: item.origin,
+                items: []
+            };
+        }
+        grouped[drNumber].items.push(item);
+    });
+    
+    return Object.values(grouped);
+}
+
+// Display multi-item delivery information
+function displayMultiItemDelivery(deliveryItems) {
     const trackingResults = document.getElementById('trackingResults');
     
     if (!trackingResults) return;
     
-    // Map internal status to customer-friendly status
-    const publicStatus = mapToPublicStatus(delivery.status);
-    const statusClass = getStatusClass(delivery.status);
+    // Group items by DR number
+    const deliveryGroups = groupItemsByDR(deliveryItems);
     
-    // Mask sensitive information for privacy
-    const maskedDelivery = maskSensitiveInfo(delivery);
+    let html = '';
     
-    const html = `
-        <div class="tracking-result">
-            <div class="delivery-header">
-                <h5><i class="bi bi-truck me-2"></i>Delivery Information</h5>
-                <span class="badge ${statusClass} fs-6">${publicStatus}</span>
-            </div>
-            
-            <div class="delivery-details">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>DR Number:</strong> ${maskedDelivery.drNumber}</p>
-                        <p><strong>Customer:</strong> ${maskedDelivery.customerName}</p>
-                        <p><strong>Delivery Date:</strong> ${maskedDelivery.deliveryDate || 'TBD'}</p>
+    deliveryGroups.forEach(group => {
+        // Determine overall status (use most common status or first item's status)
+        const overallStatus = determineOverallStatus(group.items);
+        const statusClass = getStatusClass(overallStatus);
+        const publicStatus = mapToPublicStatus(overallStatus);
+        
+        // Create unique ID for collapsible content
+        const groupId = group.drNumber.replace(/[^a-zA-Z0-9]/g, '');
+        
+        html += `
+            <div class="dr-group-card mb-3 border rounded">
+                <div class="dr-header p-3 bg-light cursor-pointer" onclick="toggleItems('${groupId}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1"><i class="bi bi-truck me-2"></i>${group.drNumber}</h5>
+                            <p class="mb-0 text-muted">${maskCustomerName(group.customerName)}</p>
+                            <small class="text-muted">
+                                <i class="bi bi-geo-alt me-1"></i>
+                                To: ${maskAddress(group.destination || 'Delivery Address')}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-secondary mb-1">${group.items.length} item${group.items.length > 1 ? 's' : ''}</span><br>
+                            <span class="badge ${statusClass}">${publicStatus}</span><br>
+                            <small class="text-muted mt-1">
+                                <i class="bi bi-chevron-down" id="chevron-${groupId}"></i>
+                                Click to view items
+                            </small>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <p><strong>From:</strong> ${maskedDelivery.origin || 'Warehouse'}</p>
-                        <p><strong>To:</strong> ${maskedDelivery.destination}</p>
-                        <p><strong>Status:</strong> ${publicStatus}</p>
+                </div>
+                
+                <div class="dr-items-list collapse" id="items-${groupId}">
+                    <div class="p-3 border-top">
+                        <h6 class="mb-3"><i class="bi bi-list-ul me-2"></i>Items in this delivery:</h6>
+                        ${renderItemsList(group.items)}
                     </div>
                 </div>
             </div>
-            
-            <div class="delivery-contact">
-                <p class="text-muted small">
-                    <i class="bi bi-info-circle me-1"></i>
-                    For questions about your delivery, please contact us at <strong>+63 912 345 6789</strong>
-                </p>
-            </div>
+        `;
+    });
+    
+    // Add contact information
+    html += `
+        <div class="delivery-contact mt-3 p-3 bg-light rounded">
+            <p class="text-muted small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                For questions about your delivery, please contact us at <strong>+63 912 345 6789</strong>
+            </p>
         </div>
     `;
     
     trackingResults.innerHTML = html;
     trackingResults.style.display = 'block';
+}
+
+// Render individual items list
+function renderItemsList(items) {
+    let itemsHtml = '';
+    
+    items.forEach((item, index) => {
+        const itemStatus = mapToPublicStatus(item.status);
+        const itemStatusClass = getStatusClass(item.status);
+        
+        // Mask sensitive information
+        const maskedItem = maskSensitiveItemInfo(item);
+        
+        itemsHtml += `
+            <div class="item-card mb-2 p-3 border rounded bg-white">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="item-info flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-primary me-2">#${index + 1}</span>
+                            <strong>${maskedItem.itemDescription || 'Item'}</strong>
+                        </div>
+                        
+                        ${maskedItem.serialNumber ? `
+                            <p class="mb-1 small">
+                                <i class="bi bi-hash me-1"></i>
+                                <strong>Serial:</strong> ${maskedItem.serialNumber}
+                            </p>
+                        ` : ''}
+                        
+                        ${maskedItem.mobileNumber ? `
+                            <p class="mb-1 small">
+                                <i class="bi bi-phone me-1"></i>
+                                <strong>Mobile:</strong> ${maskedItem.mobileNumber}
+                            </p>
+                        ` : ''}
+                        
+                        ${maskedItem.itemNumber ? `
+                            <p class="mb-0 small text-muted">
+                                <i class="bi bi-tag me-1"></i>
+                                Item #: ${maskedItem.itemNumber}
+                            </p>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="item-status text-end">
+                        <span class="badge ${itemStatusClass}">${itemStatus}</span>
+                        ${item.delivery_date || item.deliveryDate ? `
+                            <br><small class="text-muted mt-1">
+                                ${formatDate(item.delivery_date || item.deliveryDate)}
+                            </small>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return itemsHtml;
+}
+
+// Display delivery information (keep for backward compatibility)
+function displayDeliveryInfo(delivery) {
+    // Convert single delivery to array and use multi-item display
+    displayMultiItemDelivery([delivery]);
 }
 
 // Map internal status to customer-friendly status
@@ -295,6 +402,104 @@ function maskAddress(address) {
     return address.substring(0, 10) + '***';
 }
 
+// Mask sensitive item information
+function maskSensitiveItemInfo(item) {
+    return {
+        itemDescription: item.item_description || item.itemDescription || 'Item',
+        serialNumber: maskSerialNumber(item.serial_number || item.serialNumber),
+        mobileNumber: maskMobileNumber(item.mobile_number || item.mobileNumber),
+        itemNumber: item.item_number || item.itemNumber
+    };
+}
+
+// Mask serial number for privacy
+function maskSerialNumber(serialNumber) {
+    if (!serialNumber || serialNumber.length < 4) return serialNumber;
+    
+    // Show first 3 characters, mask the rest
+    return serialNumber.substring(0, 3) + '***';
+}
+
+// Mask mobile number for privacy
+function maskMobileNumber(mobileNumber) {
+    if (!mobileNumber || mobileNumber.length < 7) return mobileNumber;
+    
+    // Show first 3 and last 2 digits, mask middle
+    const cleaned = mobileNumber.replace(/\D/g, '');
+    if (cleaned.length >= 7) {
+        return cleaned.substring(0, 3) + '***' + cleaned.substring(cleaned.length - 2);
+    }
+    
+    return mobileNumber;
+}
+
+// Determine overall status from multiple items
+function determineOverallStatus(items) {
+    if (!items || items.length === 0) return 'Processing';
+    
+    // Priority order for status determination
+    const statusPriority = {
+        'Delivered': 5,
+        'Completed': 5,
+        'In Transit': 4,
+        'On Schedule': 4,
+        'Active': 3,
+        'Pending': 2,
+        'Delayed': 1,
+        'Cancelled': 0
+    };
+    
+    // Find the highest priority status
+    let highestPriority = -1;
+    let overallStatus = 'Processing';
+    
+    items.forEach(item => {
+        const status = item.status || 'Processing';
+        const priority = statusPriority[status] || 1;
+        
+        if (priority > highestPriority) {
+            highestPriority = priority;
+            overallStatus = status;
+        }
+    });
+    
+    return overallStatus;
+}
+
+// Format date for display
+function formatDate(dateString) {
+    if (!dateString) return 'TBD';
+    
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    } catch (error) {
+        return dateString;
+    }
+}
+
+// Toggle items visibility
+function toggleItems(groupId) {
+    const itemsList = document.getElementById(`items-${groupId}`);
+    const chevron = document.getElementById(`chevron-${groupId}`);
+    
+    if (itemsList && chevron) {
+        if (itemsList.classList.contains('show')) {
+            itemsList.classList.remove('show');
+            chevron.classList.remove('bi-chevron-up');
+            chevron.classList.add('bi-chevron-down');
+        } else {
+            itemsList.classList.add('show');
+            chevron.classList.remove('bi-chevron-down');
+            chevron.classList.add('bi-chevron-up');
+        }
+    }
+}
+
 // Show loading state
 function showTrackingLoading() {
     const trackingResults = document.getElementById('trackingResults');
@@ -351,5 +556,6 @@ function showTrackingError(message) {
 // Make functions globally available
 window.setupDeliveryTracking = setupDeliveryTracking;
 window.performDeliverySearch = performDeliverySearch;
+window.toggleItems = toggleItems;
 
-console.log('✅ Delivery tracking module initialized');
+console.log('✅ Delivery tracking module initialized with multi-item support');
