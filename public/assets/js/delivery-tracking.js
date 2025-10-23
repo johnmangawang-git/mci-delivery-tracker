@@ -466,16 +466,26 @@ function determineOverallStatus(items) {
     return overallStatus;
 }
 
-// Format date for display
+// Format date for display with timestamp
 function formatDate(dateString) {
     if (!dateString) return 'TBD';
     
+    // Use the enhanced date formatter if available
+    if (typeof window.formatCustomerTrackingDate === 'function') {
+        return window.formatCustomerTrackingDate(dateString);
+    }
+    
+    // Fallback to enhanced formatting
     try {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
+        return date.toLocaleString('en-US', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric'
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+            timeZone: 'Asia/Manila'
         });
     } catch (error) {
         return dateString;

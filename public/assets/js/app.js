@@ -559,7 +559,7 @@ console.log('app.js loaded');
                 'Distance': delivery.distance || 'N/A',
                 'Truck': delivery.truckPlateNumber || 'N/A',
                 'Status': delivery.status || 'N/A',
-                'Booked Date': delivery.deliveryDate || delivery.timestamp || 'N/A',
+                'Booked Date': window.formatExportDate ? window.formatExportDate(delivery.deliveryDate || delivery.timestamp) : (delivery.deliveryDate || delivery.timestamp || 'N/A'),
                 'Additional Costs': delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'
             }));
 
@@ -616,7 +616,7 @@ console.log('app.js loaded');
 
             // Prepare data for export
             const exportData = dataToExport.map(delivery => ({
-                'Date': delivery.completedDate || 'N/A',
+                'Date': window.formatExportDate ? window.formatExportDate(delivery.completedDateTime || delivery.completedDate) : (delivery.completedDate || 'N/A'),
                 'DR Number': delivery.drNumber || 'N/A',
                 'Customer Name': delivery.customerName || 'N/A',
                 'Vendor Number': delivery.vendorNumber || 'N/A',
@@ -813,8 +813,11 @@ console.log('app.js loaded');
             const truckInfo = delivery.truck || 
                              (truckType && truckPlate ? `${truckType} (${truckPlate})` : truckPlate || 'N/A');
             
-            const deliveryDate = getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
-                               getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
+            // Use enhanced date formatting for Active Deliveries
+            const deliveryDate = window.formatActiveDeliveryDate ? 
+                window.formatActiveDeliveryDate(delivery) :
+                getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
+                getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
             
             // Get new fields
             const itemNumber = getField(delivery, 'itemNumber') || getField(delivery, 'item_number') || '';
@@ -970,7 +973,7 @@ function loadDeliveryHistory() {
                     <td>
                         <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
-                    <td>${delivery.completedDateTime || delivery.completedDate || 'N/A'}</td>
+                    <td>${window.formatDeliveryHistoryDate ? window.formatDeliveryHistoryDate(delivery) : (delivery.completedDateTime || delivery.completedDate || 'N/A')}</td>
                     <td><strong>${deliveryDrNumber}</strong></td>
                     <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>

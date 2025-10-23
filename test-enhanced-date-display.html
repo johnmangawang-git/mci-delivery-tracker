@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Date Display Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="public/assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Enhanced Date Display Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Test Data Generator -->
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle me-2"></i>Test Enhanced Date Formatting</h6>
+                            <p class="mb-2">Click to generate test data with timestamps:</p>
+                            <button onclick="generateTestData()" class="btn btn-sm btn-outline-primary me-2">
+                                Generate Test Data with Timestamps
+                            </button>
+                            <button onclick="clearTestData()" class="btn btn-sm btn-outline-danger">
+                                Clear Test Data
+                            </button>
+                        </div>
+
+                        <!-- Active Deliveries Table -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-truck me-2"></i>Active Deliveries (Enhanced Date Display)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>DR Number</th>
+                                                <th>Customer</th>
+                                                <th>Status</th>
+                                                <th>Booked Date & Time</th>
+                                                <th>Relative Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="activeDeliveriesTestTable">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">No test data generated yet</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery History Table -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-archive me-2"></i>Delivery History (Enhanced Date Display)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>DR Number</th>
+                                                <th>Customer</th>
+                                                <th>Status</th>
+                                                <th>Completed Date & Time</th>
+                                                <th>Relative Time</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="deliveryHistoryTestTable">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">No test data generated yet</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date Format Examples -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-gear me-2"></i>Date Format Examples</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="dateFormatExamples">
+                                    <p class="text-muted">Generate test data to see format examples</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    
+    <script>
+        // Generate test data with various timestamps
+        function generateTestData() {
+            const now = new Date();
+            
+            // Create test active deliveries with different timestamps
+            const activeDeliveries = [
+                {
+                    drNumber: 'DR-2024-001',
+                    customerName: 'John Doe',
+                    status: 'In Transit',
+                    deliveryDate: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+                    timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    drNumber: 'DR-2024-002',
+                    customerName: 'Jane Smith',
+                    status: 'On Schedule',
+                    deliveryDate: new Date(now.getTime() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
+                    timestamp: new Date(now.getTime() - 30 * 60 * 1000).toISOString()
+                },
+                {
+                    drNumber: 'DR-2024-003',
+                    customerName: 'Bob Johnson',
+                    status: 'Active',
+                    deliveryDate: new Date(now.getTime() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+                    timestamp: new Date(now.getTime() - 5 * 60 * 1000).toISOString()
+                }
+            ];
+
+            // Create test delivery history with different timestamps
+            const deliveryHistory = [
+                {
+                    drNumber: 'DR-2024-100',
+                    customerName: 'Alice Brown',
+                    status: 'Completed',
+                    completedDateTime: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+                    completedDate: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    drNumber: 'DR-2024-101',
+                    customerName: 'Charlie Wilson',
+                    status: 'Completed',
+                    completedDateTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+                    completedDate: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+                },
+                {
+                    drNumber: 'DR-2024-102',
+                    customerName: 'Diana Davis',
+                    status: 'Completed',
+                    completedDateTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
+                    completedDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+                }
+            ];
+
+            // Store in localStorage
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+            localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
+
+            // Display the data
+            displayTestData();
+            showDateFormatExamples();
+
+            alert('Test data generated with enhanced timestamps!');
+        }
+
+        // Clear test data
+        function clearTestData() {
+            localStorage.removeItem('mci-active-deliveries');
+            localStorage.removeItem('mci-delivery-history');
+            
+            document.getElementById('activeDeliveriesTestTable').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-muted">No test data generated yet</td></tr>';
+            document.getElementById('deliveryHistoryTestTable').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-muted">No test data generated yet</td></tr>';
+            document.getElementById('dateFormatExamples').innerHTML = 
+                '<p class="text-muted">Generate test data to see format examples</p>';
+
+            alert('Test data cleared!');
+        }
+
+        // Display test data in tables
+        function displayTestData() {
+            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+
+            // Display Active Deliveries
+            const activeTable = document.getElementById('activeDeliveriesTestTable');
+            if (activeDeliveries.length === 0) {
+                activeTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No active deliveries</td></tr>';
+            } else {
+                activeTable.innerHTML = activeDeliveries.map(delivery => {
+                    const formattedDate = window.formatActiveDeliveryDate ? 
+                        window.formatActiveDeliveryDate(delivery) : 
+                        delivery.deliveryDate;
+                    const relativeTime = window.getRelativeTime ? 
+                        window.getRelativeTime(delivery.deliveryDate) : 
+                        'N/A';
+                    
+                    return `
+                        <tr>
+                            <td><strong>${delivery.drNumber}</strong></td>
+                            <td>${delivery.customerName}</td>
+                            <td><span class="badge bg-primary">${delivery.status}</span></td>
+                            <td>${formattedDate}</td>
+                            <td><small class="text-muted">${relativeTime}</small></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            // Display Delivery History
+            const historyTable = document.getElementById('deliveryHistoryTestTable');
+            if (deliveryHistory.length === 0) {
+                historyTable.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No delivery history</td></tr>';
+            } else {
+                historyTable.innerHTML = deliveryHistory.map(delivery => {
+                    const formattedDate = window.formatDeliveryHistoryDate ? 
+                        window.formatDeliveryHistoryDate(delivery) : 
+                        delivery.completedDateTime;
+                    const relativeTime = window.getRelativeTime ? 
+                        window.getRelativeTime(delivery.completedDateTime) : 
+                        'N/A';
+                    
+                    return `
+                        <tr>
+                            <td><strong>${delivery.drNumber}</strong></td>
+                            <td>${delivery.customerName}</td>
+                            <td><span class="badge bg-success">${delivery.status}</span></td>
+                            <td>${formattedDate}</td>
+                            <td><small class="text-muted">${relativeTime}</small></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Show different date format examples
+        function showDateFormatExamples() {
+            const now = new Date();
+            const testDate = now.toISOString();
+
+            const examples = [
+                {
+                    label: 'Standard Format (with time)',
+                    value: window.formatDateWithTimestamp ? 
+                        window.formatDateWithTimestamp(testDate, { format: 'standard' }) : 
+                        'Function not available'
+                },
+                {
+                    label: 'Compact Format (with time)',
+                    value: window.formatDateWithTimestamp ? 
+                        window.formatDateWithTimestamp(testDate, { format: 'compact' }) : 
+                        'Function not available'
+                },
+                {
+                    label: 'Detailed Format (with time)',
+                    value: window.formatDateWithTimestamp ? 
+                        window.formatDateWithTimestamp(testDate, { format: 'detailed' }) : 
+                        'Function not available'
+                },
+                {
+                    label: 'Export Format',
+                    value: window.formatExportDate ? 
+                        window.formatExportDate(testDate) : 
+                        'Function not available'
+                },
+                {
+                    label: 'Customer Tracking Format',
+                    value: window.formatCustomerTrackingDate ? 
+                        window.formatCustomerTrackingDate(testDate) : 
+                        'Function not available'
+                },
+                {
+                    label: 'Relative Time',
+                    value: window.getRelativeTime ? 
+                        window.getRelativeTime(testDate) : 
+                        'Function not available'
+                }
+            ];
+
+            const examplesHtml = examples.map(example => `
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>${example.label}:</strong></div>
+                    <div class="col-md-8"><code>${example.value}</code></div>
+                </div>
+            `).join('');
+
+            document.getElementById('dateFormatExamples').innerHTML = examplesHtml;
+        }
+
+        // Initialize display on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            displayTestData();
+            if (localStorage.getItem('mci-active-deliveries')) {
+                showDateFormatExamples();
+            }
+        });
+    </script>
+</body>
+</html>
