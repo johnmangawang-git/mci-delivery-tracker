@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>409 Conflict DR Unique Fix Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="public/assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>409 Conflict DR Unique Fix Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Test Description -->
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle me-2"></i>Test 409 Conflict Resolution</h6>
+                            <p class="mb-2">This test simulates 409 conflict errors that occur when trying to save deliveries with duplicate DR numbers. The fix should handle these conflicts gracefully.</p>
+                            <p class="mb-0"><strong>Scenarios tested:</strong> Duplicate DR numbers, Multi-item DRs, Database constraint violations</p>
+                        </div>
+
+                        <!-- Test Controls -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-play-circle me-2"></i>Test Controls</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button onclick="testDuplicateDRConflict()" class="btn btn-warning mb-2 w-100">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Test Duplicate DR Conflict
+                                        </button>
+                                        <button onclick="testMultiItemDRConflict()" class="btn btn-warning mb-2 w-100">
+                                            <i class="bi bi-layers me-1"></i>Test Multi-Item DR Conflict
+                                        </button>
+                                        <button onclick="testUpdateStrategy()" class="btn btn-info mb-2 w-100">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Test Update Strategy
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button onclick="testCompositeKeyStrategy()" class="btn btn-info mb-2 w-100">
+                                            <i class="bi bi-key me-1"></i>Test Composite Key Strategy
+                                        </button>
+                                        <button onclick="clearTestResults()" class="btn btn-outline-secondary mb-2 w-100">
+                                            <i class="bi bi-trash me-1"></i>Clear Test Results
+                                        </button>
+                                        <button onclick="checkConflictHandling()" class="btn btn-success mb-2 w-100">
+                                            <i class="bi bi-check-circle me-1"></i>Check Conflict Handling Status
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Results -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-clipboard-data me-2"></i>Test Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="testResults">
+                                    <p class="text-muted">No tests run yet. Click a test button above to start.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conflict Resolution Strategies -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-gear me-2"></i>Conflict Resolution Strategies</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">Strategy 1: Update Existing</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">When a duplicate DR is detected, try to update the existing record instead of creating a new one.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-info">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0">Strategy 2: Unique Identifier</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">Add a unique identifier (timestamp + random) to make the record unique while preserving the original DR number.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">Strategy 3: Composite Key</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="small">Use DR number + item details (serial number, item number) to create a composite key for multi-item deliveries.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="public/assets/js/supabase.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/fix-409-conflict-dr-unique.js"></script>
+    
+    <script>
+        let testCounter = 0;
+
+        // Add test result to display
+        function addTestResult(testName, status, message, details = null) {
+            testCounter++;
+            const timestamp = new Date().toLocaleTimeString();
+            const statusClass = status === 'success' ? 'success' : status === 'error' ? 'danger' : 'warning';
+            const icon = status === 'success' ? 'check-circle' : status === 'error' ? 'x-circle' : 'exclamation-triangle';
+            
+            const resultHtml = `
+                <div class="alert alert-${statusClass} mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="bi bi-${icon} me-2"></i>
+                                Test #${testCounter}: ${testName}
+                            </h6>
+                            <p class="mb-1">${message}</p>
+                            ${details ? `<small class="text-muted">${details}</small>` : ''}
+                        </div>
+                        <small class="text-muted">${timestamp}</small>
+                    </div>
+                </div>
+            `;
+            
+            const resultsDiv = document.getElementById('testResults');
+            if (resultsDiv.innerHTML.includes('No tests run yet')) {
+                resultsDiv.innerHTML = resultHtml;
+            } else {
+                resultsDiv.insertAdjacentHTML('afterbegin', resultHtml);
+            }
+        }
+
+        // Test duplicate DR conflict
+        async function testDuplicateDRConflict() {
+            try {
+                addTestResult('Duplicate DR Conflict', 'info', 'Starting duplicate DR conflict test...');
+                
+                // Create two deliveries with the same DR number
+                const baseDelivery = {
+                    dr_number: 'TEST-DR-001',
+                    customer_name: 'Test Customer',
+                    status: 'Active',
+                    created_at: new Date().toISOString()
+                };
+                
+                const delivery1 = { ...baseDelivery, item_description: 'Item 1' };
+                const delivery2 = { ...baseDelivery, item_description: 'Item 2' };
+                
+                // Simulate 409 conflict
+                const mockError = new Error('duplicate key value violates unique constraint');
+                mockError.code = '23505';
+                
+                if (typeof window.handle409ConflictError === 'function') {
+                    const result = await window.handle409ConflictError(
+                        delivery2, 
+                        mockError, 
+                        async (delivery) => {
+                            // Mock save function that would normally cause conflict
+                            return { ...delivery, id: Math.random().toString(36) };
+                        }
+                    );
+                    
+                    addTestResult('Duplicate DR Conflict', 'success', 
+                        'Conflict resolved successfully', 
+                        `Resolved delivery: ${result.dr_number} with unique_id: ${result.unique_id || 'N/A'}`);
+                } else {
+                    addTestResult('Duplicate DR Conflict', 'error', 
+                        'Conflict handler function not available', 
+                        'window.handle409ConflictError is not defined');
+                }
+                
+            } catch (error) {
+                addTestResult('Duplicate DR Conflict', 'error', 
+                    'Test failed with error', 
+                    error.message);
+            }
+        }
+
+        // Test multi-item DR conflict
+        async function testMultiItemDRConflict() {
+            try {
+                addTestResult('Multi-Item DR Conflict', 'info', 'Starting multi-item DR conflict test...');
+                
+                const multiItemDeliveries = [
+                    {
+                        dr_number: 'TEST-DR-002',
+                        customer_name: 'Multi Customer',
+                        item_description: 'iPhone 15',
+                        serial_number: 'ABC123',
+                        item_number: 'ITM001',
+                        status: 'Active'
+                    },
+                    {
+                        dr_number: 'TEST-DR-002',
+                        customer_name: 'Multi Customer',
+                        item_description: 'MacBook Air',
+                        serial_number: 'DEF456',
+                        item_number: 'ITM002',
+                        status: 'Active'
+                    },
+                    {
+                        dr_number: 'TEST-DR-002',
+                        customer_name: 'Multi Customer',
+                        item_description: 'AirPods Pro',
+                        serial_number: 'GHI789',
+                        item_number: 'ITM003',
+                        status: 'Active'
+                    }
+                ];
+                
+                let successCount = 0;
+                const results = [];
+                
+                for (const delivery of multiItemDeliveries) {
+                    try {
+                        const mockError = new Error('duplicate key value violates unique constraint');
+                        mockError.code = '23505';
+                        
+                        if (typeof window.handle409ConflictError === 'function') {
+                            const result = await window.handle409ConflictError(
+                                delivery,
+                                mockError,
+                                async (d) => ({ ...d, id: Math.random().toString(36) })
+                            );
+                            results.push(result);
+                            successCount++;
+                        }
+                    } catch (itemError) {
+                        console.error('Failed to handle item:', delivery.item_description, itemError);
+                    }
+                }
+                
+                addTestResult('Multi-Item DR Conflict', 'success', 
+                    `Successfully handled ${successCount}/${multiItemDeliveries.length} multi-item conflicts`,
+                    `Items processed: ${results.map(r => r.item_description).join(', ')}`);
+                
+            } catch (error) {
+                addTestResult('Multi-Item DR Conflict', 'error', 
+                    'Multi-item test failed', 
+                    error.message);
+            }
+        }
+
+        // Test update strategy
+        async function testUpdateStrategy() {
+            try {
+                addTestResult('Update Strategy', 'info', 'Testing update existing record strategy...');
+                
+                const testDelivery = {
+                    dr_number: 'TEST-DR-003',
+                    customer_name: 'Update Test Customer',
+                    status: 'In Transit',
+                    item_description: 'Updated Item'
+                };
+                
+                if (typeof window.tryUpdateExistingDelivery === 'function') {
+                    // This would normally check Supabase, but we'll simulate
+                    addTestResult('Update Strategy', 'info', 
+                        'Update strategy function is available',
+                        'Function: window.tryUpdateExistingDelivery');
+                } else {
+                    addTestResult('Update Strategy', 'warning', 
+                        'Update strategy function not available',
+                        'window.tryUpdateExistingDelivery is not defined');
+                }
+                
+            } catch (error) {
+                addTestResult('Update Strategy', 'error', 
+                    'Update strategy test failed', 
+                    error.message);
+            }
+        }
+
+        // Test composite key strategy
+        async function testCompositeKeyStrategy() {
+            try {
+                addTestResult('Composite Key Strategy', 'info', 'Testing composite key strategy...');
+                
+                const testDelivery = {
+                    dr_number: 'TEST-DR-004',
+                    customer_name: 'Composite Test Customer',
+                    serial_number: 'COMP123',
+                    item_number: 'COMP001',
+                    status: 'Active'
+                };
+                
+                if (typeof window.addUniqueIdentifier === 'function') {
+                    const uniqueDelivery = window.addUniqueIdentifier(testDelivery);
+                    
+                    addTestResult('Composite Key Strategy', 'success', 
+                        'Unique identifier added successfully',
+                        `Original DR: ${testDelivery.dr_number}, Unique ID: ${uniqueDelivery.unique_id}`);
+                } else {
+                    addTestResult('Composite Key Strategy', 'warning', 
+                        'Unique identifier function not available',
+                        'window.addUniqueIdentifier is not defined');
+                }
+                
+            } catch (error) {
+                addTestResult('Composite Key Strategy', 'error', 
+                    'Composite key test failed', 
+                    error.message);
+            }
+        }
+
+        // Check conflict handling status
+        function checkConflictHandling() {
+            const checks = [
+                {
+                    name: 'handle409ConflictError',
+                    available: typeof window.handle409ConflictError === 'function'
+                },
+                {
+                    name: 'tryUpdateExistingDelivery',
+                    available: typeof window.tryUpdateExistingDelivery === 'function'
+                },
+                {
+                    name: 'addUniqueIdentifier',
+                    available: typeof window.addUniqueIdentifier === 'function'
+                },
+                {
+                    name: 'dataService',
+                    available: typeof window.dataService !== 'undefined'
+                },
+                {
+                    name: 'supabase',
+                    available: typeof window.supabase !== 'undefined'
+                }
+            ];
+            
+            const availableCount = checks.filter(c => c.available).length;
+            const totalCount = checks.length;
+            
+            const status = availableCount === totalCount ? 'success' : 
+                          availableCount > totalCount / 2 ? 'warning' : 'error';
+            
+            const details = checks.map(c => 
+                `${c.name}: ${c.available ? '✅' : '❌'}`
+            ).join(', ');
+            
+            addTestResult('Conflict Handling Status', status, 
+                `${availableCount}/${totalCount} components available`,
+                details);
+        }
+
+        // Clear test results
+        function clearTestResults() {
+            document.getElementById('testResults').innerHTML = 
+                '<p class="text-muted">No tests run yet. Click a test button above to start.</p>';
+            testCounter = 0;
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('409 Conflict Test Page loaded');
+            
+            // Auto-check status on load
+            setTimeout(() => {
+                checkConflictHandling();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
