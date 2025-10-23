@@ -254,12 +254,24 @@ console.log('🔧 Loading Analytics Error Fix...');
     }
 
     /**
-     * Safe chart update function
+     * Safe chart update function with enhanced DOM checks
      */
     function safeUpdateCostBreakdownChart(period) {
         console.log('📊 Safe cost breakdown chart update...', period);
         
-        getSafeCostBreakdownData(period).then(costBreakdownData => {
+        // First check if canvas exists and is visible
+        const canvas = document.getElementById('costBreakdownChart');
+        if (!canvas) {
+            console.warn('⚠️ Cost breakdown chart canvas not found. Skipping chart update.');
+            return Promise.resolve();
+        }
+        
+        if (canvas.offsetParent === null) {
+            console.warn('⚠️ Cost breakdown chart canvas not visible. Skipping chart update.');
+            return Promise.resolve();
+        }
+        
+        return getSafeCostBreakdownData(period).then(costBreakdownData => {
             try {
                 // Find the chart instance with enhanced debugging
                 let costBreakdownChart = null;

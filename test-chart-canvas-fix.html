@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Canvas Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .chart-container {
+            width: 400px;
+            height: 300px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            position: relative;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Chart Canvas Fix Test</h1>
+    <p>This page tests the Chart.js canvas DOM error fix.</p>
+    
+    <div class="test-section">
+        <h2>Test 1: Chart Creation Before Canvas is Visible</h2>
+        <button onclick="testHiddenCanvas()">Test Hidden Canvas</button>
+        <button onclick="showCanvas()">Show Canvas</button>
+        <button onclick="hideCanvas()">Hide Canvas</button>
+        
+        <div id="hiddenChartContainer" class="chart-container hidden">
+            <canvas id="testChart1"></canvas>
+        </div>
+        
+        <div class="log" id="test1Log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Cost Breakdown Chart Update</h2>
+        <button onclick="testCostBreakdownUpdate()">Update Cost Breakdown Chart</button>
+        <button onclick="createCostBreakdownChart()">Create Chart</button>
+        <button onclick="destroyChart()">Destroy Chart</button>
+        
+        <div class="chart-container">
+            <canvas id="costBreakdownChart"></canvas>
+        </div>
+        
+        <div class="log" id="test2Log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Multiple Chart Operations</h2>
+        <button onclick="stressTest()">Stress Test (Multiple Operations)</button>
+        <button onclick="clearStressTest()">Clear</button>
+        
+        <div class="chart-container">
+            <canvas id="stressTestChart"></canvas>
+        </div>
+        
+        <div class="log" id="test3Log"></div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Our fixes -->
+    <script src="public/assets/js/chart-canvas-fix.js"></script>
+    <script src="public/assets/js/analytics-error-fix.js"></script>
+    
+    <script>
+        function log(message, type = 'info', testId = 'test1Log') {
+            const logElement = document.getElementById(testId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${testId}] ${message}`);
+        }
+        
+        // Test 1: Hidden canvas
+        function testHiddenCanvas() {
+            log('🧪 Testing chart creation on hidden canvas...', 'info', 'test1Log');
+            
+            try {
+                const canvas = document.getElementById('testChart1');
+                if (!canvas) {
+                    log('❌ Canvas not found', 'error', 'test1Log');
+                    return;
+                }
+                
+                log(`Canvas visibility: ${canvas.offsetParent !== null ? 'visible' : 'hidden'}`, 'info', 'test1Log');
+                
+                // Try to create chart on hidden canvas
+                if (window.safeCreateChart) {
+                    window.safeCreateChart('testChart1', {
+                        type: 'pie',
+                        data: {
+                            labels: ['Test 1', 'Test 2'],
+                            datasets: [{
+                                data: [30, 70],
+                                backgroundColor: ['#ff6384', '#36a2eb']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    }).then(chart => {
+                        if (chart) {
+                            log('✅ Chart created successfully with safe method', 'success', 'test1Log');
+                        } else {
+                            log('⚠️ Chart creation returned null (expected for hidden canvas)', 'warning', 'test1Log');
+                        }
+                    }).catch(error => {
+                        log(`⚠️ Safe chart creation failed: ${error.message}`, 'warning', 'test1Log');
+                    });
+                } else {
+                    log('❌ safeCreateChart function not available', 'error', 'test1Log');
+                }
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`, 'error', 'test1Log');
+            }
+        }
+        
+        function showCanvas() {
+            document.getElementById('hiddenChartContainer').classList.remove('hidden');
+            log('👁️ Canvas shown', 'info', 'test1Log');
+        }
+        
+        function hideCanvas() {
+            document.getElementById('hiddenChartContainer').classList.add('hidden');
+            log('🙈 Canvas hidden', 'info', 'test1Log');
+        }
+        
+        // Test 2: Cost breakdown chart
+        function testCostBreakdownUpdate() {
+            log('🧪 Testing cost breakdown chart update...', 'info', 'test2Log');
+            
+            if (window.safeUpdateCostBreakdownChart) {
+                window.safeUpdateCostBreakdownChart('month').then(() => {
+                    log('✅ Cost breakdown chart update completed', 'success', 'test2Log');
+                }).catch(error => {
+                    log(`❌ Update failed: ${error.message}`, 'error', 'test2Log');
+                });
+            } else if (window.updateCostBreakdownChart) {
+                try {
+                    window.updateCostBreakdownChart('month');
+                    log('✅ Cost breakdown chart update called', 'success', 'test2Log');
+                } catch (error) {
+                    log(`❌ Update failed: ${error.message}`, 'error', 'test2Log');
+                }
+            } else {
+                log('❌ No update function available', 'error', 'test2Log');
+            }
+        }
+        
+        function createCostBreakdownChart() {
+            log('🧪 Creating cost breakdown chart...', 'info', 'test2Log');
+            
+            const testData = {
+                labels: ['Fuel', 'Toll', 'Helper', 'Other'],
+                values: [1500, 800, 500, 300],
+                colors: ['#f39c12', '#3498db', '#2ecc71', '#95a5a6']
+            };
+            
+            if (window.createSafeCostBreakdownChart) {
+                window.createSafeCostBreakdownChart(testData).then(chart => {
+                    if (chart) {
+                        log('✅ Chart created successfully', 'success', 'test2Log');
+                    } else {
+                        log('❌ Chart creation returned null', 'error', 'test2Log');
+                    }
+                }).catch(error => {
+                    log(`❌ Chart creation failed: ${error.message}`, 'error', 'test2Log');
+                });
+            } else {
+                log('❌ createSafeCostBreakdownChart function not available', 'error', 'test2Log');
+            }
+        }
+        
+        function destroyChart() {
+            log('🧪 Destroying chart...', 'info', 'test2Log');
+            
+            const canvas = document.getElementById('costBreakdownChart');
+            if (canvas) {
+                const chart = Chart.getChart(canvas);
+                if (chart) {
+                    chart.destroy();
+                    log('✅ Chart destroyed', 'success', 'test2Log');
+                } else {
+                    log('⚠️ No chart found to destroy', 'warning', 'test2Log');
+                }
+            }
+            
+            if (window.costBreakdownChart) {
+                window.costBreakdownChart = null;
+                log('✅ Global chart reference cleared', 'success', 'test2Log');
+            }
+        }
+        
+        // Test 3: Stress test
+        async function stressTest() {
+            log('🧪 Starting stress test...', 'info', 'test3Log');
+            
+            const canvas = document.getElementById('stressTestChart');
+            if (!canvas) {
+                log('❌ Stress test canvas not found', 'error', 'test3Log');
+                return;
+            }
+            
+            for (let i = 0; i < 5; i++) {
+                try {
+                    log(`Iteration ${i + 1}: Creating chart...`, 'info', 'test3Log');
+                    
+                    // Create chart
+                    const chart = new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: ['A', 'B', 'C'],
+                            datasets: [{
+                                data: [Math.random() * 100, Math.random() * 100, Math.random() * 100],
+                                backgroundColor: '#3498db'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
+                    
+                    log(`Iteration ${i + 1}: Chart created, updating...`, 'info', 'test3Log');
+                    
+                    // Update chart
+                    chart.data.datasets[0].data = [Math.random() * 100, Math.random() * 100, Math.random() * 100];
+                    chart.update();
+                    
+                    log(`Iteration ${i + 1}: Chart updated, destroying...`, 'info', 'test3Log');
+                    
+                    // Destroy chart
+                    chart.destroy();
+                    
+                    log(`Iteration ${i + 1}: ✅ Completed successfully`, 'success', 'test3Log');
+                    
+                    // Small delay
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                } catch (error) {
+                    log(`Iteration ${i + 1}: ❌ Failed: ${error.message}`, 'error', 'test3Log');
+                }
+            }
+            
+            log('🎉 Stress test completed!', 'success', 'test3Log');
+        }
+        
+        function clearStressTest() {
+            document.getElementById('test3Log').innerHTML = '';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Test page loaded', 'success', 'test1Log');
+            log('🚀 Test page loaded', 'success', 'test2Log');
+            log('🚀 Test page loaded', 'success', 'test3Log');
+            
+            // Check if our fixes are loaded
+            if (window.chartCanvasFix) {
+                log('✅ Chart Canvas Fix loaded', 'success', 'test1Log');
+            } else {
+                log('❌ Chart Canvas Fix not loaded', 'error', 'test1Log');
+            }
+            
+            if (window.analyticsErrorFix) {
+                log('✅ Analytics Error Fix loaded', 'success', 'test2Log');
+            } else {
+                log('❌ Analytics Error Fix not loaded', 'error', 'test2Log');
+            }
+        });
+    </script>
+</body>
+</html>

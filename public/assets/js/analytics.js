@@ -217,10 +217,12 @@ async function initAnalyticsCharts(period = 'day') {
         });
     }
 
-    // Cost Breakdown Chart - Additional cost breakdown
+    // Cost Breakdown Chart - Additional cost breakdown with DOM safety check
     const costBreakdownCtx = document.getElementById('costBreakdownChart');
-    if (costBreakdownCtx) {
-        costBreakdownChart = new Chart(costBreakdownCtx, {
+    if (costBreakdownCtx && costBreakdownCtx.offsetParent !== null) {
+        // Ensure canvas is visible and properly mounted
+        try {
+            costBreakdownChart = new Chart(costBreakdownCtx, {
             type: 'pie',
             data: {
                 labels: data.costBreakdown.labels,
@@ -273,6 +275,12 @@ async function initAnalyticsCharts(period = 'day') {
                 }
             }
         });
+        } catch (chartError) {
+            console.error('❌ Error creating cost breakdown chart:', chartError);
+            costBreakdownChart = null;
+        }
+    } else {
+        console.warn('⚠️ Cost breakdown chart canvas not found or not visible');
     }
 }
 
@@ -772,25 +780,154 @@ function updateOriginChart(period) {
 function updateCostBreakdownChart(period) {
     console.log(`Updating cost breakdown chart for ${period}`);
     
-    // Get cost breakdown data from DR uploads and regular bookings
-    const costBreakdownData = getCostBreakdownData(period);
-    
-    if (costBreakdownChart && costBreakdownData) {
-        costBreakdownChart.data.labels = costBreakdownData.labels;
-        costBreakdownChart.data.datasets[0].data = costBreakdownData.values;
-        costBreakdownChart.data.datasets[0].backgroundColor = costBreakdownData.colors;
-        costBreakdownChart.update();
+    try {
+        // Check if canvas exists and is visible
+        const canvas = document.getElementById('costBreakdownChart');
+        if (!canvas) {
+            console.warn('⚠️ Cost breakdown chart canvas not found. Skipping chart update.');
+            return;
+        }
         
-        console.log('Cost breakdown chart updated with real data:', costBreakdownData);
-    } else {
-        // Fallback to mock data if no real data available
-        loadAnalyticsData(period).then(data => {
-            if (costBreakdownChart) {
-                costBreakdownChart.data.labels = data.costBreakdown.labels;
-                costBreakdownChart.data.datasets[0].data = data.costBreakdown.values;
-                costBreakdownChart.update();
+        if (canvas.offsetParent === null) {
+            console.warn('⚠️ Cost breakdown chart canvas not visible. Skipping chart update.');
+            return;
+        }
+        
+        // Get cost breakdown data from DR uploads and regular bookings
+        const costBreakdownData = getCostBreakdownData(period);
+        
+        // Find the chart instance
+        let chart = costBreakdownChart || Chart.getChart(canvas);
+        
+        if (chart && costBreakdownData) {
+            // Validate chart has proper structure
+            if (!chart.data || !chart.data.datasets || !chart.data.datasets[0]) {
+                console.warn('⚠️ Chart data structure invalid, recreating...');
+                chart.destroy();
+                chart = null;
+            } else {
+                // Update existing chart
+                chart.data.labels = costBreakdownData.labels;
+                chart.data.datasets[0].data = costBreakdownData.values;
+                chart.data.datasets[0].backgroundColor = costBreakdownData.colors;
+                
+                if (typeof chart.update === 'function') {
+                    chart.update('none'); // Update without animation to prevent errors
+                    console.log('✅ Cost breakdown chart updated with real data:', costBreakdownData);
+                    return;
+                } else {
+                    console.warn('⚠️ Chart update method not available, recreating...');
+                    chart.destroy();
+                    chart = null;
+                }
+            }
+        }
+        
+        // If we reach here, we need to create or recreate the chart
+        if (!chart) {
+            console.log('🔧 Creating new cost breakdown chart...');
+            
+            // Use fallback data if no real data available
+            if (!costBreakdownData) {
+                loadAnalyticsData(period).then(data => {
+                    createNewCostBreakdownChart(canvas, data.costBreakdown);
+                }).catch(error => {
+                    console.error('❌ Failed to load fallback data:', error);
+                    createNewCostBreakdownChart(canvas, {
+                        labels: ['No Data'],
+                        values: [1],
+                        colors: ['rgba(149, 165, 166, 0.8)']
+                    });
+                });
+            } else {
+                createNewCostBreakdownChart(canvas, costBreakdownData);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error updating cost breakdown chart:', error);
+        
+        // Try to create a basic chart as fallback
+        try {
+            const canvas = document.getElementById('costBreakdownChart');
+            if (canvas) {
+                createNewCostBreakdownChart(canvas, {
+                    labels: ['Error'],
+                    values: [1],
+                    colors: ['rgba(231, 76, 60, 0.8)']
+                });
+            }
+        } catch (fallbackError) {
+            console.error('❌ Fallback chart creation failed:', fallbackError);
+        }
+    }
+}
+
+// Helper function to create new cost breakdown chart
+function createNewCostBreakdownChart(canvas, data) {
+    try {
+        // Clean up any existing chart
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
+        // Create new chart
+        const newChart = new Chart(canvas, {
+            type: 'pie',
+            data: {
+                labels: data.labels || ['No Data'],
+                datasets: [{
+                    data: data.values || [1],
+                    backgroundColor: data.colors || [
+                        'rgba(243, 156, 18, 0.8)',
+                        'rgba(52, 152, 219, 0.8)',
+                        'rgba(46, 204, 113, 0.8)',
+                        'rgba(155, 89, 182, 0.8)',
+                        'rgba(149, 165, 166, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(44, 62, 80, 0.9)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((sum, value) => sum + value, 0);
+                                const currentValue = dataset.data[context.dataIndex];
+                                const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${percentage}% (₱${currentValue.toLocaleString()})`;
+                            }
+                        }
+                    }
+                }
             }
         });
+        
+        // Store globally
+        costBreakdownChart = newChart;
+        window.costBreakdownChart = newChart;
+        
+        console.log('✅ New cost breakdown chart created successfully');
+        return newChart;
+        
+    } catch (error) {
+        console.error('❌ Error creating new cost breakdown chart:', error);
+        return null;
     }
 }
 
