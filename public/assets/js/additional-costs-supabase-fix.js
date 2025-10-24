@@ -61,7 +61,8 @@ console.log('🔧 Loading Additional Costs Supabase Fix...');
         }
         
         try {
-            const client = window.supabaseClient();
+            // Ensure Supabase client is ready
+            const client = await window.getSafeSupabaseClient();
             if (!client) {
                 throw new Error('Supabase client not available');
             }
@@ -119,7 +120,8 @@ console.log('🔧 Loading Additional Costs Supabase Fix...');
         }
         
         try {
-            const client = window.supabaseClient();
+            // Ensure Supabase client is ready
+            const client = await window.getSafeSupabaseClient();
             if (!client) {
                 throw new Error('Supabase client not available');
             }
@@ -151,7 +153,8 @@ console.log('🔧 Loading Additional Costs Supabase Fix...');
         console.log('📊 Getting cost breakdown analytics from Supabase...', period);
         
         try {
-            const client = window.supabaseClient();
+            // Ensure Supabase client is ready
+            const client = await window.getSafeSupabaseClient();
             if (!client) {
                 throw new Error('Supabase client not available');
             }

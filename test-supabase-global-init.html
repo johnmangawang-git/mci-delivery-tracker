@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Global Initialization Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        .status { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .pass { background-color: green; }
+        .fail { background-color: red; }
+        .pending { background-color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Global Initialization Test</h1>
+    
+    <div class="test-section">
+        <h3>Initialization Status</h3>
+        <div id="initStatus">
+            <div><span class="status pending" id="libraryStatus"></span>Supabase Library Loaded</div>
+            <div><span class="status pending" id="clientStatus"></span>Global Client Initialized</div>
+            <div><span class="status pending" id="functionsStatus"></span>Helper Functions Available</div>
+            <div><span class="status pending" id="accessStatus"></span>Multiple Access Patterns Work</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testLibraryLoad()">Test Library Load</button>
+        <button onclick="testClientInit()">Test Client Init</button>
+        <button onclick="testHelperFunctions()">Test Helper Functions</button>
+        <button onclick="testAccessPatterns()">Test Access Patterns</button>
+        <button onclick="testSupabaseOperations()">Test Supabase Operations</button>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+    </div>
+
+    <!-- Load Supabase and our initialization scripts -->
+    <script>
+        // Mock credentials
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="public/assets/js/core/supabase-init.js"></script>
+    <script src="public/assets/js/supabase-global-fix.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(testName, passed) {
+            const statusElement = document.getElementById(testName + 'Status');
+            if (statusElement) {
+                statusElement.className = `status ${passed ? 'pass' : 'fail'}`;
+            }
+        }
+
+        // Test 1: Library Load
+        function testLibraryLoad() {
+            log('🔄 Testing Supabase library load...', 'info');
+            
+            try {
+                const hasSupabase = typeof window.supabase !== 'undefined';
+                const hasCreateClient = window.supabase && typeof window.supabase.createClient === 'function';
+                const hasGlobalCreateClient = typeof window.createClient === 'function';
+                
+                log(`Supabase object: ${hasSupabase}`, hasSupabase ? 'success' : 'error');
+                log(`createClient method: ${hasCreateClient}`, hasCreateClient ? 'success' : 'warning');
+                log(`Global createClient: ${hasGlobalCreateClient}`, hasGlobalCreateClient ? 'success' : 'warning');
+                
+                if (hasSupabase && (hasCreateClient || hasGlobalCreateClient)) {
+                    log('✅ Supabase library loaded successfully', 'success');
+                    updateStatus('library', true);
+                } else {
+                    log('❌ Supabase library not properly loaded', 'error');
+                    updateStatus('library', false);
+                }
+            } catch (error) {
+                log('❌ Library load test failed: ' + error.message, 'error');
+                updateStatus('library', false);
+            }
+        }
+
+        // Test 2: Client Initialization
+        async function testClientInit() {
+            log('🔄 Testing Supabase client initialization...', 'info');
+            
+            try {
+                // Test if client is already initialized
+                const hasClient = window.supabase && typeof window.supabase.from === 'function';
+                log(`Client already initialized: ${hasClient}`, hasClient ? 'success' : 'info');
+                
+                // Test initialization function
+                if (typeof window.ensureSupabaseClientReady === 'function') {
+                    const client = await window.ensureSupabaseClientReady();
+                    if (client && typeof client.from === 'function') {
+                        log('✅ Client initialization successful', 'success');
+                        updateStatus('client', true);
+                    } else {
+                        log('❌ Client initialization returned invalid client', 'error');
+                        updateStatus('client', false);
+                    }
+                } else {
+                    log('❌ ensureSupabaseClientReady function not available', 'error');
+                    updateStatus('client', false);
+                }
+            } catch (error) {
+                log('❌ Client initialization test failed: ' + error.message, 'error');
+                updateStatus('client', false);
+            }
+        }
+
+        // Test 3: Helper Functions
+        function testHelperFunctions() {
+            log('🔄 Testing helper functions...', 'info');
+            
+            try {
+                const functions = [
+                    'ensureSupabaseClientReady',
+                    'getSafeSupabaseClient',
+                    'waitForSupabase',
+                    'withSupabase'
+                ];
+                
+                let allAvailable = true;
+                functions.forEach(funcName => {
+                    const available = typeof window[funcName] === 'function';
+                    log(`${funcName}: ${available}`, available ? 'success' : 'error');
+                    if (!available) allAvailable = false;
+                });
+                
+                if (allAvailable) {
+                    log('✅ All helper functions available', 'success');
+                    updateStatus('functions', true);
+                } else {
+                    log('❌ Some helper functions missing', 'error');
+                    updateStatus('functions', false);
+                }
+            } catch (error) {
+                log('❌ Helper functions test failed: ' + error.message, 'error');
+                updateStatus('functions', false);
+            }
+        }
+
+        // Test 4: Access Patterns
+        function testAccessPatterns() {
+            log('🔄 Testing access patterns...', 'info');
+            
+            try {
+                const patterns = [
+                    { name: 'window.supabase', test: () => window.supabase && typeof window.supabase.from === 'function' },
+                    { name: 'window.supabaseClient()', test: () => typeof window.supabaseClient === 'function' && window.supabaseClient() },
+                    { name: 'window.getSupabaseClient()', test: () => typeof window.getSupabaseClient === 'function' && window.getSupabaseClient() },
+                    { name: 'window.supabaseGlobalClient', test: () => window.supabaseGlobalClient && typeof window.supabaseGlobalClient.from === 'function' }
+                ];
+                
+                let allWork = true;
+                patterns.forEach(pattern => {
+                    try {
+                        const works = pattern.test();
+                        log(`${pattern.name}: ${works}`, works ? 'success' : 'warning');
+                        if (!works) allWork = false;
+                    } catch (error) {
+                        log(`${pattern.name}: Error - ${error.message}`, 'error');
+                        allWork = false;
+                    }
+                });
+                
+                if (allWork) {
+                    log('✅ All access patterns work', 'success');
+                    updateStatus('access', true);
+                } else {
+                    log('⚠️ Some access patterns not working', 'warning');
+                    updateStatus('access', false);
+                }
+            } catch (error) {
+                log('❌ Access patterns test failed: ' + error.message, 'error');
+                updateStatus('access', false);
+            }
+        }
+
+        // Test 5: Supabase Operations
+        async function testSupabaseOperations() {
+            log('🔄 Testing Supabase operations...', 'info');
+            
+            try {
+                if (typeof window.withSupabase === 'function') {
+                    const result = await window.withSupabase(async (client) => {
+                        // Test a simple query
+                        const query = client.from('deliveries').select('count', { count: 'exact', head: true });
+                        log('✅ Query created successfully', 'success');
+                        return true;
+                    });
+                    
+                    if (result) {
+                        log('✅ Supabase operations test passed', 'success');
+                    } else {
+                        log('❌ Supabase operations test failed', 'error');
+                    }
+                } else {
+                    log('❌ withSupabase function not available', 'error');
+                }
+            } catch (error) {
+                log('❌ Supabase operations test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🧪 Running all Supabase global initialization tests...', 'info');
+            
+            // Reset status indicators
+            ['library', 'client', 'functions', 'access'].forEach(test => {
+                const statusElement = document.getElementById(test + 'Status');
+                if (statusElement) {
+                    statusElement.className = 'status pending';
+                }
+            });
+            
+            // Run tests with delays
+            testLibraryLoad();
+            
+            setTimeout(async () => {
+                await testClientInit();
+                
+                setTimeout(() => {
+                    testHelperFunctions();
+                    
+                    setTimeout(() => {
+                        testAccessPatterns();
+                        
+                        setTimeout(async () => {
+                            await testSupabaseOperations();
+                            
+                            setTimeout(() => {
+                                log('🎉 All tests completed! Check status indicators above.', 'success');
+                            }, 500);
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }, 1000);
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Supabase Global Initialization Test loaded', 'info');
+            
+            // Listen for Supabase events
+            window.addEventListener('supabaseReady', (event) => {
+                log('🎉 Supabase ready event received!', 'success');
+            });
+            
+            window.addEventListener('supabaseError', (event) => {
+                log('💥 Supabase error event received: ' + event.detail.error.message, 'error');
+            });
+            
+            setTimeout(() => {
+                log('🔄 Auto-running tests in 2 seconds...', 'info');
+                setTimeout(runAllTests, 2000);
+            }, 1000);
+        });
+
+        // Monitor console errors
+        let errorCount = 0;
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            errorCount++;
+            if (args[0] && typeof args[0] === 'string') {
+                if (args[0].includes('createClient not available')) {
+                    log('❌ DETECTED: createClient not available error', 'error');
+                } else if (args[0].includes('Supabase client not available')) {
+                    log('❌ DETECTED: Supabase client not available error', 'error');
+                }
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Report error count after tests
+        setTimeout(() => {
+            if (errorCount === 0) {
+                log('🎉 No Supabase initialization errors detected!', 'success');
+            } else {
+                log(`⚠️ ${errorCount} Supabase-related errors detected`, 'warning');
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
