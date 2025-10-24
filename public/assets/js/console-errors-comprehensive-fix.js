@@ -307,31 +307,205 @@ window.getSupabaseClient = getSupabaseClient;
 window.supabaseClient = () => window.supabaseClientInstance; // Sync alias for compatibility
 window.getSafeSupabaseClient = getSupabaseClient; // Async version
 
-// Load additional fixes after a delay to ensure other fixes are loaded
-setTimeout(() => {
-    // Load additional cost items fix
-    if (typeof window.safeDeliveryInsertWithCostItems === 'function') {
-        console.log('✅ Additional cost items fix already loaded');
-    } else {
-        console.log('🔧 Loading additional cost items fix...');
-        const script1 = document.createElement('script');
-        script1.src = 'public/assets/js/supabase-additional-cost-items-fix.js';
-        script1.onload = () => console.log('✅ Additional cost items fix loaded');
-        script1.onerror = () => console.warn('⚠️ Failed to load additional cost items fix');
-        document.head.appendChild(script1);
+// ========================================
+// 5. EMBEDDED ADDITIONAL COST ITEMS FIX
+// ========================================
+
+/**
+ * Sanitize delivery payload to remove additionalCostItems field
+ */
+function sanitizeDeliveryPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return { valid: false, sanitized: null, errors: ['Invalid payload'] };
     }
     
-    // Load duplicate ID fix
-    if (typeof window.safeDeliveryInsertNoDuplicates === 'function') {
-        console.log('✅ Duplicate ID fix already loaded');
-    } else {
-        console.log('🔧 Loading duplicate ID fix...');
-        const script2 = document.createElement('script');
-        script2.src = 'public/assets/js/supabase-duplicate-id-fix.js';
-        script2.onload = () => console.log('✅ Duplicate ID fix loaded');
-        script2.onerror = () => console.warn('⚠️ Failed to load duplicate ID fix');
-        document.head.appendChild(script2);
+    const sanitized = { ...payload };
+    const warnings = [];
+    
+    // Handle additionalCostItems field
+    if (sanitized.additionalCostItems || sanitized.additional_cost_items) {
+        const costItems = sanitized.additionalCostItems || sanitized.additional_cost_items;
+        
+        // Convert to total if it's an array
+        if (Array.isArray(costItems) && costItems.length > 0) {
+            const total = costItems.reduce((sum, item) => {
+                return sum + (parseFloat(item.amount) || 0);
+            }, 0);
+            sanitized.additional_costs = total;
+            warnings.push(`Converted cost items array to total: ${total}`);
+        }
+        
+        // Remove the invalid fields
+        delete sanitized.additionalCostItems;
+        delete sanitized.additional_cost_items;
+        warnings.push('Removed additionalCostItems field');
     }
-}, 1000);
+    
+    return { valid: true, sanitized, errors: [], warnings };
+}
+
+// ========================================
+// 6. EMBEDDED DUPLICATE ID FIX
+// ========================================
+
+/**
+ * Generate a unique UUID v4
+ */
+function generateUniqueId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Safe delivery insert with comprehensive error handling
+ */
+async function safeDeliveryInsertComprehensive(deliveryData) {
+    console.log('💾 Comprehensive safe delivery insert...', deliveryData);
+    
+    try {
+        const client = await getSafeSupabaseClient();
+        if (!client) {
+            throw new Error('Supabase client not available');
+        }
+
+        // Step 1: Sanitize payload
+        const sanitization = sanitizeDeliveryPayload(deliveryData);
+        let finalData = sanitization.sanitized || deliveryData;
+        
+        if (sanitization.warnings.length > 0) {
+            console.log('⚠️ Payload sanitization warnings:', sanitization.warnings);
+        }
+
+        // Step 2: Check if DR number already exists
+        if (finalData.dr_number) {
+            const { data: existing, error: findError } = await client
+                .from('deliveries')
+                .select('id, dr_number')
+                .eq('dr_number', finalData.dr_number)
+                .single();
+
+            if (!findError || findError.code === 'PGRST116') {
+                // No existing record or no rows found
+                if (existing) {
+                    console.log('🔄 DR number exists, updating existing record...');
+                    const updateData = { ...finalData };
+                    delete updateData.id;
+                    updateData.updated_at = new Date().toISOString();
+                    
+                    const { data, error } = await client
+                        .from('deliveries')
+                        .update(updateData)
+                        .eq('id', existing.id)
+                        .select();
+
+                    if (error) {
+                        console.error('❌ Update failed:', error);
+                        return { data: null, error };
+                    }
+
+                    console.log('✅ Existing delivery updated:', data);
+                    return { data, error: null };
+                }
+            }
+        }
+
+        // Step 3: Handle ID conflicts for new inserts
+        if (finalData.id) {
+            // Check if ID exists
+            const { data: existingId, error: idError } = await client
+                .from('deliveries')
+                .select('id')
+                .eq('id', finalData.id)
+                .single();
+
+            if (existingId && !idError) {
+                console.log('⚠️ ID already exists, generating new one...');
+                finalData.id = generateUniqueId();
+            }
+        } else {
+            finalData.id = generateUniqueId();
+        }
+
+        // Step 4: Ensure timestamps
+        if (!finalData.created_at) {
+            finalData.created_at = new Date().toISOString();
+        }
+        if (!finalData.updated_at) {
+            finalData.updated_at = new Date().toISOString();
+        }
+
+        // Step 5: Attempt insert with retry logic
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            attempts++;
+            console.log(`📤 Insert attempt ${attempts}/${maxAttempts}...`);
+            
+            try {
+                const { data, error } = await client
+                    .from('deliveries')
+                    .insert([finalData])
+                    .select();
+
+                if (error) {
+                    if (error.code === '23505' && error.message.includes('deliveries_pkey')) {
+                        // Duplicate ID error - generate new ID and retry
+                        console.log('🔄 Duplicate ID detected, generating new one...');
+                        finalData.id = generateUniqueId();
+                        continue;
+                    } else {
+                        console.error('❌ Insert failed:', error);
+                        return { data: null, error };
+                    }
+                }
+
+                console.log('✅ Delivery inserted successfully:', data);
+                return { data, error: null };
+
+            } catch (insertError) {
+                console.error(`❌ Insert attempt ${attempts} failed:`, insertError);
+                if (attempts >= maxAttempts) {
+                    return { data: null, error: { message: insertError.message } };
+                }
+                finalData.id = generateUniqueId();
+            }
+        }
+
+        return { data: null, error: { message: 'Max insert attempts exceeded' } };
+
+    } catch (error) {
+        console.error('❌ Comprehensive safe delivery insert failed:', error);
+        return { data: null, error: { message: error.message } };
+    }
+}
+
+// ========================================
+// 7. INITIALIZE EMBEDDED FIXES
+// ========================================
+
+// Initialize embedded fixes after a delay
+setTimeout(() => {
+    console.log('🔧 Initializing embedded fixes...');
+    
+    // Export embedded functions
+    window.sanitizeDeliveryPayload = sanitizeDeliveryPayload;
+    window.generateUniqueId = generateUniqueId;
+    window.safeDeliveryInsertComprehensive = safeDeliveryInsertComprehensive;
+    
+    // Override existing functions with comprehensive versions
+    if (!window.safeInsertDelivery) {
+        window.safeInsertDelivery = safeDeliveryInsertComprehensive;
+    }
+    
+    if (!window.safeDeliveryInsert) {
+        window.safeDeliveryInsert = safeDeliveryInsertComprehensive;
+    }
+    
+    console.log('✅ Embedded fixes initialized successfully');
+}, 500);
 
 console.log('✅ Comprehensive console errors fix loaded');
