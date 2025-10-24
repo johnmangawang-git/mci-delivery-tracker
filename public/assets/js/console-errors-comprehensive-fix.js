@@ -496,24 +496,52 @@ setTimeout(() => {
     window.generateUniqueId = generateUniqueId;
     window.safeDeliveryInsertComprehensive = safeDeliveryInsertComprehensive;
     
-    // Add 409 conflict handling to the comprehensive insert
+    // Add comprehensive conflict handling (409 + 23505)
     const originalComprehensiveInsert = safeDeliveryInsertComprehensive;
     
-    window.safeDeliveryInsertWith409 = async function(deliveryData) {
+    window.safeDeliveryInsertWithConflictHandling = async function(deliveryData) {
         try {
             const result = await originalComprehensiveInsert(deliveryData);
             
-            // If we get a 409 conflict, try upsert
-            if (result.error && (result.error.code === '409' || result.error.status === 409)) {
-                console.log('🔄 409 conflict detected, trying upsert...');
+            // Handle both 409 conflicts and 23505 duplicate key errors
+            if (result.error && (
+                result.error.code === '409' || 
+                result.error.status === 409 ||
+                result.error.code === '23505' ||
+                (result.error.message && result.error.message.includes('duplicate key'))
+            )) {
+                console.log('🔄 Conflict detected (409/23505), attempting resolution...', result.error);
                 
                 const client = await getSafeSupabaseClient();
                 if (!client) {
                     return result; // Return original error if no client
                 }
 
+                // For 23505 ID conflicts, generate new ID and try insert
+                if (result.error.code === '23505' && result.error.message.includes('deliveries_pkey')) {
+                    console.log('🆔 Duplicate ID detected, generating new ID...');
+                    
+                    const retryData = { ...deliveryData };
+                    retryData.id = generateUniqueId();
+                    retryData.updated_at = new Date().toISOString();
+                    
+                    const { data, error } = await client
+                        .from('deliveries')
+                        .insert([retryData])
+                        .select();
+
+                    if (!error) {
+                        console.log('✅ 23505 ID conflict resolved with new ID:', retryData.id);
+                        return { data, error: null };
+                    } else {
+                        console.log('⚠️ Insert with new ID failed, trying upsert fallback...');
+                    }
+                }
+
+                // For all conflicts, try upsert as fallback
+                console.log('🔄 Attempting upsert fallback...');
                 const upsertData = { ...deliveryData };
-                delete upsertData.id;
+                delete upsertData.id; // Remove ID to let Supabase handle it
                 upsertData.updated_at = new Date().toISOString();
 
                 const { data, error } = await client
@@ -525,32 +553,68 @@ setTimeout(() => {
                     .select();
 
                 if (!error) {
-                    console.log('✅ 409 conflict resolved via upsert');
+                    console.log('✅ Conflict resolved via upsert fallback');
                     return { data, error: null };
+                } else {
+                    console.error('❌ Upsert fallback also failed:', error);
+                    return { data: null, error };
                 }
             }
             
             return result;
         } catch (error) {
-            console.error('❌ 409 handling failed:', error);
+            console.error('❌ Conflict handling failed:', error);
+            
+            // Last resort: try to handle caught exceptions
+            if (error.message && (error.message.includes('409') || error.message.includes('23505'))) {
+                console.log('🔄 Caught conflict exception, attempting final upsert...');
+                
+                try {
+                    const client = await getSafeSupabaseClient();
+                    if (client) {
+                        const finalData = { ...deliveryData };
+                        delete finalData.id;
+                        finalData.updated_at = new Date().toISOString();
+
+                        const { data, error: finalError } = await client
+                            .from('deliveries')
+                            .upsert([finalData], {
+                                onConflict: 'dr_number',
+                                ignoreDuplicates: false
+                            })
+                            .select();
+
+                        if (!finalError) {
+                            console.log('✅ Final upsert successful');
+                            return { data, error: null };
+                        }
+                    }
+                } catch (finalError) {
+                    console.error('❌ Final upsert failed:', finalError);
+                }
+            }
+            
             return { data: null, error: { message: error.message } };
         }
     };
     
-    // Override existing functions with 409-aware comprehensive versions
+    // Override existing functions with comprehensive conflict handling (409 + 23505)
     if (!window.safeInsertDelivery) {
-        window.safeInsertDelivery = window.safeDeliveryInsertWith409;
+        window.safeInsertDelivery = window.safeDeliveryInsertWithConflictHandling;
     }
     
     if (!window.safeDeliveryInsert) {
-        window.safeDeliveryInsert = window.safeDeliveryInsertWith409;
+        window.safeDeliveryInsert = window.safeDeliveryInsertWithConflictHandling;
     }
     
     if (!window.safeUpsertDelivery) {
-        window.safeUpsertDelivery = window.safeDeliveryInsertWith409;
+        window.safeUpsertDelivery = window.safeDeliveryInsertWithConflictHandling;
     }
     
-    console.log('✅ Embedded fixes with 409 conflict handling initialized successfully');
+    // Also provide direct access to the comprehensive handler
+    window.safeDeliveryInsertWith409 = window.safeDeliveryInsertWithConflictHandling;
+    
+    console.log('✅ Embedded fixes with comprehensive conflict handling (409 + 23505) initialized successfully');
 }, 500);
 
 console.log('✅ Comprehensive console errors fix loaded');
