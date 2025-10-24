@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Errors Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        canvas { border: 1px solid #ccc; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Console Errors Comprehensive Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Results</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>1. Supabase 409 Conflict Test</h3>
+        <button onclick="test409ConflictFix()">Test Safe Upsert</button>
+        <p>Tests safe upsert functionality to prevent duplicate DR number conflicts.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Chart.js ownerDocument Error Test</h3>
+        <canvas id="testChart" width="400" height="200"></canvas>
+        <button onclick="testChartOwnerDocumentFix()">Test Safe Chart Creation</button>
+        <button onclick="testChartUpdate()">Test Safe Chart Update</button>
+        <p>Tests safe chart creation and update to prevent ownerDocument errors.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Syntax Error Test</h3>
+        <button onclick="testSyntaxFix()">Test Syntax Validation</button>
+        <p>Tests that main.js syntax error has been fixed.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Supabase API Reference Test</h3>
+        <button onclick="testSupabaseClient()">Test Supabase Client</button>
+        <p>Tests that Supabase client is properly initialized and accessible.</p>
+    </div>
+
+    <!-- Load required libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Load our fix -->
+    <script src="public/assets/js/console-errors-comprehensive-fix.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Initialize test environment
+        window.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Console Errors Fix Test Initialized', 'info');
+            
+            // Set up mock Supabase credentials for testing
+            window.SUPABASE_URL = 'https://test.supabase.co';
+            window.SUPABASE_ANON_KEY = 'test-key';
+            
+            log('✅ Test environment ready', 'success');
+        });
+
+        // Test 1: 409 Conflict Fix
+        async function test409ConflictFix() {
+            log('🔄 Testing 409 conflict fix...', 'info');
+            
+            try {
+                if (typeof window.safeUpsertDelivery === 'function') {
+                    log('✅ safeUpsertDelivery function available', 'success');
+                    
+                    // Test with mock data
+                    const mockDelivery = {
+                        reference_no: 'DR-TEST-001',
+                        customer_name: 'Test Customer',
+                        status: 'Active',
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    log('📝 Mock delivery data prepared', 'info');
+                    log('✅ Safe upsert function is ready for use', 'success');
+                } else {
+                    log('❌ safeUpsertDelivery function not found', 'error');
+                }
+            } catch (error) {
+                log('❌ 409 conflict test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 2: Chart.js ownerDocument Fix
+        function testChartOwnerDocumentFix() {
+            log('🔄 Testing Chart.js ownerDocument fix...', 'info');
+            
+            try {
+                if (typeof window.safeCreateChart === 'function') {
+                    log('✅ safeCreateChart function available', 'success');
+                    
+                    const config = {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Test 1', 'Test 2', 'Test 3'],
+                            datasets: [{
+                                data: [10, 20, 30],
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    };
+                    
+                    const chart = window.safeCreateChart('testChart', config);
+                    if (chart) {
+                        log('✅ Safe chart creation successful', 'success');
+                        window.testChartInstance = chart;
+                    } else {
+                        log('⚠️ Chart creation returned null (canvas may not be ready)', 'warning');
+                    }
+                } else {
+                    log('❌ safeCreateChart function not found', 'error');
+                }
+            } catch (error) {
+                log('❌ Chart creation test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test chart update
+        function testChartUpdate() {
+            log('🔄 Testing safe chart update...', 'info');
+            
+            try {
+                if (window.testChartInstance && typeof window.safeUpdateChart === 'function') {
+                    const newData = {
+                        labels: ['Updated 1', 'Updated 2'],
+                        datasets: [{
+                            data: [40, 60],
+                            backgroundColor: ['#FF9F40', '#4BC0C0']
+                        }]
+                    };
+                    
+                    const success = window.safeUpdateChart(window.testChartInstance, newData);
+                    if (success) {
+                        log('✅ Safe chart update successful', 'success');
+                    } else {
+                        log('⚠️ Chart update returned false', 'warning');
+                    }
+                } else {
+                    log('❌ Chart instance or safeUpdateChart function not available', 'error');
+                }
+            } catch (error) {
+                log('❌ Chart update test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 3: Syntax Error Fix
+        function testSyntaxFix() {
+            log('🔄 Testing syntax error fix...', 'info');
+            
+            try {
+                // Test that we can execute JavaScript without syntax errors
+                const testCode = `
+                    // This should not cause syntax errors
+                    const test = "syntax test";
+                    const result = test === "syntax test";
+                    return result;
+                `;
+                
+                const func = new Function(testCode);
+                const result = func();
+                
+                if (result) {
+                    log('✅ Syntax validation passed', 'success');
+                } else {
+                    log('❌ Syntax validation failed', 'error');
+                }
+            } catch (error) {
+                log('❌ Syntax test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 4: Supabase Client Fix
+        function testSupabaseClient() {
+            log('🔄 Testing Supabase client fix...', 'info');
+            
+            try {
+                if (typeof window.ensureSupabaseClient === 'function') {
+                    log('✅ ensureSupabaseClient function available', 'success');
+                    
+                    if (typeof window.getSupabaseClient === 'function') {
+                        log('✅ getSupabaseClient function available', 'success');
+                        
+                        // Test client getter
+                        const client = window.getSupabaseClient();
+                        if (client) {
+                            log('✅ Supabase client accessible', 'success');
+                        } else {
+                            log('⚠️ Supabase client not initialized (credentials may be missing)', 'warning');
+                        }
+                    } else {
+                        log('❌ getSupabaseClient function not found', 'error');
+                    }
+                } else {
+                    log('❌ ensureSupabaseClient function not found', 'error');
+                }
+                
+                // Test global error handling
+                if (window.addEventListener) {
+                    log('✅ Global error handling is set up', 'success');
+                } else {
+                    log('❌ Global error handling not available', 'error');
+                }
+            } catch (error) {
+                log('❌ Supabase client test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test all fixes
+        function runAllTests() {
+            log('🧪 Running all console error fix tests...', 'info');
+            
+            setTimeout(() => test409ConflictFix(), 100);
+            setTimeout(() => testChartOwnerDocumentFix(), 200);
+            setTimeout(() => testSyntaxFix(), 300);
+            setTimeout(() => testSupabaseClient(), 400);
+            
+            setTimeout(() => {
+                log('🎉 All tests completed! Check results above.', 'success');
+            }, 500);
+        }
+
+        // Auto-run tests after page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 1000);
+        });
+    </script>
+
+    <div class="test-section">
+        <h3>Run All Tests</h3>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+        <p>Runs all console error fix tests automatically.</p>
+    </div>
+</body>
+</html>

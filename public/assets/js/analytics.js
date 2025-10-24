@@ -780,6 +780,32 @@ function updateOriginChart(period) {
 function updateCostBreakdownChart(period) {
     console.log(`Updating cost breakdown chart for ${period}`);
     
+    // Use safe chart update if available
+    if (window.safeUpdateChart) {
+        console.log('🔧 Using safe chart update...');
+        const canvas = document.getElementById('costBreakdownChart');
+        if (!canvas || !canvas.ownerDocument) {
+            console.warn('⚠️ Canvas not properly mounted, skipping update');
+            return;
+        }
+        
+        const chart = costBreakdownChart || Chart.getChart(canvas);
+        if (chart) {
+            const costBreakdownData = getCostBreakdownData(period);
+            if (costBreakdownData) {
+                const newData = {
+                    labels: costBreakdownData.labels,
+                    datasets: [{
+                        data: costBreakdownData.values,
+                        backgroundColor: costBreakdownData.colors
+                    }]
+                };
+                window.safeUpdateChart(chart, newData);
+                return;
+            }
+        }
+    }
+    
     try {
         // Check if canvas exists and is visible
         const canvas = document.getElementById('costBreakdownChart');

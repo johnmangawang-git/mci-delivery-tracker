@@ -2420,8 +2420,8 @@ window.testLogoutButton = function() {
 window.saveProfileSettings = saveProfileSettings;
 window.getInitials = getInitials;
 window.updateUIWithUserData = updateUIWithUserData;
-// 
-========================================
+
+// ========================================
 // CLEAN LOGOUT IMPLEMENTATION - REWRITTEN
 // ========================================
 
