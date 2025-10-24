@@ -496,16 +496,61 @@ setTimeout(() => {
     window.generateUniqueId = generateUniqueId;
     window.safeDeliveryInsertComprehensive = safeDeliveryInsertComprehensive;
     
-    // Override existing functions with comprehensive versions
+    // Add 409 conflict handling to the comprehensive insert
+    const originalComprehensiveInsert = safeDeliveryInsertComprehensive;
+    
+    window.safeDeliveryInsertWith409 = async function(deliveryData) {
+        try {
+            const result = await originalComprehensiveInsert(deliveryData);
+            
+            // If we get a 409 conflict, try upsert
+            if (result.error && (result.error.code === '409' || result.error.status === 409)) {
+                console.log('🔄 409 conflict detected, trying upsert...');
+                
+                const client = await getSafeSupabaseClient();
+                if (!client) {
+                    return result; // Return original error if no client
+                }
+
+                const upsertData = { ...deliveryData };
+                delete upsertData.id;
+                upsertData.updated_at = new Date().toISOString();
+
+                const { data, error } = await client
+                    .from('deliveries')
+                    .upsert([upsertData], {
+                        onConflict: 'dr_number',
+                        ignoreDuplicates: false
+                    })
+                    .select();
+
+                if (!error) {
+                    console.log('✅ 409 conflict resolved via upsert');
+                    return { data, error: null };
+                }
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('❌ 409 handling failed:', error);
+            return { data: null, error: { message: error.message } };
+        }
+    };
+    
+    // Override existing functions with 409-aware comprehensive versions
     if (!window.safeInsertDelivery) {
-        window.safeInsertDelivery = safeDeliveryInsertComprehensive;
+        window.safeInsertDelivery = window.safeDeliveryInsertWith409;
     }
     
     if (!window.safeDeliveryInsert) {
-        window.safeDeliveryInsert = safeDeliveryInsertComprehensive;
+        window.safeDeliveryInsert = window.safeDeliveryInsertWith409;
     }
     
-    console.log('✅ Embedded fixes initialized successfully');
+    if (!window.safeUpsertDelivery) {
+        window.safeUpsertDelivery = window.safeDeliveryInsertWith409;
+    }
+    
+    console.log('✅ Embedded fixes with 409 conflict handling initialized successfully');
 }, 500);
 
 console.log('✅ Comprehensive console errors fix loaded');
