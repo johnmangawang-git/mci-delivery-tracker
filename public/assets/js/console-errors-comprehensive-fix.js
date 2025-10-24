@@ -306,17 +306,30 @@ window.ensureSupabaseClient = ensureSupabaseClient;
 window.getSupabaseClient = getSupabaseClient;
 window.supabaseClient = getSupabaseClient; // Alias for compatibility
 
-// Load additional cost items fix after a delay to ensure other fixes are loaded
+// Load additional fixes after a delay to ensure other fixes are loaded
 setTimeout(() => {
+    // Load additional cost items fix
     if (typeof window.safeDeliveryInsertWithCostItems === 'function') {
         console.log('✅ Additional cost items fix already loaded');
     } else {
         console.log('🔧 Loading additional cost items fix...');
-        const script = document.createElement('script');
-        script.src = 'public/assets/js/supabase-additional-cost-items-fix.js';
-        script.onload = () => console.log('✅ Additional cost items fix loaded');
-        script.onerror = () => console.warn('⚠️ Failed to load additional cost items fix');
-        document.head.appendChild(script);
+        const script1 = document.createElement('script');
+        script1.src = 'public/assets/js/supabase-additional-cost-items-fix.js';
+        script1.onload = () => console.log('✅ Additional cost items fix loaded');
+        script1.onerror = () => console.warn('⚠️ Failed to load additional cost items fix');
+        document.head.appendChild(script1);
+    }
+    
+    // Load duplicate ID fix
+    if (typeof window.safeDeliveryInsertNoDuplicates === 'function') {
+        console.log('✅ Duplicate ID fix already loaded');
+    } else {
+        console.log('🔧 Loading duplicate ID fix...');
+        const script2 = document.createElement('script');
+        script2.src = 'public/assets/js/supabase-duplicate-id-fix.js';
+        script2.onload = () => console.log('✅ Duplicate ID fix loaded');
+        script2.onerror = () => console.warn('⚠️ Failed to load duplicate ID fix');
+        document.head.appendChild(script2);
     }
 }, 1000);
 

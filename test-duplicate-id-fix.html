@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Duplicate ID Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .log-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .test-data {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-pending { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Duplicate ID Fix Test</h1>
+        <p>This page tests the fix for the 23505 error: "duplicate key value violates unique constraint 'deliveries_pkey'"</p>
+        
+        <div class="test-section info">
+            <h3>📋 Test Status</h3>
+            <div id="testStatus">
+                <div><span class="status-indicator status-pending"></span>ID Generation: <span id="idGenStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Duplicate Check: <span id="duplicateStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Safe Insert: <span id="insertStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Duplicate Prevention: <span id="preventionStatus">Pending</span></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Test Actions</h3>
+            <button onclick="testIdGeneration()">Test ID Generation</button>
+            <button onclick="testDuplicateCheck()">Test Duplicate Check</button>
+            <button onclick="testSafeInsert()">Test Safe Insert</button>
+            <button onclick="testDuplicatePrevention()">Test Duplicate Prevention</button>
+            <button onclick="testCleanup()">Test Cleanup</button>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Data</h3>
+            <div class="test-data">
+                <strong>Sample Delivery Data:</strong>
+                <pre id="sampleData"></pre>
+            </div>
+            <div class="test-data">
+                <strong>Generated IDs:</strong>
+                <pre id="generatedIds"></pre>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test Log</h3>
+            <div id="logOutput" class="log-output"></div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/assets/js/core/supabase-init.js"></script>
+    <script src="public/assets/js/supabase-client-fix.js"></script>
+    <script src="public/assets/js/supabase-global-fix.js"></script>
+    <script src="public/assets/js/supabase-duplicate-id-fix.js"></script>
+
+    <script>
+        // Sample test data
+        const baseDrNumber = 'TEST-DUP-' + Date.now();
+        const sampleDeliveryData = {
+            dr_number: baseDrNumber,
+            customer_name: 'Test Customer for Duplicate Fix',
+            status: 'Active',
+            origin: 'Test Origin',
+            destination: 'Test Destination',
+            additional_costs: 100.00
+        };
+
+        // Display sample data
+        document.getElementById('sampleData').textContent = JSON.stringify(sampleDeliveryData, null, 2);
+
+        // Generated IDs tracking
+        let generatedIds = [];
+
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logOutput = document.getElementById('logOutput');
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logOutput.textContent += logEntry;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            
+            console.log(message);
+        }
+
+        // Update status indicator
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const indicator = element.previousElementSibling;
+            
+            indicator.className = 'status-indicator';
+            element.textContent = message;
+            
+            switch(status) {
+                case 'success':
+                    indicator.classList.add('status-success');
+                    break;
+                case 'error':
+                    indicator.classList.add('status-error');
+                    break;
+                case 'warning':
+                    indicator.classList.add('status-warning');
+                    break;
+                default:
+                    indicator.classList.add('status-pending');
+            }
+        }
+
+        // Update generated IDs display
+        function updateGeneratedIds() {
+            document.getElementById('generatedIds').textContent = generatedIds.join('\n');
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('logOutput').textContent = '';
+            log('Log cleared');
+        }
+
+        // Test ID generation
+        function testIdGeneration() {
+            log('🆔 Testing ID generation...');
+            updateStatus('idGenStatus', 'pending', 'Testing...');
+            
+            try {
+                if (typeof window.generateUniqueId === 'function') {
+                    const ids = [];
+                    for (let i = 0; i < 5; i++) {
+                        const id = window.generateUniqueId();
+                        ids.push(id);
+                        generatedIds.push(id);
+                    }
+                    
+                    log('✅ Generated 5 unique IDs:');
+                    ids.forEach(id => log(`   ${id}`));
+                    
+                    // Check for duplicates
+                    const uniqueIds = new Set(ids);
+                    if (uniqueIds.size === ids.length) {
+                        updateStatus('idGenStatus', 'success', 'All unique');
+                        log('✅ All generated IDs are unique');
+                    } else {
+                        updateStatus('idGenStatus', 'error', 'Duplicates found');
+                        log('❌ Duplicate IDs found!');
+                    }
+                    
+                    updateGeneratedIds();
+                } else {
+                    log('❌ generateUniqueId function not available');
+                    updateStatus('idGenStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ ID generation test failed: ' + error.message);
+                updateStatus('idGenStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Test duplicate check
+        async function testDuplicateCheck() {
+            log('🔍 Testing duplicate check...');
+            updateStatus('duplicateStatus', 'pending', 'Testing...');
+            
+            try {
+                if (typeof window.checkDrNumberExists === 'function') {
+                    // Test with a DR number that likely doesn't exist
+                    const testDrNumber = 'NONEXISTENT-' + Date.now();
+                    const result = await window.checkDrNumberExists(testDrNumber);
+                    
+                    log('📊 Duplicate check result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (!result.exists) {
+                        updateStatus('duplicateStatus', 'success', 'Check working');
+                        log('✅ Duplicate check working correctly');
+                    } else {
+                        updateStatus('duplicateStatus', 'warning', 'Unexpected result');
+                        log('⚠️ Unexpected result - DR number exists');
+                    }
+                } else {
+                    log('❌ checkDrNumberExists function not available');
+                    updateStatus('duplicateStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Duplicate check test failed: ' + error.message);
+                updateStatus('duplicateStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Test safe insert
+        async function testSafeInsert() {
+            log('💾 Testing safe insert...');
+            updateStatus('insertStatus', 'pending', 'Testing...');
+            
+            try {
+                if (typeof window.safeDeliveryInsertNoDuplicates === 'function') {
+                    const testData = {
+                        ...sampleDeliveryData,
+                        dr_number: baseDrNumber + '-SAFE-INSERT'
+                    };
+                    
+                    const result = await window.safeDeliveryInsertNoDuplicates(testData);
+                    log('📊 Safe insert result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (result.data && !result.error) {
+                        updateStatus('insertStatus', 'success', 'Insert successful');
+                        log('✅ Safe insert successful with ID: ' + result.data[0]?.id);
+                    } else {
+                        updateStatus('insertStatus', 'error', 'Insert failed');
+                        log('❌ Safe insert failed: ' + (result.error?.message || 'Unknown error'));
+                    }
+                } else {
+                    log('❌ safeDeliveryInsertNoDuplicates function not available');
+                    updateStatus('insertStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Safe insert test failed: ' + error.message);
+                updateStatus('insertStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Test duplicate prevention
+        async function testDuplicatePrevention() {
+            log('🛡️ Testing duplicate prevention...');
+            updateStatus('preventionStatus', 'pending', 'Testing...');
+            
+            try {
+                if (typeof window.safeDeliveryInsertNoDuplicates === 'function') {
+                    const testData = {
+                        ...sampleDeliveryData,
+                        dr_number: baseDrNumber + '-DUPLICATE-TEST'
+                    };
+                    
+                    // First insert
+                    log('📤 First insert attempt...');
+                    const result1 = await window.safeDeliveryInsertNoDuplicates(testData);
+                    
+                    if (result1.data && !result1.error) {
+                        log('✅ First insert successful');
+                        
+                        // Second insert with same DR number
+                        log('📤 Second insert attempt (should update existing)...');
+                        const result2 = await window.safeDeliveryInsertNoDuplicates({
+                            ...testData,
+                            customer_name: 'Updated Customer Name'
+                        });
+                        
+                        if (result2.data && !result2.error) {
+                            updateStatus('preventionStatus', 'success', 'Prevention working');
+                            log('✅ Duplicate prevention working - existing record updated');
+                        } else {
+                            updateStatus('preventionStatus', 'error', 'Second insert failed');
+                            log('❌ Second insert failed: ' + (result2.error?.message || 'Unknown error'));
+                        }
+                    } else {
+                        updateStatus('preventionStatus', 'error', 'First insert failed');
+                        log('❌ First insert failed: ' + (result1.error?.message || 'Unknown error'));
+                    }
+                } else {
+                    log('❌ safeDeliveryInsertNoDuplicates function not available');
+                    updateStatus('preventionStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Duplicate prevention test failed: ' + error.message);
+                updateStatus('preventionStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Test cleanup
+        async function testCleanup() {
+            log('🧹 Testing cleanup function...');
+            
+            try {
+                if (typeof window.cleanupDuplicateDeliveries === 'function') {
+                    const result = await window.cleanupDuplicateDeliveries();
+                    log('📊 Cleanup result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (result.error) {
+                        log('⚠️ Cleanup completed with warnings: ' + result.error);
+                    } else {
+                        log('✅ Cleanup completed successfully. Removed ' + result.cleaned + ' duplicates');
+                    }
+                } else {
+                    log('❌ cleanupDuplicateDeliveries function not available');
+                }
+            } catch (error) {
+                log('❌ Cleanup test failed: ' + error.message);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🚀 Running all duplicate ID tests...');
+            
+            testIdGeneration();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testDuplicateCheck();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testSafeInsert();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testDuplicatePrevention();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testCleanup();
+            
+            log('✅ All duplicate ID tests completed');
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            log('🔧 Duplicate ID Fix Test initialized');
+            log('📋 Ready to test duplicate ID prevention');
+            
+            // Auto-run ID generation test after a short delay
+            setTimeout(testIdGeneration, 2000);
+        });
+    </script>
+</body>
+</html>
