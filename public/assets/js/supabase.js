@@ -346,14 +346,20 @@ async function saveDelivery(delivery) {
             serial_number: delivery.serialNumber
         };
 
-        // Use safe upsert with validation
-        if (window.safeUpsertDelivery) {
-            console.log('🔄 Using safe upsert for delivery:', supabaseDelivery.dr_number);
-            const result = await window.safeUpsertDelivery(supabaseDelivery);
+        // Use schema-aware complete delivery save
+        if (window.completeDeliverySave) {
+            console.log('🔄 Using complete delivery save with schema validation:', supabaseDelivery.dr_number);
+            const result = await window.completeDeliverySave(supabaseDelivery);
+            if (result.error) throw result.error;
+            return result.data[0];
+        } else if (window.safeDeliveryUpsert) {
+            console.log('🔄 Using schema-aware safe upsert for delivery:', supabaseDelivery.dr_number);
+            const result = await window.safeDeliveryUpsert(supabaseDelivery);
             if (result.error) throw result.error;
             return result.data[0];
         } else {
-            // Fallback to direct upsert
+            // Fallback to direct upsert with warning
+            console.warn('⚠️ Schema-aware functions not available, using direct upsert (may cause 400 errors)');
             const { data, error } = await supabaseClientInstance
                 .from('deliveries')
                 .upsert(supabaseDelivery)

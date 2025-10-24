@@ -198,24 +198,26 @@ class DataService {
                 }
             }
             
-            // Use validated safe insert to handle all issues
+            // Use schema-aware complete delivery save
             let data, error;
-            if (window.safeInsertDelivery) {
+            if (window.completeDeliverySave) {
+                console.log('🔄 Using complete delivery save with schema validation:', supabaseData.dr_number);
+                const result = await window.completeDeliverySave(supabaseData);
+                data = result.data;
+                error = result.error;
+            } else if (window.safeDeliveryUpsert) {
+                console.log('🔄 Using schema-aware safe upsert for delivery:', supabaseData.dr_number);
+                const result = await window.safeDeliveryUpsert(supabaseData);
+                data = result.data;
+                error = result.error;
+            } else if (window.safeInsertDelivery) {
                 console.log('🔄 Using validated safe insert for delivery:', supabaseData.dr_number);
                 const result = await window.safeInsertDelivery(supabaseData);
                 data = result.data;
                 error = result.error;
-            } else if (window.safeSupabaseUpsert) {
-                console.log('🔄 Using safe Supabase upsert for delivery:', supabaseData.dr_number);
-                const result = await window.safeSupabaseUpsert('deliveries', supabaseData, { 
-                    upsert: true,
-                    select: '*'
-                });
-                data = result.data;
-                error = result.error;
             } else {
                 // Fallback with validation
-                console.log('⚠️ Safe functions not available, using fallback with validation');
+                console.log('⚠️ Schema-aware functions not available, using fallback with validation');
                 
                 // Basic validation
                 if (!supabaseData.dr_number || !supabaseData.customer_name) {

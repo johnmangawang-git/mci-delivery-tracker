@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Sanitizer Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        .status { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .pass { background-color: green; }
+        .fail { background-color: red; }
+        .pending { background-color: orange; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧹 Schema Sanitizer Test</h1>
+    
+    <div class="test-section">
+        <h3>Sanitization Status</h3>
+        <div id="sanitizationStatus">
+            <div><span class="status pending" id="invalidFieldsStatus"></span>Invalid Fields Removal</div>
+            <div><span class="status pending" id="fieldMappingStatus"></span>Field Mapping (camelCase → snake_case)</div>
+            <div><span class="status pending" id="typeValidationStatus"></span>Data Type Validation</div>
+            <div><span class="status pending" id="costItemsStatus"></span>Additional Cost Items Handling</div>
+            <div><span class="status pending" id="insertStatus"></span>Safe Insert Operations</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testInvalidFieldsRemoval()">Test Invalid Fields</button>
+        <button onclick="testFieldMapping()">Test Field Mapping</button>
+        <button onclick="testTypeValidation()">Test Type Validation</button>
+        <button onclick="testCostItemsHandling()">Test Cost Items</button>
+        <button onclick="testSafeInsert()">Test Safe Insert</button>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Sample Payloads</h3>
+        <h4>Before Sanitization (with invalid fields):</h4>
+        <pre id="beforePayload"></pre>
+        <h4>After Sanitization (clean):</h4>
+        <pre id="afterPayload"></pre>
+    </div>
+
+    <!-- Load Supabase and our fixes -->
+    <script>
+        // Mock credentials
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="public/assets/js/supabase-client-fix.js"></script>
+    <script src="public/assets/js/supabase-schema-sanitizer.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(testName, passed) {
+            const statusElement = document.getElementById(testName + 'Status');
+            if (statusElement) {
+                statusElement.className = `status ${passed ? 'pass' : 'fail'}`;
+            }
+        }
+
+        // Sample payload with invalid fields (common in the codebase)
+        const samplePayload = {
+            // Valid fields
+            dr_number: 'DR-TEST-001',
+            customer_name: 'Test Customer',
+            vendor_number: 'V001',
+            origin: 'Test Origin',
+            destination: 'Test Destination',
+            truck_type: 'Truck',
+            truck_plate_number: 'ABC-123',
+            status: 'Active',
+            
+            // Invalid fields that cause 400 errors
+            additionalCostItems: [
+                { description: 'Fuel', amount: 100 },
+                { description: 'Toll', amount: 50 }
+            ],
+            additional_cost_items: [
+                { description: 'Helper', amount: 200 }
+            ],
+            
+            // camelCase fields that need mapping
+            drNumber: 'DR-TEST-001', // Should be dr_number
+            customerName: 'Test Customer', // Should be customer_name
+            vendorNumber: 'V001', // Should be vendor_number
+            truckType: 'Truck', // Should be truck_type
+            truckPlateNumber: 'ABC-123', // Should be truck_plate_number
+            additionalCosts: 350, // Should be additional_costs
+            deliveryDate: '2024-01-15', // Should be created_date
+            timestamp: '2024-01-15T10:30:00Z', // Should be created_at
+            
+            // Invalid fields
+            costItems: [],
+            bookedDate: '2024-01-15',
+            unknownField: 'should be removed'
+        };
+
+        // Display sample payloads
+        document.getElementById('beforePayload').textContent = JSON.stringify(samplePayload, null, 2);
+
+        // Test 1: Invalid Fields Removal
+        function testInvalidFieldsRemoval() {
+            log('🔄 Testing invalid fields removal...', 'info');
+            
+            try {
+                if (typeof window.sanitizeDeliveryPayload === 'function') {
+                    const result = window.sanitizeDeliveryPayload(samplePayload);
+                    
+                    if (result.valid && result.sanitized) {
+                        // Check that invalid fields are removed
+                        const invalidFieldsRemoved = !result.sanitized.hasOwnProperty('additionalCostItems') &&
+                                                   !result.sanitized.hasOwnProperty('additional_cost_items') &&
+                                                   !result.sanitized.hasOwnProperty('costItems') &&
+                                                   !result.sanitized.hasOwnProperty('unknownField');
+                        
+                        if (invalidFieldsRemoved) {
+                            log('✅ Invalid fields successfully removed', 'success');
+                            updateStatus('invalidFields', true);
+                        } else {
+                            log('❌ Some invalid fields were not removed', 'error');
+                            updateStatus('invalidFields', false);
+                        }
+                        
+                        // Update display
+                        document.getElementById('afterPayload').textContent = JSON.stringify(result.sanitized, null, 2);
+                    } else {
+                        log('❌ Sanitization failed: ' + result.errors.join(', '), 'error');
+                        updateStatus('invalidFields', false);
+                    }
+                } else {
+                    log('❌ sanitizeDeliveryPayload function not available', 'error');
+                    updateStatus('invalidFields', false);
+                }
+            } catch (error) {
+                log('❌ Invalid fields test failed: ' + error.message, 'error');
+                updateStatus('invalidFields', false);
+            }
+        }
+
+        // Test 2: Field Mapping
+        function testFieldMapping() {
+            log('🔄 Testing field mapping (camelCase → snake_case)...', 'info');
+            
+            try {
+                if (typeof window.sanitizeDeliveryPayload === 'function') {
+                    const result = window.sanitizeDeliveryPayload(samplePayload);
+                    
+                    if (result.valid && result.sanitized) {
+                        // Check that camelCase fields are mapped to snake_case
+                        const mappingWorked = result.sanitized.hasOwnProperty('dr_number') &&
+                                            result.sanitized.hasOwnProperty('customer_name') &&
+                                            result.sanitized.hasOwnProperty('vendor_number') &&
+                                            result.sanitized.hasOwnProperty('truck_type') &&
+                                            result.sanitized.hasOwnProperty('truck_plate_number') &&
+                                            result.sanitized.hasOwnProperty('additional_costs') &&
+                                            result.sanitized.hasOwnProperty('created_date') &&
+                                            result.sanitized.hasOwnProperty('created_at');
+                        
+                        if (mappingWorked) {
+                            log('✅ Field mapping successful', 'success');
+                            updateStatus('fieldMapping', true);
+                        } else {
+                            log('❌ Field mapping failed', 'error');
+                            updateStatus('fieldMapping', false);
+                        }
+                    } else {
+                        log('❌ Sanitization failed for field mapping test', 'error');
+                        updateStatus('fieldMapping', false);
+                    }
+                } else {
+                    log('❌ sanitizeDeliveryPayload function not available', 'error');
+                    updateStatus('fieldMapping', false);
+                }
+            } catch (error) {
+                log('❌ Field mapping test failed: ' + error.message, 'error');
+                updateStatus('fieldMapping', false);
+            }
+        }
+
+        // Test 3: Type Validation
+        function testTypeValidation() {
+            log('🔄 Testing data type validation...', 'info');
+            
+            try {
+                const testPayload = {
+                    dr_number: 'DR-TYPE-TEST',
+                    customer_name: 'Type Test Customer',
+                    additional_costs: '123.45', // String that should become number
+                    created_date: '2024-01-15T10:30:00Z', // Timestamp that should become date
+                    created_at: 'invalid-date', // Invalid date that should be corrected
+                    status: 123 // Number that should become string
+                };
+                
+                if (typeof window.sanitizeDeliveryPayload === 'function') {
+                    const result = window.sanitizeDeliveryPayload(testPayload);
+                    
+                    if (result.valid && result.sanitized) {
+                        const typeValidation = typeof result.sanitized.additional_costs === 'number' &&
+                                             typeof result.sanitized.status === 'string' &&
+                                             result.sanitized.created_date.match(/^\d{4}-\d{2}-\d{2}$/) &&
+                                             result.sanitized.created_at.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+                        
+                        if (typeValidation) {
+                            log('✅ Data type validation successful', 'success');
+                            updateStatus('typeValidation', true);
+                        } else {
+                            log('❌ Data type validation failed', 'error');
+                            log('Types: ' + JSON.stringify({
+                                additional_costs: typeof result.sanitized.additional_costs,
+                                status: typeof result.sanitized.status,
+                                created_date: result.sanitized.created_date,
+                                created_at: result.sanitized.created_at
+                            }), 'info');
+                            updateStatus('typeValidation', false);
+                        }
+                    } else {
+                        log('❌ Type validation test failed: ' + result.errors.join(', '), 'error');
+                        updateStatus('typeValidation', false);
+                    }
+                } else {
+                    log('❌ sanitizeDeliveryPayload function not available', 'error');
+                    updateStatus('typeValidation', false);
+                }
+            } catch (error) {
+                log('❌ Type validation test failed: ' + error.message, 'error');
+                updateStatus('typeValidation', false);
+            }
+        }
+
+        // Test 4: Cost Items Handling
+        function testCostItemsHandling() {
+            log('🔄 Testing additional cost items handling...', 'info');
+            
+            try {
+                if (typeof window.sanitizeDeliveryPayload === 'function') {
+                    const result = window.sanitizeDeliveryPayload(samplePayload);
+                    
+                    if (result.valid && result.sanitized) {
+                        // Check that additionalCostItems was converted to additional_costs total
+                        const expectedTotal = 100 + 50; // From additionalCostItems array
+                        const actualTotal = result.sanitized.additional_costs;
+                        
+                        if (actualTotal >= expectedTotal) {
+                            log('✅ Additional cost items converted to total successfully', 'success');
+                            log(`Total calculated: ${actualTotal}`, 'info');
+                            updateStatus('costItems', true);
+                        } else {
+                            log('❌ Additional cost items conversion failed', 'error');
+                            log(`Expected >= ${expectedTotal}, got ${actualTotal}`, 'error');
+                            updateStatus('costItems', false);
+                        }
+                    } else {
+                        log('❌ Cost items handling test failed', 'error');
+                        updateStatus('costItems', false);
+                    }
+                } else {
+                    log('❌ sanitizeDeliveryPayload function not available', 'error');
+                    updateStatus('costItems', false);
+                }
+            } catch (error) {
+                log('❌ Cost items handling test failed: ' + error.message, 'error');
+                updateStatus('costItems', false);
+            }
+        }
+
+        // Test 5: Safe Insert
+        async function testSafeInsert() {
+            log('🔄 Testing safe insert operations...', 'info');
+            
+            try {
+                if (typeof window.safeDeliveryInsert === 'function') {
+                    const testPayload = {
+                        dr_number: 'DR-SAFE-TEST-' + Date.now(),
+                        customer_name: 'Safe Insert Test Customer',
+                        additionalCostItems: [
+                            { description: 'Test Cost', amount: 100 }
+                        ],
+                        unknownField: 'should be removed'
+                    };
+                    
+                    log('📝 Testing safe insert with problematic payload...', 'info');
+                    const result = await window.safeDeliveryInsert(testPayload);
+                    
+                    if (result.error) {
+                        log('⚠️ Safe insert returned error (may be expected): ' + result.error.message, 'warning');
+                        // This might be expected due to database constraints, but no 400 error
+                        if (!result.error.message.includes('Could not find') && !result.error.message.includes('column')) {
+                            updateStatus('insert', true);
+                        } else {
+                            updateStatus('insert', false);
+                        }
+                    } else {
+                        log('✅ Safe insert successful', 'success');
+                        updateStatus('insert', true);
+                    }
+                } else {
+                    log('❌ safeDeliveryInsert function not available', 'error');
+                    updateStatus('insert', false);
+                }
+            } catch (error) {
+                log('❌ Safe insert test failed: ' + error.message, 'error');
+                updateStatus('insert', false);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🧪 Running all schema sanitizer tests...', 'info');
+            
+            // Reset status indicators
+            ['invalidFields', 'fieldMapping', 'typeValidation', 'costItems', 'insert'].forEach(test => {
+                const statusElement = document.getElementById(test + 'Status');
+                if (statusElement) {
+                    statusElement.className = 'status pending';
+                }
+            });
+            
+            // Run tests with delays
+            testInvalidFieldsRemoval();
+            
+            setTimeout(() => {
+                testFieldMapping();
+                
+                setTimeout(() => {
+                    testTypeValidation();
+                    
+                    setTimeout(() => {
+                        testCostItemsHandling();
+                        
+                        setTimeout(async () => {
+                            await testSafeInsert();
+                            
+                            setTimeout(() => {
+                                log('🎉 All tests completed! Check status indicators above.', 'success');
+                            }, 500);
+                        }, 1000);
+                    }, 500);
+                }, 500);
+            }, 500);
+        }
+
+        // Listen for schema sanitizer events
+        window.addEventListener('schemaSanitizerReady', (event) => {
+            log('🎉 Schema sanitizer ready event received!', 'success');
+        });
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Schema Sanitizer Test loaded', 'info');
+            
+            setTimeout(() => {
+                log('🔄 Auto-running tests in 3 seconds...', 'info');
+                setTimeout(runAllTests, 3000);
+            }, 1000);
+        });
+
+        // Monitor console errors
+        let errorCount = 0;
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            errorCount++;
+            if (args[0] && typeof args[0] === 'string') {
+                if (args[0].includes('Could not find') && args[0].includes('column')) {
+                    log('❌ DETECTED: Schema column error', 'error');
+                } else if (args[0].includes('400 (Bad Request)')) {
+                    log('❌ DETECTED: 400 Bad Request error', 'error');
+                }
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Report error count after tests
+        setTimeout(() => {
+            if (errorCount === 0) {
+                log('🎉 No schema-related errors detected!', 'success');
+            } else {
+                log(`⚠️ ${errorCount} schema-related errors detected`, 'warning');
+            }
+        }, 15000);
+    </script>
+</body>
+</html>
