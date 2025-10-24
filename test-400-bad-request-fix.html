@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test 400 Bad Request Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .payload { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test 400 Bad Request Fix</h1>
+    <p>Testing the fix for "Could not find the 'additionalCosts' column" errors</p>
+    
+    <div class="test-section">
+        <h3>Test Payloads</h3>
+        <div class="payload">
+            <strong>Problematic Payload (causes 400 errors):</strong>
+            <pre id="problematicPayload"></pre>
+        </div>
+        <div class="payload">
+            <strong>Sanitized Payload (prevents 400 errors):</strong>
+            <pre id="sanitizedPayload"></pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test Actions</h3>
+        <button onclick="testSanitization()">Test Payload Sanitization</button>
+        <button onclick="testDeliveryInsert()">Test Delivery Insert</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="logOutput" class="log"></div>
+    </div>
+
+    <!-- Load Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Load credentials -->
+    <script src="assets/js/core/supabase-init.js"></script>
+    
+    <!-- Load 400 Bad Request Fix -->
+    <script src="assets/js/supabase-400-bad-request-fix.js"></script>
+
+    <script>
+        // Problematic payload that causes 400 errors
+        const problematicPayload = {
+            dr_number: 'TEST-400-' + Date.now(),
+            customerName: 'Test Customer',           // camelCase - should be customer_name
+            additionalCosts: 150.00,                 // camelCase - should be additional_costs
+            additionalCostItems: [                   // Invalid field - should be converted
+                { description: 'Fuel', amount: 50.00 },
+                { description: 'Toll', amount: 25.00 },
+                { description: 'Helper', amount: 75.00 }
+            ],
+            truckType: 'Truck',                      // camelCase - should be truck_type
+            invalidField: 'This should be removed', // Invalid field
+            status: 'Active'
+        };
+
+        // Display payloads
+        document.getElementById('problematicPayload').textContent = JSON.stringify(problematicPayload, null, 2);
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logOutput = document.getElementById('logOutput');
+            logOutput.textContent += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('logOutput').textContent = '';
+            log('Log cleared');
+        }
+
+        function testSanitization() {
+            log('🧪 Testing payload sanitization...');
+            
+            try {
+                if (typeof window.sanitizeDeliveryPayload === 'function') {
+                    const result = window.sanitizeDeliveryPayload(problematicPayload);
+                    
+                    if (result.valid) {
+                        log('✅ Sanitization successful');
+                        log('📊 Sanitized payload: ' + JSON.stringify(result.sanitized, null, 2));
+                        log('⚠️ Warnings: ' + result.warnings.join(', '));
+                        
+                        // Display sanitized payload
+                        document.getElementById('sanitizedPayload').textContent = JSON.stringify(result.sanitized, null, 2);
+                    } else {
+                        log('❌ Sanitization failed: ' + result.errors.join(', '));
+                    }
+                } else {
+                    log('❌ sanitizeDeliveryPayload function not available');
+                }
+            } catch (error) {
+                log('❌ Sanitization test failed: ' + error.message);
+            }
+        }
+
+        async function testDeliveryInsert() {
+            log('🧪 Testing delivery insert with 400 error prevention...');
+            
+            try {
+                if (typeof window.safeDeliveryInsertNo400 === 'function') {
+                    log('📤 Attempting insert with problematic payload...');
+                    const result = await window.safeDeliveryInsertNo400(problematicPayload);
+                    
+                    if (result.data && !result.error) {
+                        log('✅ Delivery insert successful - no 400 errors!');
+                        log('📊 Inserted delivery ID: ' + result.data[0]?.id);
+                        log('📊 Inserted DR number: ' + result.data[0]?.dr_number);
+                        log('📊 Additional costs: ' + result.data[0]?.additional_costs);
+                    } else {
+                        log('❌ Delivery insert failed: ' + (result.error?.message || 'Unknown error'));
+                        if (result.error?.code) {
+                            log('📊 Error code: ' + result.error.code);
+                        }
+                    }
+                } else {
+                    log('❌ safeDeliveryInsertNo400 function not available');
+                }
+            } catch (error) {
+                log('❌ Insert test failed: ' + error.message);
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            log('🔧 400 Bad Request Fix Test initialized');
+            log('📋 Ready to test additionalCosts column error fix');
+            
+            // Auto-run sanitization test
+            setTimeout(testSanitization, 1000);
+        });
+    </script>
+</body>
+</html>

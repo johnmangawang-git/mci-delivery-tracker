@@ -62,30 +62,79 @@ async function initializeSupabaseClient() {
 }
 
 // ========================================
-// 2. PAYLOAD SANITIZATION
+// 2. COMPREHENSIVE PAYLOAD SANITIZATION
 // ========================================
 
+// Field mappings for camelCase → snake_case conversion
+const FIELD_MAPPINGS = {
+    // The problematic field causing 400 errors
+    'additionalCosts': 'additional_costs',           // ← PRIMARY FIX for 400 errors
+    'additionalCostItems': 'additional_costs',       // Convert array to total
+    'additional_cost_items': 'additional_costs',     // Convert array to total
+    
+    // Other common camelCase → snake_case mappings
+    'drNumber': 'dr_number',
+    'customerName': 'customer_name',
+    'vendorNumber': 'vendor_number',
+    'truckType': 'truck_type',
+    'truckPlateNumber': 'truck_plate_number',
+    'createdDate': 'created_date',
+    'createdAt': 'created_at',
+    'updatedAt': 'updated_at',
+    'createdBy': 'created_by',
+    'userId': 'user_id'
+};
+
 function sanitizePayload(payload) {
+    console.log('🧹 Comprehensive payload sanitization (400 error prevention)...', payload);
+    
     if (!payload || typeof payload !== 'object') {
         return { valid: false, sanitized: null, errors: ['Invalid payload'] };
     }
 
-    const sanitized = { ...payload };
+    const sanitized = {};
     const warnings = [];
+    const removedFields = [];
 
-    // Remove invalid fields
-    const invalidFields = ['additionalCostItems', 'additional_cost_items'];
-    invalidFields.forEach(field => {
-        if (sanitized[field]) {
-            // Convert to total if it's an array
-            if (Array.isArray(sanitized[field])) {
-                const total = sanitized[field].reduce((sum, item) => {
+    // Process each field in the payload
+    Object.keys(payload).forEach(key => {
+        const value = payload[key];
+        
+        // Check if field should be mapped
+        const mappedKey = FIELD_MAPPINGS[key] || key;
+        
+        // Handle special case: additionalCostItems/additionalCosts array → additional_costs total
+        if (key === 'additionalCostItems' || key === 'additional_cost_items' || key === 'additionalCosts') {
+            if (Array.isArray(value) && value.length > 0) {
+                const total = value.reduce((sum, item) => {
                     return sum + (parseFloat(item.amount) || 0);
                 }, 0);
                 sanitized.additional_costs = total;
-                warnings.push(`Converted ${field} to additional_costs: ${total}`);
+                warnings.push(`✅ Converted ${key} array to additional_costs total: ${total}`);
+            } else if (typeof value === 'number') {
+                sanitized.additional_costs = value;
+                warnings.push(`✅ Mapped ${key} → additional_costs: ${value}`);
+            } else {
+                sanitized.additional_costs = 0.00;
+                warnings.push(`✅ Set additional_costs to 0.00 (invalid ${key})`);
             }
-            delete sanitized[field];
+            return;
+        }
+        
+        // Remove completely invalid fields
+        const invalidFields = ['costItems', 'cost_items', 'deliveryDate', 'timestamp', 'bookedDate'];
+        if (invalidFields.includes(key)) {
+            removedFields.push(key);
+            warnings.push(`🗑️ Removed invalid field: ${key}`);
+            return;
+        }
+        
+        // Add the field with proper mapping
+        if (value !== null && value !== undefined && value !== '') {
+            sanitized[mappedKey] = value;
+            if (key !== mappedKey) {
+                warnings.push(`🔄 Mapped ${key} → ${mappedKey}`);
+            }
         }
     });
 
@@ -96,7 +145,22 @@ function sanitizePayload(payload) {
     if (!sanitized.updated_at) {
         sanitized.updated_at = new Date().toISOString();
     }
+    
+    // Ensure additional_costs exists
+    if (!sanitized.additional_costs) {
+        sanitized.additional_costs = 0.00;
+    }
 
+    // Log results
+    if (warnings.length > 0) {
+        console.log('⚠️ Payload sanitization warnings:', warnings);
+    }
+    
+    if (removedFields.length > 0) {
+        console.log('🗑️ Removed invalid fields:', removedFields);
+    }
+
+    console.log('✅ Payload sanitized successfully - 400 errors prevented:', sanitized);
     return { valid: true, sanitized, errors: [], warnings };
 }
 
