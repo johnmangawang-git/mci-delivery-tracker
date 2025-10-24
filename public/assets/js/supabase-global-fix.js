@@ -14,8 +14,29 @@ async function patchSupabaseDependentFunctions() {
     
     // Wait for Supabase to be ready
     try {
-        await window.waitForSupabase(15000); // 15 second timeout
-        console.log('✅ Supabase is ready, applying patches...');
+        // Use waitForSupabase if available, otherwise create a simple fallback
+        if (typeof window.waitForSupabase === 'function') {
+            await window.waitForSupabase(15000); // 15 second timeout
+            console.log('✅ Supabase is ready, applying patches...');
+        } else {
+            console.log('🔧 waitForSupabase not available, using simple check...');
+            // Simple fallback: check if Supabase is ready
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds total
+            
+            while (attempts < maxAttempts) {
+                if (window.supabase && typeof window.supabase.from === 'function') {
+                    console.log('✅ Supabase is ready (fallback check), applying patches...');
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (attempts >= maxAttempts) {
+                console.warn('⚠️ Supabase not ready after fallback check, applying patches anyway...');
+            }
+        }
     } catch (error) {
         console.error('❌ Supabase not ready, applying fallback patches:', error);
     }

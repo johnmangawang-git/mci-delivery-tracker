@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Additional Cost Items Schema Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .log-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .test-data {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .status-pending { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Additional Cost Items Schema Fix Test</h1>
+        <p>This page tests the fix for the PGRST204 error: "Could not find the 'additionalCostItems' column of 'deliveries' in the schema cache"</p>
+        
+        <div class="test-section info">
+            <h3>📋 Test Status</h3>
+            <div id="testStatus">
+                <div><span class="status-indicator status-pending"></span>Schema Diagnosis: <span id="diagnosisStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Column Check: <span id="columnStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Schema Refresh: <span id="refreshStatus">Pending</span></div>
+                <div><span class="status-indicator status-pending"></span>Test Insert: <span id="insertStatus">Pending</span></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Test Actions</h3>
+            <button onclick="runDiagnosis()">Run Schema Diagnosis</button>
+            <button onclick="checkColumn()">Check Column Exists</button>
+            <button onclick="refreshSchema()">Refresh Schema Cache</button>
+            <button onclick="testInsert()">Test Delivery Insert</button>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Data</h3>
+            <div class="test-data">
+                <strong>Sample Delivery with Additional Cost Items:</strong>
+                <pre id="sampleData"></pre>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test Log</h3>
+            <div id="logOutput" class="log-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>💡 Recommendations</h3>
+            <div id="recommendations"></div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/assets/js/core/supabase-init.js"></script>
+    <script src="public/assets/js/supabase-client-fix.js"></script>
+    <script src="public/assets/js/supabase-global-fix.js"></script>
+    <script src="public/assets/js/supabase-schema-sanitizer.js"></script>
+    <script src="public/assets/js/supabase-additional-cost-items-fix.js"></script>
+
+    <script>
+        // Sample test data
+        const sampleDeliveryData = {
+            dr_number: 'TEST-' + Date.now(),
+            customer_name: 'Test Customer',
+            status: 'Active',
+            origin: 'Test Origin',
+            destination: 'Test Destination',
+            additional_costs: 150.00,
+            additionalCostItems: [
+                {
+                    id: 'item1',
+                    description: 'Fuel Surcharge',
+                    amount: 50.00,
+                    category: 'Fuel'
+                },
+                {
+                    id: 'item2',
+                    description: 'Toll Fees',
+                    amount: 25.00,
+                    category: 'Toll'
+                },
+                {
+                    id: 'item3',
+                    description: 'Helper Fee',
+                    amount: 75.00,
+                    category: 'Labor'
+                }
+            ]
+        };
+
+        // Display sample data
+        document.getElementById('sampleData').textContent = JSON.stringify(sampleDeliveryData, null, 2);
+
+        // Logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logOutput = document.getElementById('logOutput');
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logOutput.textContent += logEntry;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            
+            console.log(message);
+        }
+
+        // Update status indicator
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const indicator = element.previousElementSibling;
+            
+            indicator.className = 'status-indicator';
+            element.textContent = message;
+            
+            switch(status) {
+                case 'success':
+                    indicator.classList.add('status-success');
+                    break;
+                case 'error':
+                    indicator.classList.add('status-error');
+                    break;
+                case 'warning':
+                    indicator.classList.add('status-warning');
+                    break;
+                default:
+                    indicator.classList.add('status-pending');
+            }
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('logOutput').textContent = '';
+            log('Log cleared');
+        }
+
+        // Run schema diagnosis
+        async function runDiagnosis() {
+            log('🔍 Running schema diagnosis...');
+            updateStatus('diagnosisStatus', 'pending', 'Running...');
+            
+            try {
+                if (typeof window.diagnoseAdditionalCostItemsSchema === 'function') {
+                    const diagnosis = await window.diagnoseAdditionalCostItemsSchema();
+                    log('📋 Diagnosis complete: ' + JSON.stringify(diagnosis, null, 2));
+                    
+                    if (diagnosis.columnExists) {
+                        updateStatus('diagnosisStatus', 'success', 'Column exists');
+                    } else {
+                        updateStatus('diagnosisStatus', 'error', 'Column missing');
+                    }
+                    
+                    // Show recommendations
+                    const recommendationsDiv = document.getElementById('recommendations');
+                    if (diagnosis.recommendations && diagnosis.recommendations.length > 0) {
+                        recommendationsDiv.innerHTML = '<ul>' + 
+                            diagnosis.recommendations.map(rec => `<li>${rec}</li>`).join('') + 
+                            '</ul>';
+                    }
+                } else {
+                    log('❌ diagnoseAdditionalCostItemsSchema function not available');
+                    updateStatus('diagnosisStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Diagnosis failed: ' + error.message);
+                updateStatus('diagnosisStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Check if column exists
+        async function checkColumn() {
+            log('🔍 Checking if additional_cost_items column exists...');
+            updateStatus('columnStatus', 'pending', 'Checking...');
+            
+            try {
+                if (typeof window.checkAdditionalCostItemsColumn === 'function') {
+                    const result = await window.checkAdditionalCostItemsColumn();
+                    log('📊 Column check result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (result.exists) {
+                        updateStatus('columnStatus', 'success', 'Column exists');
+                    } else {
+                        updateStatus('columnStatus', 'error', 'Column missing');
+                        log('💡 SQL to add column:');
+                        log('ALTER TABLE public.deliveries ADD COLUMN IF NOT EXISTS additional_cost_items JSONB DEFAULT \'[]\';');
+                    }
+                } else {
+                    log('❌ checkAdditionalCostItemsColumn function not available');
+                    updateStatus('columnStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Column check failed: ' + error.message);
+                updateStatus('columnStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Refresh schema cache
+        async function refreshSchema() {
+            log('🔄 Refreshing schema cache...');
+            updateStatus('refreshStatus', 'pending', 'Refreshing...');
+            
+            try {
+                if (typeof window.refreshSchemaCache === 'function') {
+                    const result = await window.refreshSchemaCache();
+                    log('🔄 Schema refresh result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (result.success) {
+                        updateStatus('refreshStatus', 'success', 'Refreshed');
+                    } else {
+                        updateStatus('refreshStatus', 'warning', 'Partial refresh');
+                    }
+                } else {
+                    log('❌ refreshSchemaCache function not available');
+                    updateStatus('refreshStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Schema refresh failed: ' + error.message);
+                updateStatus('refreshStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Test delivery insert
+        async function testInsert() {
+            log('💾 Testing delivery insert with additional cost items...');
+            updateStatus('insertStatus', 'pending', 'Testing...');
+            
+            try {
+                // Use the safe insert function
+                if (typeof window.safeDeliveryInsertWithCostItems === 'function') {
+                    const result = await window.safeDeliveryInsertWithCostItems(sampleDeliveryData);
+                    log('📊 Insert result: ' + JSON.stringify(result, null, 2));
+                    
+                    if (result.data && !result.error) {
+                        updateStatus('insertStatus', 'success', 'Insert successful');
+                        log('✅ Delivery inserted successfully with ID: ' + result.data[0]?.id);
+                    } else {
+                        updateStatus('insertStatus', 'error', 'Insert failed');
+                        log('❌ Insert failed: ' + (result.error?.message || 'Unknown error'));
+                        
+                        // Check if it's the specific PGRST204 error
+                        if (result.error?.code === 'PGRST204' && result.error?.message?.includes('additionalCostItems')) {
+                            log('🔍 This is the PGRST204 error we\'re trying to fix!');
+                            log('💡 The column needs to be added to the database schema');
+                        }
+                    }
+                } else {
+                    log('❌ safeDeliveryInsertWithCostItems function not available');
+                    updateStatus('insertStatus', 'error', 'Function not available');
+                }
+            } catch (error) {
+                log('❌ Test insert failed: ' + error.message);
+                updateStatus('insertStatus', 'error', 'Failed: ' + error.message);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🚀 Running all tests...');
+            
+            await runDiagnosis();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await checkColumn();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await refreshSchema();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testInsert();
+            
+            log('✅ All tests completed');
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            log('🔧 Additional Cost Items Schema Fix Test initialized');
+            log('📋 Ready to test schema fixes');
+            
+            // Auto-run diagnosis after a short delay
+            setTimeout(runDiagnosis, 2000);
+        });
+    </script>
+</body>
+</html>

@@ -178,11 +178,26 @@ function ensureSupabaseClient() {
             return null;
         }
 
+        // Check if newer comprehensive fixes are available
+        if (typeof window.initializeSupabaseClient === 'function') {
+            console.log('🔧 Using newer comprehensive Supabase client fix...');
+            try {
+                const client = await window.initializeSupabaseClient();
+                if (client) {
+                    window.supabaseClientInstance = client;
+                    console.log('✅ Supabase client initialized via comprehensive fix');
+                    return client;
+                }
+            } catch (error) {
+                console.warn('⚠️ Comprehensive fix failed, trying fallback:', error.message);
+            }
+        }
+        
         // Check if createClient function exists
         if (typeof window.supabase.createClient !== 'function') {
-            console.error('❌ Supabase createClient not available');
+            console.warn('⚠️ Supabase createClient not available in legacy fix - newer fixes should handle this');
             
-            // Try to find createClient in global scope
+            // Try to find createClient in global scope as fallback
             if (typeof createClient !== 'undefined') {
                 console.log('🔧 Found createClient in global scope, creating client...');
                 const supabaseUrl = window.SUPABASE_URL;
@@ -290,5 +305,19 @@ window.safeUpdateChart = safeUpdateChart;
 window.ensureSupabaseClient = ensureSupabaseClient;
 window.getSupabaseClient = getSupabaseClient;
 window.supabaseClient = getSupabaseClient; // Alias for compatibility
+
+// Load additional cost items fix after a delay to ensure other fixes are loaded
+setTimeout(() => {
+    if (typeof window.safeDeliveryInsertWithCostItems === 'function') {
+        console.log('✅ Additional cost items fix already loaded');
+    } else {
+        console.log('🔧 Loading additional cost items fix...');
+        const script = document.createElement('script');
+        script.src = 'public/assets/js/supabase-additional-cost-items-fix.js';
+        script.onload = () => console.log('✅ Additional cost items fix loaded');
+        script.onerror = () => console.warn('⚠️ Failed to load additional cost items fix');
+        document.head.appendChild(script);
+    }
+}, 1000);
 
 console.log('✅ Comprehensive console errors fix loaded');

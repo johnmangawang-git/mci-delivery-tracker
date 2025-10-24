@@ -6,8 +6,8 @@
 
 console.log('🔧 Loading Supabase Client Comprehensive Fix...');
 
-// Configuration
-const SUPABASE_CONFIG = {
+// Configuration for client fix
+const CLIENT_FIX_CONFIG = {
     url: 'https://ntyvrezyhrmflswxefbk.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4',
     maxRetries: 15,
@@ -17,8 +17,8 @@ const SUPABASE_CONFIG = {
 /**
  * Ensure createClient function is available
  */
-function ensureCreateClientAvailable(retries = SUPABASE_CONFIG.maxRetries) {
-    console.log(`🔍 Checking createClient availability (attempt ${SUPABASE_CONFIG.maxRetries - retries + 1}/${SUPABASE_CONFIG.maxRetries})...`);
+function ensureCreateClientAvailable(retries = CLIENT_FIX_CONFIG.maxRetries) {
+    console.log(`🔍 Checking createClient availability (attempt ${CLIENT_FIX_CONFIG.maxRetries - retries + 1}/${CLIENT_FIX_CONFIG.maxRetries})...`);
     
     // Method 1: Check if window.supabase has createClient (UMD version)
     if (window.supabase && typeof window.supabase.createClient === 'function') {
@@ -48,11 +48,11 @@ function ensureCreateClientAvailable(retries = SUPABASE_CONFIG.maxRetries) {
     
     // If not found and retries left, wait and try again
     if (retries > 0) {
-        console.warn(`⏳ createClient not found, retrying in ${SUPABASE_CONFIG.retryDelay}ms... (${retries} attempts left)`);
+        console.warn(`⏳ createClient not found, retrying in ${CLIENT_FIX_CONFIG.retryDelay}ms... (${retries} attempts left)`);
         return new Promise(resolve => {
             setTimeout(() => {
                 resolve(ensureCreateClientAvailable(retries - 1));
-            }, SUPABASE_CONFIG.retryDelay);
+            }, CLIENT_FIX_CONFIG.retryDelay);
         });
     }
     
@@ -87,7 +87,7 @@ async function initializeSupabaseClient() {
         
         // Create the client
         console.log('🔧 Creating new Supabase client...');
-        const client = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key, {
+        const client = createClient(CLIENT_FIX_CONFIG.url, CLIENT_FIX_CONFIG.key, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true,

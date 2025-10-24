@@ -374,7 +374,7 @@ async function completeDeliverySave(payload) {
 /**
  * Initialize schema sanitizer
  */
-function initializeSchemasanitizer() {
+function initializeSchemaSanitizer() {
     console.log('🚀 Initializing Supabase Schema Sanitizer...');
     
     // Export functions globally
@@ -405,16 +405,16 @@ function initializeSchemasanitizer() {
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSchemanitizer);
+    document.addEventListener('DOMContentLoaded', initializeSchemaSanitizer);
 } else {
-    initializeSchemanitizer();
+    initializeSchemaSanitizer();
 }
 
 // Also initialize on window load as backup
 window.addEventListener('load', () => {
     if (!window.schemaSanitizerInitialized) {
         console.log('🔄 Backup Schema Sanitizer initialization...');
-        initializeSchemanitizer();
+        initializeSchemaSanitizer();
         window.schemaSanitizerInitialized = true;
     }
 });
