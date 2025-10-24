@@ -168,7 +168,7 @@ async function safeUpdateChart(chartInstance, newData) {
 /**
  * Ensure Supabase client is properly initialized
  */
-function ensureSupabaseClient() {
+async function ensureSupabaseClient() {
     console.log('🔧 Ensuring Supabase client...');
     
     try {
@@ -248,8 +248,8 @@ function ensureSupabaseClient() {
 /**
  * Safe Supabase client getter
  */
-function getSupabaseClient() {
-    return window.supabaseClientInstance || ensureSupabaseClient();
+async function getSupabaseClient() {
+    return window.supabaseClientInstance || await ensureSupabaseClient();
 }
 
 // ========================================
@@ -293,9 +293,9 @@ function setupGlobalErrorHandling() {
 setupGlobalErrorHandling();
 
 // Ensure Supabase client on load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Initializing console errors fix...');
-    ensureSupabaseClient();
+    await ensureSupabaseClient();
 });
 
 // Export functions to global scope
@@ -304,7 +304,8 @@ window.safeCreateChart = safeCreateChart;
 window.safeUpdateChart = safeUpdateChart;
 window.ensureSupabaseClient = ensureSupabaseClient;
 window.getSupabaseClient = getSupabaseClient;
-window.supabaseClient = getSupabaseClient; // Alias for compatibility
+window.supabaseClient = () => window.supabaseClientInstance; // Sync alias for compatibility
+window.getSafeSupabaseClient = getSupabaseClient; // Async version
 
 // Load additional fixes after a delay to ensure other fixes are loaded
 setTimeout(() => {
