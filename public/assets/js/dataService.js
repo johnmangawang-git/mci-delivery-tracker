@@ -198,9 +198,14 @@ class DataService {
                 }
             }
             
-            // Use safe Supabase upsert to handle duplicate DR numbers
+            // Use validated safe insert to handle all issues
             let data, error;
-            if (window.safeSupabaseUpsert) {
+            if (window.safeInsertDelivery) {
+                console.log('🔄 Using validated safe insert for delivery:', supabaseData.dr_number);
+                const result = await window.safeInsertDelivery(supabaseData);
+                data = result.data;
+                error = result.error;
+            } else if (window.safeSupabaseUpsert) {
                 console.log('🔄 Using safe Supabase upsert for delivery:', supabaseData.dr_number);
                 const result = await window.safeSupabaseUpsert('deliveries', supabaseData, { 
                     upsert: true,
@@ -208,17 +213,18 @@ class DataService {
                 });
                 data = result.data;
                 error = result.error;
-            } else if (window.safeUpsertDelivery) {
-                console.log('🔄 Using legacy safe upsert for delivery:', supabaseData.dr_number);
-                const result = await window.safeUpsertDelivery(supabaseData);
-                data = result.data;
-                error = result.error;
             } else {
-                // Fallback to direct insert if safe functions not available
-                console.log('⚠️ Safe upsert functions not available, using direct insert');
+                // Fallback with validation
+                console.log('⚠️ Safe functions not available, using fallback with validation');
+                
+                // Basic validation
+                if (!supabaseData.dr_number || !supabaseData.customer_name) {
+                    throw new Error('Missing required fields: dr_number and customer_name are required');
+                }
+                
                 const result = await client
                     .from('deliveries')
-                    .insert(supabaseData)
+                    .upsert(supabaseData, { onConflict: 'dr_number' })
                     .select();
                 data = result.data;
                 error = result.error;
@@ -440,17 +446,43 @@ class DataService {
 
     async saveCustomer(customer) {
         const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
-                .from('customers')
-                .upsert({
+            // Use validated safe insert for customers
+            if (window.safeInsertCustomer) {
+                console.log('🔄 Using validated safe insert for customer:', customer.name || customer.customer_name);
+                const result = await window.safeInsertCustomer({
                     ...customer,
                     updated_at: new Date().toISOString()
-                })
-                .select();
-            
-            if (error) throw error;
-            return data[0];
+                });
+                
+                if (result.error) throw result.error;
+                return result.data[0];
+            } else {
+                // Fallback with validation
+                const client = window.supabaseClient();
+                
+                // Ensure name field is properly set
+                const customerData = {
+                    ...customer,
+                    name: customer.name || customer.customer_name || customer.customerName || '',
+                    updated_at: new Date().toISOString()
+                };
+                
+                // Validate required fields
+                if (!customerData.name || customerData.name.trim() === '') {
+                    throw new Error('Customer name is required and cannot be empty');
+                }
+                
+                const { data, error } = await client
+                    .from('customers')
+                    .upsert(customerData)
+                    .select();
+                
+                if (error) {
+                    console.error('❌ Customer save error:', error);
+                    throw error;
+                }
+                return data[0];
+            }
         };
 
         const localStorageOp = async () => {
