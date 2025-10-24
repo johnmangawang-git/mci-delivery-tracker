@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Permanent Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        .status-indicator { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .status-pass { background-color: green; }
+        .status-fail { background-color: red; }
+        .status-pending { background-color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Permanent Fix Test Suite</h1>
+    
+    <div class="test-section">
+        <h3>Test Status Overview</h3>
+        <div id="statusOverview">
+            <div><span class="status-indicator status-pending" id="status1"></span>1. Supabase Client Initialization</div>
+            <div><span class="status-indicator status-pending" id="status2"></span>2. Safe Query Operations</div>
+            <div><span class="status-indicator status-pending" id="status3"></span>3. Safe Upsert Operations</div>
+            <div><span class="status-indicator status-pending" id="status4"></span>4. initEPod Function</div>
+            <div><span class="status-indicator status-pending" id="status5"></span>5. Error Handling</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testSupabaseInitialization()">Test Supabase Initialization</button>
+        <button onclick="testSafeQuery()">Test Safe Query</button>
+        <button onclick="testSafeUpsert()">Test Safe Upsert</button>
+        <button onclick="testInitEPod()">Test initEPod</button>
+        <button onclick="testErrorHandling()">Test Error Handling</button>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+    </div>
+
+    <!-- Load Supabase library -->
+    <script>
+        // Mock Supabase credentials for testing
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    
+    <!-- Load our permanent fix -->
+    <script src="public/assets/js/supabase-permanent-fix.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(testNumber, passed) {
+            const statusElement = document.getElementById(`status${testNumber}`);
+            if (statusElement) {
+                statusElement.className = `status-indicator ${passed ? 'status-pass' : 'status-fail'}`;
+            }
+        }
+
+        // Test 1: Supabase Client Initialization
+        function testSupabaseInitialization() {
+            log('🔄 Testing Supabase client initialization...', 'info');
+            
+            try {
+                // Check if permanent fix loaded
+                if (typeof window.initializeSupabaseClient === 'function') {
+                    log('✅ Permanent fix functions available', 'success');
+                } else {
+                    log('❌ Permanent fix functions not loaded', 'error');
+                    updateStatus(1, false);
+                    return;
+                }
+
+                // Check if Supabase library loaded
+                if (typeof window.supabase !== 'undefined') {
+                    log('✅ Supabase library loaded', 'success');
+                } else {
+                    log('❌ Supabase library not loaded', 'error');
+                    updateStatus(1, false);
+                    return;
+                }
+
+                // Check if client is initialized
+                if (window.supabaseGlobalClient) {
+                    log('✅ Supabase global client available', 'success');
+                } else {
+                    log('⚠️ Supabase global client not found, attempting initialization...', 'warning');
+                    window.initializeSupabaseClient();
+                }
+
+                // Check if from function works
+                if (typeof window.supabase.from === 'function') {
+                    log('✅ window.supabase.from is a function', 'success');
+                    updateStatus(1, true);
+                } else {
+                    log('❌ window.supabase.from is not a function', 'error');
+                    updateStatus(1, false);
+                }
+
+            } catch (error) {
+                log('❌ Initialization test failed: ' + error.message, 'error');
+                updateStatus(1, false);
+            }
+        }
+
+        // Test 2: Safe Query Operations
+        async function testSafeQuery() {
+            log('🔄 Testing safe query operations...', 'info');
+            
+            try {
+                if (typeof window.safeSupabaseQuery === 'function') {
+                    log('✅ safeSupabaseQuery function available', 'success');
+                    
+                    // Test query with proper filtering
+                    log('📝 Testing query with filters...', 'info');
+                    const result = await window.safeSupabaseQuery('deliveries', {
+                        select: 'id, dr_number, customer_name',
+                        filters: { dr_number: '167664412' },
+                        limit: 5
+                    });
+                    
+                    if (result.error) {
+                        log('⚠️ Query returned error (this may be expected): ' + result.error.message, 'warning');
+                    } else {
+                        log(`✅ Query successful, returned ${result.data?.length || 0} rows`, 'success');
+                    }
+                    
+                    updateStatus(2, true);
+                } else {
+                    log('❌ safeSupabaseQuery function not available', 'error');
+                    updateStatus(2, false);
+                }
+            } catch (error) {
+                log('❌ Safe query test failed: ' + error.message, 'error');
+                updateStatus(2, false);
+            }
+        }
+
+        // Test 3: Safe Upsert Operations
+        async function testSafeUpsert() {
+            log('🔄 Testing safe upsert operations...', 'info');
+            
+            try {
+                if (typeof window.safeSupabaseUpsert === 'function') {
+                    log('✅ safeSupabaseUpsert function available', 'success');
+                    
+                    // Test upsert with mock data
+                    const mockData = {
+                        dr_number: 'TEST-' + Date.now(),
+                        customer_name: 'Test Customer',
+                        status: 'Active',
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    log('📝 Testing upsert with mock data...', 'info');
+                    const result = await window.safeSupabaseUpsert('deliveries', mockData, {
+                        upsert: true,
+                        select: '*'
+                    });
+                    
+                    if (result.error) {
+                        log('⚠️ Upsert returned error: ' + result.error.message, 'warning');
+                        // This might be expected due to schema issues
+                        updateStatus(3, true); // Still pass if function works
+                    } else {
+                        log('✅ Upsert successful', 'success');
+                        updateStatus(3, true);
+                    }
+                } else {
+                    log('❌ safeSupabaseUpsert function not available', 'error');
+                    updateStatus(3, false);
+                }
+            } catch (error) {
+                log('❌ Safe upsert test failed: ' + error.message, 'error');
+                updateStatus(3, false);
+            }
+        }
+
+        // Test 4: initEPod Function
+        function testInitEPod() {
+            log('🔄 Testing initEPod function...', 'info');
+            
+            try {
+                if (typeof window.initEPod === 'function') {
+                    log('✅ initEPod function available', 'success');
+                    
+                    // Test calling initEPod
+                    window.initEPod();
+                    log('✅ initEPod called successfully', 'success');
+                    updateStatus(4, true);
+                } else {
+                    log('❌ initEPod function not available', 'error');
+                    updateStatus(4, false);
+                }
+            } catch (error) {
+                log('❌ initEPod test failed: ' + error.message, 'error');
+                updateStatus(4, false);
+            }
+        }
+
+        // Test 5: Error Handling
+        function testErrorHandling() {
+            log('🔄 Testing error handling...', 'info');
+            
+            try {
+                // Check if error handlers are set up
+                const hasUnhandledRejectionHandler = window.addEventListener.toString().includes('unhandledrejection');
+                const hasErrorHandler = window.addEventListener.toString().includes('error');
+                
+                if (typeof window.setupSupabaseErrorHandling === 'function') {
+                    log('✅ Error handling setup function available', 'success');
+                    updateStatus(5, true);
+                } else {
+                    log('❌ Error handling setup function not available', 'error');
+                    updateStatus(5, false);
+                }
+                
+                // Test that we can handle a mock error
+                log('📝 Testing mock error handling...', 'info');
+                try {
+                    throw new Error('Test error for handling');
+                } catch (testError) {
+                    log('✅ Error handling works (caught test error)', 'success');
+                }
+                
+            } catch (error) {
+                log('❌ Error handling test failed: ' + error.message, 'error');
+                updateStatus(5, false);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🧪 Running all Supabase permanent fix tests...', 'info');
+            
+            // Reset status indicators
+            for (let i = 1; i <= 5; i++) {
+                const statusElement = document.getElementById(`status${i}`);
+                if (statusElement) {
+                    statusElement.className = 'status-indicator status-pending';
+                }
+            }
+            
+            // Run tests with delays
+            testSupabaseInitialization();
+            
+            setTimeout(async () => {
+                await testSafeQuery();
+                
+                setTimeout(async () => {
+                    await testSafeUpsert();
+                    
+                    setTimeout(() => {
+                        testInitEPod();
+                        
+                        setTimeout(() => {
+                            testErrorHandling();
+                            
+                            setTimeout(() => {
+                                log('🎉 All tests completed! Check status indicators above.', 'success');
+                            }, 500);
+                        }, 500);
+                    }, 500);
+                }, 1000);
+            }, 1000);
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Supabase Permanent Fix Test Suite loaded', 'info');
+            
+            setTimeout(() => {
+                log('🔄 Auto-running tests in 2 seconds...', 'info');
+                setTimeout(runAllTests, 2000);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

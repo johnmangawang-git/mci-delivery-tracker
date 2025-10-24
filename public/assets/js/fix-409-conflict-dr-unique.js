@@ -251,15 +251,18 @@ function wrapDataServiceWithConflictHandling() {
  * Wrap Supabase operations with conflict handling
  */
 function wrapSupabaseWithConflictHandling() {
-    if (typeof window.supabase === 'undefined') {
-        console.log('⚠️ Supabase not available yet, will wrap when available');
+    // Use the safe Supabase functions instead of direct manipulation
+    if (typeof window.safeSupabaseUpsert === 'function') {
+        console.log('✅ Using safe Supabase functions for conflict handling');
+        return;
+    }
+    
+    if (typeof window.supabase === 'undefined' || typeof window.supabase.from !== 'function') {
+        console.log('⚠️ Supabase not properly initialized, will wrap when available');
         return;
     }
 
     // Store original insert method
-    const originalInsert = window.supabase.from('deliveries').insert;
-
-    // Override the insert method for deliveries table
     const originalFrom = window.supabase.from;
     window.supabase.from = function (tableName) {
         const table = originalFrom.call(this, tableName);

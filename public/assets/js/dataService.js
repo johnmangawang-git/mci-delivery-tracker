@@ -198,16 +198,24 @@ class DataService {
                 }
             }
             
-            // Use safe upsert to handle duplicate DR numbers
+            // Use safe Supabase upsert to handle duplicate DR numbers
             let data, error;
-            if (window.safeUpsertDelivery) {
-                console.log('🔄 Using safe upsert for delivery:', supabaseData.dr_number);
+            if (window.safeSupabaseUpsert) {
+                console.log('🔄 Using safe Supabase upsert for delivery:', supabaseData.dr_number);
+                const result = await window.safeSupabaseUpsert('deliveries', supabaseData, { 
+                    upsert: true,
+                    select: '*'
+                });
+                data = result.data;
+                error = result.error;
+            } else if (window.safeUpsertDelivery) {
+                console.log('🔄 Using legacy safe upsert for delivery:', supabaseData.dr_number);
                 const result = await window.safeUpsertDelivery(supabaseData);
                 data = result.data;
                 error = result.error;
             } else {
-                // Fallback to direct insert if safe upsert not available
-                console.log('⚠️ Safe upsert not available, using direct insert');
+                // Fallback to direct insert if safe functions not available
+                console.log('⚠️ Safe upsert functions not available, using direct insert');
                 const result = await client
                     .from('deliveries')
                     .insert(supabaseData)
