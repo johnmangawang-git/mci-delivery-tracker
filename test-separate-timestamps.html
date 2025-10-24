@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Separate Timestamps Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Separate Timestamps Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Explanation -->
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-lightbulb me-2"></i>Why Different Timestamps?</h6>
+                            <p class="mb-0">
+                                <strong>Active Deliveries</strong> show when you <strong>uploaded/booked</strong> the DR.<br>
+                                <strong>Delivery History</strong> shows when you <strong>completed/e-signed</strong> the DR.<br>
+                                These are <strong>different actions at different times</strong> - they should never be the same!
+                            </p>
+                        </div>
+
+                        <!-- Scenario Simulation -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-play-circle me-2"></i>Realistic Scenario Simulation</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button onclick="simulateBooking()" class="btn btn-primary mb-2 w-100">
+                                            <i class="bi bi-upload me-1"></i>1. Upload DR (Morning)
+                                        </button>
+                                        <div id="bookingResult" class="alert alert-light" style="display: none;"></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button onclick="simulateCompletion()" class="btn btn-success mb-2 w-100">
+                                            <i class="bi bi-pen me-1"></i>2. E-Sign DR (Afternoon)
+                                        </button>
+                                        <div id="completionResult" class="alert alert-light" style="display: none;"></div>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="showComparison()" class="btn btn-warning w-100 mt-3">
+                                    <i class="bi bi-compare me-1"></i>Compare Both Timestamps
+                                </button>
+                                
+                                <div id="comparisonResult" class="mt-3" style="display: none;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Live Demo -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-activity me-2"></i>Live Demo - Real Time Difference</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">This shows how timestamps would work in real usage:</p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">📤 Active Deliveries</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p><strong>Shows:</strong> When you uploaded the DR</p>
+                                                <p><strong>Current booking time:</strong></p>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code id="liveBookingTime">Loading...</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">📋 Delivery History</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p><strong>Shows:</strong> When you e-signed the DR</p>
+                                                <p><strong>Current completion time:</strong></p>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code id="liveCompletionTime">Loading...</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Example Timeline -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-clock me-2"></i>Example Timeline</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="timeline">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="badge bg-primary me-3">8:00 AM</div>
+                                        <div>
+                                            <strong>📤 Upload DR-2024-001</strong><br>
+                                            <small class="text-muted">Active Deliveries shows: Oct 24, 2025 08:00:00</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="badge bg-secondary me-3">12:30 PM</div>
+                                        <div>
+                                            <strong>🚚 DR is out for delivery</strong><br>
+                                            <small class="text-muted">Still shows original upload time: 08:00:00</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center">
+                                        <div class="badge bg-success me-3">3:45 PM</div>
+                                        <div>
+                                            <strong>✍️ Customer e-signs DR</strong><br>
+                                            <small class="text-muted">Delivery History shows: Oct 24, 2025 15:45:00</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-success mt-3">
+                                    <h6><i class="bi bi-check-circle me-2"></i>Result:</h6>
+                                    <p class="mb-0">
+                                        <strong>Active Deliveries:</strong> 08:00:00 (upload time)<br>
+                                        <strong>Delivery History:</strong> 15:45:00 (completion time)<br>
+                                        <strong>Time Difference:</strong> 7 hours 45 minutes ✅
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    <script src="public/assets/js/local-system-time.js"></script>
+    
+    <script>
+        let bookingTimestamp = null;
+        let completionTimestamp = null;
+
+        // Simulate booking (upload) action
+        function simulateBooking() {
+            if (window.createBookingTimestamp) {
+                bookingTimestamp = window.createBookingTimestamp();
+                
+                const resultDiv = document.getElementById('bookingResult');
+                resultDiv.innerHTML = `
+                    <h6>📤 DR Upload Completed</h6>
+                    <p><strong>Booking Time:</strong> ${bookingTimestamp.displayTime}</p>
+                    <p><strong>Action:</strong> ${bookingTimestamp.action}</p>
+                    <small class="text-muted">This timestamp will be shown in Active Deliveries</small>
+                `;
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'alert alert-primary';
+            } else {
+                alert('Booking timestamp function not available');
+            }
+        }
+
+        // Simulate completion (e-signature) action
+        function simulateCompletion() {
+            // Add a small delay to show time difference
+            setTimeout(() => {
+                if (window.createCompletionTimestamp) {
+                    completionTimestamp = window.createCompletionTimestamp();
+                    
+                    const resultDiv = document.getElementById('completionResult');
+                    resultDiv.innerHTML = `
+                        <h6>✍️ DR E-Signature Completed</h6>
+                        <p><strong>Completion Time:</strong> ${completionTimestamp.displayTime}</p>
+                        <p><strong>Action:</strong> ${completionTimestamp.action}</p>
+                        <small class="text-muted">This timestamp will be shown in Delivery History</small>
+                    `;
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-success';
+                } else {
+                    alert('Completion timestamp function not available');
+                }
+            }, 1000); // 1 second delay to show difference
+        }
+
+        // Show comparison
+        function showComparison() {
+            if (!bookingTimestamp || !completionTimestamp) {
+                alert('Please run both Upload DR and E-Sign DR first!');
+                return;
+            }
+
+            const bookingTime = new Date(bookingTimestamp.timestamp);
+            const completionTime = new Date(completionTimestamp.completedDateTime);
+            const timeDiff = completionTime - bookingTime;
+            const secondsDiff = Math.floor(timeDiff / 1000);
+
+            const resultDiv = document.getElementById('comparisonResult');
+            resultDiv.innerHTML = `
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-compare me-2"></i>Timestamp Comparison</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>📤 Active Deliveries:</strong><br>
+                            ${bookingTimestamp.displayTime}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>📋 Delivery History:</strong><br>
+                            ${completionTimestamp.displayTime}</p>
+                        </div>
+                    </div>
+                    <p class="mb-0"><strong>Time Difference:</strong> ${secondsDiff} seconds</p>
+                    <p class="text-success mb-0">✅ Different timestamps as expected!</p>
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+
+        // Update live timestamps
+        function updateLiveTimestamps() {
+            if (window.createBookingTimestamp) {
+                const booking = window.createBookingTimestamp();
+                document.getElementById('liveBookingTime').textContent = booking.displayTime;
+            }
+
+            if (window.createCompletionTimestamp) {
+                const completion = window.createCompletionTimestamp();
+                document.getElementById('liveCompletionTime').textContent = completion.displayTime;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLiveTimestamps();
+            
+            // Update every second to show live time
+            setInterval(updateLiveTimestamps, 1000);
+        });
+    </script>
+</body>
+</html>

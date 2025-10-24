@@ -822,10 +822,10 @@ async function saveBooking() {
                 status: 'Active',
                 distance: '',
                 additional_costs: parseFloat(additionalCostsTotal) || 0.00,
-                created_date: deliveryDate || new Date().toISOString().split('T')[0],
+                created_date: deliveryDate || (window.getLocalSystemDate ? window.getLocalSystemDate() : new Date().toISOString().split('T')[0]),
                 created_by: 'Manual',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
+                created_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
+                updated_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
                 
                 // Display fields (camelCase) - for backward compatibility
                 drNumber: drNumber,
@@ -833,8 +833,8 @@ async function saveBooking() {
                 vendorNumber: vendorNumber || '',
                 truckType: truckType || '',
                 truckPlateNumber: truckPlateNumber || '',
-                deliveryDate: deliveryDate || new Date().toISOString().split('T')[0],
-                timestamp: new Date().toISOString()
+                deliveryDate: deliveryDate || (window.getLocalSystemDate ? window.getLocalSystemDate() : new Date().toISOString().split('T')[0]),
+                timestamp: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()
             };
             
             // Use global field normalizer if available
@@ -865,7 +865,7 @@ async function saveBooking() {
                         deliveryDate: deliveryDate,
                         additionalCosts: additionalCostsTotal,
                         additionalCostItems: additionalCostItems,
-                        timestamp: new Date().toISOString()
+                        timestamp: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()
                     };
                     if (typeof window.activeDeliveries !== 'undefined') {
                         window.activeDeliveries.push(localDelivery);
@@ -2386,10 +2386,12 @@ function mapDRData(data) {
             origin: 'SMEG Alabang warehouse', // Default warehouse as requested
             destination: destination, // Already processed and trimmed above
             
-            // Date and timing
-            deliveryDate: new Date().toISOString().split('T')[0], // Upload date as requested
-            bookedDate: new Date().toISOString().split('T')[0],
-            timestamp: new Date().toISOString(),
+            // Date and timing - BOOKING TIMESTAMP (when DR is uploaded)
+            ...(window.createBookingTimestamp ? window.createBookingTimestamp() : {
+                deliveryDate: new Date().toISOString().split('T')[0],
+                bookedDate: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString()
+            }),
             
             // Truck reference (will be filled from form inputs) - will be converted to truck_type, truck_plate_number
             truckType: '',

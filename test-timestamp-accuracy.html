@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timestamp Accuracy Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="public/assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-clock me-2"></i>Timestamp Accuracy Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Current System Time -->
+                        <div class="alert alert-primary">
+                            <h6><i class="bi bi-laptop me-2"></i>Your Local System Time</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Current Time:</strong> <span id="currentTime">Loading...</span></p>
+                                    <p class="mb-1"><strong>Timezone:</strong> <span id="timezone">Loading...</span></p>
+                                    <p class="mb-0"><strong>ISO Format:</strong> <span id="isoTime">Loading...</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Manila Time:</strong> <span id="manilaTime">Loading...</span></p>
+                                    <p class="mb-1"><strong>UTC Time:</strong> <span id="utcTime">Loading...</span></p>
+                                    <p class="mb-0"><strong>Unix Timestamp:</strong> <span id="unixTime">Loading...</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Your Example Scenario -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-calendar-event me-2"></i>Your Example Scenario</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">📤 DR Upload (Active Deliveries)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p><strong>Time:</strong> Oct 10, 2025 08:00:00</p>
+                                                <p><strong>Action:</strong> Complete DR upload from booking modal</p>
+                                                <p><strong>Timestamp Source:</strong> Your local system time</p>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code>deliveryDate: "2025-10-10T08:00:00.000Z"</code><br>
+                                                    <code>created_at: "2025-10-10T08:00:00.000Z"</code>
+                                                </div>
+                                                <p class="mt-2"><strong>Display:</strong> <span class="badge bg-primary">Oct 10, 2025 08:00:00</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">✍️ E-Signature (Delivery History)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <p><strong>Time:</strong> Oct 10, 2025 14:34:06</p>
+                                                <p><strong>Action:</strong> E-sign DR item (move to history)</p>
+                                                <p><strong>Timestamp Source:</strong> Your local system time</p>
+                                                <div class="bg-light p-2 rounded">
+                                                    <code>completedDateTime: "2025-10-10T14:34:06.000Z"</code><br>
+                                                    <code>lastStatusUpdate: "2025-10-10T14:34:06.000Z"</code>
+                                                </div>
+                                                <p class="mt-2"><strong>Display:</strong> <span class="badge bg-success">Oct 10, 2025 14:34:06</span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Timestamp Test -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-play-circle me-2"></i>Live Timestamp Test</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button onclick="simulateDRUpload()" class="btn btn-primary mb-2 w-100">
+                                            <i class="bi bi-upload me-1"></i>Simulate DR Upload
+                                        </button>
+                                        <button onclick="simulateESignature()" class="btn btn-success mb-2 w-100">
+                                            <i class="bi bi-pen me-1"></i>Simulate E-Signature
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button onclick="testTimezoneAccuracy()" class="btn btn-info mb-2 w-100">
+                                            <i class="bi bi-globe me-1"></i>Test Timezone Accuracy
+                                        </button>
+                                        <button onclick="clearTestResults()" class="btn btn-outline-secondary mb-2 w-100">
+                                            <i class="bi bi-trash me-1"></i>Clear Results
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="timestampResults" class="mt-3">
+                                    <p class="text-muted">Click a test button to see live timestamp generation</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timestamp Accuracy Verification -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-check-circle me-2"></i>Timestamp Accuracy Verification</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <i class="bi bi-laptop display-4 text-primary"></i>
+                                            <h6 class="mt-2">Local System</h6>
+                                            <p class="small">Timestamps are generated using your computer's system clock</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <i class="bi bi-globe display-4 text-info"></i>
+                                            <h6 class="mt-2">Timezone Handling</h6>
+                                            <p class="small">Displayed in Asia/Manila timezone for consistency</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center">
+                                            <i class="bi bi-clock-history display-4 text-success"></i>
+                                            <h6 class="mt-2">Precision</h6>
+                                            <p class="small">Accurate to the millisecond when actions are performed</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-warning mt-3">
+                                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Important Notes:</h6>
+                                    <ul class="mb-0">
+                                        <li><strong>Accuracy:</strong> Timestamps reflect the exact moment you perform actions</li>
+                                        <li><strong>Source:</strong> Based on your local computer's system time</li>
+                                        <li><strong>Timezone:</strong> Stored in UTC, displayed in Asia/Manila</li>
+                                        <li><strong>Precision:</strong> Includes seconds and milliseconds for complete accuracy</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    
+    <script>
+        // Update current time display
+        function updateCurrentTime() {
+            const now = new Date();
+            
+            document.getElementById('currentTime').textContent = now.toLocaleString();
+            document.getElementById('timezone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            document.getElementById('isoTime').textContent = now.toISOString();
+            document.getElementById('manilaTime').textContent = now.toLocaleString('en-US', {
+                timeZone: 'Asia/Manila',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('utcTime').textContent = now.toUTCString();
+            document.getElementById('unixTime').textContent = now.getTime();
+        }
+
+        // Simulate DR Upload
+        function simulateDRUpload() {
+            const uploadTime = new Date();
+            const delivery = {
+                drNumber: 'TEST-DR-001',
+                deliveryDate: uploadTime.toISOString(),
+                created_at: uploadTime.toISOString(),
+                timestamp: uploadTime.toISOString(),
+                customerName: 'Test Customer',
+                status: 'Active'
+            };
+            
+            const formattedTime = window.formatActiveDeliveryDate ? 
+                window.formatActiveDeliveryDate(delivery) : 
+                uploadTime.toLocaleString();
+            
+            addTimestampResult('DR Upload Simulation', 'primary', 
+                `DR uploaded at: ${formattedTime}`,
+                `Raw timestamp: ${uploadTime.toISOString()}`);
+        }
+
+        // Simulate E-Signature
+        function simulateESignature() {
+            const signatureTime = new Date();
+            const delivery = {
+                drNumber: 'TEST-DR-001',
+                completedDateTime: signatureTime.toISOString(),
+                completedDate: signatureTime.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }),
+                lastStatusUpdate: signatureTime.toISOString(),
+                status: 'Completed'
+            };
+            
+            const formattedTime = window.formatDeliveryHistoryDate ? 
+                window.formatDeliveryHistoryDate(delivery) : 
+                signatureTime.toLocaleString();
+            
+            addTimestampResult('E-Signature Simulation', 'success', 
+                `DR completed at: ${formattedTime}`,
+                `Raw timestamp: ${signatureTime.toISOString()}`);
+        }
+
+        // Test timezone accuracy
+        function testTimezoneAccuracy() {
+            const now = new Date();
+            const timezones = [
+                { name: 'Local', value: now.toLocaleString() },
+                { name: 'Manila', value: now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }) },
+                { name: 'UTC', value: now.toUTCString() },
+                { name: 'ISO', value: now.toISOString() }
+            ];
+            
+            let details = timezones.map(tz => `${tz.name}: ${tz.value}`).join('<br>');
+            
+            addTimestampResult('Timezone Accuracy Test', 'info', 
+                'Same moment displayed in different timezones',
+                details);
+        }
+
+        // Add timestamp result
+        function addTimestampResult(title, type, message, details) {
+            const timestamp = new Date().toLocaleTimeString();
+            const resultHtml = `
+                <div class="alert alert-${type} mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${title}</h6>
+                            <p class="mb-1">${message}</p>
+                            <small class="text-muted">${details}</small>
+                        </div>
+                        <small class="text-muted">${timestamp}</small>
+                    </div>
+                </div>
+            `;
+            
+            const resultsDiv = document.getElementById('timestampResults');
+            if (resultsDiv.innerHTML.includes('Click a test button')) {
+                resultsDiv.innerHTML = resultHtml;
+            } else {
+                resultsDiv.insertAdjacentHTML('afterbegin', resultHtml);
+            }
+        }
+
+        // Clear test results
+        function clearTestResults() {
+            document.getElementById('timestampResults').innerHTML = 
+                '<p class="text-muted">Click a test button to see live timestamp generation</p>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentTime();
+            
+            // Update time every second
+            setInterval(updateCurrentTime, 1000);
+        });
+    </script>
+</body>
+</html>

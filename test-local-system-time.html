@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local System Time Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-clock me-2"></i>Local System Time Test</h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Current Time Display -->
+                        <div class="alert alert-success">
+                            <h6><i class="bi bi-laptop me-2"></i>Your System Time (Live)</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Local System Time:</strong> <span id="localTime">Loading...</span></p>
+                                    <p class="mb-1"><strong>Formatted Display:</strong> <span id="formattedTime">Loading...</span></p>
+                                    <p class="mb-0"><strong>Date Only:</strong> <span id="dateOnly">Loading...</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>ISO Format:</strong> <span id="isoTime">Loading...</span></p>
+                                    <p class="mb-1"><strong>Browser Time:</strong> <span id="browserTime">Loading...</span></p>
+                                    <p class="mb-0"><strong>UTC Time:</strong> <span id="utcTime">Loading...</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Controls -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="bi bi-play-circle me-2"></i>Test Local System Time</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button onclick="testDeliveryTimestamp()" class="btn btn-success mb-2 w-100">
+                                            <i class="bi bi-upload me-1"></i>Test Delivery Upload Timestamp
+                                        </button>
+                                        <button onclick="testCompletionTimestamp()" class="btn btn-primary mb-2 w-100">
+                                            <i class="bi bi-check-circle me-1"></i>Test Completion Timestamp
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button onclick="compareWithUTC()" class="btn btn-warning mb-2 w-100">
+                                            <i class="bi bi-globe me-1"></i>Compare with UTC
+                                        </button>
+                                        <button onclick="clearResults()" class="btn btn-outline-secondary mb-2 w-100">
+                                            <i class="bi bi-trash me-1"></i>Clear Results
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div id="testResults" class="mt-3">
+                                    <p class="text-muted">Click a test button to see local system time in action</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comparison Table -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-table me-2"></i>Before vs After Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Method</th>
+                                                <th>Before (UTC Issue)</th>
+                                                <th>After (Local System)</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Your Time</strong></td>
+                                                <td>9:30 AM → Shows 8:00 AM</td>
+                                                <td id="currentLocalTime">Loading...</td>
+                                                <td><span class="badge bg-success">Fixed</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Upload Time</strong></td>
+                                                <td>new Date().toISOString()</td>
+                                                <td id="uploadMethod">Loading...</td>
+                                                <td><span class="badge bg-success">Updated</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Display Format</strong></td>
+                                                <td>UTC → Manila conversion</td>
+                                                <td id="displayMethod">Loading...</td>
+                                                <td><span class="badge bg-success">Direct</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    <script src="public/assets/js/local-system-time.js"></script>
+    
+    <script>
+        // Update live time display
+        function updateLiveTime() {
+            if (window.getLocalSystemTime) {
+                document.getElementById('localTime').textContent = window.getLocalSystemTime();
+            }
+            
+            if (window.formatLocalSystemTime) {
+                document.getElementById('formattedTime').textContent = window.formatLocalSystemTime(true);
+            }
+            
+            if (window.getLocalSystemDate) {
+                document.getElementById('dateOnly').textContent = window.getLocalSystemDate();
+            }
+            
+            if (window.getLocalSystemTimeISO) {
+                document.getElementById('isoTime').textContent = window.getLocalSystemTimeISO();
+            }
+            
+            const now = new Date();
+            document.getElementById('browserTime').textContent = now.toLocaleString();
+            document.getElementById('utcTime').textContent = now.toISOString();
+            
+            // Update comparison table
+            if (window.formatLocalSystemTime) {
+                document.getElementById('currentLocalTime').textContent = window.formatLocalSystemTime(true);
+            }
+            
+            if (window.getLocalSystemTimeISO) {
+                document.getElementById('uploadMethod').textContent = 'getLocalSystemTimeISO()';
+            }
+            
+            if (window.formatDeliveryDateLocal) {
+                document.getElementById('displayMethod').textContent = 'Direct system time';
+            }
+        }
+
+        // Test booking timestamp (for Active Deliveries)
+        function testDeliveryTimestamp() {
+            if (window.createBookingTimestamp) {
+                const timestamp = window.createBookingTimestamp();
+                
+                addTestResult('Booking/Upload Timestamp', 'success', 
+                    'Created for Active Deliveries using your local system time',
+                    `Display: ${timestamp.displayTime}<br>
+                     Action: ${timestamp.action}<br>
+                     Date: ${timestamp.deliveryDate}<br>
+                     Purpose: Shows when DR was uploaded`);
+            } else {
+                addTestResult('Booking Timestamp', 'error', 
+                    'Booking timestamp function not available',
+                    'Make sure local-system-time.js is loaded');
+            }
+        }
+
+        // Test completion timestamp (for Delivery History)
+        function testCompletionTimestamp() {
+            if (window.createCompletionTimestamp) {
+                const timestamp = window.createCompletionTimestamp();
+                
+                addTestResult('Completion/E-Signature Timestamp', 'success',
+                    'Created for Delivery History using your local system time',
+                    `Display: ${timestamp.displayTime}<br>
+                     Action: ${timestamp.action}<br>
+                     Completed: ${timestamp.completedDateTime}<br>
+                     Purpose: Shows when DR was e-signed/completed`);
+            } else {
+                addTestResult('Completion Timestamp', 'error', 
+                    'Completion timestamp function not available',
+                    'Make sure local-system-time.js is loaded');
+            }
+        }
+
+        // Compare with UTC
+        function compareWithUTC() {
+            const now = new Date();
+            const utcTime = now.toISOString();
+            const localTime = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : 'Not available';
+            const utcDisplay = now.toLocaleString('en-US', { timeZone: 'UTC' });
+            const localDisplay = window.formatLocalSystemTime ? window.formatLocalSystemTime(true) : 'Not available';
+            
+            addTestResult('UTC vs Local Comparison', 'info',
+                'See the difference between UTC and local system time',
+                `UTC: ${utcTime} (${utcDisplay})<br>
+                 Local: ${localTime} (${localDisplay})<br>
+                 <strong>Your system shows: ${localDisplay}</strong>`);
+        }
+
+        // Add test result
+        function addTestResult(title, type, message, details) {
+            const timestamp = new Date().toLocaleTimeString();
+            const resultHtml = `
+                <div class="alert alert-${type} mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">${title}</h6>
+                            <p class="mb-1">${message}</p>
+                            <small class="text-muted">${details}</small>
+                        </div>
+                        <small class="text-muted">${timestamp}</small>
+                    </div>
+                </div>
+            `;
+            
+            const resultsDiv = document.getElementById('testResults');
+            if (resultsDiv.innerHTML.includes('Click a test button')) {
+                resultsDiv.innerHTML = resultHtml;
+            } else {
+                resultsDiv.insertAdjacentHTML('afterbegin', resultHtml);
+            }
+        }
+
+        // Clear results
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = 
+                '<p class="text-muted">Click a test button to see local system time in action</p>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLiveTime();
+            
+            // Update time every second
+            setInterval(updateLiveTime, 1000);
+            
+            // Auto-test on load
+            setTimeout(() => {
+                testDeliveryTimestamp();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

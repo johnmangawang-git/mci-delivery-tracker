@@ -405,8 +405,8 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
     console.log('Saving multiple signatures for DR numbers:', drNumbers);
     
     try {
-        // Process each DR number
-        const timestamp = new Date().toISOString();
+        // Process each DR number - USING LOCAL SYSTEM TIME
+        const timestamp = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
         const promises = [];
         const ePodRecords = [];
         
@@ -495,7 +495,7 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
     console.log('Saving single signature for DR:', signatureInfo.drNumber);
     
     try {
-        const timestamp = new Date().toISOString();
+        const timestamp = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
         const [origin, destination] = signatureInfo.deliveryRoute.split(' to ');
 
         const ePodRecord = {

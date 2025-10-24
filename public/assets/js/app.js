@@ -113,8 +113,8 @@ console.log('app.js loaded');
             const oldStatus = activeDeliveries[deliveryIndex].status;
             activeDeliveries[deliveryIndex].status = newStatus;
             
-            // Update timestamp for status change
-            activeDeliveries[deliveryIndex].lastStatusUpdate = new Date().toISOString();
+            // Update timestamp for status change - USING LOCAL SYSTEM TIME
+            activeDeliveries[deliveryIndex].lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
             
             // Save to localStorage and database
             localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
@@ -157,15 +157,23 @@ console.log('app.js loaded');
                 const delivery = activeDeliveries[deliveryIndex];
                 const oldStatus = delivery.status;
                 delivery.status = newStatus;
-                delivery.lastStatusUpdate = new Date().toISOString();
+                delivery.lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
                 
                 // If status is Completed, move to delivery history
                 if (newStatus === 'Completed') {
-                    delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
+                    // COMPLETION TIMESTAMP (when DR is e-signed/completed)
+                    if (window.createCompletionTimestamp) {
+                        const completionData = window.createCompletionTimestamp();
+                        Object.assign(delivery, completionData);
+                    } else {
+                        // Fallback for backward compatibility
+                        delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        delivery.completedDateTime = new Date().toISOString();
+                    }
                     
                     // Add to delivery history
                     if (!deliveryHistory) {
@@ -240,11 +248,19 @@ console.log('app.js loaded');
             // If status is changed to "Completed", move to history
             if (newStatus === 'Completed') {
                 const completedDelivery = activeDeliveries[deliveryIndex];
-                completedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
+                // COMPLETION TIMESTAMP (when DR is e-signed/completed)
+                if (window.createCompletionTimestamp) {
+                    const completionData = window.createCompletionTimestamp();
+                    Object.assign(completedDelivery, completionData);
+                } else {
+                    // Fallback for backward compatibility
+                    completedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    completedDelivery.completedDateTime = new Date().toISOString();
+                }
                 
                 // Move to history
                 deliveryHistory.unshift(completedDelivery);

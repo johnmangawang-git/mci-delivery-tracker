@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test 8 AM Bug</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4>🐛 Reproduce 8:00 AM Bug</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6>Your Console Output:</h6>
+                    <p><strong>Current time:</strong> 10/24/2025, 9:30:00 AM</p>
+                    <p><strong>Manila time:</strong> 10/24/2025, 9:30:00 AM</p>
+                    <p><strong>ISO time:</strong> 2025-10-24T01:30:00.730Z</p>
+                    <p><strong>But showing:</strong> Oct 24, 2025, 08:00:00</p>
+                </div>
+                
+                <button onclick="reproduceIssue()" class="btn btn-danger mb-3">Reproduce 8 AM Issue</button>
+                <button onclick="testTimezoneConversion()" class="btn btn-warning mb-3">Test Timezone Conversion</button>
+                
+                <div id="testResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    
+    <script>
+        function reproduceIssue() {
+            // Simulate your exact scenario
+            const now = new Date(); // This should be 9:30 AM Manila time
+            const isoString = now.toISOString(); // This becomes 01:30 UTC
+            
+            console.log('🔍 Reproducing issue:');
+            console.log('Local time:', now.toLocaleString());
+            console.log('ISO string:', isoString);
+            
+            // Test what happens when we format this ISO string
+            const testDelivery = {
+                deliveryDate: isoString,
+                timestamp: isoString
+            };
+            
+            let results = {
+                'Original ISO': isoString,
+                'Local time when created': now.toLocaleString(),
+                'Manila time when created': now.toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+            };
+            
+            // Test the enhanced formatter
+            if (window.formatActiveDeliveryDate) {
+                const formatted = window.formatActiveDeliveryDate(testDelivery);
+                results['Enhanced formatter shows'] = formatted;
+                
+                // Check if this is showing 8:00 instead of 9:30
+                if (formatted.includes('08:')) {
+                    results['🚨 BUG CONFIRMED'] = 'Showing 8:00 instead of 9:30!';
+                } else if (formatted.includes('09:')) {
+                    results['✅ Working correctly'] = 'Showing correct 9:30 time';
+                }
+            }
+            
+            // Test manual conversion
+            const testDate = new Date(isoString);
+            const manualManilaTime = testDate.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Manila'
+            });
+            
+            results['Manual Manila conversion'] = manualManilaTime;
+            
+            displayResults('🐛 Issue Reproduction', results);
+        }
+        
+        function testTimezoneConversion() {
+            // Test different timezone scenarios
+            const testTimes = [
+                new Date().toISOString(), // Current time
+                '2025-10-24T01:30:00.000Z', // Your exact UTC time
+                '2025-10-24T08:00:00.000Z', // 8 AM UTC (4 PM Manila)
+                '2025-10-24T00:00:00.000Z'  // Midnight UTC (8 AM Manila)
+            ];
+            
+            let results = {};
+            
+            testTimes.forEach((timeString, index) => {
+                const date = new Date(timeString);
+                const manilaTime = date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric', 
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                    timeZone: 'Asia/Manila'
+                });
+                
+                results[`Test ${index + 1} (${timeString})`] = manilaTime;
+                
+                // Check if any of these produce 8:00
+                if (manilaTime.includes('08:00:00')) {
+                    results[`🎯 FOUND 8:00 SOURCE`] = `UTC ${timeString} = Manila ${manilaTime}`;
+                }
+            });
+            
+            displayResults('🌍 Timezone Conversion Tests', results);
+        }
+        
+        function displayResults(title, results) {
+            const html = `
+                <div class="alert alert-info mb-3">
+                    <h5>${title}</h5>
+                    ${Object.entries(results).map(([key, value]) => 
+                        `<p><strong>${key}:</strong> <code>${value}</code></p>`
+                    ).join('')}
+                </div>
+            `;
+            
+            document.getElementById('testResults').insertAdjacentHTML('afterbegin', html);
+        }
+        
+        // Auto-run on load
+        document.addEventListener('DOMContentLoaded', function() {
+            reproduceIssue();
+            testTimezoneConversion();
+        });
+    </script>
+</body>
+</html>

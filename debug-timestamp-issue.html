@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Timestamp Issue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4>🚨 Debug: Why 8:00 AM Instead of 9:24 AM?</h4>
+            </div>
+            <div class="card-body">
+                <button onclick="debugTimestamp()" class="btn btn-primary mb-3">Debug Current Timestamp</button>
+                <button onclick="simulateExcelUpload()" class="btn btn-warning mb-3">Simulate Excel Upload</button>
+                <button onclick="checkLocalStorage()" class="btn btn-info mb-3">Check localStorage</button>
+                
+                <div id="debugResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/assets/js/enhanced-date-formatter.js"></script>
+    
+    <script>
+        function debugTimestamp() {
+            const now = new Date();
+            const results = {
+                'Raw new Date()': now.toString(),
+                'toISOString()': now.toISOString(),
+                'toLocaleString()': now.toLocaleString(),
+                'Manila Time': now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }),
+                'UTC Time': now.toUTCString(),
+                'getTimezoneOffset()': now.getTimezoneOffset() + ' minutes',
+                'System Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+            
+            // Test the exact code from booking.js
+            const bookingTimestamp = new Date().toISOString();
+            const bookingDate = new Date().toISOString().split('T')[0];
+            
+            results['Booking timestamp'] = bookingTimestamp;
+            results['Booking date'] = bookingDate;
+            
+            // CRITICAL TEST: Test the exact enhanced formatter logic
+            const testDate = new Date(bookingTimestamp);
+            results['Test Date Object'] = testDate.toString();
+            
+            // Test manual formatting with Asia/Manila
+            const manualFormat = testDate.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Manila'
+            });
+            results['Manual Manila Format'] = manualFormat;
+            
+            // Test enhanced formatter
+            if (window.formatActiveDeliveryDate) {
+                const testDelivery = {
+                    deliveryDate: bookingTimestamp,
+                    timestamp: bookingTimestamp
+                };
+                results['Enhanced Formatter Result'] = window.formatActiveDeliveryDate(testDelivery);
+            }
+            
+            // Test formatDateWithTimestamp directly
+            if (window.formatDateWithTimestamp) {
+                results['formatDateWithTimestamp'] = window.formatDateWithTimestamp(bookingTimestamp, {
+                    includeTime: true,
+                    includeSeconds: true,
+                    format: 'standard',
+                    timezone: 'Asia/Manila'
+                });
+            }
+            
+            displayResults('Current Timestamp Debug', results);
+        }
+        
+        function simulateExcelUpload() {
+            // Simulate the exact code from booking.js line 2390-2392
+            const uploadData = {
+                deliveryDate: new Date().toISOString().split('T')[0],
+                bookedDate: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString()
+            };
+            
+            const results = {
+                'Upload deliveryDate': uploadData.deliveryDate,
+                'Upload bookedDate': uploadData.bookedDate,
+                'Upload timestamp': uploadData.timestamp,
+                'Current Time Check': new Date().toLocaleString(),
+                'Manila Time Check': new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+            };
+            
+            // Test what would be displayed
+            if (window.formatActiveDeliveryDate) {
+                results['What would be displayed'] = window.formatActiveDeliveryDate(uploadData);
+            }
+            
+            displayResults('Excel Upload Simulation', results);
+        }
+        
+        function checkLocalStorage() {
+            const activeDeliveries = localStorage.getItem('mci-active-deliveries');
+            const results = {};
+            
+            if (activeDeliveries) {
+                try {
+                    const parsed = JSON.parse(activeDeliveries);
+                    results['localStorage items count'] = parsed.length;
+                    
+                    if (parsed.length > 0) {
+                        const latest = parsed[parsed.length - 1];
+                        results['Latest item deliveryDate'] = latest.deliveryDate || 'Not set';
+                        results['Latest item timestamp'] = latest.timestamp || 'Not set';
+                        results['Latest item bookedDate'] = latest.bookedDate || 'Not set';
+                        results['Latest item created_at'] = latest.created_at || 'Not set';
+                        
+                        // Check if this matches the 8:00 AM time
+                        if (window.formatActiveDeliveryDate) {
+                            results['Latest item formatted'] = window.formatActiveDeliveryDate(latest);
+                        }
+                    }
+                } catch (e) {
+                    results['localStorage error'] = e.message;
+                }
+            } else {
+                results['localStorage'] = 'No active deliveries found';
+            }
+            
+            displayResults('localStorage Check', results);
+        }
+        
+        function displayResults(title, results) {
+            const html = `
+                <div class="alert alert-info mb-3">
+                    <h5>${title}</h5>
+                    ${Object.entries(results).map(([key, value]) => 
+                        `<p><strong>${key}:</strong> <code>${value}</code></p>`
+                    ).join('')}
+                </div>
+            `;
+            
+            document.getElementById('debugResults').insertAdjacentHTML('afterbegin', html);
+        }
+        
+        // Auto-run debug on load
+        document.addEventListener('DOMContentLoaded', function() {
+            debugTimestamp();
+        });
+    </script>
+</body>
+</html>
