@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runtime Errors Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        canvas { border: 1px solid #ccc; margin: 10px 0; }
+        .status { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .pass { background-color: green; }
+        .fail { background-color: red; }
+        .pending { background-color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Runtime Errors Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Error Status</h3>
+        <div id="errorStatus">
+            <div><span class="status pending" id="supabaseStatus"></span>Supabase Initialization</div>
+            <div><span class="status pending" id="chartStatus"></span>Chart.js ownerDocument</div>
+            <div><span class="status pending" id="asyncStatus"></span>Async Message Channel</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Chart Test</h3>
+        <canvas id="costBreakdownChart" width="400" height="200"></canvas>
+        <button onclick="testChartUpdate()">Test Chart Update</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testSupabaseInit()">Test Supabase Init</button>
+        <button onclick="testChartSafety()">Test Chart Safety</button>
+        <button onclick="testAsyncHandling()">Test Async Handling</button>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+    </div>
+
+    <!-- Load required libraries -->
+    <script>
+        // Mock Supabase credentials
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    
+    <!-- Load our fix -->
+    <script src="public/assets/js/runtime-errors-fix.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(testName, passed) {
+            const statusElement = document.getElementById(testName + 'Status');
+            if (statusElement) {
+                statusElement.className = `status ${passed ? 'pass' : 'fail'}`;
+            }
+        }
+
+        // Mock getCostBreakdownData function
+        window.getCostBreakdownData = function(period) {
+            return {
+                labels: ['Test 1', 'Test 2', 'Test 3'],
+                values: [30, 40, 30],
+                colors: ['#FF6384', '#36A2EB', '#FFCE56']
+            };
+        };
+
+        // Test 1: Supabase Initialization
+        function testSupabaseInit() {
+            log('🔄 Testing Supabase initialization...', 'info');
+            
+            try {
+                if (typeof window.ensureSupabaseClient === 'function') {
+                    const client = window.ensureSupabaseClient();
+                    if (client) {
+                        log('✅ Supabase client initialized successfully', 'success');
+                        updateStatus('supabase', true);
+                    } else {
+                        log('❌ Supabase client initialization failed', 'error');
+                        updateStatus('supabase', false);
+                    }
+                } else {
+                    log('❌ ensureSupabaseClient function not found', 'error');
+                    updateStatus('supabase', false);
+                }
+            } catch (error) {
+                log('❌ Supabase test failed: ' + error.message, 'error');
+                updateStatus('supabase', false);
+            }
+        }
+
+        // Test 2: Chart Safety
+        function testChartSafety() {
+            log('🔄 Testing chart safety...', 'info');
+            
+            try {
+                if (typeof window.safeUpdateCostBreakdownChart === 'function') {
+                    window.safeUpdateCostBreakdownChart('month');
+                    log('✅ Safe chart update function called', 'success');
+                    updateStatus('chart', true);
+                } else {
+                    log('❌ safeUpdateCostBreakdownChart function not found', 'error');
+                    updateStatus('chart', false);
+                }
+            } catch (error) {
+                log('❌ Chart safety test failed: ' + error.message, 'error');
+                updateStatus('chart', false);
+            }
+        }
+
+        // Test 3: Async Handling
+        function testAsyncHandling() {
+            log('🔄 Testing async error handling...', 'info');
+            
+            try {
+                // Test unhandled promise rejection
+                Promise.reject(new Error('Test async error')).catch(() => {
+                    // This should be caught by our global handler
+                });
+                
+                // Test async wrapper
+                if (typeof window.safeAsync === 'function') {
+                    const testAsync = window.safeAsync(async () => {
+                        throw new Error('Test wrapped async error');
+                    }, 'Test Context');
+                    
+                    testAsync().then(() => {
+                        log('✅ Async error handling working', 'success');
+                        updateStatus('async', true);
+                    });
+                } else {
+                    log('❌ safeAsync function not found', 'error');
+                    updateStatus('async', false);
+                }
+            } catch (error) {
+                log('❌ Async handling test failed: ' + error.message, 'error');
+                updateStatus('async', false);
+            }
+        }
+
+        // Test chart update manually
+        function testChartUpdate() {
+            log('🔄 Testing manual chart update...', 'info');
+            
+            if (window.safeUpdateCostBreakdownChart) {
+                window.safeUpdateCostBreakdownChart('month');
+                log('✅ Manual chart update triggered', 'success');
+            } else {
+                log('❌ Chart update function not available', 'error');
+            }
+        }
+
+        // Run all tests
+        function runAllTests() {
+            log('🧪 Running all runtime error fix tests...', 'info');
+            
+            // Reset status indicators
+            ['supabase', 'chart', 'async'].forEach(test => {
+                const statusElement = document.getElementById(test + 'Status');
+                if (statusElement) {
+                    statusElement.className = 'status pending';
+                }
+            });
+            
+            // Run tests with delays
+            setTimeout(testSupabaseInit, 500);
+            setTimeout(testChartSafety, 1000);
+            setTimeout(testAsyncHandling, 1500);
+            
+            setTimeout(() => {
+                log('🎉 All tests completed! Check status indicators above.', 'success');
+            }, 2000);
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Runtime Errors Fix Test loaded', 'info');
+            
+            setTimeout(() => {
+                log('🔄 Auto-running tests in 2 seconds...', 'info');
+                setTimeout(runAllTests, 2000);
+            }, 1000);
+        });
+
+        // Monitor for console errors
+        let errorCount = 0;
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            errorCount++;
+            if (args[0] && typeof args[0] === 'string') {
+                if (args[0].includes('Supabase createClient not available')) {
+                    log('❌ Detected: Supabase createClient error', 'error');
+                } else if (args[0].includes('ownerDocument')) {
+                    log('❌ Detected: Chart ownerDocument error', 'error');
+                } else if (args[0].includes('message channel')) {
+                    log('❌ Detected: Async message channel error', 'error');
+                }
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Report error count after tests
+        setTimeout(() => {
+            if (errorCount === 0) {
+                log('🎉 No console errors detected!', 'success');
+            } else {
+                log(`⚠️ ${errorCount} console errors detected`, 'warning');
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

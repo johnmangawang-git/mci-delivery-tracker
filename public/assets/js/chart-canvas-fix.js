@@ -194,6 +194,18 @@ console.log('🔧 Loading Chart Canvas Fix...');
         } catch (error) {
             console.error('❌ Error in safe chart update:', error);
             
+            // Check if error is related to ownerDocument
+            if (error.message && error.message.includes('ownerDocument')) {
+                console.warn('⚠️ ownerDocument error detected, canvas not properly mounted');
+                // Retry after DOM is fully ready
+                setTimeout(() => {
+                    if (window.safeUpdateCostBreakdownChart) {
+                        window.safeUpdateCostBreakdownChart(period);
+                    }
+                }, 1000);
+                return;
+            }
+            
             // Try to recreate chart as last resort
             try {
                 console.log('🔄 Attempting to recreate chart...');

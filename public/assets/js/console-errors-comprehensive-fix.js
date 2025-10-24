@@ -181,6 +181,24 @@ function ensureSupabaseClient() {
         // Check if createClient function exists
         if (typeof window.supabase.createClient !== 'function') {
             console.error('❌ Supabase createClient not available');
+            
+            // Try to find createClient in global scope
+            if (typeof createClient !== 'undefined') {
+                console.log('🔧 Found createClient in global scope, creating client...');
+                const supabaseUrl = window.SUPABASE_URL;
+                const supabaseKey = window.SUPABASE_ANON_KEY;
+                
+                if (supabaseUrl && supabaseKey) {
+                    try {
+                        window.supabaseClientInstance = createClient(supabaseUrl, supabaseKey);
+                        console.log('✅ Supabase client created using global createClient');
+                        return window.supabaseClientInstance;
+                    } catch (error) {
+                        console.error('❌ Failed to create client with global createClient:', error);
+                    }
+                }
+            }
+            
             return null;
         }
 
