@@ -346,13 +346,22 @@ async function saveDelivery(delivery) {
             serial_number: delivery.serialNumber
         };
 
-        const { data, error } = await supabaseClientInstance
-            .from('deliveries')
-            .upsert(supabaseDelivery)
-            .select();
-        
-        if (error) throw error;
-        return data[0];
+        // Use safe upsert with validation
+        if (window.safeUpsertDelivery) {
+            console.log('🔄 Using safe upsert for delivery:', supabaseDelivery.dr_number);
+            const result = await window.safeUpsertDelivery(supabaseDelivery);
+            if (result.error) throw result.error;
+            return result.data[0];
+        } else {
+            // Fallback to direct upsert
+            const { data, error } = await supabaseClientInstance
+                .from('deliveries')
+                .upsert(supabaseDelivery)
+                .select();
+            
+            if (error) throw error;
+            return data[0];
+        }
     };
 
     const fallbackOperation = async () => {

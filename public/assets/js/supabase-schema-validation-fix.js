@@ -40,7 +40,20 @@ async function initializeSupabaseWithValidation() {
             return null;
         }
         
-        // Verify createClient is available
+        // Use the comprehensive client fix
+        if (typeof window.initializeSupabaseClient === 'function') {
+            try {
+                const client = await window.initializeSupabaseClient();
+                if (client && typeof client.from === 'function') {
+                    console.log('✅ Using initialized Supabase client');
+                    return client;
+                }
+            } catch (error) {
+                console.error('❌ Failed to initialize client:', error);
+            }
+        }
+        
+        // Fallback: check if createClient is available
         if (typeof window.supabase.createClient !== 'function') {
             console.error('❌ Supabase createClient function not available');
             console.error('Available methods:', Object.keys(window.supabase));

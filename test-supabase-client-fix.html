@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Client Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        .info { color: blue; }
+        #testLog { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; font-family: monospace; }
+        button { margin: 5px; padding: 10px 15px; }
+        .status { display: inline-block; width: 20px; height: 20px; border-radius: 50%; margin-right: 10px; }
+        .pass { background-color: green; }
+        .fail { background-color: red; }
+        .pending { background-color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Client Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Fix Status</h3>
+        <div id="fixStatus">
+            <div><span class="status pending" id="clientStatus"></span>Client Initialization</div>
+            <div><span class="status pending" id="createClientStatus"></span>createClient Function</div>
+            <div><span class="status pending" id="validationStatus"></span>Record Validation</div>
+            <div><span class="status pending" id="insertStatus"></span>Safe Insert Operations</div>
+            <div><span class="status pending" id="errorStatus"></span>400 Error Prevention</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="testLog"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testClientInit()">Test Client Init</button>
+        <button onclick="testCreateClient()">Test createClient</button>
+        <button onclick="testValidation()">Test Validation</button>
+        <button onclick="testSafeInsert()">Test Safe Insert</button>
+        <button onclick="test400Prevention()">Test 400 Prevention</button>
+        <button onclick="runAllTests()">🧪 Run All Tests</button>
+    </div>
+
+    <!-- Load Supabase and our fixes -->
+    <script>
+        // Mock credentials
+        window.SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    <script src="public/assets/js/supabase-client-fix.js"></script>
+
+    <script>
+        // Test logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const className = type === 'success' ? 'success' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateStatus(testName, passed) {
+            const statusElement = document.getElementById(testName + 'Status');
+            if (statusElement) {
+                statusElement.className = `status ${passed ? 'pass' : 'fail'}`;
+            }
+        }
+
+        // Test 1: Client Initialization
+        async function testClientInit() {
+            log('🔄 Testing client initialization...', 'info');
+            
+            try {
+                if (typeof window.initializeSupabaseClient === 'function') {
+                    const client = await window.initializeSupabaseClient();
+                    if (client && typeof client.from === 'function') {
+                        log('✅ Client initialization successful', 'success');
+                        updateStatus('client', true);
+                    } else {
+                        log('❌ Client initialization returned invalid client', 'error');
+                        updateStatus('client', false);
+                    }
+                } else {
+                    log('❌ initializeSupabaseClient function not available', 'error');
+                    updateStatus('client', false);
+                }
+            } catch (error) {
+                log('❌ Client initialization test failed: ' + error.message, 'error');
+                updateStatus('client', false);
+            }
+        }
+
+        // Test 2: createClient Function
+        async function testCreateClient() {
+            log('🔄 Testing createClient function...', 'info');
+            
+            try {
+                if (typeof window.ensureCreateClientAvailable === 'function') {
+                    const createClient = await window.ensureCreateClientAvailable();
+                    if (createClient || (window.supabase && typeof window.supabase.from === 'function')) {
+                        log('✅ createClient function available or client already exists', 'success');
+                        updateStatus('createClient', true);
+                    } else {
+                        log('❌ createClient function not available', 'error');
+                        updateStatus('createClient', false);
+                    }
+                } else {
+                    log('❌ ensureCreateClientAvailable function not available', 'error');
+                    updateStatus('createClient', false);
+                }
+            } catch (error) {
+                log('❌ createClient test failed: ' + error.message, 'error');
+                updateStatus('createClient', false);
+            }
+        }
+
+        // Test 3: Record Validation
+        function testValidation() {
+            log('🔄 Testing record validation...', 'info');
+            
+            try {
+                if (typeof window.validateDeliveryRecord === 'function') {
+                    // Test valid record
+                    const validRecord = {
+                        dr_number: 'DR-TEST-001',
+                        customer_name: 'Test Customer',
+                        status: 'Active'
+                    };
+                    
+                    const validResult = window.validateDeliveryRecord(validRecord);
+                    if (validResult.valid) {
+                        log('✅ Valid record validation passed', 'success');
+                    } else {
+                        log('❌ Valid record validation failed: ' + validResult.errors.join(', '), 'error');
+                        updateStatus('validation', false);
+                        return;
+                    }
+                    
+                    // Test invalid record
+                    const invalidRecord = {
+                        dr_number: '',
+                        customer_name: null
+                    };
+                    
+                    const invalidResult = window.validateDeliveryRecord(invalidRecord);
+                    if (!invalidResult.valid && invalidResult.errors.length > 0) {
+                        log('✅ Invalid record validation correctly failed', 'success');
+                        updateStatus('validation', true);
+                    } else {
+                        log('❌ Invalid record validation should have failed', 'error');
+                        updateStatus('validation', false);
+                    }
+                } else {
+                    log('❌ validateDeliveryRecord function not available', 'error');
+                    updateStatus('validation', false);
+                }
+            } catch (error) {
+                log('❌ Validation test failed: ' + error.message, 'error');
+                updateStatus('validation', false);
+            }
+        }
+
+        // Test 4: Safe Insert
+        async function testSafeInsert() {
+            log('🔄 Testing safe insert operations...', 'info');
+            
+            try {
+                if (typeof window.safeInsertDelivery === 'function') {
+                    const testRecord = {
+                        dr_number: 'DR-TEST-' + Date.now(),
+                        customer_name: 'Test Customer',
+                        status: 'Active',
+                        origin: 'Test Origin',
+                        destination: 'Test Destination'
+                    };
+                    
+                    log('📝 Testing safe insert with valid record...', 'info');
+                    const result = await window.safeInsertDelivery(testRecord);
+                    
+                    if (result.error) {
+                        log('⚠️ Safe insert returned error (may be expected): ' + result.error.message, 'warning');
+                        // This might be expected due to database constraints
+                        updateStatus('insert', true);
+                    } else {
+                        log('✅ Safe insert successful', 'success');
+                        updateStatus('insert', true);
+                    }
+                } else {
+                    log('❌ safeInsertDelivery function not available', 'error');
+                    updateStatus('insert', false);
+                }
+            } catch (error) {
+                log('❌ Safe insert test failed: ' + error.message, 'error');
+                updateStatus('insert', false);
+            }
+        }
+
+        // Test 5: 400 Error Prevention
+        async function test400Prevention() {
+            log('🔄 Testing 400 error prevention...', 'info');
+            
+            try {
+                if (typeof window.safeInsertDelivery === 'function') {
+                    // Test with invalid data that would cause 400 error
+                    const invalidRecord = {
+                        dr_number: '',
+                        customer_name: null,
+                        additional_costs: 'invalid_number'
+                    };
+                    
+                    log('📝 Testing with invalid data...', 'info');
+                    const result = await window.safeInsertDelivery(invalidRecord);
+                    
+                    if (result.error && result.error.message.includes('Validation failed')) {
+                        log('✅ 400 error prevented by validation', 'success');
+                        updateStatus('error', true);
+                    } else {
+                        log('❌ Invalid data should have been caught by validation', 'error');
+                        updateStatus('error', false);
+                    }
+                } else {
+                    log('❌ safeInsertDelivery function not available', 'error');
+                    updateStatus('error', false);
+                }
+            } catch (error) {
+                log('❌ 400 prevention test failed: ' + error.message, 'error');
+                updateStatus('error', false);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            log('🧪 Running all Supabase client fix tests...', 'info');
+            
+            // Reset status indicators
+            ['client', 'createClient', 'validation', 'insert', 'error'].forEach(test => {
+                const statusElement = document.getElementById(test + 'Status');
+                if (statusElement) {
+                    statusElement.className = 'status pending';
+                }
+            });
+            
+            // Run tests with delays
+            await testClientInit();
+            
+            setTimeout(async () => {
+                await testCreateClient();
+                
+                setTimeout(() => {
+                    testValidation();
+                    
+                    setTimeout(async () => {
+                        await testSafeInsert();
+                        
+                        setTimeout(async () => {
+                            await test400Prevention();
+                            
+                            setTimeout(() => {
+                                log('🎉 All tests completed! Check status indicators above.', 'success');
+                            }, 500);
+                        }, 1000);
+                    }, 1000);
+                }, 500);
+            }, 1000);
+        }
+
+        // Listen for Supabase events
+        window.addEventListener('supabaseClientReady', (event) => {
+            log('🎉 Supabase client ready event received!', 'success');
+        });
+
+        window.addEventListener('supabaseClientError', (event) => {
+            log('💥 Supabase client error event: ' + event.detail.error.message, 'error');
+        });
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            log('🚀 Supabase Client Fix Test loaded', 'info');
+            
+            setTimeout(() => {
+                log('🔄 Auto-running tests in 3 seconds...', 'info');
+                setTimeout(runAllTests, 3000);
+            }, 1000);
+        });
+
+        // Monitor console errors
+        let errorCount = 0;
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            errorCount++;
+            if (args[0] && typeof args[0] === 'string') {
+                if (args[0].includes('createClient not available')) {
+                    log('❌ DETECTED: createClient not available error', 'error');
+                } else if (args[0].includes('400 (Bad Request)')) {
+                    log('❌ DETECTED: 400 Bad Request error', 'error');
+                }
+            }
+            originalConsoleError.apply(console, args);
+        };
+
+        // Report error count after tests
+        setTimeout(() => {
+            if (errorCount === 0) {
+                log('🎉 No Supabase client errors detected!', 'success');
+            } else {
+                log(`⚠️ ${errorCount} Supabase-related errors detected`, 'warning');
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

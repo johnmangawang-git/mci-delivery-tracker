@@ -147,6 +147,9 @@
     <!-- Supabase CDN with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" onload="this.onload=null;window.supabaseLoaded=true;" onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
     
+    <!-- SUPABASE CLIENT COMPREHENSIVE FIX - Must load first -->
+    <script src="assets/js/supabase-client-fix.js"></script>
+    
     <!-- GLOBAL SUPABASE INITIALIZER - Must load immediately after Supabase library -->
     <script src="assets/js/core/supabase-init.js"></script>
     
