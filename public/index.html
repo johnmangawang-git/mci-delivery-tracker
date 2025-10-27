@@ -145,6 +145,9 @@
 
     <!-- Supabase CDN with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" onload="this.onload=null;window.supabaseLoaded=true;" onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
+    
+    <!-- SUPABASE DEFINITIVE FIX - Must load immediately after Supabase library -->
+    <script src="assets/js/supabase-definitive-fix.js"></script>
     <!-- Signature Pad Library with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js" onload="this.onload=null;window.signaturePadLoaded=true;" onerror="this.onerror=null;window.signaturePadLoaded=false;loadLocalSignaturePad();"></script>
 
