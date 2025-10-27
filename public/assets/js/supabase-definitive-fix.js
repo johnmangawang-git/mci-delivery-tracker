@@ -128,9 +128,28 @@ console.log('🔧 Loading Supabase Definitive Fix...');
         // Create working client
         const workingClient = createWorkingSupabaseClient();
         
-        // Override global Supabase references
-        window.supabaseClient = workingClient;
+        // Override global Supabase references - they expect functions, not objects
+        window.supabaseClient = function() {
+            console.log('✅ supabaseClient() called - returning working client');
+            return workingClient;
+        };
+        
+        // Add the isSupabaseOnline function that's also expected
+        window.isSupabaseOnline = function() {
+            console.log('✅ isSupabaseOnline() called - returning true');
+            return true;
+        };
+        
         window.safeSupabase = workingClient;
+        
+        // Also provide direct access for scripts that expect the object
+        window.supabaseClientObject = workingClient;
+        
+        // Add other expected functions
+        window.getSupabaseClient = function() {
+            console.log('✅ getSupabaseClient() called - returning working client');
+            return workingClient;
+        };
         
         // Override ensureSupabaseClient function that's causing errors
         window.ensureSupabaseClient = function() {
