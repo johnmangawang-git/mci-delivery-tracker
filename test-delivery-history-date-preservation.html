@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery History Date Preservation Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .critical { background-color: #f5c6cb; border: 2px solid #dc3545; color: #721c24; font-weight: bold; }
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .date-comparison {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .date-before { color: #dc3545; }
+        .date-after { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">🛡️ Delivery History Date Preservation Test</h1>
+        
+        <div class="alert alert-danger">
+            <h5><i class="bi bi-exclamation-triangle"></i> Critical Issue Detected</h5>
+            <p><strong>Problem:</strong> All delivery history dates are changing to today's date</p>
+            <p><strong>Cause:</strong> Fallback logic in app.js overwriting existing completion dates</p>
+            <p><strong>Solution:</strong> Date preservation fix to protect existing timestamps</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🔍 Problem Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Root Cause:</strong></p>
+                        <ul>
+                            <li>app.js lines 170 & 257 have fallback logic</li>
+                            <li>Uses <code>new Date().toLocaleDateString()</code></li>
+                            <li>Overwrites existing completion dates</li>
+                            <li>All history shows today's date</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🛡️ Fix Strategy</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Protection Method:</strong></p>
+                        <ul>
+                            <li>Check for existing completion data</li>
+                            <li>Preserve original timestamps</li>
+                            <li>Only create new dates if none exist</li>
+                            <li>Fix corrupted historical data</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Functions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-danger mb-2" onclick="testDatePreservation()">
+                            🛡️ Test Date Preservation
+                        </button>
+                        <button class="btn btn-warning mb-2" onclick="testExistingDataFix()">
+                            🔧 Test Existing Data Fix
+                        </button>
+                        <button class="btn btn-info mb-2" onclick="simulateCompletionProcess()">
+                            📝 Simulate Completion Process
+                        </button>
+                        <button class="btn btn-success" onclick="testSafeTimestampCreation()">
+                            ✅ Test Safe Timestamp Creation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📊 Sample Data Comparison</h5>
+                    </div>
+                    <div class="card-body" id="sampleDataComparison">
+                        <p class="text-muted">Run tests to see before/after comparison...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Results</h5>
+                    </div>
+                    <div class="card-body" id="testResults">
+                        <p class="text-muted">Click a test button above to see results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/delivery-history-date-preservation-fix.js"></script>
+    
+    <script>
+        // Today's date for comparison
+        const todaysDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        // Sample delivery data with various date scenarios
+        const sampleDeliveries = [
+            {
+                drNumber: 'DR-001',
+                customerName: 'Customer A',
+                completedDate: 'Oct 25, 2025', // Original date (should be preserved)
+                completedDateTime: '2025-10-25T14:30:00.000Z',
+                status: 'Completed'
+            },
+            {
+                drNumber: 'DR-002',
+                customerName: 'Customer B',
+                completedDate: todaysDate, // Today's date (suspicious - may be corrupted)
+                signedAt: '2025-10-26T09:15:00.000Z', // Original timestamp
+                status: 'Completed'
+            },
+            {
+                drNumber: 'DR-003',
+                customerName: 'Customer C',
+                completedDate: 'Oct 27, 2025', // Original date
+                completedTime: '16:45:30',
+                status: 'Completed'
+            },
+            {
+                drNumber: 'DR-004',
+                customerName: 'Customer D',
+                // No completion date - should get new timestamp
+                status: 'Active'
+            },
+            {
+                drNumber: 'DR-005',
+                customerName: 'Customer E',
+                completedDate: todaysDate, // Today's date (suspicious)
+                completedDateTime: '2025-10-24T11:20:00.000Z', // But has original timestamp
+                status: 'Completed'
+            }
+        ];
+        
+        function testDatePreservation() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Date Preservation Test', 'info', 'Testing if existing completion dates are preserved...');
+            
+            if (typeof window.createSafeCompletionTimestamp === 'function') {
+                addTestResult('Function Availability', 'success', 'createSafeCompletionTimestamp function is available');
+                
+                sampleDeliveries.forEach(delivery => {
+                    const originalDate = delivery.completedDate;
+                    const safeTimestamp = window.createSafeCompletionTimestamp(delivery);
+                    const resultDate = safeTimestamp.completedDate;
+                    
+                    if (originalDate && originalDate !== todaysDate) {
+                        // Should preserve original date
+                        if (resultDate === originalDate) {
+                            addTestResult(`${delivery.drNumber} - Preserve Original`, 'success', 
+                                `Original: ${originalDate} → Preserved: ${resultDate}`);
+                        } else {
+                            addTestResult(`${delivery.drNumber} - Preserve Original`, 'error', 
+                                `Original: ${originalDate} → Changed to: ${resultDate}`);
+                        }
+                    } else if (!originalDate) {
+                        // Should create new date
+                        if (resultDate && resultDate !== 'N/A') {
+                            addTestResult(`${delivery.drNumber} - Create New`, 'success', 
+                                `No original date → Created: ${resultDate}`);
+                        } else {
+                            addTestResult(`${delivery.drNumber} - Create New`, 'error', 
+                                `Failed to create new date: ${resultDate}`);
+                        }
+                    } else if (originalDate === todaysDate) {
+                        // Suspicious today's date - should try to fix
+                        addTestResult(`${delivery.drNumber} - Suspicious Date`, 'warning', 
+                            `Today's date detected: ${originalDate} → Result: ${resultDate}`);
+                    }
+                });
+                
+            } else {
+                addTestResult('Function Availability', 'error', 'createSafeCompletionTimestamp function not available');
+            }
+            
+            updateSampleDataComparison();
+        }
+        
+        function testExistingDataFix() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Existing Data Fix Test', 'info', 'Testing fix for corrupted delivery history dates...');
+            
+            // Set up mock delivery history with corrupted dates
+            window.deliveryHistory = [...sampleDeliveries];
+            
+            if (typeof window.fixExistingDeliveryHistoryDates === 'function') {
+                addTestResult('Fix Function', 'success', 'fixExistingDeliveryHistoryDates function is available');
+                
+                // Count items with today's date before fix
+                const beforeCount = window.deliveryHistory.filter(d => d.completedDate === todaysDate).length;
+                addTestResult('Before Fix', 'warning', `${beforeCount} items with today's date (suspicious)`);
+                
+                // Run the fix
+                window.fixExistingDeliveryHistoryDates();
+                
+                // Count items with today's date after fix
+                setTimeout(() => {
+                    const afterCount = window.deliveryHistory.filter(d => d.completedDate === todaysDate).length;
+                    const fixedCount = beforeCount - afterCount;
+                    
+                    if (fixedCount > 0) {
+                        addTestResult('After Fix', 'success', `Fixed ${fixedCount} corrupted dates`);
+                    } else {
+                        addTestResult('After Fix', 'info', 'No dates needed correction');
+                    }
+                    
+                    // Show corrected data
+                    window.deliveryHistory.forEach(delivery => {
+                        if (delivery.completedDate && delivery.completedDate !== todaysDate) {
+                            addTestResult(`${delivery.drNumber} Corrected`, 'success', 
+                                `Date: ${delivery.completedDate}`);
+                        }
+                    });
+                }, 100);
+                
+            } else {
+                addTestResult('Fix Function', 'error', 'fixExistingDeliveryHistoryDates function not available');
+            }
+        }
+        
+        function simulateCompletionProcess() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Completion Process Simulation', 'info', 'Simulating DR completion with date preservation...');
+            
+            // Mock active delivery
+            const mockActiveDelivery = {
+                drNumber: 'DR-SIM-001',
+                customerName: 'Simulation Customer',
+                status: 'Active',
+                completedDate: 'Oct 20, 2025', // Existing completion date (should be preserved)
+                completedDateTime: '2025-10-20T13:45:00.000Z'
+            };
+            
+            window.activeDeliveries = [mockActiveDelivery];
+            window.deliveryHistory = [];
+            
+            if (typeof window.updateDeliveryStatus === 'function') {
+                addTestResult('Simulation Setup', 'success', 'Mock delivery created with existing completion date');
+                addTestResult('Original Date', 'info', `Original completion date: ${mockActiveDelivery.completedDate}`);
+                
+                // Simulate completion
+                const success = window.updateDeliveryStatus('DR-SIM-001', 'Completed');
+                
+                if (success) {
+                    addTestResult('Completion Success', 'success', 'Delivery status updated successfully');
+                    
+                    // Check if date was preserved
+                    setTimeout(() => {
+                        if (window.deliveryHistory.length > 0) {
+                            const completedDelivery = window.deliveryHistory[0];
+                            const finalDate = completedDelivery.completedDate;
+                            
+                            if (finalDate === 'Oct 20, 2025') {
+                                addTestResult('Date Preservation', 'success', 
+                                    `✅ Original date preserved: ${finalDate}`);
+                            } else if (finalDate === todaysDate) {
+                                addTestResult('Date Preservation', 'critical', 
+                                    `❌ Date overwritten with today's date: ${finalDate}`);
+                            } else {
+                                addTestResult('Date Preservation', 'warning', 
+                                    `⚠️ Date changed unexpectedly: ${finalDate}`);
+                            }
+                        } else {
+                            addTestResult('History Check', 'error', 'Delivery not found in history');
+                        }
+                    }, 200);
+                } else {
+                    addTestResult('Completion Failed', 'error', 'Failed to update delivery status');
+                }
+            } else {
+                addTestResult('Function Check', 'error', 'updateDeliveryStatus function not available');
+            }
+        }
+        
+        function testSafeTimestampCreation() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Safe Timestamp Creation Test', 'info', 'Testing safe timestamp creation logic...');
+            
+            const testCases = [
+                {
+                    name: 'Delivery with existing data',
+                    delivery: { drNumber: 'TEST-001', completedDate: 'Oct 15, 2025', completedTime: '14:30:00' },
+                    expected: 'preserve'
+                },
+                {
+                    name: 'Delivery with no completion data',
+                    delivery: { drNumber: 'TEST-002', customerName: 'Test Customer' },
+                    expected: 'create'
+                },
+                {
+                    name: 'Delivery with suspicious today date',
+                    delivery: { drNumber: 'TEST-003', completedDate: todaysDate, signedAt: '2025-10-16T10:00:00.000Z' },
+                    expected: 'preserve'
+                }
+            ];
+            
+            if (typeof window.createSafeCompletionTimestamp === 'function') {
+                testCases.forEach(testCase => {
+                    const result = window.createSafeCompletionTimestamp(testCase.delivery);
+                    
+                    if (testCase.expected === 'preserve' && testCase.delivery.completedDate) {
+                        if (result.completedDate === testCase.delivery.completedDate) {
+                            addTestResult(testCase.name, 'success', 
+                                `✅ Preserved: ${result.completedDate}`);
+                        } else {
+                            addTestResult(testCase.name, 'error', 
+                                `❌ Not preserved: ${testCase.delivery.completedDate} → ${result.completedDate}`);
+                        }
+                    } else if (testCase.expected === 'create') {
+                        if (result.completedDate && result.completedDate !== 'N/A') {
+                            addTestResult(testCase.name, 'success', 
+                                `✅ Created: ${result.completedDate}`);
+                        } else {
+                            addTestResult(testCase.name, 'error', 
+                                `❌ Failed to create: ${result.completedDate}`);
+                        }
+                    }
+                });
+            } else {
+                addTestResult('Function Check', 'error', 'createSafeCompletionTimestamp function not available');
+            }
+        }
+        
+        function addTestResult(title, type, content) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `
+                <strong>${title}:</strong><br>
+                <div class="time-display">${content}</div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function updateSampleDataComparison() {
+            const comparisonDiv = document.getElementById('sampleDataComparison');
+            
+            const comparisonHtml = sampleDeliveries.map(delivery => {
+                const originalDate = delivery.completedDate || 'No date';
+                const isSuspicious = originalDate === todaysDate;
+                const hasOriginalTimestamp = delivery.completedDateTime || delivery.signedAt;
+                
+                return `
+                    <div class="date-comparison ${isSuspicious ? 'border-warning' : ''}">
+                        <div>
+                            <strong>${delivery.drNumber}</strong><br>
+                            <small>${delivery.customerName}</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="date-before">Before: ${originalDate}</div>
+                            <div class="date-after">Status: ${isSuspicious ? '⚠️ Suspicious' : '✅ Good'}</div>
+                            ${hasOriginalTimestamp ? '<small>📅 Has original timestamp</small>' : '<small>❌ No original timestamp</small>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            comparisonDiv.innerHTML = comparisonHtml;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSampleDataComparison();
+            
+            // Run initial test after scripts load
+            setTimeout(() => {
+                console.log('🧪 Running initial date preservation test...');
+                
+                const hasPreservationFunction = typeof window.createSafeCompletionTimestamp === 'function';
+                const hasFixFunction = typeof window.fixExistingDeliveryHistoryDates === 'function';
+                
+                console.log('Preservation function available:', hasPreservationFunction);
+                console.log('Fix function available:', hasFixFunction);
+                
+                if (hasPreservationFunction && hasFixFunction) {
+                    addTestResult('Initial Check', 'success', 'Date preservation functions are loaded and ready');
+                    
+                    // Show today's date for reference
+                    addTestResult('Today\'s Date Reference', 'info', `Today: ${todaysDate}`);
+                    addTestResult('Critical Issue', 'critical', 'All delivery history dates changing to today\'s date - fix deployed');
+                } else {
+                    addTestResult('Initial Check', 'warning', 'Functions may still be loading. Try running tests manually.');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
