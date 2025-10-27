@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery History Date-Time Display Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .sample-data {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">📅 Delivery History Date-Time Display Test</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🔧 Fix Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Problem:</strong> "Date" column only showed date without time</p>
+                        <p><strong>Solution:</strong> Enhanced formatting to show both date and time</p>
+                        <p><strong>Column Renamed:</strong> "Date" → "Date Delivered"</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Functions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary mb-2" onclick="testDateTimeFormatting()">
+                            Test Date-Time Formatting
+                        </button>
+                        <br>
+                        <button class="btn btn-success mb-2" onclick="testWithSampleData()">
+                            Test with Sample Data
+                        </button>
+                        <br>
+                        <button class="btn btn-info" onclick="testEdgeCases()">
+                            Test Edge Cases
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📊 Sample Delivery Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="sample-data" id="sampleData">
+                            <p>Sample delivery records will be shown here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Results</h5>
+                    </div>
+                    <div class="card-body" id="testResults">
+                        <p class="text-muted">Click a test button above to see results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📋 Expected vs Actual Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date Delivered</th>
+                                        <th>DR Number</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Format Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsPreview">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">Run tests to see formatted results</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/delivery-history-date-time-display-fix.js"></script>
+    
+    <script>
+        // Sample delivery data for testing
+        const sampleDeliveries = [
+            {
+                drNumber: 'DR-001',
+                customerName: 'Test Customer 1',
+                status: 'Completed',
+                completedDateTime: '2025-01-27T14:30:25.123Z',
+                completedDate: 'Jan 27, 2025',
+                completedTime: '14:30:25'
+            },
+            {
+                drNumber: 'DR-002', 
+                customerName: 'Test Customer 2',
+                status: 'Completed',
+                signedAt: '2025-01-27T09:15:45.000Z',
+                completedDate: 'Jan 27, 2025'
+            },
+            {
+                drNumber: 'DR-003',
+                customerName: 'Test Customer 3', 
+                status: 'Completed',
+                completedDate: 'Oct 27, 2025',
+                completedTime: '16:45:30'
+            },
+            {
+                drNumber: 'DR-004',
+                customerName: 'Test Customer 4',
+                status: 'Completed',
+                completed_date_time: '2025-01-27T11:20:15.456Z'
+            },
+            {
+                drNumber: 'DR-005',
+                customerName: 'Test Customer 5',
+                status: 'Completed',
+                completedDate: 'Jan 27, 2025'
+                // No time data - edge case
+            }
+        ];
+        
+        function displaySampleData() {
+            const sampleDataDiv = document.getElementById('sampleData');
+            const dataHtml = sampleDeliveries.map(delivery => `
+                <div class="mb-2">
+                    <strong>${delivery.drNumber}</strong> - ${delivery.customerName}<br>
+                    <small>
+                        completedDateTime: ${delivery.completedDateTime || 'N/A'}<br>
+                        completedDate: ${delivery.completedDate || 'N/A'}<br>
+                        completedTime: ${delivery.completedTime || 'N/A'}<br>
+                        signedAt: ${delivery.signedAt || 'N/A'}
+                    </small>
+                </div>
+            `).join('');
+            
+            sampleDataDiv.innerHTML = dataHtml;
+        }
+        
+        function testDateTimeFormatting() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Date-Time Formatting Test', 'info', 'Testing enhanced date-time formatting...');
+            
+            // Test if the formatting function is available
+            if (typeof window.formatDeliveryHistoryDateTimeEnhanced === 'function') {
+                addTestResult('Function Availability', 'success', 'formatDeliveryHistoryDateTimeEnhanced function is available');
+                
+                // Test with sample data
+                sampleDeliveries.forEach((delivery, index) => {
+                    const formatted = window.formatDeliveryHistoryDateTimeEnhanced(delivery);
+                    const testName = `${delivery.drNumber} Formatting`;
+                    
+                    if (formatted && !formatted.includes('No completion') && !formatted.includes('Error')) {
+                        addTestResult(testName, 'success', formatted);
+                    } else {
+                        addTestResult(testName, 'warning', formatted);
+                    }
+                });
+                
+            } else {
+                addTestResult('Function Availability', 'error', 'formatDeliveryHistoryDateTimeEnhanced function not available');
+            }
+            
+            updateResultsPreview();
+        }
+        
+        function testWithSampleData() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Sample Data Test', 'info', 'Testing with realistic delivery data...');
+            
+            if (typeof window.formatDeliveryHistoryDate === 'function') {
+                addTestResult('Global Function', 'success', 'formatDeliveryHistoryDate function is available');
+                
+                sampleDeliveries.forEach(delivery => {
+                    const formatted = window.formatDeliveryHistoryDate(delivery);
+                    const hasDateTime = formatted.includes(':') && (formatted.includes('Jan') || formatted.includes('Oct'));
+                    
+                    if (hasDateTime) {
+                        addTestResult(`${delivery.drNumber} - Full Date-Time`, 'success', formatted);
+                    } else {
+                        addTestResult(`${delivery.drNumber} - Date Only`, 'warning', formatted);
+                    }
+                });
+                
+            } else {
+                addTestResult('Global Function', 'error', 'formatDeliveryHistoryDate function not available');
+            }
+            
+            updateResultsPreview();
+        }
+        
+        function testEdgeCases() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Edge Cases Test', 'info', 'Testing edge cases and error handling...');
+            
+            const edgeCases = [
+                { drNumber: 'EDGE-001', customerName: 'No Timestamp' },
+                { drNumber: 'EDGE-002', customerName: 'Invalid Date', completedDateTime: 'invalid-date' },
+                { drNumber: 'EDGE-003', customerName: 'Empty String', completedDateTime: '' },
+                { drNumber: 'EDGE-004', customerName: 'Null Value', completedDateTime: null },
+                { drNumber: 'EDGE-005', customerName: 'Future Date', completedDateTime: '2030-12-31T23:59:59.999Z' }
+            ];
+            
+            if (typeof window.formatDeliveryHistoryDateTimeEnhanced === 'function') {
+                edgeCases.forEach(delivery => {
+                    const formatted = window.formatDeliveryHistoryDateTimeEnhanced(delivery);
+                    const testName = `${delivery.drNumber} - ${delivery.customerName}`;
+                    
+                    if (formatted.includes('Error') || formatted.includes('Invalid')) {
+                        addTestResult(testName, 'error', formatted);
+                    } else if (formatted.includes('No completion') || formatted.includes('not recorded')) {
+                        addTestResult(testName, 'warning', formatted);
+                    } else {
+                        addTestResult(testName, 'success', formatted);
+                    }
+                });
+            }
+            
+            updateResultsPreview();
+        }
+        
+        function addTestResult(title, type, content) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `
+                <strong>${title}:</strong><br>
+                <div class="time-display">${content}</div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function updateResultsPreview() {
+            const resultsPreview = document.getElementById('resultsPreview');
+            
+            if (typeof window.formatDeliveryHistoryDate === 'function') {
+                const previewRows = sampleDeliveries.map(delivery => {
+                    const formatted = window.formatDeliveryHistoryDate(delivery);
+                    const formatType = formatted.includes(':') ? 'Date + Time' : 'Date Only';
+                    const rowClass = formatted.includes(':') ? 'table-success' : 'table-warning';
+                    
+                    return `
+                        <tr class="${rowClass}">
+                            <td><strong>${formatted}</strong></td>
+                            <td>${delivery.drNumber}</td>
+                            <td>${delivery.customerName}</td>
+                            <td><span class="badge bg-success">Completed</span></td>
+                            <td>${formatType}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                resultsPreview.innerHTML = previewRows;
+            } else {
+                resultsPreview.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Formatting function not available</td></tr>';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            displaySampleData();
+            
+            // Run initial test after scripts load
+            setTimeout(() => {
+                console.log('🧪 Running initial date-time formatting test...');
+                
+                const hasFunction = typeof window.formatDeliveryHistoryDateTimeEnhanced === 'function';
+                const hasGlobalFunction = typeof window.formatDeliveryHistoryDate === 'function';
+                
+                console.log('Enhanced function available:', hasFunction);
+                console.log('Global function available:', hasGlobalFunction);
+                
+                if (hasFunction || hasGlobalFunction) {
+                    addTestResult('Initial Check', 'success', 'Date-time formatting functions are loaded and ready');
+                    testDateTimeFormatting();
+                } else {
+                    addTestResult('Initial Check', 'warning', 'Functions may still be loading. Try running tests manually.');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
