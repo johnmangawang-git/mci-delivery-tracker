@@ -258,6 +258,9 @@
     <!-- CHART CANVAS FIX - Prevents Chart.js DOM errors by ensuring canvas elements are ready -->
     <script src="assets/js/chart-canvas-fix.js"></script>
     
+    <!-- DELIVERY DATE ENHANCEMENT - Adds custom delivery date selection to DR Preview -->
+    <script src="assets/js/delivery-date-enhancement.js"></script>
+    
     <!-- ANALYTICS ERROR FIX - Handles analytics errors gracefully with fallbacks -->
     <script src="assets/js/analytics-error-fix.js"></script>
     
@@ -1274,7 +1277,7 @@ The page will refresh to show your new data.`);
                                     <th>Destination</th>
                                     <th>Truck</th>
                                     <th>Status</th>
-                                    <th>Booked Date</th>
+                                    <th>Delivery Date</th>
                                     <th>Item #</th>
                                     <th>Mobile#</th>
                                     <th>Item Description</th>
@@ -2197,7 +2200,7 @@ The page will refresh to show your new data.`);
                                             <th>Vendor Number</th>
                                             <th>Origin</th>
                                             <th>Destination</th>
-                                            <th>Delivery Date</th>
+                                            <th>Created Date</th>
                                             <th>Status</th>
                                             <th>Item #</th>
                                             <th>Mobile#</th>
@@ -2243,6 +2246,31 @@ The page will refresh to show your new data.`);
                                                 <input type="text" class="form-control" id="drTruckPlate" 
                                                        placeholder="Enter plate number (e.g., ABC-1234)" required>
                                                 <div class="form-text">Truck plate number for all DR items</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery Date Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6><i class="bi bi-calendar-event"></i> Delivery Date</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="drDeliveryDate" class="form-label">Delivery Date</label>
+                                                <input type="date" class="form-control" id="drDeliveryDate" required>
+                                                <div class="form-text">When should these deliveries be completed?</div>
+                                            </div>
+                                            <div class="col-md-6 d-flex align-items-center">
+                                                <div class="alert alert-info mb-0 w-100">
+                                                    <i class="bi bi-info-circle me-2"></i>
+                                                    <strong>Tip:</strong> You can schedule deliveries for future dates. 
+                                                    All DR items will use this delivery date.
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
