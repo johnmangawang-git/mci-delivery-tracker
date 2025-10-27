@@ -6,45 +6,65 @@
 console.log('🕐 Loading Local System Time module...');
 
 /**
- * Get current local system time as a formatted string
- * This bypasses UTC conversion and uses your system clock directly
+ * Get local system time as a formatted string using DELIVERY DATE + current time
+ * ENHANCED: Uses selected delivery date with current system time
  */
 function getLocalSystemTime() {
     const now = new Date();
     
-    // Format using your system's local time directly
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    // Get the selected delivery date (YYYY-MM-DD format)
+    const deliveryDate = getLocalSystemDate(); // This now respects selected delivery date
+    
+    // Extract date parts from selected delivery date
+    const [year, month, day] = deliveryDate.split('-');
+    
+    // Use current system time (HH:mm:ss)
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     
+    // Combine: SELECTED DATE + CURRENT TIME
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
- * Get current local system time as ISO-like string but using local time
+ * Get current local system time as ISO-like string but using DELIVERY DATE + current time
+ * ENHANCED: Uses selected delivery date with current system time
  */
 function getLocalSystemTimeISO() {
     const now = new Date();
     
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    // Get the selected delivery date (YYYY-MM-DD format)
+    const deliveryDate = getLocalSystemDate(); // This now respects selected delivery date
+    
+    // Extract date parts from selected delivery date
+    const [year, month, day] = deliveryDate.split('-');
+    
+    // Use current system time (HH:mm:ss)
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
     
-    // Create ISO-like format but with local time instead of UTC
+    // Create ISO-like format: SELECTED DATE + CURRENT TIME
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}+08:00`;
 }
 
 /**
  * Get current date in YYYY-MM-DD format using local system time
+ * ENHANCED: Now respects user-selected delivery date
  */
 function getLocalSystemDate() {
+    // Check if user has selected a custom delivery date
+    if (typeof window.getSelectedDeliveryDate === 'function') {
+        const selectedDate = window.getSelectedDeliveryDate();
+        if (selectedDate && selectedDate !== new Date().toISOString().split('T')[0]) {
+            console.log('📅 Using selected delivery date instead of today:', selectedDate);
+            return selectedDate;
+        }
+    }
+    
+    // Fallback to today's date
     const now = new Date();
     
     const year = now.getFullYear();
@@ -55,10 +75,18 @@ function getLocalSystemDate() {
 }
 
 /**
- * Format local system time for display
+ * Format local system time for display using DELIVERY DATE + current time
+ * ENHANCED: Uses selected delivery date with current system time
  */
 function formatLocalSystemTime(includeSeconds = true) {
     const now = new Date();
+    
+    // Get the selected delivery date
+    const deliveryDate = getLocalSystemDate(); // This now respects selected delivery date
+    
+    // Create a date object with selected date but current time
+    const [year, month, day] = deliveryDate.split('-');
+    const displayDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
     
     const options = {
         year: 'numeric',
@@ -73,8 +101,8 @@ function formatLocalSystemTime(includeSeconds = true) {
         options.second = '2-digit';
     }
     
-    // Use your system's locale and timezone directly
-    return now.toLocaleString('en-US', options);
+    // Format: SELECTED DATE + CURRENT TIME
+    return displayDate.toLocaleString('en-US', options);
 }
 
 /**
@@ -185,14 +213,17 @@ function formatCompletionTimestamp(delivery) {
 
 /**
  * Create booking timestamp (for when DR is uploaded)
+ * ENHANCED: Now uses selected delivery date
  */
 function createBookingTimestamp() {
+    const selectedDeliveryDate = getLocalSystemDate(); // This now respects selected date
+    
     return {
-        // For Active Deliveries display
-        deliveryDate: getLocalSystemDate(),
-        bookedDate: getLocalSystemDate(), 
-        timestamp: getLocalSystemTimeISO(),
-        created_at: getLocalSystemTimeISO(),
+        // For Active Deliveries display - USE SELECTED DELIVERY DATE
+        deliveryDate: selectedDeliveryDate,
+        bookedDate: selectedDeliveryDate, 
+        timestamp: getLocalSystemTimeISO(), // Keep actual creation time
+        created_at: getLocalSystemTimeISO(), // Keep actual creation time
         
         // Display format for Active Deliveries
         displayTime: formatLocalSystemTime(true),

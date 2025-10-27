@@ -2386,11 +2386,11 @@ function mapDRData(data) {
             origin: 'SMEG Alabang warehouse', // Default warehouse as requested
             destination: destination, // Already processed and trimmed above
             
-            // Date and timing - BOOKING TIMESTAMP (when DR is uploaded)
+            // Date and timing - USE SELECTED DELIVERY DATE
             ...(window.createBookingTimestamp ? window.createBookingTimestamp() : {
-                deliveryDate: new Date().toISOString().split('T')[0],
-                bookedDate: new Date().toISOString().split('T')[0],
-                timestamp: new Date().toISOString()
+                deliveryDate: window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0],
+                bookedDate: window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString() // Keep actual creation timestamp
             }),
             
             // Truck reference (will be filled from form inputs) - will be converted to truck_type, truck_plate_number
@@ -2696,8 +2696,9 @@ async function createBookingFromDR(bookingData) {
             console.warn('Missing required fields:', missingFields);
         }
         
-        // Ensure all display fields are properly set
-        bookingData.bookedDate = bookingData.bookedDate || bookingData.deliveryDate || new Date().toISOString().split('T')[0];
+        // Ensure all display fields are properly set - USE SELECTED DELIVERY DATE
+        bookingData.bookedDate = bookingData.bookedDate || bookingData.deliveryDate || 
+            (window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0]);
         bookingData.truck = bookingData.truck || (bookingData.truckType && bookingData.truckPlateNumber ? 
             `${bookingData.truckType} (${bookingData.truckPlateNumber})` : 'N/A');
         
@@ -2717,7 +2718,7 @@ async function createBookingFromDR(bookingData) {
                     status: 'Active', // Changed to match manual booking
                     distance: '', // Add distance field
                     additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
-                    created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
+                    created_date: bookingData.bookedDate || (window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0]),
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),

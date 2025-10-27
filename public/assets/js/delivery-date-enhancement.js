@@ -167,6 +167,30 @@ console.log('🔧 Loading Delivery Date Enhancement...');
             };
         }
         
+        // Override createBookingTimestamp function if it exists
+        if (typeof window.createBookingTimestamp === 'function') {
+            const originalCreateBookingTimestamp = window.createBookingTimestamp;
+            window.createBookingTimestamp = function() {
+                const originalResult = originalCreateBookingTimestamp();
+                const selectedDate = getSelectedDeliveryDate();
+                
+                // Override the dates with selected delivery date
+                return {
+                    ...originalResult,
+                    deliveryDate: selectedDate,
+                    bookedDate: selectedDate
+                };
+            };
+        }
+        
+        // Override any date creation functions
+        const originalGetLocalSystemDate = window.getLocalSystemDate;
+        window.getLocalSystemDate = function() {
+            const selectedDate = getSelectedDeliveryDate();
+            console.log('🔧 getLocalSystemDate overridden, returning:', selectedDate);
+            return selectedDate;
+        };
+        
         console.log('✅ Booking functions overridden with delivery date support');
     }
     
@@ -205,7 +229,17 @@ console.log('🔧 Loading Delivery Date Enhancement...');
      */
     function getSelectedDeliveryDate() {
         const deliveryDateInput = document.getElementById('drDeliveryDate');
-        return deliveryDateInput ? deliveryDateInput.value : new Date().toISOString().split('T')[0];
+        const selectedDate = deliveryDateInput ? deliveryDateInput.value : null;
+        
+        if (selectedDate) {
+            console.log('📅 Using selected delivery date:', selectedDate);
+            return selectedDate;
+        }
+        
+        // Fallback to today
+        const today = new Date().toISOString().split('T')[0];
+        console.log('📅 Using fallback date (today):', today);
+        return today;
     }
     
     /**
@@ -244,6 +278,22 @@ console.log('🔧 Loading Delivery Date Enhancement...');
         // DOM is already loaded
         setTimeout(initDeliveryDateEnhancement, 100);
     }
+    
+    // Set up periodic override to ensure our delivery date is always used
+    setInterval(() => {
+        // Ensure our getSelectedDeliveryDate function is always available
+        if (typeof window.getSelectedDeliveryDate !== 'function') {
+            window.getSelectedDeliveryDate = getSelectedDeliveryDate;
+        }
+        
+        // Re-override key functions periodically
+        if (typeof window.getLocalSystemDate === 'function') {
+            window.getLocalSystemDate = function() {
+                const selectedDate = getSelectedDeliveryDate();
+                return selectedDate;
+            };
+        }
+    }, 2000);
     
     console.log('✅ Delivery Date Enhancement loaded successfully');
     

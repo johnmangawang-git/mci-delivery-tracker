@@ -158,7 +158,7 @@ window.createBookingFromDR = async function (bookingData) {
             truck_type: bookingData.truckType || '',
             truck_plate_number: bookingData.truckPlateNumber || '',
             status: 'Active',
-            created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
+            created_date: bookingData.bookedDate || (window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0]),
             created_by: 'Excel Upload',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
