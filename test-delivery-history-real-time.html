@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery History Real-Time Integration Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .live-clock {
+            font-size: 1.5em;
+            color: #28a745;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .mock-delivery {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">🕐 Delivery History Real-Time Integration Test</h1>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🕐 Current System Time</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="live-clock" id="liveClock">Loading...</div>
+                        <p class="text-muted text-center">This is your laptop's current time</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test E-Signature Completion</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Mock DR Number:</label>
+                            <input type="text" class="form-control" id="mockDrNumber" value="DR-TEST-001" readonly>
+                        </div>
+                        <button class="btn btn-primary" onclick="testESignatureCompletion()">
+                            🖊️ Simulate E-Signature Completion
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📦 Mock Active Delivery</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mock-delivery" id="mockDelivery">
+                            <strong>DR Number:</strong> DR-TEST-001<br>
+                            <strong>Customer:</strong> Test Customer<br>
+                            <strong>Status:</strong> <span id="mockStatus" class="badge bg-primary">Active</span><br>
+                            <strong>Completion Time:</strong> <span id="mockCompletionTime">Not completed yet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Results</h5>
+                    </div>
+                    <div class="card-body" id="testResults">
+                        <p class="text-muted">Click "Simulate E-Signature Completion" to test the real-time integration.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📊 Delivery History Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>DR Number</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Completion Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyPreview">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted">No completed deliveries yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/real-time-system-integration.js"></script>
+    <script src="public/assets/js/delivery-history-real-time-integration.js"></script>
+    
+    <script>
+        // Initialize mock data
+        window.activeDeliveries = [
+            {
+                drNumber: 'DR-TEST-001',
+                customerName: 'Test Customer',
+                vendorNumber: 'V001',
+                origin: 'Warehouse A',
+                destination: 'Customer Location',
+                status: 'Active',
+                truckPlateNumber: 'ABC-123',
+                truckType: 'Truck'
+            }
+        ];
+        
+        window.deliveryHistory = [];
+        
+        // Update live clock
+        function updateLiveClock() {
+            const now = new Date();
+            const timeString = now.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('liveClock').textContent = timeString;
+        }
+        
+        // Test e-signature completion
+        function testESignatureCompletion() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            const drNumber = document.getElementById('mockDrNumber').value;
+            const startTime = new Date();
+            
+            addTestResult('Test Started', 'info', `Testing e-signature completion for ${drNumber}`);
+            addTestResult('Start Time', 'info', startTime.toLocaleString());
+            
+            // Test if real-time integration is available
+            if (typeof window.createCompletionTimestamp === 'function') {
+                addTestResult('Real-Time Integration', 'success', 'createCompletionTimestamp function available');
+                
+                // Test timestamp creation
+                const completionTimestamp = window.createCompletionTimestamp();
+                addTestResult('Completion Timestamp Created', 'success', JSON.stringify(completionTimestamp, null, 2));
+                
+                // Test updateDeliveryStatus function
+                if (typeof window.updateDeliveryStatus === 'function') {
+                    addTestResult('Update Function', 'success', 'updateDeliveryStatus function available');
+                    
+                    // Simulate the e-signature completion
+                    const success = window.updateDeliveryStatus(drNumber, 'Completed');
+                    
+                    if (success) {
+                        addTestResult('E-Signature Simulation', 'success', 'Delivery status updated successfully');
+                        
+                        // Update mock UI
+                        document.getElementById('mockStatus').innerHTML = '<span class="badge bg-success">Completed</span>';
+                        document.getElementById('mockCompletionTime').textContent = completionTimestamp.completedDate + ' ' + completionTimestamp.completedTime;
+                        
+                        // Update history preview
+                        updateHistoryPreview();
+                        
+                        // Verify the timestamp uses real system time
+                        const completionTime = new Date(completionTimestamp.completedDateTime);
+                        const timeDiff = Math.abs(completionTime.getTime() - startTime.getTime());
+                        
+                        if (timeDiff < 5000) { // Within 5 seconds
+                            addTestResult('Real-Time Verification', 'success', `Timestamp uses real system time (${timeDiff}ms difference)`);
+                        } else {
+                            addTestResult('Real-Time Verification', 'warning', `Timestamp might not be using real-time (${timeDiff}ms difference)`);
+                        }
+                        
+                    } else {
+                        addTestResult('E-Signature Simulation', 'error', 'Failed to update delivery status');
+                    }
+                } else {
+                    addTestResult('Update Function', 'error', 'updateDeliveryStatus function not available');
+                }
+            } else {
+                addTestResult('Real-Time Integration', 'error', 'createCompletionTimestamp function not available');
+            }
+            
+            const endTime = new Date();
+            addTestResult('Test Completed', 'info', `Total time: ${endTime.getTime() - startTime.getTime()}ms`);
+        }
+        
+        function addTestResult(title, type, content) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `
+                <strong>${title}:</strong><br>
+                <div class="time-display">${content}</div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function updateHistoryPreview() {
+            const historyPreview = document.getElementById('historyPreview');
+            
+            if (window.deliveryHistory && window.deliveryHistory.length > 0) {
+                const historyRows = window.deliveryHistory.map(delivery => `
+                    <tr>
+                        <td>${delivery.completedDate || 'N/A'}</td>
+                        <td><strong>${delivery.drNumber}</strong></td>
+                        <td>${delivery.customerName || 'N/A'}</td>
+                        <td><span class="badge bg-success">Completed</span></td>
+                        <td>
+                            <small>
+                                <strong>Time:</strong> ${delivery.completedTime || 'N/A'}<br>
+                                <strong>Signed:</strong> ${delivery.signedAt ? new Date(delivery.signedAt).toLocaleString() : 'N/A'}
+                            </small>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                historyPreview.innerHTML = historyRows;
+            } else {
+                historyPreview.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No completed deliveries yet</td></tr>';
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start live clock
+            updateLiveClock();
+            setInterval(updateLiveClock, 1000);
+            
+            // Run initial test after a delay to ensure scripts are loaded
+            setTimeout(() => {
+                console.log('🧪 Running initial integration test...');
+                
+                // Test if functions are available
+                const hasRealTime = typeof window.createRealTimeTimestamp === 'function';
+                const hasCompletion = typeof window.createCompletionTimestamp === 'function';
+                const hasUpdate = typeof window.updateDeliveryStatus === 'function';
+                
+                console.log('Real-time integration available:', hasRealTime);
+                console.log('Completion timestamp available:', hasCompletion);
+                console.log('Update delivery status available:', hasUpdate);
+                
+                if (hasRealTime && hasCompletion && hasUpdate) {
+                    addTestResult('Integration Check', 'success', 'All required functions are available and ready for testing');
+                } else {
+                    addTestResult('Integration Check', 'warning', 'Some functions may not be available yet. Try the test anyway.');
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
