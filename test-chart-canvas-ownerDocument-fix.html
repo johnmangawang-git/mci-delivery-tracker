@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Canvas ownerDocument Fix Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .chart-container {
+            width: 400px;
+            height: 300px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            position: relative;
+        }
+        .hidden {
+            display: none;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Chart Canvas ownerDocument Fix Test</h1>
+    
+    <div class="test-results" id="testResults">
+        <h3>Test Results:</h3>
+        <div id="resultsList"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 1: Chart Creation Before Canvas Exists</h3>
+        <p>This test attempts to create a chart before the canvas is added to the DOM.</p>
+        <button onclick="testChartBeforeCanvas()">Test Chart Before Canvas</button>
+        <div id="canvasContainer1"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Chart Creation on Hidden Canvas</h3>
+        <p>This test creates a chart on a hidden canvas, then shows it.</p>
+        <button onclick="testHiddenCanvas()">Test Hidden Canvas</button>
+        <button onclick="showHiddenCanvas()">Show Hidden Canvas</button>
+        <div class="chart-container hidden" id="hiddenContainer">
+            <canvas id="hiddenChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Normal Chart Creation</h3>
+        <p>This test creates a chart on a visible, properly attached canvas.</p>
+        <button onclick="testNormalChart()">Test Normal Chart</button>
+        <div class="chart-container">
+            <canvas id="costBreakdownChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Rapid Multiple Updates</h3>
+        <p>This test rapidly calls chart update functions to test race conditions.</p>
+        <button onclick="testRapidUpdates()">Test Rapid Updates</button>
+        <div class="chart-container">
+            <canvas id="rapidUpdateChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- Load the chart canvas fix -->
+    <script src="public/assets/js/chart-canvas-fix.js"></script>
+    
+    <script>
+        let testCount = 0;
+        
+        function logResult(test, status, message) {
+            testCount++;
+            const resultsList = document.getElementById('resultsList');
+            const div = document.createElement('div');
+            div.className = status;
+            div.innerHTML = `<strong>Test ${testCount} (${test}):</strong> ${message}`;
+            resultsList.appendChild(div);
+            console.log(`${status.toUpperCase()}: ${test} - ${message}`);
+        }
+        
+        // Test 1: Chart creation before canvas exists
+        async function testChartBeforeCanvas() {
+            try {
+                logResult('Chart Before Canvas', 'warning', 'Attempting to create chart before canvas exists...');
+                
+                // Try to update chart that doesn't exist yet
+                if (typeof window.safeUpdateCostBreakdownChart === 'function') {
+                    await window.safeUpdateCostBreakdownChart();
+                }
+                
+                // Add canvas after a delay
+                setTimeout(() => {
+                    const container = document.getElementById('canvasContainer1');
+                    container.innerHTML = '<div class="chart-container"><canvas id="delayedChart" width="400" height="300"></canvas></div>';
+                    
+                    // Now try to create chart
+                    setTimeout(async () => {
+                        try {
+                            const canvas = document.getElementById('delayedChart');
+                            if (canvas && canvas.ownerDocument) {
+                                const chart = await window.safeCreateChart('delayedChart', {
+                                    type: 'pie',
+                                    data: {
+                                        labels: ['Test 1', 'Test 2'],
+                                        datasets: [{
+                                            data: [30, 70],
+                                            backgroundColor: ['#ff6384', '#36a2eb']
+                                        }]
+                                    }
+                                });
+                                
+                                if (chart) {
+                                    logResult('Chart Before Canvas', 'success', 'Chart created successfully after canvas was added');
+                                } else {
+                                    logResult('Chart Before Canvas', 'error', 'Chart creation failed');
+                                }
+                            } else {
+                                logResult('Chart Before Canvas', 'error', 'Canvas still not properly attached');
+                            }
+                        } catch (error) {
+                            logResult('Chart Before Canvas', 'error', `Error: ${error.message}`);
+                        }
+                    }, 100);
+                }, 1000);
+                
+            } catch (error) {
+                logResult('Chart Before Canvas', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        // Test 2: Hidden canvas
+        async function testHiddenCanvas() {
+            try {
+                logResult('Hidden Canvas', 'warning', 'Attempting to create chart on hidden canvas...');
+                
+                const chart = await window.safeCreateChart('hiddenChart', {
+                    type: 'bar',
+                    data: {
+                        labels: ['Hidden', 'Chart'],
+                        datasets: [{
+                            data: [25, 75],
+                            backgroundColor: ['#ff9f40', '#4bc0c0']
+                        }]
+                    }
+                });
+                
+                if (chart) {
+                    logResult('Hidden Canvas', 'success', 'Chart created on hidden canvas (will be visible when shown)');
+                } else {
+                    logResult('Hidden Canvas', 'warning', 'Chart creation deferred until canvas is visible');
+                }
+                
+            } catch (error) {
+                logResult('Hidden Canvas', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        function showHiddenCanvas() {
+            const container = document.getElementById('hiddenContainer');
+            container.classList.remove('hidden');
+            logResult('Show Hidden', 'success', 'Hidden canvas is now visible');
+            
+            // Try to create chart again now that it's visible
+            setTimeout(async () => {
+                const chart = await window.safeCreateChart('hiddenChart', {
+                    type: 'bar',
+                    data: {
+                        labels: ['Now', 'Visible'],
+                        datasets: [{
+                            data: [40, 60],
+                            backgroundColor: ['#ff9f40', '#4bc0c0']
+                        }]
+                    }
+                });
+                
+                if (chart) {
+                    logResult('Show Hidden', 'success', 'Chart created successfully on now-visible canvas');
+                }
+            }, 100);
+        }
+        
+        // Test 3: Normal chart creation
+        async function testNormalChart() {
+            try {
+                logResult('Normal Chart', 'warning', 'Creating chart on visible canvas...');
+                
+                const chart = await window.safeUpdateCostBreakdownChart();
+                
+                // Also test direct creation
+                const directChart = await window.safeCreateChart('costBreakdownChart', {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Direct', 'Creation', 'Test'],
+                        datasets: [{
+                            data: [33, 33, 34],
+                            backgroundColor: ['#ff6384', '#36a2eb', '#ffce56']
+                        }]
+                    }
+                });
+                
+                if (directChart) {
+                    logResult('Normal Chart', 'success', 'Chart created successfully on visible canvas');
+                } else {
+                    logResult('Normal Chart', 'error', 'Chart creation failed');
+                }
+                
+            } catch (error) {
+                logResult('Normal Chart', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        // Test 4: Rapid updates
+        async function testRapidUpdates() {
+            try {
+                logResult('Rapid Updates', 'warning', 'Testing rapid chart updates...');
+                
+                // Create initial chart
+                let chart = await window.safeCreateChart('rapidUpdateChart', {
+                    type: 'line',
+                    data: {
+                        labels: ['Start'],
+                        datasets: [{
+                            data: [10],
+                            backgroundColor: '#ff6384'
+                        }]
+                    }
+                });
+                
+                if (!chart) {
+                    logResult('Rapid Updates', 'error', 'Initial chart creation failed');
+                    return;
+                }
+                
+                // Rapid updates
+                let updateCount = 0;
+                const maxUpdates = 10;
+                
+                const rapidUpdate = () => {
+                    if (updateCount >= maxUpdates) {
+                        logResult('Rapid Updates', 'success', `Completed ${maxUpdates} rapid updates without errors`);
+                        return;
+                    }
+                    
+                    updateCount++;
+                    
+                    try {
+                        if (chart && chart.data) {
+                            chart.data.labels.push(`Update ${updateCount}`);
+                            chart.data.datasets[0].data.push(Math.random() * 100);
+                            chart.update('none');
+                        }
+                        
+                        setTimeout(rapidUpdate, 50); // Very rapid updates
+                    } catch (error) {
+                        logResult('Rapid Updates', 'error', `Update ${updateCount} failed: ${error.message}`);
+                    }
+                };
+                
+                rapidUpdate();
+                
+            } catch (error) {
+                logResult('Rapid Updates', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        // Mock data function for testing
+        window.getSafeCostBreakdownData = async function(period) {
+            return {
+                labels: ['Fuel', 'Maintenance', 'Insurance', 'Other'],
+                values: [45, 25, 20, 10],
+                colors: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0']
+            };
+        };
+        
+        // Auto-run basic test on load
+        document.addEventListener('DOMContentLoaded', () => {
+            logResult('DOM Ready', 'success', 'Page loaded, chart canvas fix initialized');
+            
+            // Test that the fix is loaded
+            if (typeof window.safeUpdateCostBreakdownChart === 'function') {
+                logResult('Fix Loaded', 'success', 'Chart canvas fix functions are available');
+            } else {
+                logResult('Fix Loaded', 'error', 'Chart canvas fix functions not found');
+            }
+        });
+    </script>
+</body>
+</html>

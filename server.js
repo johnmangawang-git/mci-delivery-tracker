@@ -6,18 +6,18 @@ const compression = require('compression');
 const morgan = require('morgan');
 
 const app = express();
-const PORT = process.env.PORT || 8086;
+const PORT = process.env.PORT || 3333;
 
 // Security middleware
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
-            imgSrc: ["'self'", "data:", "https:", "blob:"],
-            fontSrc: ["'self'", "https://cdn.jsdelivr.net"],
-            connectSrc: ["'self'", "https:", "wss:"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://cdnjs.cloudflare.com"],
+            imgSrc: ["'self'", "data:", "https:", "blob:", "https://*.tile.openstreetmap.org"],
+            fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            connectSrc: ["'self'", "https:", "wss:", "ws://localhost:8088", "http://localhost:8088", "https://ntyvrezyhrmflswxefbk.supabase.co", "https://*.tile.openstreetmap.org"],
             mediaSrc: ["'self'", "blob:"],
             objectSrc: ["'none'"],
             childSrc: ["'self'", "blob:"],

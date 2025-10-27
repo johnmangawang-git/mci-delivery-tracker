@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Chart Fix - Isolated Test (No Supabase)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container {
+            width: 100%;
+            max-width: 500px;
+            height: 350px;
+            margin: 20px auto;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            position: relative;
+            background: #fff;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .test-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        
+        .success { 
+            color: #28a745; 
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
+        .error { 
+            color: #dc3545; 
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
+        .warning { 
+            color: #856404; 
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
+        .info {
+            color: #0c5460;
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+        .status-info { background: #17a2b8; }
+        
+        .console-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Chart.js ownerDocument Fix - Isolated Test</h1>
+        <p>Testing chart functionality without affecting Supabase operations</p>
+    </div>
+    
+    <div class="test-results" id="testResults">
+        <h3>🧪 Test Results Dashboard</h3>
+        <div id="resultsList"></div>
+        <div class="console-output" id="consoleOutput"></div>
+    </div>
+    
+    <div class="test-grid">
+        <div class="test-section">
+            <h3>🚀 Test 1: Early Chart Call</h3>
+            <p>Tests calling chart functions before canvas exists in DOM</p>
+            <button onclick="testEarlyChartCall()">Run Early Call Test</button>
+            <div id="earlyTestContainer"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>👻 Test 2: Hidden Canvas</h3>
+            <p>Tests chart creation on hidden/invisible canvas elements</p>
+            <button onclick="testHiddenCanvas()">Create Hidden Chart</button>
+            <button onclick="showHiddenCanvas()">Show Hidden Chart</button>
+            <div class="chart-container hidden" id="hiddenContainer">
+                <canvas id="hiddenChart" width="500" height="350"></canvas>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>✅ Test 3: Normal Operation</h3>
+            <p>Tests standard chart creation on visible, ready canvas</p>
+            <button onclick="testNormalChart()">Create Normal Chart</button>
+            <div class="chart-container">
+                <canvas id="costBreakdownChart" width="500" height="350"></canvas>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>⚡ Test 4: Rapid Updates</h3>
+            <p>Tests rapid chart updates to check for race conditions</p>
+            <button onclick="testRapidUpdates()">Start Rapid Updates</button>
+            <button onclick="stopRapidUpdates()">Stop Updates</button>
+            <div class="chart-container">
+                <canvas id="rapidChart" width="500" height="350"></canvas>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔄 Test 5: Dynamic Canvas</h3>
+            <p>Tests chart creation on dynamically added canvas elements</p>
+            <button onclick="testDynamicCanvas()">Add Dynamic Canvas</button>
+            <button onclick="clearDynamicCanvas()">Clear Canvas</button>
+            <div id="dynamicContainer"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>💥 Test 6: Error Simulation</h3>
+            <p>Simulates various error conditions to test recovery</p>
+            <button onclick="simulateChartJSMissing()">Simulate Chart.js Missing</button>
+            <button onclick="simulateCanvasRemoval()">Remove Canvas Mid-Update</button>
+            <div class="chart-container">
+                <canvas id="errorTestChart" width="500" height="350"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the chart canvas fix (NO SUPABASE DEPENDENCIES) -->
+    <script src="public/assets/js/chart-canvas-fix.js"></script>
+    
+    <script>
+        // ===================================
+        // ISOLATED TEST ENVIRONMENT
+        // NO SUPABASE FUNCTIONALITY INCLUDED
+        // ===================================
+        
+        let testCount = 0;
+        let rapidUpdateInterval = null;
+        let consoleMessages = [];
+        
+        // Override console methods to capture output
+        const originalConsole = {
+            log: console.log,
+            warn: console.warn,
+            error: console.error
+        };
+        
+        function captureConsole(type, ...args) {
+            const message = args.join(' ');
+            consoleMessages.push(`[${type.toUpperCase()}] ${new Date().toLocaleTimeString()}: ${message}`);
+            updateConsoleOutput();
+            originalConsole[type](...args);
+        }
+        
+        console.log = (...args) => captureConsole('log', ...args);
+        console.warn = (...args) => captureConsole('warn', ...args);
+        console.error = (...args) => captureConsole('error', ...args);
+        
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML = consoleMessages.slice(-20).join('\n'); // Show last 20 messages
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function logResult(test, status, message) {
+            testCount++;
+            const resultsList = document.getElementById('resultsList');
+            const div = document.createElement('div');
+            div.className = status;
+            div.innerHTML = `
+                <span class="status-indicator status-${status}"></span>
+                <strong>Test ${testCount} (${test}):</strong> ${message}
+            `;
+            resultsList.appendChild(div);
+            console.log(`${status.toUpperCase()}: ${test} - ${message}`);
+        }
+        
+        // Mock data functions (NO SUPABASE CALLS)
+        window.getSafeCostBreakdownData = async function(period = 'month') {
+            // Simulate async data loading without Supabase
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const mockData = {
+                month: {
+                    labels: ['Fuel Costs', 'Vehicle Maintenance', 'Insurance', 'Driver Wages', 'Other'],
+                    values: [45000, 25000, 15000, 35000, 8000],
+                    colors: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff']
+                },
+                week: {
+                    labels: ['Fuel', 'Maintenance', 'Insurance', 'Wages'],
+                    values: [12000, 5000, 3000, 8000],
+                    colors: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0']
+                }
+            };
+            
+            return mockData[period] || mockData.month;
+        };
+        
+        // Test 1: Early chart call
+        async function testEarlyChartCall() {
+            logResult('Early Chart Call', 'info', 'Testing chart creation before canvas exists...');
+            
+            try {
+                // Try to update a chart that doesn't exist yet
+                await window.safeUpdateCostBreakdownChart();
+                
+                // Add canvas after delay
+                setTimeout(() => {
+                    const container = document.getElementById('earlyTestContainer');
+                    container.innerHTML = '<div class="chart-container"><canvas id="earlyChart" width="500" height="350"></canvas></div>';
+                    
+                    // Now try to create chart
+                    setTimeout(async () => {
+                        try {
+                            const chart = await window.safeCreateChart('earlyChart', {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Early Test', 'Success'],
+                                    datasets: [{
+                                        data: [60, 40],
+                                        backgroundColor: ['#ff6384', '#36a2eb']
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: { position: 'bottom' }
+                                    }
+                                }
+                            });
+                            
+                            if (chart) {
+                                logResult('Early Chart Call', 'success', 'Chart created successfully after canvas was added');
+                            } else {
+                                logResult('Early Chart Call', 'warning', 'Chart creation was deferred');
+                            }
+                        } catch (error) {
+                            logResult('Early Chart Call', 'error', `Error: ${error.message}`);
+                        }
+                    }, 200);
+                }, 1000);
+                
+            } catch (error) {
+                logResult('Early Chart Call', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        // Test 2: Hidden canvas
+        async function testHiddenCanvas() {
+            logResult('Hidden Canvas', 'info', 'Creating chart on hidden canvas...');
+            
+            try {
+                const chart = await window.safeCreateChart('hiddenChart', {
+                    type: 'bar',
+                    data: {
+                        labels: ['Hidden', 'Chart', 'Test'],
+                        datasets: [{
+                            label: 'Hidden Data',
+                            data: [25, 45, 30],
+                            backgroundColor: ['#ff9f40', '#4bc0c0', '#ff6384']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+                
+                if (chart) {
+                    logResult('Hidden Canvas', 'success', 'Chart created (will be visible when shown)');
+                } else {
+                    logResult('Hidden Canvas', 'warning', 'Chart creation deferred until visible');
+                }
+            } catch (error) {
+                logResult('Hidden Canvas', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        function showHiddenCanvas() {
+            const container = document.getElementById('hiddenContainer');
+            container.classList.remove('hidden');
+            logResult('Show Hidden', 'success', 'Hidden canvas is now visible');
+            
+            // Try to update chart now that it's visible
+            setTimeout(async () => {
+                const chart = await window.safeCreateChart('hiddenChart', {
+                    type: 'bar',
+                    data: {
+                        labels: ['Now', 'Visible', 'Chart'],
+                        datasets: [{
+                            label: 'Visible Data',
+                            data: [40, 35, 25],
+                            backgroundColor: ['#36a2eb', '#ff6384', '#ffce56']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+                
+                if (chart) {
+                    logResult('Show Hidden', 'success', 'Chart updated successfully on visible canvas');
+                }
+            }, 100);
+        }
+        
+        // Test 3: Normal chart
+        async function testNormalChart() {
+            logResult('Normal Chart', 'info', 'Creating chart on visible canvas...');
+            
+            try {
+                const data = await window.getSafeCostBreakdownData('month');
+                const chart = await window.createSafeCostBreakdownChart(data);
+                
+                if (chart) {
+                    logResult('Normal Chart', 'success', 'Chart created successfully on visible canvas');
+                } else {
+                    logResult('Normal Chart', 'error', 'Chart creation failed');
+                }
+            } catch (error) {
+                logResult('Normal Chart', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        // Test 4: Rapid updates
+        async function testRapidUpdates() {
+            logResult('Rapid Updates', 'info', 'Starting rapid chart updates...');
+            
+            try {
+                // Create initial chart
+                let chart = await window.safeCreateChart('rapidChart', {
+                    type: 'line',
+                    data: {
+                        labels: ['Start'],
+                        datasets: [{
+                            label: 'Rapid Updates',
+                            data: [10],
+                            borderColor: '#ff6384',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        animation: false, // Disable animation for rapid updates
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+                
+                if (!chart) {
+                    logResult('Rapid Updates', 'error', 'Initial chart creation failed');
+                    return;
+                }
+                
+                let updateCount = 0;
+                rapidUpdateInterval = setInterval(() => {
+                    updateCount++;
+                    
+                    try {
+                        if (chart && chart.data) {
+                            chart.data.labels.push(`Update ${updateCount}`);
+                            chart.data.datasets[0].data.push(Math.random() * 100);
+                            
+                            // Keep only last 20 points
+                            if (chart.data.labels.length > 20) {
+                                chart.data.labels.shift();
+                                chart.data.datasets[0].data.shift();
+                            }
+                            
+                            chart.update('none'); // No animation for performance
+                        }
+                        
+                        if (updateCount >= 50) {
+                            clearInterval(rapidUpdateInterval);
+                            logResult('Rapid Updates', 'success', `Completed ${updateCount} rapid updates without errors`);
+                        }
+                    } catch (error) {
+                        clearInterval(rapidUpdateInterval);
+                        logResult('Rapid Updates', 'error', `Update ${updateCount} failed: ${error.message}`);
+                    }
+                }, 100); // Very rapid updates every 100ms
+                
+            } catch (error) {
+                logResult('Rapid Updates', 'error', `Error: ${error.message}`);
+            }
+        }
+        
+        function stopRapidUpdates() {
+            if (rapidUpdateInterval) {
+                clearInterval(rapidUpdateInterval);
+                rapidUpdateInterval = null;
+                logResult('Rapid Updates', 'info', 'Rapid updates stopped manually');
+            }
+        }
+        
+        // Test 5: Dynamic canvas
+        async function testDynamicCanvas() {
+            logResult('Dynamic Canvas', 'info', 'Adding dynamic canvas element...');
+            
+            const container = document.getElementById('dynamicContainer');
+            const canvasId = `dynamicChart_${Date.now()}`;
+            
+            container.innerHTML = `
+                <div class="chart-container">
+                    <canvas id="${canvasId}" width="500" height="350"></canvas>
+                </div>
+            `;
+            
+            // Wait a bit for DOM to settle
+            setTimeout(async () => {
+                try {
+                    const chart = await window.safeCreateChart(canvasId, {
+                        type: 'polarArea',
+                        data: {
+                            labels: ['Dynamic', 'Canvas', 'Test', 'Success'],
+                            datasets: [{
+                                data: [30, 25, 20, 25],
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)',
+                                    'rgba(255, 205, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'bottom' }
+                            }
+                        }
+                    });
+                    
+                    if (chart) {
+                        logResult('Dynamic Canvas', 'success', 'Chart created on dynamically added canvas');
+                    } else {
+                        logResult('Dynamic Canvas', 'error', 'Dynamic chart creation failed');
+                    }
+                } catch (error) {
+                    logResult('Dynamic Canvas', 'error', `Error: ${error.message}`);
+                }
+            }, 200);
+        }
+        
+        function clearDynamicCanvas() {
+            const container = document.getElementById('dynamicContainer');
+            container.innerHTML = '';
+            logResult('Dynamic Canvas', 'info', 'Dynamic canvas cleared');
+        }
+        
+        // Test 6: Error simulation
+        function simulateChartJSMissing() {
+            logResult('Error Simulation', 'warning', 'Simulating Chart.js missing...');
+            
+            // Temporarily hide Chart.js
+            const originalChart = window.Chart;
+            window.Chart = undefined;
+            
+            // Try to create chart
+            window.safeCreateChart('errorTestChart', {
+                type: 'pie',
+                data: {
+                    labels: ['Error', 'Test'],
+                    datasets: [{ data: [50, 50] }]
+                }
+            }).then(chart => {
+                if (chart) {
+                    logResult('Error Simulation', 'error', 'Chart created despite missing Chart.js (unexpected)');
+                } else {
+                    logResult('Error Simulation', 'success', 'Correctly handled missing Chart.js');
+                }
+            });
+            
+            // Restore Chart.js after delay
+            setTimeout(() => {
+                window.Chart = originalChart;
+                logResult('Error Simulation', 'info', 'Chart.js restored');
+            }, 2000);
+        }
+        
+        function simulateCanvasRemoval() {
+            logResult('Error Simulation', 'warning', 'Simulating canvas removal during update...');
+            
+            // Create chart first
+            window.safeCreateChart('errorTestChart', {
+                type: 'doughnut',
+                data: {
+                    labels: ['Before', 'Removal'],
+                    datasets: [{ data: [60, 40], backgroundColor: ['#ff6384', '#36a2eb'] }]
+                }
+            }).then(chart => {
+                if (chart) {
+                    // Remove canvas after creation
+                    setTimeout(() => {
+                        const canvas = document.getElementById('errorTestChart');
+                        if (canvas) {
+                            canvas.remove();
+                            logResult('Error Simulation', 'info', 'Canvas removed from DOM');
+                            
+                            // Try to update the removed chart
+                            setTimeout(() => {
+                                try {
+                                    chart.update();
+                                    logResult('Error Simulation', 'error', 'Chart update succeeded on removed canvas (unexpected)');
+                                } catch (error) {
+                                    logResult('Error Simulation', 'success', 'Correctly handled update on removed canvas');
+                                }
+                            }, 500);
+                        }
+                    }, 1000);
+                }
+            });
+        }
+        
+        // Auto-run initialization test
+        document.addEventListener('DOMContentLoaded', () => {
+            logResult('Initialization', 'success', 'Page loaded, chart canvas fix initialized');
+            
+            // Test that the fix is loaded
+            if (typeof window.safeUpdateCostBreakdownChart === 'function') {
+                logResult('Fix Loaded', 'success', 'Chart canvas fix functions are available');
+            } else {
+                logResult('Fix Loaded', 'error', 'Chart canvas fix functions not found');
+            }
+            
+            // Test Chart.js availability
+            if (typeof Chart !== 'undefined') {
+                logResult('Chart.js', 'success', `Chart.js v${Chart.version} loaded successfully`);
+            } else {
+                logResult('Chart.js', 'error', 'Chart.js library not found');
+            }
+            
+            // Test DOM readiness functions
+            if (typeof window.waitForElement === 'function') {
+                logResult('DOM Utils', 'success', 'DOM utility functions available');
+            } else {
+                logResult('DOM Utils', 'error', 'DOM utility functions missing');
+            }
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (rapidUpdateInterval) {
+                clearInterval(rapidUpdateInterval);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -7,8 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <!-- Content Security Policy to allow necessary connections while maintaining security -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws://localhost:8088 http://localhost:8088 https://ntyvrezyhrmflswxefbk.supabase.co https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://*.tile.openstreetmap.org; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: https://*.tile.openstreetmap.org; object-src 'none';"
+    <!-- Content Security Policy is now handled by server.js helmet middleware -->
     <title>MCI App</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="manifest" href="/manifest.json">
@@ -149,6 +148,9 @@
     <!-- Signature Pad Library with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js" onload="this.onload=null;window.signaturePadLoaded=true;" onerror="this.onerror=null;window.signaturePadLoaded=false;loadLocalSignaturePad();"></script>
 
+    <!-- SUPABASE AUTH FIX - Clears invalid refresh tokens and handles auth errors -->
+    <script src="assets/js/supabase-auth-fix.js"></script>
+    
     <!-- SUPABASE PERMANENT FIX - Fixes all initialization and runtime errors -->
     <script src="assets/js/supabase-permanent-fix.js"></script>
     

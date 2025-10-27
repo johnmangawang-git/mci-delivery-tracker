@@ -10,7 +10,7 @@ console.log('🔧 Loading Chart Canvas Fix...');
     'use strict';
     
     /**
-     * Wait for DOM element to be available and visible
+     * Wait for DOM element to be available, visible, and fully attached
      */
     function waitForElement(selector, timeout = 5000) {
         return new Promise((resolve, reject) => {
@@ -19,14 +19,14 @@ console.log('🔧 Loading Chart Canvas Fix...');
             function checkElement() {
                 const element = document.getElementById(selector);
                 
-                if (element && element.offsetParent !== null) {
-                    // Element exists and is visible
+                if (element && element.ownerDocument && element.offsetParent !== null) {
+                    // Element exists, is fully attached to DOM, and is visible
                     resolve(element);
                     return;
                 }
                 
                 if (Date.now() - startTime > timeout) {
-                    reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+                    reject(new Error(`Element ${selector} not found or not ready within ${timeout}ms`));
                     return;
                 }
                 
@@ -142,7 +142,36 @@ console.log('🔧 Loading Chart Canvas Fix...');
         console.log('📊 Safe cost breakdown chart update...', period);
         
         try {
-            // Get data first
+            // Check if canvas exists and is fully loaded before proceeding
+            const canvas = document.getElementById('costBreakdownChart');
+            if (!canvas) {
+                console.warn('⚠️ Cost breakdown chart canvas not found, retrying...');
+                setTimeout(() => safeUpdateCostBreakdownChart(period), 500);
+                return;
+            }
+            
+            // Check if canvas has ownerDocument (fully attached to DOM)
+            if (!canvas.ownerDocument) {
+                console.warn('⚠️ Canvas not fully attached to DOM, retrying...');
+                setTimeout(() => safeUpdateCostBreakdownChart(period), 500);
+                return;
+            }
+            
+            // Check if canvas is visible
+            if (canvas.offsetParent === null) {
+                console.warn('⚠️ Cost breakdown chart canvas not visible, retrying...');
+                setTimeout(() => safeUpdateCostBreakdownChart(period), 500);
+                return;
+            }
+            
+            // Verify Chart.js is available
+            if (typeof Chart === 'undefined') {
+                console.warn('⚠️ Chart.js not loaded, retrying...');
+                setTimeout(() => safeUpdateCostBreakdownChart(period), 500);
+                return;
+            }
+            
+            // Get data
             let costBreakdownData;
             
             if (typeof window.getSafeCostBreakdownData === 'function') {
@@ -156,18 +185,6 @@ console.log('🔧 Loading Chart Canvas Fix...');
                     values: [1],
                     colors: ['rgba(149, 165, 166, 0.8)']
                 };
-            }
-            
-            // Check if canvas exists and is visible
-            const canvas = document.getElementById('costBreakdownChart');
-            if (!canvas) {
-                console.warn('⚠️ Cost breakdown chart canvas not found');
-                return;
-            }
-            
-            if (canvas.offsetParent === null) {
-                console.warn('⚠️ Cost breakdown chart canvas not visible');
-                return;
             }
             
             // Try to get existing chart
@@ -231,6 +248,33 @@ console.log('🔧 Loading Chart Canvas Fix...');
     }
     
     /**
+     * Additional safety wrapper for any chart function calls
+     */
+    function withDOMSafety(fn, canvasId, retryCount = 0, maxRetries = 3) {
+        return function(...args) {
+            try {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas || !canvas.ownerDocument) {
+                    if (retryCount < maxRetries) {
+                        console.warn(`⚠️ DOM not ready for ${canvasId}, retry ${retryCount + 1}/${maxRetries}`);
+                        setTimeout(() => {
+                            withDOMSafety(fn, canvasId, retryCount + 1, maxRetries).apply(this, args);
+                        }, 300 * (retryCount + 1)); // Exponential backoff
+                        return;
+                    } else {
+                        console.error(`❌ Failed to initialize ${canvasId} after ${maxRetries} retries`);
+                        return;
+                    }
+                }
+                
+                return fn.apply(this, args);
+            } catch (error) {
+                console.error(`❌ Error in DOM safety wrapper for ${canvasId}:`, error);
+            }
+        };
+    }
+    
+    /**
      * Initialize the fix
      */
     function initChartCanvasFix() {
@@ -243,6 +287,34 @@ console.log('🔧 Loading Chart Canvas Fix...');
         setTimeout(overrideChartFunctions, 1000);
         setTimeout(overrideChartFunctions, 3000);
         
+        // Add intersection observer for better visibility detection
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.target.id === 'costBreakdownChart') {
+                        console.log('📊 Cost breakdown chart is now visible');
+                        // Chart is visible, safe to update
+                        setTimeout(() => {
+                            if (typeof window.updateCostBreakdownChart === 'function') {
+                                window.updateCostBreakdownChart();
+                            }
+                        }, 100);
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            // Observe chart canvas when it becomes available
+            const checkForCanvas = () => {
+                const canvas = document.getElementById('costBreakdownChart');
+                if (canvas) {
+                    observer.observe(canvas);
+                } else {
+                    setTimeout(checkForCanvas, 500);
+                }
+            };
+            checkForCanvas();
+        }
+        
         console.log('✅ Chart Canvas Fix initialized');
     }
     
@@ -251,6 +323,7 @@ console.log('🔧 Loading Chart Canvas Fix...');
     window.createSafeCostBreakdownChart = createSafeCostBreakdownChart;
     window.safeUpdateCostBreakdownChart = safeUpdateCostBreakdownChart;
     window.waitForElement = waitForElement;
+    window.withDOMSafety = withDOMSafety;
     
     // Initialize based on document state
     if (document.readyState === 'loading') {
