@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency localStorage Cleaner</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .button { padding: 12px 20px; margin: 10px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .button:hover { background: #c82333; }
+        .button.safe { background: #28a745; }
+        .button.safe:hover { background: #218838; }
+        .output { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 Emergency localStorage Cleaner</h1>
+        
+        <div class="warning">
+            <strong>⚠️ WARNING:</strong> This tool will clean up localStorage to fix quota and recursion errors. 
+            Use this if your app is stuck in a login loop or showing localStorage errors.
+        </div>
+
+        <h3>Current localStorage Status:</h3>
+        <div id="status" class="output">Loading...</div>
+
+        <h3>Actions:</h3>
+        <button class="button safe" onclick="checkUsage()">🔍 Check Usage</button>
+        <button class="button" onclick="removeEPODRecords()">🗑️ Remove EPOD Records</button>
+        <button class="button" onclick="trimDeliveryData()">✂️ Trim Delivery Data</button>
+        <button class="button" onclick="emergencyCleanAll()">🚨 Emergency Clean All</button>
+        <button class="button safe" onclick="location.reload()">🔄 Refresh Page</button>
+
+        <div id="output" class="output"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        function getStorageUsage() {
+            let total = 0;
+            const breakdown = {};
+            
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    const size = localStorage[key].length;
+                    breakdown[key] = size;
+                    total += size;
+                }
+            }
+            
+            return { total, breakdown };
+        }
+
+        function checkUsage() {
+            try {
+                const usage = getStorageUsage();
+                const totalMB = (usage.total / 1024 / 1024).toFixed(2);
+                
+                let report = `Total localStorage usage: ${totalMB}MB\n\nBreakdown:\n`;
+                
+                Object.entries(usage.breakdown)
+                    .sort((a, b) => b[1] - a[1])
+                    .forEach(([key, size]) => {
+                        const sizeMB = (size / 1024 / 1024).toFixed(2);
+                        report += `- ${key}: ${sizeMB}MB\n`;
+                    });
+                
+                document.getElementById('status').textContent = report;
+                log('Usage check completed');
+                
+            } catch (error) {
+                log('Error checking usage: ' + error.message);
+            }
+        }
+
+        function removeEPODRecords() {
+            try {
+                const ePodRecords = localStorage.getItem('ePodRecords');
+                if (ePodRecords) {
+                    const sizeMB = (ePodRecords.length / 1024 / 1024).toFixed(2);
+                    localStorage.removeItem('ePodRecords');
+                    log(`Removed ePodRecords (${sizeMB}MB)`);
+                } else {
+                    log('No ePodRecords found');
+                }
+                checkUsage();
+            } catch (error) {
+                log('Error removing EPOD records: ' + error.message);
+            }
+        }
+
+        function trimDeliveryData() {
+            try {
+                // Trim active deliveries
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                if (activeDeliveries.length > 20) {
+                    const trimmed = activeDeliveries.slice(-20);
+                    localStorage.setItem('mci-active-deliveries', JSON.stringify(trimmed));
+                    log(`Trimmed active deliveries from ${activeDeliveries.length} to ${trimmed.length}`);
+                }
+
+                // Trim delivery history
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+                if (deliveryHistory.length > 30) {
+                    const trimmed = deliveryHistory.slice(-30);
+                    localStorage.setItem('mci-delivery-history', JSON.stringify(trimmed));
+                    log(`Trimmed delivery history from ${deliveryHistory.length} to ${trimmed.length}`);
+                }
+
+                checkUsage();
+            } catch (error) {
+                log('Error trimming delivery data: ' + error.message);
+            }
+        }
+
+        function emergencyCleanAll() {
+            if (!confirm('This will remove ALL non-essential data from localStorage. Continue?')) {
+                return;
+            }
+
+            try {
+                const essential = ['mci-active-deliveries', 'mci-delivery-history', 'user-settings'];
+                const keysToRemove = [];
+
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key) && !essential.includes(key)) {
+                        keysToRemove.push(key);
+                    }
+                }
+
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+
+                log(`Emergency clean completed: Removed ${keysToRemove.length} items`);
+                log('Removed keys: ' + keysToRemove.join(', '));
+
+                // Also trim essential data
+                trimDeliveryData();
+
+            } catch (error) {
+                log('Error during emergency clean: ' + error.message);
+            }
+        }
+
+        // Auto-check usage on load
+        window.addEventListener('load', checkUsage);
+    </script>
+</body>
+</html>

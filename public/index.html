@@ -146,6 +146,9 @@
     <!-- Supabase CDN with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" onload="this.onload=null;window.supabaseLoaded=true;" onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
     
+    <!-- LOCALSTORAGE SAFE FIX - CRITICAL: Must load first to prevent recursive errors -->
+    <script src="assets/js/localStorage-safe-fix.js"></script>
+    
     <!-- SUPABASE DEFINITIVE FIX - Must load immediately after Supabase library -->
     <script src="assets/js/supabase-definitive-fix.js"></script>
     <!-- Signature Pad Library with fallback -->
@@ -181,8 +184,8 @@
     <!-- SUPABASE-FIRST ARCHITECTURE FIX - Eliminates localStorage quota issues by using Supabase as primary storage -->
     <script src="assets/js/supabase-first-architecture-fix.js"></script>
     
-    <!-- LOCALSTORAGE QUOTA FIX - Prevents storage quota exceeded errors -->
-    <script src="assets/js/localStorage-quota-fix-enhanced.js"></script>
+    <!-- LOCALSTORAGE QUOTA FIX - Prevents storage quota exceeded errors (DISABLED - using safe fix instead) -->
+    <!-- <script src="assets/js/localStorage-quota-fix-enhanced.js"></script> -->
     
     <!-- Enhanced Date Formatter - Provides consistent date/timestamp formatting -->
     <script src="assets/js/enhanced-date-formatter.js"></script>
