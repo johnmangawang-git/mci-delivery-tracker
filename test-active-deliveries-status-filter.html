@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Deliveries Status Filter Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .test-result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .critical { background-color: #f5c6cb; border: 2px solid #dc3545; color: #721c24; font-weight: bold; }
+        .data-table {
+            font-size: 0.9em;
+        }
+        .status-active { color: #28a745; font-weight: bold; }
+        .status-completed { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">🔧 Active Deliveries Status Filter Test</h1>
+        
+        <div class="alert alert-danger">
+            <h5><i class="bi bi-exclamation-triangle"></i> Critical Issue Identified</h5>
+            <p><strong>Problem:</strong> Active Deliveries showing "Completed" status items</p>
+            <p><strong>Rule:</strong> Completed items should ONLY be in Delivery History</p>
+            <p><strong>Root Cause:</strong> Inconsistent filtering logic in app.js (lines 427-430 vs 463-465)</p>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🔍 Diagnostic Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-danger mb-2" onclick="testStatusFiltering()">
+                            🚫 Test Status Filtering
+                        </button>
+                        <br>
+                        <button class="btn btn-warning mb-2" onclick="simulateCompletedItems()">
+                            📝 Simulate Completed Items
+                        </button>
+                        <br>
+                        <button class="btn btn-info mb-2" onclick="checkCurrentData()">
+                            📊 Check Current Data
+                        </button>
+                        <br>
+                        <button class="btn btn-success" onclick="cleanupData()">
+                            🧹 Cleanup Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📊 Current Status</h5>
+                    </div>
+                    <div class="card-body" id="currentStatus">
+                        <p class="text-muted">Click diagnostic tools to see current status...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🧪 Test Results</h5>
+                    </div>
+                    <div class="card-body" id="testResults">
+                        <p class="text-muted">Run diagnostic tools to see results.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📋 Active Deliveries Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm data-table">
+                                <thead>
+                                    <tr>
+                                        <th>DR Number</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Valid?</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activePreview">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">No data loaded</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📋 Delivery History Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm data-table">
+                                <thead>
+                                    <tr>
+                                        <th>DR Number</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Valid?</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyPreview">
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">No data loaded</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/active-deliveries-status-filter-fix.js"></script>
+    
+    <script>
+        // Sample test data with mixed statuses
+        const sampleTestData = [
+            {
+                drNumber: 'DR-001',
+                customerName: 'Customer A',
+                status: 'Active',
+                id: 'test-001'
+            },
+            {
+                drNumber: 'DR-002',
+                customerName: 'Customer B',
+                status: 'Completed', // This should NOT be in Active Deliveries
+                id: 'test-002'
+            },
+            {
+                drNumber: 'DR-003',
+                customerName: 'Customer C',
+                status: 'On Schedule',
+                id: 'test-003'
+            },
+            {
+                drNumber: 'DR-004',
+                customerName: 'Customer D',
+                status: 'Signed', // This should NOT be in Active Deliveries
+                id: 'test-004'
+            },
+            {
+                drNumber: 'DR-005',
+                customerName: 'Customer E',
+                status: 'In Transit',
+                id: 'test-005'
+            },
+            {
+                drNumber: 'DR-006',
+                customerName: 'Customer F',
+                status: 'Delivered', // This should NOT be in Active Deliveries
+                id: 'test-006'
+            }
+        ];
+        
+        function updateCurrentStatus() {
+            const statusDiv = document.getElementById('currentStatus');
+            const activeCount = window.activeDeliveries ? window.activeDeliveries.length : 0;
+            const historyCount = window.deliveryHistory ? window.deliveryHistory.length : 0;
+            
+            // Check for completed items in active deliveries
+            let completedInActive = 0;
+            if (window.activeDeliveries) {
+                completedInActive = window.activeDeliveries.filter(d => 
+                    ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+                ).length;
+            }
+            
+            statusDiv.innerHTML = `
+                <p><strong>Active Deliveries:</strong> ${activeCount} items</p>
+                <p><strong>Delivery History:</strong> ${historyCount} items</p>
+                <p><strong>Completed in Active:</strong> <span class="${completedInActive > 0 ? 'text-danger' : 'text-success'}">${completedInActive} items ${completedInActive > 0 ? '❌' : '✅'}</span></p>
+                <p><strong>Filter Fix Loaded:</strong> ${typeof window.activeDeliveriesStatusFilterFix !== 'undefined' ? '✅ Yes' : '❌ No'}</p>
+            `;
+        }
+        
+        function updatePreviews() {
+            updateActivePreview();
+            updateHistoryPreview();
+        }
+        
+        function updateActivePreview() {
+            const activePreview = document.getElementById('activePreview');
+            const activeDeliveries = window.activeDeliveries || [];
+            
+            if (activeDeliveries.length === 0) {
+                activePreview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No active deliveries</td></tr>';
+                return;
+            }
+            
+            const rows = activeDeliveries.slice(0, 10).map(delivery => {
+                const status = delivery.status || 'Unknown';
+                const isCompleted = ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(status);
+                const statusClass = isCompleted ? 'status-completed' : 'status-active';
+                const validClass = isCompleted ? 'text-danger' : 'text-success';
+                const validText = isCompleted ? '❌ INVALID' : '✅ Valid';
+                
+                return `
+                    <tr class="${isCompleted ? 'table-danger' : ''}">
+                        <td>${delivery.drNumber || delivery.dr_number || 'N/A'}</td>
+                        <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
+                        <td><span class="${statusClass}">${status}</span></td>
+                        <td><span class="${validClass}">${validText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            activePreview.innerHTML = rows;
+        }
+        
+        function updateHistoryPreview() {
+            const historyPreview = document.getElementById('historyPreview');
+            const deliveryHistory = window.deliveryHistory || [];
+            
+            if (deliveryHistory.length === 0) {
+                historyPreview.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No delivery history</td></tr>';
+                return;
+            }
+            
+            const rows = deliveryHistory.slice(0, 10).map(delivery => {
+                const status = delivery.status || 'Unknown';
+                const isCompleted = ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(status);
+                const statusClass = isCompleted ? 'status-completed' : 'status-active';
+                const validClass = isCompleted ? 'text-success' : 'text-danger';
+                const validText = isCompleted ? '✅ Valid' : '❌ INVALID';
+                
+                return `
+                    <tr class="${!isCompleted ? 'table-warning' : ''}">
+                        <td>${delivery.drNumber || delivery.dr_number || 'N/A'}</td>
+                        <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
+                        <td><span class="${statusClass}">${status}</span></td>
+                        <td><span class="${validClass}">${validText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            historyPreview.innerHTML = rows;
+        }
+        
+        function testStatusFiltering() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Status Filtering Test', 'info', 'Testing enhanced status filtering...');
+            
+            if (typeof window.filterActiveDeliveriesOnly === 'function') {
+                addTestResult('Filter Function', 'success', 'filterActiveDeliveriesOnly function available');
+                
+                // Test with sample data
+                const filteredActive = window.filterActiveDeliveriesOnly(sampleTestData);
+                const filteredHistory = window.filterDeliveryHistoryOnly(sampleTestData);
+                
+                addTestResult('Sample Data Input', 'info', `${sampleTestData.length} total items`);
+                addTestResult('Filtered Active', 'success', `${filteredActive.length} items (should be 3: Active, On Schedule, In Transit)`);
+                addTestResult('Filtered History', 'success', `${filteredHistory.length} items (should be 3: Completed, Signed, Delivered)`);
+                
+                // Check for any completed items in active
+                const completedInActive = filteredActive.filter(d => 
+                    ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+                );
+                
+                if (completedInActive.length === 0) {
+                    addTestResult('Active Deliveries Validation', 'success', '✅ No completed items in active deliveries');
+                } else {
+                    addTestResult('Active Deliveries Validation', 'error', `❌ Found ${completedInActive.length} completed items in active deliveries`);
+                }
+                
+                // Check for any non-completed items in history
+                const nonCompletedInHistory = filteredHistory.filter(d => 
+                    !['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+                );
+                
+                if (nonCompletedInHistory.length === 0) {
+                    addTestResult('Delivery History Validation', 'success', '✅ Only completed items in delivery history');
+                } else {
+                    addTestResult('Delivery History Validation', 'error', `❌ Found ${nonCompletedInHistory.length} non-completed items in delivery history`);
+                }
+                
+            } else {
+                addTestResult('Filter Function', 'error', 'filterActiveDeliveriesOnly function not available');
+            }
+            
+            updateCurrentStatus();
+            updatePreviews();
+        }
+        
+        function simulateCompletedItems() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Completed Items Simulation', 'info', 'Adding completed items to test filtering...');
+            
+            // Initialize arrays if they don't exist
+            if (!window.activeDeliveries) {
+                window.activeDeliveries = [];
+            }
+            if (!window.deliveryHistory) {
+                window.deliveryHistory = [];
+            }
+            
+            // Add sample data to activeDeliveries (including completed items)
+            const initialActiveCount = window.activeDeliveries.length;
+            
+            // This should trigger our enhanced setter which filters out completed items
+            window.activeDeliveries = [...window.activeDeliveries, ...sampleTestData];
+            
+            const finalActiveCount = window.activeDeliveries.length;
+            const expectedActiveCount = initialActiveCount + 3; // Only 3 non-completed items should be added
+            
+            addTestResult('Initial Active Count', 'info', `${initialActiveCount} items`);
+            addTestResult('Added Sample Data', 'info', `${sampleTestData.length} items (3 active, 3 completed)`);
+            addTestResult('Final Active Count', finalActiveCount === expectedActiveCount ? 'success' : 'error', 
+                `${finalActiveCount} items (expected: ${expectedActiveCount})`);
+            
+            // Check if completed items were properly filtered out
+            const completedInActive = window.activeDeliveries.filter(d => 
+                ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+            );
+            
+            if (completedInActive.length === 0) {
+                addTestResult('Filtering Result', 'success', '✅ All completed items were filtered out of Active Deliveries');
+            } else {
+                addTestResult('Filtering Result', 'critical', `❌ CRITICAL: ${completedInActive.length} completed items found in Active Deliveries!`);
+            }
+            
+            updateCurrentStatus();
+            updatePreviews();
+        }
+        
+        function checkCurrentData() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Current Data Check', 'info', 'Checking current activeDeliveries and deliveryHistory...');
+            
+            const activeDeliveries = window.activeDeliveries || [];
+            const deliveryHistory = window.deliveryHistory || [];
+            
+            addTestResult('Active Deliveries Count', 'info', `${activeDeliveries.length} items`);
+            addTestResult('Delivery History Count', 'info', `${deliveryHistory.length} items`);
+            
+            // Check for completed items in active deliveries
+            const completedInActive = activeDeliveries.filter(d => 
+                ['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+            );
+            
+            if (completedInActive.length === 0) {
+                addTestResult('Active Deliveries Status Check', 'success', '✅ No completed items found in Active Deliveries');
+            } else {
+                addTestResult('Active Deliveries Status Check', 'critical', `❌ CRITICAL: ${completedInActive.length} completed items found in Active Deliveries!`);
+                
+                completedInActive.forEach((item, index) => {
+                    addTestResult(`Completed Item ${index + 1}`, 'error', 
+                        `${item.drNumber || item.dr_number} - Status: ${item.status}`);
+                });
+            }
+            
+            // Check for non-completed items in delivery history
+            const nonCompletedInHistory = deliveryHistory.filter(d => 
+                !['Completed', 'Signed', 'Delivered', 'Finished', 'Done'].includes(d.status)
+            );
+            
+            if (nonCompletedInHistory.length === 0) {
+                addTestResult('Delivery History Status Check', 'success', '✅ Only completed items found in Delivery History');
+            } else {
+                addTestResult('Delivery History Status Check', 'warning', `⚠️ ${nonCompletedInHistory.length} non-completed items found in Delivery History`);
+            }
+            
+            updateCurrentStatus();
+            updatePreviews();
+        }
+        
+        function cleanupData() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            addTestResult('Data Cleanup', 'info', 'Running data cleanup to ensure proper status separation...');
+            
+            if (typeof window.cleanupExistingData === 'function') {
+                addTestResult('Cleanup Function', 'success', 'cleanupExistingData function available');
+                
+                const beforeActive = window.activeDeliveries ? window.activeDeliveries.length : 0;
+                const beforeHistory = window.deliveryHistory ? window.deliveryHistory.length : 0;
+                
+                // Run cleanup
+                window.cleanupExistingData();
+                
+                const afterActive = window.activeDeliveries ? window.activeDeliveries.length : 0;
+                const afterHistory = window.deliveryHistory ? window.deliveryHistory.length : 0;
+                
+                addTestResult('Cleanup Results', 'success', 
+                    `Active: ${beforeActive} → ${afterActive}, History: ${beforeHistory} → ${afterHistory}`);
+                
+                // Verify cleanup worked
+                setTimeout(() => {
+                    checkCurrentData();
+                }, 500);
+                
+            } else {
+                addTestResult('Cleanup Function', 'error', 'cleanupExistingData function not available');
+            }
+            
+            updateCurrentStatus();
+            updatePreviews();
+        }
+        
+        function addTestResult(title, type, content) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `
+                <strong>${title}:</strong><br>
+                <div>${content}</div>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentStatus();
+            updatePreviews();
+            
+            // Run initial check after scripts load
+            setTimeout(() => {
+                console.log('🧪 Running initial status filter test...');
+                
+                const hasFilterFix = typeof window.activeDeliveriesStatusFilterFix !== 'undefined';
+                const hasFilterFunction = typeof window.filterActiveDeliveriesOnly === 'function';
+                
+                console.log('Status filter fix loaded:', hasFilterFix);
+                console.log('Filter function available:', hasFilterFunction);
+                
+                if (hasFilterFix && hasFilterFunction) {
+                    addTestResult('Initial Check', 'success', 'Active Deliveries Status Filter Fix is loaded and ready');
+                    checkCurrentData();
+                } else {
+                    addTestResult('Initial Check', 'warning', 'Some functions may still be loading. Try running tests manually.');
+                }
+                
+                updateCurrentStatus();
+                updatePreviews();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
