@@ -38,9 +38,22 @@
         const systemTime = getInstantSystemTime();
         
         if (!deliveryDate) {
-            // Get from DR input if available
+            // PRIORITY 1: Get from DR input if available
             const drInput = document.getElementById('drDeliveryDate');
-            deliveryDate = drInput && drInput.value ? drInput.value : new Date().toISOString().split('T')[0];
+            if (drInput && drInput.value) {
+                deliveryDate = drInput.value;
+                console.log('⚡ INSTANT: Using drDeliveryDate input:', deliveryDate);
+            } else {
+                // PRIORITY 2: Try to get from force delivery date fix
+                if (window.getUserSelectedDeliveryDate) {
+                    deliveryDate = window.getUserSelectedDeliveryDate();
+                    console.log('⚡ INSTANT: Using getUserSelectedDeliveryDate:', deliveryDate);
+                } else {
+                    // FALLBACK: Use today's date (but log warning)
+                    deliveryDate = new Date().toISOString().split('T')[0];
+                    console.warn('⚠️ INSTANT: Fallback to system date - delivery date input not found:', deliveryDate);
+                }
+            }
         }
         
         // Create combined datetime
@@ -61,6 +74,34 @@
     }
     
     /**
+     * Ensure delivery date from input is preserved in delivery data
+     */
+    function preserveDeliveryDateInput() {
+        // Monitor DR upload process to ensure delivery date is captured
+        const originalProcessDRData = window.processDRData;
+        if (typeof originalProcessDRData === 'function') {
+            window.processDRData = function(data) {
+                console.log('⚡ INSTANT: Preserving delivery date input in DR data');
+                
+                // Get user-selected delivery date
+                const drInput = document.getElementById('drDeliveryDate');
+                const userDeliveryDate = drInput && drInput.value ? drInput.value : null;
+                
+                if (userDeliveryDate && Array.isArray(data)) {
+                    data.forEach(item => {
+                        // Ensure created_date uses user's delivery date
+                        item.created_date = userDeliveryDate;
+                        item.deliveryDate = userDeliveryDate;
+                        console.log('⚡ INSTANT: Set delivery dates for', item.drNumber, 'to:', userDeliveryDate);
+                    });
+                }
+                
+                return originalProcessDRData.call(this, data);
+            };
+        }
+    }
+    
+    /**
      * Override Active Deliveries display for INSTANT updates
      */
     function overrideForInstantDisplay() {
@@ -68,20 +109,28 @@
         const originalFormatActiveDeliveryDate = window.formatActiveDeliveryDate;
         
         window.formatActiveDeliveryDate = function(delivery) {
-            console.log('⚡ INSTANT: Formatting delivery date for', delivery.drNumber);
+            console.log('⚡ INSTANT: Formatting delivery date for', delivery.drNumber, 'Data:', delivery);
             
             try {
-                // INSTANT: Use created_date (delivery date) + current system time
-                if (delivery.created_date) {
+                // PRIORITY 1: Use created_date (should be user's delivery date)
+                if (delivery.created_date && delivery.created_date !== new Date().toISOString().split('T')[0]) {
                     const instantDisplay = createInstantDeliveryDisplay(delivery.created_date);
-                    console.log('⚡ INSTANT: Display ready immediately:', instantDisplay.displayFormat);
+                    console.log('⚡ INSTANT: Using created_date:', delivery.created_date, '→', instantDisplay.displayFormat);
                     return instantDisplay.displayFormat;
                 }
                 
-                // INSTANT: Use deliveryDate + current system time
-                if (delivery.deliveryDate) {
+                // PRIORITY 2: Use deliveryDate
+                if (delivery.deliveryDate && delivery.deliveryDate !== new Date().toISOString().split('T')[0]) {
                     const instantDisplay = createInstantDeliveryDisplay(delivery.deliveryDate);
-                    console.log('⚡ INSTANT: Display ready immediately:', instantDisplay.displayFormat);
+                    console.log('⚡ INSTANT: Using deliveryDate:', delivery.deliveryDate, '→', instantDisplay.displayFormat);
+                    return instantDisplay.displayFormat;
+                }
+                
+                // PRIORITY 3: Check if we have user input available
+                const drInput = document.getElementById('drDeliveryDate');
+                if (drInput && drInput.value && drInput.value !== new Date().toISOString().split('T')[0]) {
+                    const instantDisplay = createInstantDeliveryDisplay(drInput.value);
+                    console.log('⚡ INSTANT: Using drDeliveryDate input:', drInput.value, '→', instantDisplay.displayFormat);
                     return instantDisplay.displayFormat;
                 }
                 
@@ -206,6 +255,7 @@
         console.log('⚡ Initializing Instant Time Display Fix...');
         
         // Apply all optimizations
+        preserveDeliveryDateInput(); // CRITICAL: Preserve user's delivery date input
         overrideForInstantDisplay();
         removeDelays();
         startInstantClock();
