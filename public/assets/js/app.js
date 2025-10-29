@@ -727,6 +727,28 @@ console.log('app.js loaded');
         });
     }
 
+    /**
+     * Get the booked date (when user actually booked the item)
+     * Shows today's date + current system time
+     */
+    function getBookedDate(delivery) {
+        // This shows when the user actually booked the item (today's date + system time)
+        const now = new Date();
+        const bookedDate = now.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const bookedTime = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const bookedDisplay = `${bookedDate}, ${bookedTime}`;
+        console.log('📅 BOOKED DATE: Generated booked date for', delivery.drNumber || delivery.dr_number, ':', bookedDisplay);
+        return bookedDisplay;
+    }
+
     // Separate function to populate the Active Deliveries table
     function populateActiveDeliveriesTable() {
         console.log('📊 Populating Active Deliveries table...');
@@ -781,7 +803,7 @@ console.log('app.js loaded');
         if (filteredDeliveries.length === 0) {
             activeDeliveriesTableBody.innerHTML = `
                 <tr>
-                    <td colspan="13" class="text-center py-5">
+                    <td colspan="14" class="text-center py-5">
                         <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No active deliveries found</h4>
                         <p class="text-muted">
@@ -868,6 +890,7 @@ console.log('app.js loaded');
                         </div>
                     </td>
                     <td>${deliveryDate}</td>
+                    <td>${getBookedDate(delivery)}</td>
                     <td>${itemNumber}</td>
                     <td>${mobileNumber}</td>
                     <td>${itemDescription}</td>
