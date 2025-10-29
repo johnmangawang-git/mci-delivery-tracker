@@ -1158,16 +1158,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (selectedDeliveries.length > 1) {
-                showToast('Please select only one delivery for E-Signature', 'warning');
-                return;
-            }
+            // COMMENTED OUT: Multiple item E-signature limitation (can be reverted if needed)
+            // if (selectedDeliveries.length > 1) {
+            //     showToast('Please select only one delivery for E-Signature', 'warning');
+            //     return;
+            // }
             
-            // Show E-Signature modal for the first selected delivery
-            const deliveryId = selectedDeliveries[0];
-            const delivery = activeDeliveries.find(d => d.id === deliveryId);
-            if (delivery) {
-                showESignatureModal(delivery.drNumber);
+            // ENHANCED: Handle multiple deliveries for E-Signature (modified from single delivery logic)
+            if (selectedDeliveries.length === 1) {
+                // Single delivery - original logic
+                const deliveryId = selectedDeliveries[0];
+                const delivery = activeDeliveries.find(d => d.id === deliveryId);
+                if (delivery) {
+                    showESignatureModal(delivery.drNumber);
+                }
+            } else {
+                // Multiple deliveries - collect all DR numbers and delivery info
+                const selectedDeliveryData = selectedDeliveries.map(deliveryId => {
+                    return activeDeliveries.find(d => d.id === deliveryId);
+                }).filter(delivery => delivery !== undefined);
+                
+                if (selectedDeliveryData.length > 0) {
+                    // Extract DR numbers for validation
+                    const drNumbers = selectedDeliveryData.map(d => d.drNumber);
+                    
+                    // VALIDATION: Check if all selected items have the same DR number
+                    const uniqueDRNumbers = [...new Set(drNumbers)];
+                    
+                    if (uniqueDRNumbers.length > 1) {
+                        // Multiple different DR numbers selected - show warning
+                        const drNumbersList = uniqueDRNumbers.join(', ');
+                        showToast(
+                            `⚠️ Multi E-Signature Error: Please select items with the same DR number only.\n\nSelected DR numbers: ${drNumbersList}\n\nFor multi E-signature to work, all selected items must have the same DR number.`, 
+                            'warning'
+                        );
+                        console.warn('🚫 Multi E-signature blocked: Different DR numbers selected:', uniqueDRNumbers);
+                        return; // Stop execution
+                    }
+                    
+                    // All items have the same DR number - proceed with multi E-signature
+                    const customerNames = selectedDeliveryData.map(d => d.customerName).join(', ');
+                    const firstDelivery = selectedDeliveryData[0];
+                    
+                    console.log(`✅ Multi E-signature validation passed: All ${selectedDeliveryData.length} items have DR number: ${uniqueDRNumbers[0]}`);
+                    
+                    console.log(`🖊️ Opening E-Signature for ${selectedDeliveryData.length} deliveries:`, drNumbers);
+                    
+                    // Call E-signature modal with multiple DR numbers
+                    if (typeof window.openRobustSignaturePad === 'function') {
+                        window.openRobustSignaturePad(
+                            drNumbers[0], // Primary DR number
+                            customerNames, // Combined customer names
+                            firstDelivery.vendorNumber || '', // Vendor info
+                            firstDelivery.truckPlateNumber || '', // Truck info
+                            `${firstDelivery.origin} to ${firstDelivery.destination}`, // Route info
+                            drNumbers // Pass all DR numbers for multiple completion
+                        );
+                    } else {
+                        // Fallback to single delivery if robust signature not available
+                        showESignatureModal(drNumbers[0]);
+                    }
+                }
             }
         });
     }
