@@ -829,10 +829,13 @@ console.log('app.js loaded');
             const truckInfo = delivery.truck || 
                              (truckType && truckPlate ? `${truckType} (${truckPlate})` : truckPlate || 'N/A');
             
-            // Use enhanced date formatting for Active Deliveries
+            // Use enhanced date formatting for Active Deliveries - PRIORITIZE USER DATE + SYSTEM TIME
             const deliveryDate = window.formatActiveDeliveryDate ? 
                 window.formatActiveDeliveryDate(delivery) :
-                getField(delivery, 'deliveryDate') || getField(delivery, 'created_date') || 
+                // FIXED: Prioritize deliveryDateTime (user date + system time) over pure timestamps
+                getField(delivery, 'deliveryDateTime') || getField(delivery, 'formattedDeliveryDateTime') ||
+                getField(delivery, 'deliveryDate') || getField(delivery, 'bookedDate') || 
+                getField(delivery, 'formattedDeliveryDate') || getField(delivery, 'created_date') || 
                 getField(delivery, 'timestamp') || getField(delivery, 'created_at') || 'N/A';
             
             // Get new fields

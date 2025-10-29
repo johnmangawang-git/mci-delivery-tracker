@@ -10,29 +10,44 @@ window.deliveryDateSystemTimeFix = {
     
     /**
      * Enhanced delivery date capture with system time
+     * Uses USER-SELECTED DATE + CURRENT SYSTEM TIME (not system date)
      */
     captureDeliveryDateWithSystemTime() {
         const drDeliveryDateInput = document.getElementById('drDeliveryDate');
         
         if (!drDeliveryDateInput || !drDeliveryDateInput.value) {
             console.warn('⚠️ No delivery date selected, using today');
+            const today = new Date();
             return {
-                deliveryDate: new Date().toISOString().split('T')[0],
-                deliveryDateTime: new Date().toISOString(),
-                systemTime: new Date().toISOString()
+                deliveryDate: today.toISOString().split('T')[0],
+                deliveryDateTime: today.toISOString(),
+                systemTime: today.toISOString(),
+                formattedDate: today.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                }),
+                formattedDateTime: today.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })
             };
         }
         
-        const selectedDate = drDeliveryDateInput.value;
-        const currentTime = new Date();
+        const selectedDate = drDeliveryDateInput.value; // User-selected date (e.g., "2025-01-31")
+        const currentTime = new Date(); // Current system time
         
-        // Create delivery datetime by combining selected date with current system time
+        // CRITICAL: Combine USER-SELECTED DATE with CURRENT SYSTEM TIME
+        // This creates a datetime with the user's chosen date but current time
         const deliveryDateTime = new Date(selectedDate + 'T' + currentTime.toTimeString().split(' ')[0]);
         
-        return {
-            deliveryDate: selectedDate,
-            deliveryDateTime: deliveryDateTime.toISOString(),
-            systemTime: currentTime.toISOString(),
+        const result = {
+            deliveryDate: selectedDate, // User-selected date only
+            deliveryDateTime: deliveryDateTime.toISOString(), // User date + system time
+            systemTime: currentTime.toISOString(), // Pure system timestamp
             formattedDate: new Date(selectedDate).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
@@ -46,6 +61,14 @@ window.deliveryDateSystemTimeFix = {
                 minute: '2-digit'
             })
         };
+        
+        console.log('📅 Delivery date/time captured:', {
+            userSelectedDate: selectedDate,
+            currentSystemTime: currentTime.toTimeString(),
+            combinedDateTime: result.formattedDateTime
+        });
+        
+        return result;
     },
     
     /**
