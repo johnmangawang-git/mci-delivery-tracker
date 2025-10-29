@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Creation Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .button.danger { background: #dc3545; }
+        .button.danger:hover { background: #c82333; }
+        .output { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Customer Creation Debug Tool</h1>
+        <p>This tool helps diagnose issues with customer creation from DR uploads.</p>
+
+        <div class="section">
+            <h3>1. Check Customer System Status</h3>
+            <button class="button" onclick="checkCustomerSystem()">Check System Status</button>
+            <div id="systemStatus" class="output">Ready...</div>
+        </div>
+
+        <div class="section">
+            <h3>2. Test Customer Creation</h3>
+            <input type="text" id="testCustomerName" placeholder="Customer Name" value="Test Customer">
+            <input type="text" id="testVendorNumber" placeholder="Vendor Number" value="09123456789">
+            <input type="text" id="testDestination" placeholder="Destination" value="Test Address">
+            <button class="button" onclick="testCustomerCreation()">Test Create Customer</button>
+            <div id="creationTest" class="output">Ready...</div>
+        </div>
+
+        <div class="section">
+            <h3>3. View Current Customers</h3>
+            <button class="button" onclick="viewCustomers()">View All Customers</button>
+            <button class="button" onclick="refreshCustomers()">Refresh Customer Display</button>
+            <div id="customerList" class="output">Ready...</div>
+        </div>
+
+        <div class="section">
+            <h3>4. Debug Functions</h3>
+            <button class="button" onclick="checkFunctions()">Check Available Functions</button>
+            <button class="button" onclick="checkStorage()">Check Storage</button>
+            <button class="button danger" onclick="clearCustomers()">Clear All Customers</button>
+            <div id="debugOutput" class="output">Ready...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).textContent = '';
+        }
+
+        function checkCustomerSystem() {
+            clearLog('systemStatus');
+            
+            try {
+                log('systemStatus', '=== CUSTOMER SYSTEM STATUS ===');
+                
+                // Check global variables
+                log('systemStatus', 'window.customers exists: ' + (!!window.customers));
+                log('systemStatus', 'window.customers length: ' + (window.customers ? window.customers.length : 'N/A'));
+                log('systemStatus', 'HTML customers exists: ' + (typeof customers !== 'undefined'));
+                log('systemStatus', 'HTML customers length: ' + (typeof customers !== 'undefined' ? customers.length : 'N/A'));
+                
+                // Check functions
+                log('systemStatus', 'window.autoCreateCustomer exists: ' + (typeof window.autoCreateCustomer === 'function'));
+                log('systemStatus', 'window.loadCustomers exists: ' + (typeof window.loadCustomers === 'function'));
+                log('systemStatus', 'HTML loadCustomers exists: ' + (typeof loadCustomers === 'function'));
+                
+                // Check dataService
+                log('systemStatus', 'window.dataService exists: ' + (!!window.dataService));
+                log('systemStatus', 'dataService.getCustomers exists: ' + (window.dataService && typeof window.dataService.getCustomers === 'function'));
+                log('systemStatus', 'dataService.saveCustomer exists: ' + (window.dataService && typeof window.dataService.saveCustomer === 'function'));
+                
+                // Check localStorage
+                const savedCustomers = localStorage.getItem('mci-customers');
+                log('systemStatus', 'localStorage customers: ' + (savedCustomers ? 'Found data' : 'No data'));
+                if (savedCustomers) {
+                    try {
+                        const parsed = JSON.parse(savedCustomers);
+                        log('systemStatus', 'localStorage customers count: ' + parsed.length);
+                    } catch (e) {
+                        log('systemStatus', 'localStorage parse error: ' + e.message);
+                    }
+                }
+                
+                // Check fix
+                log('systemStatus', 'drUploadCustomerFix exists: ' + (!!window.drUploadCustomerFix));
+                
+                log('systemStatus', '✅ System check completed');
+                
+            } catch (error) {
+                log('systemStatus', '❌ Error during system check: ' + error.message);
+            }
+        }
+
+        async function testCustomerCreation() {
+            clearLog('creationTest');
+            
+            const customerName = document.getElementById('testCustomerName').value;
+            const vendorNumber = document.getElementById('testVendorNumber').value;
+            const destination = document.getElementById('testDestination').value;
+            
+            if (!customerName) {
+                log('creationTest', '❌ Please enter a customer name');
+                return;
+            }
+            
+            try {
+                log('creationTest', '🔄 Testing customer creation...');
+                log('creationTest', 'Name: ' + customerName);
+                log('creationTest', 'Vendor: ' + vendorNumber);
+                log('creationTest', 'Destination: ' + destination);
+                
+                // Test with enhanced function if available
+                if (window.drUploadCustomerFix && typeof window.drUploadCustomerFix.enhancedAutoCreateCustomer === 'function') {
+                    log('creationTest', 'Using enhanced auto-create customer...');
+                    const result = await window.drUploadCustomerFix.enhancedAutoCreateCustomer(customerName, vendorNumber, destination);
+                    
+                    if (result) {
+                        log('creationTest', '✅ Customer created successfully: ' + result.contactPerson);
+                        log('creationTest', 'Customer ID: ' + result.id);
+                        log('creationTest', 'Total customers now: ' + (window.customers ? window.customers.length : 'Unknown'));
+                    } else {
+                        log('creationTest', '⚠️ Customer creation returned null');
+                    }
+                } else if (typeof window.autoCreateCustomer === 'function') {
+                    log('creationTest', 'Using standard auto-create customer...');
+                    const result = await window.autoCreateCustomer(customerName, vendorNumber, destination);
+                    
+                    if (result) {
+                        log('creationTest', '✅ Customer created: ' + result.contactPerson);
+                    } else {
+                        log('creationTest', '⚠️ Customer creation returned null');
+                    }
+                } else {
+                    log('creationTest', '❌ No customer creation function available');
+                }
+                
+            } catch (error) {
+                log('creationTest', '❌ Error during customer creation: ' + error.message);
+            }
+        }
+
+        function viewCustomers() {
+            clearLog('customerList');
+            
+            try {
+                log('customerList', '=== CURRENT CUSTOMERS ===');
+                
+                if (window.customers && window.customers.length > 0) {
+                    log('customerList', 'Window.customers (' + window.customers.length + ' customers):');
+                    window.customers.forEach((customer, index) => {
+                        log('customerList', `${index + 1}. ${customer.contactPerson || customer.name} (${customer.phone}) - ${customer.status}`);
+                    });
+                } else {
+                    log('customerList', 'No customers in window.customers');
+                }
+                
+                if (typeof customers !== 'undefined' && customers.length > 0) {
+                    log('customerList', '\nHTML customers (' + customers.length + ' customers):');
+                    customers.forEach((customer, index) => {
+                        log('customerList', `${index + 1}. ${customer.contactPerson || customer.name} (${customer.phone}) - ${customer.status}`);
+                    });
+                } else {
+                    log('customerList', 'No customers in HTML customers array');
+                }
+                
+            } catch (error) {
+                log('customerList', '❌ Error viewing customers: ' + error.message);
+            }
+        }
+
+        function refreshCustomers() {
+            clearLog('customerList');
+            
+            try {
+                log('customerList', '🔄 Refreshing customer display...');
+                
+                if (window.drUploadCustomerFix && typeof window.drUploadCustomerFix.refreshCustomerDisplay === 'function') {
+                    window.drUploadCustomerFix.refreshCustomerDisplay();
+                    log('customerList', '✅ Enhanced refresh completed');
+                } else {
+                    if (typeof window.loadCustomers === 'function') {
+                        window.loadCustomers();
+                        log('customerList', '✅ window.loadCustomers called');
+                    }
+                    
+                    if (typeof loadCustomers === 'function') {
+                        loadCustomers();
+                        log('customerList', '✅ HTML loadCustomers called');
+                    }
+                }
+                
+                setTimeout(() => {
+                    viewCustomers();
+                }, 1000);
+                
+            } catch (error) {
+                log('customerList', '❌ Error refreshing customers: ' + error.message);
+            }
+        }
+
+        function checkFunctions() {
+            clearLog('debugOutput');
+            
+            try {
+                log('debugOutput', '=== AVAILABLE FUNCTIONS ===');
+                
+                const functions = [
+                    'window.autoCreateCustomer',
+                    'window.loadCustomers',
+                    'loadCustomers',
+                    'window.drUploadCustomerFix',
+                    'window.drUploadCustomerFix.enhancedAutoCreateCustomer',
+                    'window.dataService.getCustomers',
+                    'window.dataService.saveCustomer'
+                ];
+                
+                functions.forEach(funcName => {
+                    try {
+                        const func = eval(funcName);
+                        log('debugOutput', funcName + ': ' + (typeof func === 'function' ? '✅ Available' : '❌ Not a function'));
+                    } catch (e) {
+                        log('debugOutput', funcName + ': ❌ Not available');
+                    }
+                });
+                
+            } catch (error) {
+                log('debugOutput', '❌ Error checking functions: ' + error.message);
+            }
+        }
+
+        function checkStorage() {
+            clearLog('debugOutput');
+            
+            try {
+                log('debugOutput', '=== STORAGE CHECK ===');
+                
+                // Check localStorage
+                const keys = ['mci-customers', 'mci-active-deliveries', 'mci-delivery-history'];
+                keys.forEach(key => {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            log('debugOutput', key + ': ' + (Array.isArray(parsed) ? parsed.length + ' items' : 'Object'));
+                        } catch (e) {
+                            log('debugOutput', key + ': Invalid JSON');
+                        }
+                    } else {
+                        log('debugOutput', key + ': Not found');
+                    }
+                });
+                
+            } catch (error) {
+                log('debugOutput', '❌ Error checking storage: ' + error.message);
+            }
+        }
+
+        function clearCustomers() {
+            if (!confirm('Are you sure you want to clear all customers? This cannot be undone.')) {
+                return;
+            }
+            
+            clearLog('debugOutput');
+            
+            try {
+                log('debugOutput', '🗑️ Clearing all customers...');
+                
+                // Clear arrays
+                if (window.customers) {
+                    window.customers.length = 0;
+                    log('debugOutput', '✅ Cleared window.customers');
+                }
+                
+                if (typeof customers !== 'undefined') {
+                    customers.length = 0;
+                    log('debugOutput', '✅ Cleared HTML customers');
+                }
+                
+                // Clear localStorage
+                localStorage.removeItem('mci-customers');
+                log('debugOutput', '✅ Cleared localStorage customers');
+                
+                log('debugOutput', '✅ All customers cleared');
+                
+            } catch (error) {
+                log('debugOutput', '❌ Error clearing customers: ' + error.message);
+            }
+        }
+
+        // Auto-check system on load
+        window.addEventListener('load', function() {
+            setTimeout(checkCustomerSystem, 1000);
+        });
+    </script>
+</body>
+</html>
