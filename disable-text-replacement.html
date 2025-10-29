@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disable Text Replacement</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .button { padding: 12px 20px; margin: 10px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .button:hover { background: #c82333; }
+        .output { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚫 Disable Text Replacement</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Emergency Tool:</strong> Use this if the text replacement is causing errors or infinite loops.
+        </div>
+
+        <button class="button" onclick="disableTextReplacement()">🚫 Disable Text Replacement</button>
+        <button class="button" onclick="checkStatus()">🔍 Check Status</button>
+
+        <div id="output" class="output">Ready...</div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        function disableTextReplacement() {
+            try {
+                // Disable the text replacement systems
+                if (window.uiTextReplacementFix) {
+                    window.uiTextReplacementFix = null;
+                    log('Disabled uiTextReplacementFix');
+                }
+                
+                if (window.safeUITextReplacementFix) {
+                    window.safeUITextReplacementFix.isProcessing = true; // Stop processing
+                    window.safeUITextReplacementFix = null;
+                    log('Disabled safeUITextReplacementFix');
+                }
+                
+                if (window.statusDropdownFix) {
+                    window.statusDropdownFix = null;
+                    log('Disabled statusDropdownFix');
+                }
+                
+                // Clear any intervals
+                for (let i = 1; i < 99999; i++) {
+                    clearInterval(i);
+                }
+                log('Cleared all intervals');
+                
+                // Clear any timeouts
+                for (let i = 1; i < 99999; i++) {
+                    clearTimeout(i);
+                }
+                log('Cleared all timeouts');
+                
+                log('✅ Text replacement systems disabled');
+                log('You can now refresh the main app safely');
+                
+            } catch (error) {
+                log('Error disabling text replacement: ' + error.message);
+            }
+        }
+
+        function checkStatus() {
+            try {
+                log('=== Text Replacement Status ===');
+                log('uiTextReplacementFix: ' + (window.uiTextReplacementFix ? 'ACTIVE' : 'DISABLED'));
+                log('safeUITextReplacementFix: ' + (window.safeUITextReplacementFix ? 'ACTIVE' : 'DISABLED'));
+                log('statusDropdownFix: ' + (window.statusDropdownFix ? 'ACTIVE' : 'DISABLED'));
+                
+                if (window.safeUITextReplacementFix) {
+                    log('safeUITextReplacementFix.isProcessing: ' + window.safeUITextReplacementFix.isProcessing);
+                }
+                
+            } catch (error) {
+                log('Error checking status: ' + error.message);
+            }
+        }
+
+        // Auto-check status on load
+        window.addEventListener('load', checkStatus);
+    </script>
+</body>
+</html>
