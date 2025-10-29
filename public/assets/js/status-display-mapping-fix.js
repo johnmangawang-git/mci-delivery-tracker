@@ -72,7 +72,7 @@ window.statusDisplayMapping = {
                         </div>
                     `;
                 }).join('');
-            }.bind(this);
+            };
             
             console.log('✅ Status generation function overridden with display mapping');
         }
