@@ -289,10 +289,10 @@ console.log('🕐 Loading Active Deliveries Time Fix...');
         fixExistingActiveDeliveries();
         fixExistingDeliveryHistory();
         
-        // Refresh display
+        // Refresh display INSTANTLY (no delay)
         setTimeout(() => {
             refreshActiveDeliveriesDisplay();
-        }, 1000);
+        }, 0); // Changed from 1000ms to 0ms for instant display
         
         // Set up periodic refresh to ensure times stay current
         setInterval(() => {

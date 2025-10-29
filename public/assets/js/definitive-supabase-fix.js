@@ -385,7 +385,7 @@ window.definitiveBookingSave = async function() {
         if (typeof window.loadActiveDeliveries === 'function') {
             setTimeout(() => {
                 window.loadActiveDeliveries(true);
-            }, 500);
+            }, 0); // Changed from 500ms to 0ms for instant display
         }
         
         console.log('🎉 Booking process completed');
@@ -502,7 +502,7 @@ window.definitiveProcessUpload = async function(data) {
     if (typeof window.loadActiveDeliveries === 'function') {
         setTimeout(() => {
             window.loadActiveDeliveries(true);
-        }, 1000);
+        }, 0); // Changed from 1000ms to 0ms for instant display
     }
     
     return { savedCount, errors };
