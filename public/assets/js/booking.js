@@ -823,20 +823,37 @@ async function saveBooking() {
                 distance: '',
                 additional_costs: parseFloat(additionalCostsTotal) || 0.00,
                 created_date: (function() {
-                    // PRIORITY 1: Use deliveryDate parameter
-                    if (deliveryDate) return deliveryDate;
+                    // PRIORITY 1: Use deliveryDate from manual booking form
+                    if (deliveryDate) {
+                        console.log('📅 MANUAL BOOKING: Using deliveryDate from form:', deliveryDate);
+                        return deliveryDate;
+                    }
                     
-                    // PRIORITY 2: Use drDeliveryDate input (DR upload)
+                    // PRIORITY 2: Get from manual booking deliveryDate input
+                    const manualDeliveryDateInput = document.getElementById('deliveryDate');
+                    if (manualDeliveryDateInput && manualDeliveryDateInput.value) {
+                        console.log('📅 MANUAL BOOKING: Using deliveryDate input:', manualDeliveryDateInput.value);
+                        return manualDeliveryDateInput.value;
+                    }
+                    
+                    // PRIORITY 3: Use drDeliveryDate input (DR upload)
                     const drDeliveryDateInput = document.getElementById('drDeliveryDate');
                     if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                        console.log('📅 MANUAL BOOKING: Using drDeliveryDate input:', drDeliveryDateInput.value);
                         return drDeliveryDateInput.value;
                     }
                     
-                    // PRIORITY 3: Use getLocalSystemDate function
-                    if (window.getLocalSystemDate) return window.getLocalSystemDate();
+                    // PRIORITY 4: Use getLocalSystemDate function
+                    if (window.getLocalSystemDate) {
+                        const localDate = window.getLocalSystemDate();
+                        console.log('📅 MANUAL BOOKING: Using getLocalSystemDate:', localDate);
+                        return localDate;
+                    }
                     
-                    // FALLBACK: System date
-                    return new Date().toISOString().split('T')[0];
+                    // FALLBACK: System date (but log warning)
+                    const systemDate = new Date().toISOString().split('T')[0];
+                    console.warn('⚠️ MANUAL BOOKING: Fallback to system date:', systemDate);
+                    return systemDate;
                 })(),
                 created_by: 'Manual',
                 created_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
@@ -2564,6 +2581,17 @@ async function confirmDRUpload() {
         const truckType = document.getElementById('drTruckType').value;
         const truckPlate = document.getElementById('drTruckPlate').value;
         
+        // CRITICAL: Get delivery date from user input
+        const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+        const userDeliveryDate = drDeliveryDateInput && drDeliveryDateInput.value ? drDeliveryDateInput.value : null;
+        
+        console.log('📅 DR UPLOAD: User selected delivery date:', userDeliveryDate);
+        
+        if (!userDeliveryDate) {
+            showError('Please select a delivery date');
+            return;
+        }
+        
         // Validate truck reference
         if (!truckType || !truckPlate) {
             showError('Please fill in truck reference details (Truck Type and Plate Number)');
@@ -2589,6 +2617,13 @@ async function confirmDRUpload() {
             booking.truckPlateNumber = truckPlate;
             booking.truck = `${truckType} (${truckPlate})`; // Combined for display
             
+            // CRITICAL: Set delivery date from user input
+            booking.deliveryDate = userDeliveryDate;
+            booking.bookedDate = userDeliveryDate;
+            booking.created_date = userDeliveryDate; // Force created_date to use delivery date
+            
+            console.log(`📅 DR UPLOAD: Set delivery date for ${booking.drNumber} to:`, userDeliveryDate);
+            
             // OPTION C: Apply costs only to the first DR record to avoid inflating analytics data
             if (index === 0) {
                 // First DR gets all the costs
@@ -2607,7 +2642,6 @@ async function confirmDRUpload() {
             // booking.additionalCostBreakdown = [...additionalCosts]; // Deep copy
             
             // Ensure all required fields for Active Deliveries display
-            booking.bookedDate = booking.deliveryDate;
             booking.lastModified = new Date().toISOString();
             
             // Create the booking

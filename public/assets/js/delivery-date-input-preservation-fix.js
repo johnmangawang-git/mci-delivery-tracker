@@ -15,13 +15,21 @@
      * Get user's delivery date input (NEVER fallback to system date)
      */
     function getUserDeliveryDateInput() {
+        // PRIORITY 1: Check manual booking delivery date input
+        const manualDeliveryInput = document.getElementById('deliveryDate');
+        if (manualDeliveryInput && manualDeliveryInput.value) {
+            console.log('📅 PRESERVE: Found manual booking delivery date input:', manualDeliveryInput.value);
+            return manualDeliveryInput.value;
+        }
+        
+        // PRIORITY 2: Check DR upload delivery date input
         const drInput = document.getElementById('drDeliveryDate');
         if (drInput && drInput.value) {
-            console.log('📅 PRESERVE: Found user delivery date input:', drInput.value);
+            console.log('📅 PRESERVE: Found DR upload delivery date input:', drInput.value);
             return drInput.value;
         }
         
-        // Check if force delivery date fix has captured it
+        // PRIORITY 3: Check if force delivery date fix has captured it
         if (window.getUserSelectedDeliveryDate) {
             const userDate = window.getUserSelectedDeliveryDate();
             if (userDate && userDate !== new Date().toISOString().split('T')[0]) {
