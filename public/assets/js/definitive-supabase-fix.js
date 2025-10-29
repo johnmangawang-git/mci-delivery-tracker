@@ -105,7 +105,22 @@ class DefinitiveDataService {
             truck_type: delivery.truck_type || delivery.truckType,
             truck_plate_number: delivery.truck_plate_number || delivery.truckPlateNumber,
             status: delivery.status || 'Active',
-            created_date: delivery.created_date || delivery.deliveryDate || new Date().toISOString().split('T')[0],
+            created_date: (function() {
+                // PRIORITY 1: Use existing created_date
+                if (delivery.created_date) return delivery.created_date;
+                
+                // PRIORITY 2: Use deliveryDate
+                if (delivery.deliveryDate) return delivery.deliveryDate;
+                
+                // PRIORITY 3: Use drDeliveryDate input
+                const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                    return drDeliveryDateInput.value;
+                }
+                
+                // FALLBACK: System date
+                return new Date().toISOString().split('T')[0];
+            })(),
             created_by: delivery.created_by || 'Manual',
             created_at: delivery.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -309,7 +324,19 @@ window.definitiveBookingSave = async function() {
             truck_type: truckType,
             truck_plate_number: truckPlateNumber,
             status: 'Active',
-            created_date: deliveryDate || new Date().toISOString().split('T')[0],
+            created_date: (function() {
+                // PRIORITY 1: Use deliveryDate parameter
+                if (deliveryDate) return deliveryDate;
+                
+                // PRIORITY 2: Use drDeliveryDate input
+                const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                    return drDeliveryDateInput.value;
+                }
+                
+                // FALLBACK: System date
+                return new Date().toISOString().split('T')[0];
+            })(),
             created_by: 'Manual',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -395,7 +422,16 @@ window.definitiveProcessUpload = async function(data) {
                 truck_type: row['Truck Type'] || row['Truck'] || '',
                 truck_plate_number: row['Truck Plate'] || row['Plate Number'] || '',
                 status: 'Active',
-                created_date: new Date().toISOString().split('T')[0],
+                created_date: (function() {
+                    // Use drDeliveryDate input if available
+                    const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                    if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                        return drDeliveryDateInput.value;
+                    }
+                    
+                    // FALLBACK: System date
+                    return new Date().toISOString().split('T')[0];
+                })(),
                 created_by: 'Excel Upload',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()

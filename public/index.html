@@ -308,6 +308,9 @@
     <!-- FORCE DELIVERY DATE FIX - CRITICAL: Forces user-selected date + system time throughout entire system -->
     <script src="assets/js/force-delivery-date-fix.js"></script>
     
+    <!-- DR UPLOAD CREATED DATE FIX - CRITICAL: Replaces system date with delivery date for created_date -->
+    <script src="assets/js/dr-upload-created-date-fix.js"></script>
+    
     <!-- DELIVERY DATE ENHANCEMENT - Adds custom delivery date selection to DR Preview -->
     <script src="assets/js/delivery-date-enhancement.js"></script>
     
@@ -653,7 +656,10 @@
                         item_description: itemDescription || '',
                         serial_number: serialNumber || '',
                         status: 'Active',
-                        created_date: new Date().toLocaleDateString(),
+                        created_date: (function() {
+                            const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                            return drDeliveryDateInput && drDeliveryDateInput.value ? drDeliveryDateInput.value : new Date().toISOString().split('T')[0];
+                        })(),
                         created_by: 'Excel Upload',
                         created_at: new Date().toISOString(),
                         // ENHANCED: Add additional cost items from DR modal

@@ -822,7 +822,22 @@ async function saveBooking() {
                 status: 'Active',
                 distance: '',
                 additional_costs: parseFloat(additionalCostsTotal) || 0.00,
-                created_date: deliveryDate || (window.getLocalSystemDate ? window.getLocalSystemDate() : new Date().toISOString().split('T')[0]),
+                created_date: (function() {
+                    // PRIORITY 1: Use deliveryDate parameter
+                    if (deliveryDate) return deliveryDate;
+                    
+                    // PRIORITY 2: Use drDeliveryDate input (DR upload)
+                    const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                    if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                        return drDeliveryDateInput.value;
+                    }
+                    
+                    // PRIORITY 3: Use getLocalSystemDate function
+                    if (window.getLocalSystemDate) return window.getLocalSystemDate();
+                    
+                    // FALLBACK: System date
+                    return new Date().toISOString().split('T')[0];
+                })(),
                 created_by: 'Manual',
                 created_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
                 updated_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
@@ -2718,7 +2733,22 @@ async function createBookingFromDR(bookingData) {
                     status: 'Active', // Changed to match manual booking
                     distance: '', // Add distance field
                     additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
-                    created_date: bookingData.bookedDate || (window.getSelectedDeliveryDate ? window.getSelectedDeliveryDate() : new Date().toISOString().split('T')[0]),
+                    created_date: (function() {
+                        // PRIORITY 1: Use bookingData.bookedDate
+                        if (bookingData.bookedDate) return bookingData.bookedDate;
+                        
+                        // PRIORITY 2: Use drDeliveryDate input (DR upload)
+                        const drDeliveryDateInput = document.getElementById('drDeliveryDate');
+                        if (drDeliveryDateInput && drDeliveryDateInput.value) {
+                            return drDeliveryDateInput.value;
+                        }
+                        
+                        // PRIORITY 3: Use getSelectedDeliveryDate function
+                        if (window.getSelectedDeliveryDate) return window.getSelectedDeliveryDate();
+                        
+                        // FALLBACK: System date
+                        return new Date().toISOString().split('T')[0];
+                    })(),
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
