@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Date Mapping Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .output { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; white-space: pre-wrap; font-family: monospace; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗓️ Delivery Date Mapping Test</h1>
+        
+        <div class="section">
+            <h3>Test Delivery Date Input</h3>
+            <label>Delivery Date:</label>
+            <input type="date" id="testDeliveryDate">
+            <button class="button" onclick="testDateMapping()">Test Date Mapping</button>
+            <div id="dateOutput" class="output">Ready...</div>
+        </div>
+
+        <div class="section">
+            <h3>Check Current System</h3>
+            <button class="button" onclick="checkSystem()">Check Date System</button>
+            <div id="systemOutput" class="output">Ready...</div>
+        </div>
+    </div>
+
+    <script>
+        function testDateMapping() {
+            const testDate = document.getElementById('testDeliveryDate').value;
+            const output = document.getElementById('dateOutput');
+            
+            if (!testDate) {
+                output.textContent = 'Please select a date first';
+                return;
+            }
+            
+            output.textContent = `Testing date: ${testDate}\n`;
+            
+            // Test the delivery date system time fix
+            if (window.deliveryDateSystemTimeFix) {
+                // Temporarily set the drDeliveryDate input
+                let drInput = document.getElementById('drDeliveryDate');
+                if (!drInput) {
+                    drInput = document.createElement('input');
+                    drInput.id = 'drDeliveryDate';
+                    drInput.type = 'date';
+                    document.body.appendChild(drInput);
+                }
+                drInput.value = testDate;
+                
+                const result = window.deliveryDateSystemTimeFix.captureDeliveryDateWithSystemTime();
+                output.textContent += `\nDelivery Date System Results:\n`;
+                output.textContent += `- Delivery Date: ${result.deliveryDate}\n`;
+                output.textContent += `- Delivery DateTime: ${result.deliveryDateTime}\n`;
+                output.textContent += `- System Time: ${result.systemTime}\n`;
+                output.textContent += `- Formatted Date: ${result.formattedDate}\n`;
+                output.textContent += `- Formatted DateTime: ${result.formattedDateTime}\n`;
+            } else {
+                output.textContent += '\n❌ deliveryDateSystemTimeFix not available';
+            }
+        }
+
+        function checkSystem() {
+            const output = document.getElementById('systemOutput');
+            output.textContent = '=== DELIVERY DATE SYSTEM CHECK ===\n';
+            
+            // Check for delivery date inputs
+            const drDeliveryDate = document.getElementById('drDeliveryDate');
+            const deliveryDate = document.getElementById('deliveryDate');
+            
+            output.textContent += `drDeliveryDate input: ${drDeliveryDate ? '✅ Found' : '❌ Not found'}\n`;
+            output.textContent += `deliveryDate input: ${deliveryDate ? '✅ Found' : '❌ Not found'}\n`;
+            
+            // Check functions
+            output.textContent += `getSelectedDeliveryDate: ${typeof window.getSelectedDeliveryDate === 'function' ? '✅ Available' : '❌ Not available'}\n`;
+            output.textContent += `deliveryDateSystemTimeFix: ${window.deliveryDateSystemTimeFix ? '✅ Available' : '❌ Not available'}\n`;
+            output.textContent += `mapDRData: ${typeof window.mapDRData === 'function' ? '✅ Available' : '❌ Not available'}\n`;
+            output.textContent += `processDRUpload: ${typeof window.processDRUpload === 'function' ? '✅ Available' : '❌ Not available'}\n`;
+        }
+
+        // Auto-check system on load
+        window.addEventListener('load', function() {
+            setTimeout(checkSystem, 1000);
+            // Set default date to today
+            document.getElementById('testDeliveryDate').value = new Date().toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>
