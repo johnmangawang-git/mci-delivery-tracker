@@ -729,24 +729,59 @@ console.log('app.js loaded');
 
     /**
      * Get the booked date (when user actually booked the item)
-     * Shows today's date + current system time
+     * Uses the stored timestamp from when the item was originally booked
      */
     function getBookedDate(delivery) {
-        // This shows when the user actually booked the item (today's date + system time)
-        const now = new Date();
-        const bookedDate = now.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-        const bookedTime = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
+        // Use the stored timestamp from when this specific item was booked
+        const getField = window.getFieldValue || ((obj, field) => obj[field]);
+        
+        // Debug: Log all available fields for this delivery
+        if (delivery.drNumber === '167664489' || delivery.dr_number === '167664489') {
+            console.log('🔍 DEBUG: All fields for', delivery.drNumber || delivery.dr_number, ':', Object.keys(delivery));
+            console.log('🔍 DEBUG: Delivery object:', delivery);
+        }
+        
+        // Try to get the original booking timestamp
+        const created_at = getField(delivery, 'created_at');
+        const timestamp = getField(delivery, 'timestamp');
+        const booked_at = getField(delivery, 'booked_at');
+        const updated_at = getField(delivery, 'updated_at');
+        
+        // Debug logging
+        console.log('📅 BOOKED DATE DEBUG for', delivery.drNumber || delivery.dr_number, ':', {
+            created_at: created_at,
+            timestamp: timestamp,
+            booked_at: booked_at,
+            updated_at: updated_at
         });
         
-        const bookedDisplay = `${bookedDate}, ${bookedTime}`;
-        console.log('📅 BOOKED DATE: Generated booked date for', delivery.drNumber || delivery.dr_number, ':', bookedDisplay);
-        return bookedDisplay;
+        const bookedTimestamp = created_at || timestamp || booked_at || updated_at;
+        
+        if (bookedTimestamp) {
+            try {
+                const bookedDate = new Date(bookedTimestamp);
+                const formattedDate = bookedDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                const formattedTime = bookedDate.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const bookedDisplay = `${formattedDate}, ${formattedTime}`;
+                console.log('📅 BOOKED DATE: Using stored timestamp for', delivery.drNumber || delivery.dr_number, ':', bookedDisplay, 'from field:', bookedTimestamp);
+                return bookedDisplay;
+            } catch (error) {
+                console.error('📅 BOOKED DATE: Error parsing timestamp for', delivery.drNumber || delivery.dr_number, ':', error);
+                return `Error: ${bookedTimestamp}`;
+            }
+        }
+        
+        // Fallback if no timestamp found
+        console.warn('📅 BOOKED DATE: No timestamp found for', delivery.drNumber || delivery.dr_number, ', available fields:', Object.keys(delivery));
+        return 'No Date';
     }
 
     // Separate function to populate the Active Deliveries table

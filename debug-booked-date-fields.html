@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Booked Date Fields</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        .field-check { margin: 5px 0; padding: 5px; border-radius: 3px; }
+        .field-found { background: #e8f5e8; }
+        .field-missing { background: #ffe8e8; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Booked Date Fields</h1>
+    <p><strong>DEBUGGING:</strong> Check what timestamp fields are available in delivery data</p>
+    
+    <div class="debug-section">
+        <h3>📊 Active Deliveries Data Analysis</h3>
+        <button onclick="analyzeDeliveryData()">Analyze Current Data</button>
+        <div id="dataAnalysis" style="margin-top: 10px;">
+            Click "Analyze Current Data" to see what fields are available...
+        </div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>🔍 Field Availability Check</h3>
+        <div id="fieldCheck">
+            <div class="info">Checking for timestamp fields in delivery records...</div>
+        </div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>📅 Sample Booked Date Generation</h3>
+        <button onclick="testBookedDateFunction()">Test getBookedDate Function</button>
+        <div id="bookedDateTest" style="margin-top: 10px;">
+            Click "Test getBookedDate Function" to see how dates are generated...
+        </div>
+    </div>
+
+    <script>
+        // Simulate the getBookedDate function from app.js
+        function getBookedDate(delivery) {
+            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            
+            // Try to get the original booking timestamp
+            const bookedTimestamp = getField(delivery, 'created_at') || 
+                                   getField(delivery, 'timestamp') || 
+                                   getField(delivery, 'booked_at') ||
+                                   getField(delivery, 'updated_at');
+            
+            console.log('🔍 DEBUG: Checking timestamps for', delivery.drNumber || delivery.dr_number);
+            console.log('🔍 DEBUG: created_at =', getField(delivery, 'created_at'));
+            console.log('🔍 DEBUG: timestamp =', getField(delivery, 'timestamp'));
+            console.log('🔍 DEBUG: booked_at =', getField(delivery, 'booked_at'));
+            console.log('🔍 DEBUG: updated_at =', getField(delivery, 'updated_at'));
+            console.log('🔍 DEBUG: Selected timestamp =', bookedTimestamp);
+            
+            if (bookedTimestamp) {
+                try {
+                    const bookedDate = new Date(bookedTimestamp);
+                    const formattedDate = bookedDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    const formattedTime = bookedDate.toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const bookedDisplay = `${formattedDate}, ${formattedTime}`;
+                    console.log('📅 BOOKED DATE: Using stored timestamp:', bookedDisplay);
+                    return bookedDisplay;
+                } catch (error) {
+                    console.error('📅 BOOKED DATE: Error parsing timestamp:', error);
+                    return `Error: ${bookedTimestamp}`;
+                }
+            }
+            
+            console.warn('📅 BOOKED DATE: No timestamp found');
+            return 'No Date';
+        }
+        
+        function analyzeDeliveryData() {
+            const analysisDiv = document.getElementById('dataAnalysis');
+            analysisDiv.innerHTML = '';
+            
+            // Check if activeDeliveries exists
+            if (typeof window.activeDeliveries !== 'undefined' && window.activeDeliveries.length > 0) {
+                analysisDiv.innerHTML += `<div class="success">✅ Found ${window.activeDeliveries.length} active deliveries</div>`;
+                
+                // Analyze first few records
+                const samplesToAnalyze = Math.min(3, window.activeDeliveries.length);
+                
+                for (let i = 0; i < samplesToAnalyze; i++) {
+                    const delivery = window.activeDeliveries[i];
+                    analysisDiv.innerHTML += `<h4>📦 Record ${i + 1}: ${delivery.drNumber || delivery.dr_number}</h4>`;
+                    
+                    // Show all available fields
+                    const allFields = Object.keys(delivery);
+                    analysisDiv.innerHTML += `<div class="info">Available fields (${allFields.length}): ${allFields.join(', ')}</div>`;
+                    
+                    // Check timestamp fields specifically
+                    const timestampFields = ['created_at', 'timestamp', 'booked_at', 'updated_at', 'created_date'];
+                    analysisDiv.innerHTML += `<div class="info">Timestamp field values:</div>`;
+                    
+                    timestampFields.forEach(field => {
+                        const value = delivery[field];
+                        const hasValue = value !== undefined && value !== null && value !== '';
+                        analysisDiv.innerHTML += `<div class="field-check ${hasValue ? 'field-found' : 'field-missing'}">
+                            ${field}: ${hasValue ? value : 'Not found'}
+                        </div>`;
+                    });
+                    
+                    // Test getBookedDate function
+                    const bookedDate = getBookedDate(delivery);
+                    analysisDiv.innerHTML += `<div class="info">getBookedDate result: <strong>${bookedDate}</strong></div>`;
+                    
+                    analysisDiv.innerHTML += `<hr>`;
+                }
+            } else {
+                analysisDiv.innerHTML += `<div class="error">❌ No activeDeliveries data found</div>`;
+                analysisDiv.innerHTML += `<div class="info">window.activeDeliveries = ${typeof window.activeDeliveries}</div>`;
+                
+                if (window.activeDeliveries) {
+                    analysisDiv.innerHTML += `<div class="info">Length: ${window.activeDeliveries.length}</div>`;
+                }
+            }
+        }
+        
+        function testBookedDateFunction() {
+            const testDiv = document.getElementById('bookedDateTest');
+            testDiv.innerHTML = '';
+            
+            // Create mock delivery data with different timestamp scenarios
+            const mockDeliveries = [
+                {
+                    drNumber: 'DR-TEST-001',
+                    created_at: '2024-10-29T14:30:00.000Z',
+                    timestamp: '2024-10-29T14:30:00.000Z'
+                },
+                {
+                    drNumber: 'DR-TEST-002',
+                    timestamp: '2024-10-28T09:15:00.000Z'
+                },
+                {
+                    drNumber: 'DR-TEST-003',
+                    updated_at: '2024-10-27T16:45:00.000Z'
+                },
+                {
+                    drNumber: 'DR-TEST-004'
+                    // No timestamp fields
+                }
+            ];
+            
+            testDiv.innerHTML += `<div class="info">Testing getBookedDate function with mock data:</div>`;
+            
+            mockDeliveries.forEach((delivery, index) => {
+                const bookedDate = getBookedDate(delivery);
+                const hasTimestamp = delivery.created_at || delivery.timestamp || delivery.updated_at;
+                
+                testDiv.innerHTML += `<div class="field-check ${hasTimestamp ? 'field-found' : 'field-missing'}">
+                    ${delivery.drNumber}: ${bookedDate}
+                </div>`;
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Debug Booked Date Fields - Loaded');
+            
+            // Auto-analyze if data is available
+            setTimeout(() => {
+                if (typeof window.activeDeliveries !== 'undefined') {
+                    analyzeDeliveryData();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
