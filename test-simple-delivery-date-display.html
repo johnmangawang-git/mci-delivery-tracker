@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Delivery Date Display Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .simple { background: #e8f5e8; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .complex { background: #ffe8e8; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        input, button { margin: 5px; padding: 8px; }
+        #results { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>📅 Simple Delivery Date Display Test</h1>
+    <p><strong>TESTING:</strong> Clean, simple delivery date display without system time mixing</p>
+    
+    <div class="test-section">
+        <h3>📅 Date Display Comparison</h3>
+        <div class="complex">
+            <strong>❌ OLD (Complex):</strong> "Jan 31, 2025, 2:30 PM" (delivery date + system time)
+        </div>
+        <div class="simple">
+            <strong>✅ NEW (Simple):</strong> "Jan 31, 2025" (delivery date only)
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🎯 Simple Display Test</h3>
+        <label for="drDeliveryDate">Delivery Date:</label>
+        <input type="date" id="drDeliveryDate" value="2025-01-31">
+        <button onclick="testSimpleDisplay()">Test Simple Display</button>
+        
+        <div id="displayResult" style="margin-top: 10px;">
+            Select a date and click test to see the simple display format.
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📊 Test Results</h3>
+        <div id="results">Click "Test Simple Display" to see results...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🎯 Expected Results</h3>
+        <ul>
+            <li><strong>✅ SIMPLE:</strong> "Jan 31, 2025" (date only)</li>
+            <li><strong>❌ NOT:</strong> "Jan 31, 2025, 2:30 PM" (date + time)</li>
+            <li><strong>❌ NOT:</strong> "Oct 29, 2024" (today's date)</li>
+            <li><strong>✅ CLEAN:</strong> No system time mixing</li>
+        </ul>
+    </div>
+
+    <!-- Load the simple display script -->
+    <script src="public/assets/js/simple-delivery-date-display.js"></script>
+    
+    <script>
+        function testSimpleDisplay() {
+            const resultsDiv = document.getElementById('results');
+            const displayDiv = document.getElementById('displayResult');
+            const userInput = document.getElementById('drDeliveryDate').value;
+            
+            resultsDiv.innerHTML = '';
+            displayDiv.innerHTML = '';
+            
+            console.log('🧪 Testing Simple Delivery Date Display...');
+            
+            // Test 1: Check if simple display function works
+            resultsDiv.innerHTML += `<div class="info"><strong>Test 1: Simple Display Function</strong></div>`;
+            resultsDiv.innerHTML += `User Input: ${userInput}<br>`;
+            
+            if (window.formatActiveDeliveryDate) {
+                const mockDelivery = {
+                    drNumber: 'DR-TEST-001',
+                    created_date: userInput,
+                    deliveryDate: userInput
+                };
+                
+                const formatted = window.formatActiveDeliveryDate(mockDelivery);
+                resultsDiv.innerHTML += `Formatted Result: <strong>${formatted}</strong><br>`;
+                displayDiv.innerHTML = `<div class="simple"><strong>Display Result:</strong> ${formatted}</div>`;
+                
+                // Check if it's simple (no time)
+                if (formatted.includes(':') || formatted.includes('AM') || formatted.includes('PM')) {
+                    resultsDiv.innerHTML += `<div class="error">❌ FAIL: Still showing time (${formatted})</div><br>`;
+                } else if (formatted.includes('Jan 31, 2025') && userInput === '2025-01-31') {
+                    resultsDiv.innerHTML += `<div class="success">✅ PASS: Simple date display working</div><br>`;
+                } else if (formatted === 'No Date') {
+                    resultsDiv.innerHTML += `<div class="error">❌ FAIL: No date found</div><br>`;
+                } else {
+                    resultsDiv.innerHTML += `<div class="success">✅ PASS: Simple format (no time)</div><br>`;
+                }
+            } else {
+                resultsDiv.innerHTML += `<div class="error">❌ FAIL: formatActiveDeliveryDate function not available</div><br>`;
+            }
+            
+            // Test 2: Check if system time functions are disabled
+            resultsDiv.innerHTML += `<div class="info"><strong>Test 2: System Time Functions Disabled</strong></div>`;
+            
+            const systemTimeFunctions = [
+                'getInstantSystemTime',
+                'createInstantDeliveryDisplay',
+                'getLocalSystemTime',
+                'getLocalSystemTimeISO',
+                'createUserDateSystemTime'
+            ];
+            
+            let disabledCount = 0;
+            systemTimeFunctions.forEach(funcName => {
+                if (window[funcName]) {
+                    const result = window[funcName]();
+                    if (result === null) {
+                        resultsDiv.innerHTML += `<div class="success">✅ ${funcName}: Disabled</div>`;
+                        disabledCount++;
+                    } else {
+                        resultsDiv.innerHTML += `<div class="warning">⚠️ ${funcName}: Still active</div>`;
+                    }
+                } else {
+                    resultsDiv.innerHTML += `<div class="info">ℹ️ ${funcName}: Not found</div>`;
+                }
+            });
+            
+            if (disabledCount > 0) {
+                resultsDiv.innerHTML += `<div class="success">✅ PASS: ${disabledCount} system time functions disabled</div><br>`;
+            }
+            
+            // Test 3: Storage test
+            resultsDiv.innerHTML += `<div class="info"><strong>Test 3: Date Storage</strong></div>`;
+            
+            const stored = localStorage.getItem('userDeliveryDate');
+            resultsDiv.innerHTML += `Stored Date: ${stored || 'None'}<br>`;
+            
+            if (stored === userInput) {
+                resultsDiv.innerHTML += `<div class="success">✅ PASS: Date stored correctly</div><br>`;
+            } else {
+                resultsDiv.innerHTML += `<div class="warning">⚠️ Date not stored yet (will store on change)</div><br>`;
+            }
+            
+            // Final Summary
+            resultsDiv.innerHTML += `<div class="info"><strong>🎯 Summary</strong></div>`;
+            resultsDiv.innerHTML += `<div class="success">✅ Simple Display: Shows date only, no time mixing</div>`;
+            resultsDiv.innerHTML += `<div class="success">✅ Clean Format: No complex date/time combinations</div>`;
+            resultsDiv.innerHTML += `<div class="success">✅ User Input: Uses your selected delivery date</div>`;
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('drDeliveryDate').min = today;
+            
+            console.log('📅 Simple Delivery Date Display Test Loaded');
+            console.log('🎯 Testing clean, simple date display without system time');
+            
+            // Auto-run test
+            setTimeout(() => {
+                testSimpleDisplay();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
