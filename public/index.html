@@ -196,23 +196,23 @@
     <!-- LOCALSTORAGE QUOTA FIX - Prevents storage quota exceeded errors (DISABLED - using safe fix instead) -->
     <!-- <script src="assets/js/localStorage-quota-fix-enhanced.js"></script> -->
     
-    <!-- Enhanced Date Formatter - Provides consistent date/timestamp formatting -->
-    <script src="assets/js/enhanced-date-formatter.js"></script>
+    <!-- DISABLED: Enhanced date formatter - conflicts with simple display -->
+    <!-- <script src="assets/js/enhanced-date-formatter.js"></script> -->
     
     <!-- DISABLED: Active deliveries time fix - conflicts with simple display -->
     <!-- <script src="assets/js/active-deliveries-time-fix.js"></script> -->
     
-    <!-- Local System Time - Uses your computer's system clock directly -->
-    <script src="assets/js/local-system-time.js"></script>
+    <!-- DISABLED: Local system time - conflicts with simple display -->
+    <!-- <script src="assets/js/local-system-time.js"></script> -->
     
-    <!-- REAL-TIME SYSTEM INTEGRATION - Ensures selected date + REAL current time (no fixed 8:00 AM) -->
-    <script src="assets/js/real-time-system-integration.js"></script>
+    <!-- DISABLED: Real-time system integration - conflicts with simple display -->
+    <!-- <script src="assets/js/real-time-system-integration.js"></script> -->
     
     <!-- DISABLED: Delivery history date preservation - using simple display instead -->
     <!-- <script src="assets/js/delivery-history-date-preservation-fix.js"></script> -->
     
-    <!-- DELIVERY HISTORY REAL-TIME INTEGRATION - Uses real system time for e-signature completion -->
-    <script src="assets/js/delivery-history-real-time-integration.js"></script>
+    <!-- DISABLED: Delivery history real-time integration - conflicts with simple display -->
+    <!-- <script src="assets/js/delivery-history-real-time-integration.js"></script> -->
     
     <!-- DISABLED: Delivery history date-time display - using simple display instead -->
     <!-- <script src="assets/js/delivery-history-date-time-display-fix.js"></script> -->
@@ -312,11 +312,8 @@
     <!-- <script src="assets/js/delivery-date-input-preservation-fix.js"></script> -->
     <!-- <script src="assets/js/emergency-delivery-date-override.js"></script> -->
     
-    <!-- SIMPLE DELIVERY DATE DISPLAY - CLEAN: Only shows user's delivery date, no system time -->
-    <script src="assets/js/simple-delivery-date-display.js"></script>
-    
-    <!-- DELIVERY DATE ENHANCEMENT - Adds custom delivery date selection to DR Preview -->
-    <script src="assets/js/delivery-date-enhancement.js"></script>
+    <!-- DISABLED: Delivery date enhancement - conflicts with simple display -->
+    <!-- <script src="assets/js/delivery-date-enhancement.js"></script> -->
     
     <!-- DISABLED: Delivery date system time - using simple display instead -->
     <!-- <script src="assets/js/delivery-date-system-time-fix.js"></script> -->
@@ -981,6 +978,9 @@ The page will refresh to show your new data.`);
             });
         }
     </script>
+    
+    <!-- SIMPLE DELIVERY DATE DISPLAY - FINAL OVERRIDE: Loads LAST to override all other date functions -->
+    <script src="assets/js/simple-delivery-date-display.js"></script>
 </head>
 
 <body>
