@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Delivery Status Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-output { background: #f5f5f5; padding: 10px; border-radius: 3px; white-space: pre-wrap; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Delivery Status Fix Test</h1>
+    <p>This page tests the delivery status fix functionality.</p>
+
+    <div class="test-section">
+        <h3>1. Test Auto-Fix Function</h3>
+        <button onclick="testAutoFix()">Run Auto-Fix Test</button>
+        <div id="autoFixOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Status Update</h3>
+        <input type="text" id="testDrNumber" placeholder="DR Number" style="padding: 8px; margin: 5px;">
+        <select id="testStatus" style="padding: 8px; margin: 5px;">
+            <option value="Completed">Completed</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+        </select>
+        <button onclick="testStatusUpdate()">Test Status Update</button>
+        <div id="statusUpdateOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Current Data Status</h3>
+        <button onclick="checkCurrentData()">Check Current Data</button>
+        <div id="currentDataOutput" class="test-output"></div>
+    </div>
+
+    <!-- Load the delivery status fix -->
+    <script src="public/assets/js/delivery-status-fix.js"></script>
+
+    <script>
+        // Mock some test data
+        function setupTestData() {
+            const testActiveDeliveries = [
+                {
+                    id: 'test1',
+                    drNumber: '167655500',
+                    status: 'Completed', // This should be moved to history
+                    customerName: 'Test Customer 1',
+                    signature_data: 'test_signature_data'
+                },
+                {
+                    id: 'test2',
+                    drNumber: '167655501',
+                    status: 'Active',
+                    customerName: 'Test Customer 2'
+                },
+                {
+                    id: 'test3',
+                    drNumber: '167655502',
+                    status: 'Signed', // This should be moved to history
+                    customerName: 'Test Customer 3',
+                    completedDate: '2025-01-01'
+                }
+            ];
+
+            const testDeliveryHistory = [
+                {
+                    id: 'hist1',
+                    drNumber: '167655499',
+                    status: 'Completed',
+                    customerName: 'Historical Customer',
+                    completedDate: 'Dec 28, 2024'
+                }
+            ];
+
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(testActiveDeliveries));
+            localStorage.setItem('mci-delivery-history', JSON.stringify(testDeliveryHistory));
+
+            window.activeDeliveries = testActiveDeliveries;
+            window.deliveryHistory = testDeliveryHistory;
+        }
+
+        async function testAutoFix() {
+            const output = document.getElementById('autoFixOutput');
+            output.innerHTML = '<span class="warning">🔄 Setting up test data and running auto-fix...</span>';
+
+            try {
+                // Setup test data
+                setupTestData();
+
+                // Wait a moment for the fix to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Run the auto-fix
+                if (window.deliveryStatusFix) {
+                    const result = await window.deliveryStatusFix.fixStuckDeliveries();
+                    
+                    output.innerHTML = `<span class="success">✅ Auto-fix completed!</span>
+
+Fixed deliveries: ${result.fixed}
+DR Numbers moved: ${result.drNumbers.join(', ')}
+Active deliveries remaining: ${result.activeCount}
+History entries: ${result.historyCount}
+
+Expected result: 2 deliveries should be moved to history (DR 167655500 and 167655502)`;
+                } else {
+                    output.innerHTML = '<span class="error">❌ Delivery status fix not loaded</span>';
+                }
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error during auto-fix test: ${error.message}</span>`;
+            }
+        }
+
+        async function testStatusUpdate() {
+            const drNumber = document.getElementById('testDrNumber').value.trim();
+            const status = document.getElementById('testStatus').value;
+            const output = document.getElementById('statusUpdateOutput');
+
+            if (!drNumber) {
+                output.innerHTML = '<span class="warning">⚠️ Please enter a DR number</span>';
+                return;
+            }
+
+            try {
+                output.innerHTML = '<span class="warning">🔄 Testing status update...</span>';
+
+                if (window.deliveryStatusFix) {
+                    await window.deliveryStatusFix.updateDeliveryStatus(drNumber, status);
+                    
+                    output.innerHTML = `<span class="success">✅ Status update test completed!</span>
+
+DR ${drNumber} status updated to: ${status}
+${status === 'Completed' || status === 'Signed' ? 'Should be moved to history' : 'Should remain in active deliveries'}`;
+                } else {
+                    output.innerHTML = '<span class="error">❌ Delivery status fix not loaded</span>';
+                }
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error during status update test: ${error.message}</span>`;
+            }
+        }
+
+        function checkCurrentData() {
+            const output = document.getElementById('currentDataOutput');
+            
+            try {
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+
+                output.innerHTML = `<span class="success">📊 Current Data Status:</span>
+
+ACTIVE DELIVERIES (${activeDeliveries.length}):
+${activeDeliveries.map(d => `- DR ${d.drNumber}: ${d.status}`).join('\n')}
+
+DELIVERY HISTORY (${deliveryHistory.length}):
+${deliveryHistory.map(d => `- DR ${d.drNumber}: ${d.status} (${d.completedDate || 'No date'})`).join('\n')}
+
+ANALYSIS:
+${activeDeliveries.filter(d => d.status === 'Completed' || d.status === 'Signed').length > 0 ? 
+    '❌ Found completed deliveries still in active list!' : 
+    '✅ No completed deliveries in active list'}`;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error checking current data: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-check data when page loads
+        window.addEventListener('load', function() {
+            setTimeout(checkCurrentData, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Status Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .debug-output { background: #f5f5f5; padding: 10px; border-radius: 3px; white-space: pre-wrap; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Delivery Status Debug Tool</h1>
+    <p>This tool helps diagnose why completed deliveries are still showing in Active Deliveries.</p>
+
+    <div class="debug-section">
+        <h3>1. Check Local Storage Data</h3>
+        <button onclick="checkLocalStorage()">Check Local Storage</button>
+        <div id="localStorageOutput" class="debug-output"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>2. Check Supabase Data</h3>
+        <button onclick="checkSupabaseData()">Check Supabase Data</button>
+        <div id="supabaseOutput" class="debug-output"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>3. Check Specific DR Status</h3>
+        <input type="text" id="drNumberInput" placeholder="Enter DR Number (e.g., 167655500)" style="padding: 8px; margin: 5px;">
+        <button onclick="checkSpecificDR()">Check DR Status</button>
+        <div id="drStatusOutput" class="debug-output"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>4. Force Status Update</h3>
+        <input type="text" id="updateDrInput" placeholder="DR Number" style="padding: 8px; margin: 5px;">
+        <select id="statusSelect" style="padding: 8px; margin: 5px;">
+            <option value="Completed">Completed</option>
+            <option value="Signed">Signed</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+        </select>
+        <button onclick="forceStatusUpdate()">Force Update Status</button>
+        <div id="updateOutput" class="debug-output"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>5. Clean Up Duplicate/Stuck Deliveries</h3>
+        <button onclick="cleanupStuckDeliveries()">Clean Up Stuck Deliveries</button>
+        <div id="cleanupOutput" class="debug-output"></div>
+    </div>
+
+    <script>
+        // Include necessary scripts
+        const scripts = [
+            '../public/assets/js/supabaseClient.js',
+            '../public/assets/js/dataService.js'
+        ];
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        // Load scripts sequentially
+        async function loadScripts() {
+            try {
+                for (const src of scripts) {
+                    await loadScript(src);
+                }
+                console.log('All scripts loaded successfully');
+            } catch (error) {
+                console.error('Error loading scripts:', error);
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', loadScripts);
+
+        function checkLocalStorage() {
+            const output = document.getElementById('localStorageOutput');
+            try {
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+                
+                output.innerHTML = `
+<span class="success">✅ Local Storage Check:</span>
+
+Active Deliveries: ${activeDeliveries.length} items
+Delivery History: ${deliveryHistory.length} items
+
+Active Deliveries Status Breakdown:
+${activeDeliveries.map(d => `- DR ${d.drNumber || d.dr_number}: ${d.status}`).join('\n')}
+
+Recent History Items:
+${deliveryHistory.slice(0, 5).map(d => `- DR ${d.drNumber || d.dr_number}: ${d.status} (${d.completedDate || 'No date'})`).join('\n')}
+                `;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error checking local storage: ${error.message}</span>`;
+            }
+        }
+
+        async function checkSupabaseData() {
+            const output = document.getElementById('supabaseOutput');
+            try {
+                if (!window.dataService) {
+                    output.innerHTML = '<span class="warning">⚠️ DataService not available. Loading...</span>';
+                    // Wait a bit and try again
+                    setTimeout(checkSupabaseData, 2000);
+                    return;
+                }
+
+                const deliveries = await window.dataService.getDeliveries();
+                
+                const activeCount = deliveries.filter(d => d.status !== 'Completed' && d.status !== 'Signed').length;
+                const completedCount = deliveries.filter(d => d.status === 'Completed' || d.status === 'Signed').length;
+                
+                const statusBreakdown = {};
+                deliveries.forEach(d => {
+                    statusBreakdown[d.status] = (statusBreakdown[d.status] || 0) + 1;
+                });
+
+                output.innerHTML = `
+<span class="success">✅ Supabase Data Check:</span>
+
+Total Deliveries: ${deliveries.length}
+Active (not Completed/Signed): ${activeCount}
+Completed/Signed: ${completedCount}
+
+Status Breakdown:
+${Object.entries(statusBreakdown).map(([status, count]) => `- ${status}: ${count} items`).join('\n')}
+
+Recent Deliveries:
+${deliveries.slice(0, 10).map(d => `- DR ${d.dr_number || d.drNumber}: ${d.status} (Updated: ${d.updated_at || 'Unknown'})`).join('\n')}
+                `;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error checking Supabase: ${error.message}</span>`;
+            }
+        }
+
+        async function checkSpecificDR() {
+            const drNumber = document.getElementById('drNumberInput').value.trim();
+            const output = document.getElementById('drStatusOutput');
+            
+            if (!drNumber) {
+                output.innerHTML = '<span class="warning">⚠️ Please enter a DR number</span>';
+                return;
+            }
+
+            try {
+                // Check local storage
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+                
+                const localActive = activeDeliveries.find(d => (d.drNumber || d.dr_number) === drNumber);
+                const localHistory = deliveryHistory.find(d => (d.drNumber || d.dr_number) === drNumber);
+
+                // Check Supabase
+                let supabaseDelivery = null;
+                if (window.dataService) {
+                    const allDeliveries = await window.dataService.getDeliveries();
+                    supabaseDelivery = allDeliveries.find(d => (d.dr_number || d.drNumber) === drNumber);
+                }
+
+                output.innerHTML = `
+<span class="success">🔍 DR ${drNumber} Status Check:</span>
+
+LOCAL STORAGE:
+- In Active Deliveries: ${localActive ? `YES (Status: ${localActive.status})` : 'NO'}
+- In Delivery History: ${localHistory ? `YES (Status: ${localHistory.status})` : 'NO'}
+
+SUPABASE DATABASE:
+- Found: ${supabaseDelivery ? `YES (Status: ${supabaseDelivery.status})` : 'NO'}
+- Last Updated: ${supabaseDelivery?.updated_at || 'Unknown'}
+
+${localActive && supabaseDelivery && localActive.status !== supabaseDelivery.status ? 
+    `<span class="error">⚠️ STATUS MISMATCH DETECTED!</span>
+Local: ${localActive.status}
+Supabase: ${supabaseDelivery.status}` : ''}
+
+DIAGNOSIS:
+${localActive && !localHistory ? '- ❌ Delivery is stuck in Active Deliveries' : ''}
+${!localActive && localHistory ? '- ✅ Delivery correctly moved to History' : ''}
+${localActive && localHistory ? '- ❌ Delivery exists in BOTH Active and History (duplicate!)' : ''}
+${!localActive && !localHistory && !supabaseDelivery ? '- ❌ Delivery not found anywhere' : ''}
+                `;
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error checking DR status: ${error.message}</span>`;
+            }
+        }
+
+        async function forceStatusUpdate() {
+            const drNumber = document.getElementById('updateDrInput').value.trim();
+            const newStatus = document.getElementById('statusSelect').value;
+            const output = document.getElementById('updateOutput');
+            
+            if (!drNumber) {
+                output.innerHTML = '<span class="warning">⚠️ Please enter a DR number</span>';
+                return;
+            }
+
+            try {
+                output.innerHTML = '<span class="warning">🔄 Updating status...</span>';
+
+                // Update in Supabase
+                if (window.dataService) {
+                    await window.dataService.updateDeliveryStatusInSupabase(drNumber, newStatus);
+                }
+
+                // Update local storage
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+
+                // Find and update in active deliveries
+                const activeIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
+                if (activeIndex !== -1) {
+                    if (newStatus === 'Completed' || newStatus === 'Signed') {
+                        // Move to history
+                        const delivery = activeDeliveries[activeIndex];
+                        delivery.status = newStatus;
+                        delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        deliveryHistory.unshift(delivery);
+                        activeDeliveries.splice(activeIndex, 1);
+                    } else {
+                        // Update status in active
+                        activeDeliveries[activeIndex].status = newStatus;
+                    }
+                }
+
+                // Update in history if exists
+                const historyIndex = deliveryHistory.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
+                if (historyIndex !== -1) {
+                    if (newStatus !== 'Completed' && newStatus !== 'Signed') {
+                        // Move back to active
+                        const delivery = deliveryHistory[historyIndex];
+                        delivery.status = newStatus;
+                        activeDeliveries.push(delivery);
+                        deliveryHistory.splice(historyIndex, 1);
+                    } else {
+                        // Update status in history
+                        deliveryHistory[historyIndex].status = newStatus;
+                    }
+                }
+
+                // Save to local storage
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+                localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
+
+                output.innerHTML = `<span class="success">✅ Status updated successfully!</span>
+DR ${drNumber} status changed to: ${newStatus}
+${newStatus === 'Completed' || newStatus === 'Signed' ? 'Moved to Delivery History' : 'Kept in Active Deliveries'}`;
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error updating status: ${error.message}</span>`;
+            }
+        }
+
+        async function cleanupStuckDeliveries() {
+            const output = document.getElementById('cleanupOutput');
+            try {
+                output.innerHTML = '<span class="warning">🔄 Cleaning up stuck deliveries...</span>';
+
+                const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+                const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+
+                let cleanupCount = 0;
+                const stuckDeliveries = [];
+
+                // Find deliveries that should be in history but are still in active
+                for (let i = activeDeliveries.length - 1; i >= 0; i--) {
+                    const delivery = activeDeliveries[i];
+                    if (delivery.status === 'Completed' || delivery.status === 'Signed') {
+                        stuckDeliveries.push(delivery.drNumber || delivery.dr_number);
+                        
+                        // Add completion date if missing
+                        if (!delivery.completedDate) {
+                            delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                        }
+
+                        // Move to history
+                        deliveryHistory.unshift(delivery);
+                        activeDeliveries.splice(i, 1);
+                        cleanupCount++;
+                    }
+                }
+
+                // Remove duplicates from history (keep the most recent)
+                const uniqueHistory = [];
+                const seenDRs = new Set();
+                for (const delivery of deliveryHistory) {
+                    const drNumber = delivery.drNumber || delivery.dr_number;
+                    if (!seenDRs.has(drNumber)) {
+                        seenDRs.add(drNumber);
+                        uniqueHistory.push(delivery);
+                    }
+                }
+
+                // Save cleaned data
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+                localStorage.setItem('mci-delivery-history', JSON.stringify(uniqueHistory));
+
+                output.innerHTML = `<span class="success">✅ Cleanup completed!</span>
+
+Moved ${cleanupCount} stuck deliveries to history:
+${stuckDeliveries.map(dr => `- DR ${dr}`).join('\n')}
+
+Removed ${deliveryHistory.length - uniqueHistory.length} duplicate history entries
+
+Current counts:
+- Active Deliveries: ${activeDeliveries.length}
+- Delivery History: ${uniqueHistory.length}`;
+
+            } catch (error) {
+                output.innerHTML = `<span class="error">❌ Error during cleanup: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
