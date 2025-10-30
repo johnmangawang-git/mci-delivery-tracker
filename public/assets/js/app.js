@@ -18,6 +18,7 @@ console.log('app.js loaded');
     let filteredDeliveries = [];
     let filteredHistory = [];
     let currentSearchTerm = '';
+    let currentStatusFilter = 'all';
     let currentHistorySearchTerm = '';
 
     // Test function to check if modals are working
@@ -784,7 +785,6 @@ console.log('app.js loaded');
         return 'No Date';
     }
 
-    // Separate function to populate the Active Deliveries table
     function populateActiveDeliveriesTable() {
         console.log('📊 Populating Active Deliveries table...');
         
@@ -796,15 +796,21 @@ console.log('app.js loaded');
         
         // Ensure we have the latest data
         activeDeliveries = window.activeDeliveries || [];
-        
-        // Apply search filter using global field mapper
-        filteredDeliveries = currentSearchTerm ? 
-            activeDeliveries.filter(delivery => {
+
+        // Apply search and status filters
+        let filteredDeliveries = activeDeliveries;
+
+        if (currentSearchTerm) {
+            filteredDeliveries = filteredDeliveries.filter(delivery => {
                 const getField = window.getFieldValue || ((obj, field) => obj[field]);
                 const drNumber = getField(delivery, 'drNumber') || getField(delivery, 'dr_number') || '';
                 return drNumber.toLowerCase().includes(currentSearchTerm.toLowerCase());
-            }) : 
-            [...activeDeliveries];
+            });
+        }
+
+        if (currentStatusFilter !== 'all') {
+            filteredDeliveries = filteredDeliveries.filter(delivery => delivery.status === currentStatusFilter);
+        }
     
         // Update search results info
         const searchResultsInfo = document.getElementById('searchResultsInfo');
@@ -829,6 +835,7 @@ console.log('app.js loaded');
         console.log('- Window activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 'undefined');
         console.log('- Filtered deliveries:', filteredDeliveries.length);
         console.log('- Current search term:', currentSearchTerm);
+        console.log('- Current status filter:', currentStatusFilter);
         
         if (filteredDeliveries.length > 0) {
             console.log('- Sample delivery:', filteredDeliveries[0]);
@@ -842,7 +849,7 @@ console.log('app.js loaded');
                         <i class="bi bi-truck" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No active deliveries found</h4>
                         <p class="text-muted">
-                            ${currentSearchTerm ? 'Try adjusting your search criteria' : 'All deliveries are completed or there are no deliveries yet'}
+                            ${currentSearchTerm || currentStatusFilter !== 'all' ? 'Try adjusting your search or filter criteria' : 'All deliveries are completed or there are no deliveries yet'}
                         </p>
                     </td>
                 </tr>
@@ -854,6 +861,7 @@ console.log('app.js loaded');
         // Generate table rows
         activeDeliveriesTableBody.innerHTML = filteredDeliveries.map((delivery, index) => {
             const statusInfo = getStatusInfo(delivery.status);
+            const displayStatus = delivery.status === 'Delayed' ? 'SUD - Sold Undelivered' : delivery.status;
             
             // Debug logging for first few deliveries to identify field structure
             if (index < 3) {
@@ -916,7 +924,7 @@ console.log('app.js loaded');
                                   data-delivery-id="${delivery.id}" 
                                   data-current-status="${delivery.status}"
                                   onclick="toggleStatusDropdown('${delivery.id}')">
-                                <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
+                                <i class="bi ${statusInfo.icon}"></i> ${displayStatus}
                                 <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
                             </span>
                             <div class="status-dropdown" id="statusDropdown-${delivery.id}" style="display: none;">
@@ -940,6 +948,9 @@ console.log('app.js loaded');
         if (typeof window.updateBookingViewDashboard === 'function') {
             setTimeout(() => {
                 window.updateBookingViewDashboard();
+            }, 100);
+        }
+    }ashboard();
             }, 100);
         }
     }
@@ -1142,6 +1153,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const eSignatureBtn = document.getElementById('eSignatureBtn');
     const exportActiveDeliveriesBtn = document.getElementById('exportActiveDeliveriesBtn');
     const exportDeliveryHistoryBtn = document.getElementById('exportDeliveryHistoryBtn');
+    const statusFilterSelect = document.getElementById('statusFilterSelect');
     
     if (drSearchInput) {
         drSearchInput.addEventListener('input', function() {
@@ -1290,6 +1302,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (exportDeliveryHistoryBtn) {
         exportDeliveryHistoryBtn.addEventListener('click', exportDeliveryHistoryToExcel);
+    }
+
+    if (statusFilterSelect) {
+        statusFilterSelect.addEventListener('change', function() {
+            currentStatusFilter = this.value;
+            populateActiveDeliveriesTable();
+        });
     }
     
     // Add event listener for Delivery History PDF export button
