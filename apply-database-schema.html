@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply Database Schema</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Database Schema Application</h2>
+        <div class="alert alert-info">
+            <strong>Instructions:</strong> This tool will check if your database schema is up to date and apply missing tables/columns.
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Schema Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="schemaStatus">
+                            <p>Checking schema status...</p>
+                        </div>
+                        <button id="applySchema" class="btn btn-primary" style="display: none;">Apply Missing Schema</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Manual SQL Commands</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>If automatic application fails, copy and paste these SQL commands into your Supabase SQL Editor:</p>
+                        <textarea id="sqlCommands" class="form-control" rows="15" readonly>
+-- Additional Cost Items Table
+CREATE TABLE IF NOT EXISTS public.additional_cost_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    delivery_id UUID REFERENCES public.deliveries(id) ON DELETE CASCADE,
+    description TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    category TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid()
+);
+
+-- Add indexes
+CREATE INDEX IF NOT EXISTS idx_additional_cost_items_delivery_id ON public.additional_cost_items(delivery_id);
+CREATE INDEX IF NOT EXISTS idx_additional_cost_items_category ON public.additional_cost_items(category);
+CREATE INDEX IF NOT EXISTS idx_additional_cost_items_user_id ON public.additional_cost_items(user_id);
+
+-- Add JSONB column to deliveries table
+ALTER TABLE public.deliveries 
+ADD COLUMN IF NOT EXISTS additional_cost_items JSONB DEFAULT '[]';
+
+-- Enable RLS
+ALTER TABLE public.additional_cost_items ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can view their own cost items" ON public.additional_cost_items
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own cost items" ON public.additional_cost_items
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own cost items" ON public.additional_cost_items
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own cost items" ON public.additional_cost_items
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_additional_cost_items_updated_at BEFORE UPDATE ON public.additional_cost_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+                        </textarea>
+                        <button class="btn btn-secondary mt-2" onclick="copyToClipboard()">Copy to Clipboard</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function checkSchemaStatus() {
+            const statusDiv = document.getElementById('schemaStatus');
+            const applyButton = document.getElementById('applySchema');
+            
+            try {
+                statusDiv.innerHTML = '<p>🔍 Checking database schema...</p>';
+                
+                let status = '<h6>Schema Check Results:</h6>';
+                let needsUpdate = false;
+                
+                // Check if additional_cost_items table exists
+                const { data: costItemsTest, error: costItemsError } = await supabase
+                    .from('additional_cost_items')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (costItemsError) {
+                    status += '<div class="alert alert-warning">❌ additional_cost_items table: Missing</div>';
+                    needsUpdate = true;
+                } else {
+                    status += '<div class="alert alert-success">✅ additional_cost_items table: Exists</div>';
+                }
+                
+                // Check if deliveries table has additional_cost_items column
+                const { data: deliveriesData, error: deliveriesError } = await supabase
+                    .from('deliveries')
+                    .select('additional_cost_items')
+                    .limit(1);
+                
+                if (deliveriesError && deliveriesError.message.includes('column "additional_cost_items" does not exist')) {
+                    status += '<div class="alert alert-warning">❌ deliveries.additional_cost_items column: Missing</div>';
+                    needsUpdate = true;
+                } else {
+                    status += '<div class="alert alert-success">✅ deliveries.additional_cost_items column: Exists</div>';
+                }
+                
+                if (needsUpdate) {
+                    status += '<div class="alert alert-info">⚠️ Your database schema needs to be updated.</div>';
+                    applyButton.style.display = 'block';
+                } else {
+                    status += '<div class="alert alert-success">🎉 Your database schema is up to date!</div>';
+                }
+                
+                statusDiv.innerHTML = status;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="alert alert-danger">Error checking schema: ${error.message}</div>`;
+            }
+        }
+        
+        function copyToClipboard() {
+            const textarea = document.getElementById('sqlCommands');
+            textarea.select();
+            document.execCommand('copy');
+            alert('SQL commands copied to clipboard!');
+        }
+        
+        // Run check when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSchemaStatus();
+            
+            document.getElementById('applySchema').addEventListener('click', function() {
+                alert('Automatic schema application is not available. Please copy the SQL commands and run them in your Supabase SQL Editor.');
+            });
+        });
+    </script>
+</body>
+</html>

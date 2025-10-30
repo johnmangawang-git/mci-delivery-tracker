@@ -150,7 +150,7 @@
     <script src="assets/js/localStorage-safe-fix.js"></script>
     
     <!-- STATUS DISPLAY MAPPING FIX - Changes "Delayed" to "SUD - Sold Undelivered" in UI only -->
-    <script src="assets/js/status-display-mapping-fix.js"></script>
+    <!-- <script src="assets/js/status-display-mapping-fix.js"></script> -->
     
     <!-- SUPABASE DEFINITIVE FIX - Must load immediately after Supabase library -->
     <script src="assets/js/supabase-definitive-fix.js"></script>
@@ -188,13 +188,16 @@
     <script src="assets/js/delivery-status-fix.js"></script>
     
     <!-- UI TEXT REPLACEMENT FIX - Replaces "Delayed" with "Sold Undelivered" in UI only (SAFE VERSION) -->
-    <script src="assets/js/ui-text-replacement-fix-safe.js"></script>
+    <!-- <script src="assets/js/ui-text-replacement-fix-safe.js"></script> -->
     
     <!-- STATUS DROPDOWN FIX - Specifically targets dropdowns and badges -->
     <!-- <script src="assets/js/status-dropdown-fix.js"></script> -->
     
-    <!-- DEFINITIVE STATUS DROPDOWN FIX - Consolidates all status dropdown functionality (LOADS LAST) -->
-    <!-- <script src="assets/js/status-dropdown-definitive-fix.js"></script> -->
+    <!-- FINAL STATUS DROPDOWN FIX - Eliminates duplicate "Canceled" entries (LOADS LAST) -->
+    <script src="assets/js/status-dropdown-final-fix.js"></script>
+    
+    <!-- DR UPLOAD SCROLL FIX - Fixes UI freeze and scrolling issues after DR upload -->
+    <script src="assets/js/dr-upload-scroll-fix.js"></script>
     
     <!-- SUPABASE-FIRST ARCHITECTURE FIX - Eliminates localStorage quota issues by using Supabase as primary storage -->
     <script src="assets/js/supabase-first-architecture-fix.js"></script>

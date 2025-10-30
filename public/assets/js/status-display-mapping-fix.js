@@ -56,7 +56,7 @@ window.statusDisplayMapping = {
             
             // Override with display mapping
             window.generateStatusOptions = (currentStatus, deliveryId) => {
-                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed', 'Canceled'];
+                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed'];
                 
                 // Don't allow changing from Completed or Signed status
                 if (currentStatus === 'Completed' || currentStatus === 'Signed') {
@@ -71,8 +71,7 @@ window.statusDisplayMapping = {
                     let displayText = status;
                                 if (status === 'Delayed') {
                                     displayText = 'Canceled';
-                                } else if (status === 'Canceled') {
-                                    displayText = 'Canceled';                    }
+                                }
                     
                     return `
                         <div class="status-option ${isSelected}" 
