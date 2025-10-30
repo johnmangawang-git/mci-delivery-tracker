@@ -518,6 +518,30 @@ async function saveDeliveries(deliveries) {
                     localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
                     console.log('✅ Saved to localStorage:', delivery.dr_number);
                 }
+                
+                // AUTO-CREATE CUSTOMER: Extract and save customer data
+                if (delivery.customer_name && delivery.customer_name !== 'Unknown Customer') {
+                    try {
+                        const customerName = delivery.customer_name;
+                        const vendorNumber = delivery.vendor_number || '';
+                        const destination = delivery.destination || '';
+                        
+                        // Call auto-create customer function if available
+                        if (typeof window.autoCreateCustomer === 'function') {
+                            await window.autoCreateCustomer(customerName, vendorNumber, destination);
+                            console.log('✅ UPLOAD-FIX: Auto-created customer:', customerName);
+                        } else if (typeof autoCreateCustomer === 'function') {
+                            await autoCreateCustomer(customerName, vendorNumber, destination);
+                            console.log('✅ UPLOAD-FIX: Auto-created customer:', customerName);
+                        } else {
+                            console.warn('⚠️ UPLOAD-FIX: autoCreateCustomer function not available');
+                        }
+                    } catch (customerError) {
+                        console.error('❌ UPLOAD-FIX: Error auto-creating customer:', delivery.customer_name, customerError);
+                        // Don't fail the whole upload if customer creation fails
+                    }
+                }
+                
                 savedCount++;
             } catch (error) {
                 console.error('❌ Error saving delivery:', delivery.dr_number, error);

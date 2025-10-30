@@ -90,6 +90,29 @@ console.log('🔧 Loading Multi-Item DR Upload Fix...');
                     // Don't fail the whole process - localStorage save already succeeded
                 }
                 
+                // AUTO-CREATE CUSTOMER: Extract and save customer data
+                if (normalizedDelivery.customerName && normalizedDelivery.customerName !== 'Unknown Customer') {
+                    try {
+                        const customerName = normalizedDelivery.customerName;
+                        const vendorNumber = normalizedDelivery.vendorNumber || '';
+                        const destination = normalizedDelivery.destination || '';
+                        
+                        // Call auto-create customer function if available
+                        if (typeof window.autoCreateCustomer === 'function') {
+                            await window.autoCreateCustomer(customerName, vendorNumber, destination);
+                            console.log('✅ MULTI-ITEM: Auto-created customer:', customerName);
+                        } else if (typeof autoCreateCustomer === 'function') {
+                            await autoCreateCustomer(customerName, vendorNumber, destination);
+                            console.log('✅ MULTI-ITEM: Auto-created customer:', customerName);
+                        } else {
+                            console.warn('⚠️ MULTI-ITEM: autoCreateCustomer function not available');
+                        }
+                    } catch (customerError) {
+                        console.error('❌ MULTI-ITEM: Error auto-creating customer:', normalizedDelivery.customerName, customerError);
+                        // Don't fail the whole process if customer creation fails
+                    }
+                }
+                
                 console.log(`✅ Successfully processed: ${bookingData.drNumber}`);
                 resolve(normalizedDelivery);
                 

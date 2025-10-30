@@ -479,6 +479,29 @@ window.definitiveProcessUpload = async function(data) {
                 }
             }
             
+            // AUTO-CREATE CUSTOMER: Extract and save customer data
+            if (delivery.customer_name && delivery.customer_name !== 'Unknown Customer') {
+                try {
+                    const customerName = delivery.customer_name;
+                    const vendorNumber = delivery.vendor_number || '';
+                    const destination = delivery.destination || '';
+                    
+                    // Call auto-create customer function if available
+                    if (typeof window.autoCreateCustomer === 'function') {
+                        await window.autoCreateCustomer(customerName, vendorNumber, destination);
+                        console.log('✅ DEFINITIVE: Auto-created customer:', customerName);
+                    } else if (typeof autoCreateCustomer === 'function') {
+                        await autoCreateCustomer(customerName, vendorNumber, destination);
+                        console.log('✅ DEFINITIVE: Auto-created customer:', customerName);
+                    } else {
+                        console.warn('⚠️ DEFINITIVE: autoCreateCustomer function not available');
+                    }
+                } catch (customerError) {
+                    console.error('❌ DEFINITIVE: Error auto-creating customer:', delivery.customer_name, customerError);
+                    // Don't fail the whole upload if customer creation fails
+                }
+            }
+            
         } catch (error) {
             console.error(`❌ Error processing row ${i + 1}:`, error);
             errors.push(`Row ${i + 1}: ${error.message}`);

@@ -220,6 +220,9 @@
     <!-- DELIVERY HISTORY TABLE FIX - Updates table structure to match Active Deliveries -->
     <script src="assets/js/delivery-history-table-fix.js"></script>
     
+    <!-- CUSTOMER DR INTEGRATION FIX - Ensures customers are created during DR uploads -->
+    <script src="assets/js/customer-dr-integration-fix.js"></script>
+    
     <!-- SUPABASE-FIRST ARCHITECTURE FIX - Eliminates localStorage quota issues by using Supabase as primary storage -->
     <script src="assets/js/supabase-first-architecture-fix.js"></script>
     
@@ -701,6 +704,25 @@
                 
                 console.log('✅ INLINE UPLOAD: Data converted to delivery format');
                 
+                // CUSTOMER CONSOLIDATION: Track unique customers to avoid calling autoCreateCustomer multiple times for duplicates
+                const uniqueCustomers = new Map();
+                deliveries.forEach(delivery => {
+                    if (delivery.customer_name && delivery.customer_name !== 'Unknown Customer') {
+                        const key = `${delivery.customer_name}_${delivery.vendor_number || ''}`;
+                        if (!uniqueCustomers.has(key)) {
+                            uniqueCustomers.set(key, {
+                                customerName: delivery.customer_name,
+                                vendorNumber: delivery.vendor_number || '',
+                                destination: delivery.destination || '',
+                                count: 1
+                            });
+                        } else {
+                            uniqueCustomers.get(key).count++;
+                        }
+                    }
+                });
+                console.log(`📊 INLINE UPLOAD: Found ${uniqueCustomers.size} unique customers across ${deliveries.length} deliveries`);
+                
                 // Save deliveries
                 let savedCount = 0;
                 const savePromises = deliveries.map(async (delivery) => {
@@ -715,14 +737,57 @@
                             localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
                             console.log('✅ INLINE UPLOAD: Saved to localStorage:', delivery.dr_number);
                         }
+                        
                         savedCount++;
                     } catch (error) {
                         console.error('❌ INLINE UPLOAD: Error saving:', delivery.dr_number, error);
                     }
                 });
                 
-                Promise.all(savePromises).then(() => {
-                    console.log(`🎉 INLINE UPLOAD: Complete! ${savedCount}/${deliveries.length} deliveries saved`);
+                // AUTO-CREATE/UPDATE CUSTOMERS: Handle unique customers with their counts
+                const customerPromises = Array.from(uniqueCustomers.entries()).map(async ([key, customerData]) => {
+                    try {
+                        console.log(`👥 Processing customer: ${customerData.customerName} (${customerData.count} occurrences)`);
+                        
+                        // Call auto-create customer function - it will handle consolidation internally
+                        if (typeof window.autoCreateCustomer === 'function') {
+                            // Call it once per unique customer, then increment count for remaining occurrences
+                            const result = await window.autoCreateCustomer(customerData.customerName, customerData.vendorNumber, customerData.destination);
+                            console.log('✅ INLINE UPLOAD: Processed customer:', customerData.customerName);
+                            
+                            // If this customer appeared multiple times, update the count accordingly
+                            if (customerData.count > 1 && result) {
+                                // Update booking count for additional occurrences
+                                result.bookingsCount = (result.bookingsCount || 0) + (customerData.count - 1);
+                                
+                                // Save the updated count
+                                if (window.customers) {
+                                    const existingIndex = window.customers.findIndex(c => 
+                                        c.contactPerson.toLowerCase() === customerData.customerName.toLowerCase() ||
+                                        c.phone === customerData.vendorNumber
+                                    );
+                                    if (existingIndex !== -1) {
+                                        window.customers[existingIndex] = result;
+                                        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+                                        console.log(`✅ INLINE UPLOAD: Updated customer count to ${result.bookingsCount} for:`, customerData.customerName);
+                                    }
+                                }
+                            }
+                        } else if (typeof autoCreateCustomer === 'function') {
+                            await autoCreateCustomer(customerData.customerName, customerData.vendorNumber, customerData.destination);
+                            console.log('✅ INLINE UPLOAD: Auto-created customer:', customerData.customerName);
+                        } else {
+                            console.warn('⚠️ INLINE UPLOAD: autoCreateCustomer function not available');
+                        }
+                    } catch (customerError) {
+                        console.error('❌ INLINE UPLOAD: Error auto-creating customer:', customerData.customerName, customerError);
+                        // Don't fail the whole upload if customer creation fails
+                    }
+                });
+                
+                // Wait for both deliveries and customers to be processed
+                Promise.all([Promise.all(savePromises), Promise.all(customerPromises)]).then(() => {
+                    console.log(`🎉 INLINE UPLOAD: Complete! ${savedCount}/${deliveries.length} deliveries saved, ${uniqueCustomers.size} customers processed`);
                     
                     // Close modal
                     const modal = document.getElementById('drUploadModal');
@@ -738,7 +803,7 @@
                     }
                     
                     // Show success message
-                    alert(`🎉 Upload Successful!\r\n\r\nSaved ${savedCount} deliveries to the system.`);
+                    alert(`🎉 Upload Successful!\r\n\r\nSaved ${savedCount} deliveries to the system.\r\nProcessed ${uniqueCustomers.size} unique customers.`);
                     
                     // Refresh the active deliveries table
                     if (typeof window.loadActiveDeliveries === 'function') {
