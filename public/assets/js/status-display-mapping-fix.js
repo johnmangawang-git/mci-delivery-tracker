@@ -51,9 +51,12 @@ window.statusDisplayMapping = {
         if (typeof window.generateStatusOptions === 'function') {
             window.originalGenerateStatusOptions = window.generateStatusOptions;
             
+            // Store reference to this object for use in the override
+            const statusMapping = this;
+            
             // Override with display mapping
             window.generateStatusOptions = (currentStatus, deliveryId) => {
-                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed'];
+                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed', 'Sold Undelivered'];
                 
                 // Don't allow changing from Completed or Signed status
                 if (currentStatus === 'Completed' || currentStatus === 'Signed') {
@@ -63,7 +66,14 @@ window.statusDisplayMapping = {
                 return availableStatuses.map(status => {
                     const isSelected = status === currentStatus ? 'selected' : '';
                     const statusInfo = window.getStatusInfo ? window.getStatusInfo(status) : { class: 'bg-secondary', icon: 'bi-question-circle' };
-                    const displayText = this.getDisplayText(status);
+                    
+                    // Use proper display text mapping
+                    let displayText = status;
+                    if (status === 'Delayed') {
+                        displayText = 'SUD - Sold Undelivered';
+                    } else if (status === 'Sold Undelivered') {
+                        displayText = 'Sold Undelivered';
+                    }
                     
                     return `
                         <div class="status-option ${isSelected}" 

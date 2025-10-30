@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Dropdown Debug</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="public/assets/css/style.css" rel="stylesheet">
+    <style>
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>🔧 Status Dropdown Debug</h1>
+        
+        <div class="debug-section">
+            <h3>Current Issue</h3>
+            <p>Status column showing: "Active In Transit On Schedule Sold Undelivered" instead of dropdown</p>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Test Status Dropdown</h3>
+            <div class="status-dropdown-container">
+                <span class="badge bg-primary status-clickable" 
+                      data-delivery-id="test-123" 
+                      data-current-status="Active"
+                      onclick="toggleStatusDropdown('test-123')">
+                    <i class="bi bi-truck"></i> Active
+                    <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
+                </span>
+                <div class="status-dropdown" id="statusDropdown-test-123" style="display: none;">
+                    <div id="generatedOptions">Loading...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Debug Results</h3>
+            <div id="debugResults">
+                <p>Click "Run Debug" to test status dropdown functionality</p>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h3>Actions</h3>
+            <button class="btn btn-primary" onclick="runDebug()">Run Debug</button>
+            <button class="btn btn-secondary" onclick="testDropdown()">Test Dropdown</button>
+            <button class="btn btn-warning" onclick="inspectHTML()">Inspect HTML</button>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="public/assets/js/app.js"></script>
+    
+    <script>
+        function addResult(title, type, content) {
+            const resultsDiv = document.getElementById('debugResults');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `<strong>${title}:</strong><br>${content}`;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function runDebug() {
+            document.getElementById('debugResults').innerHTML = '';
+            
+            addResult('Debug Started', 'info', 'Testing status dropdown functionality...');
+            
+            // Test if functions exist
+            if (typeof window.generateStatusOptions === 'function') {
+                addResult('generateStatusOptions Function', 'success', 'Function exists');
+                
+                // Test the function
+                try {
+                    const options = window.generateStatusOptions('Active', 'test-123');
+                    addResult('Generated Options', 'info', `<pre>${options}</pre>`);
+                    
+                    // Update the test dropdown
+                    document.getElementById('generatedOptions').innerHTML = options;
+                    
+                } catch (error) {
+                    addResult('Function Error', 'error', error.message);
+                }
+            } else {
+                addResult('generateStatusOptions Function', 'error', 'Function not found');
+            }
+            
+            // Test if toggle function exists
+            if (typeof window.toggleStatusDropdown === 'function') {
+                addResult('toggleStatusDropdown Function', 'success', 'Function exists');
+            } else {
+                addResult('toggleStatusDropdown Function', 'error', 'Function not found');
+            }
+            
+            // Test if getStatusInfo exists
+            if (typeof window.getStatusInfo === 'function') {
+                addResult('getStatusInfo Function', 'success', 'Function exists');
+                
+                try {
+                    const statusInfo = window.getStatusInfo('Active');
+                    addResult('Status Info Test', 'info', `Class: ${statusInfo.class}, Icon: ${statusInfo.icon}`);
+                } catch (error) {
+                    addResult('getStatusInfo Error', 'error', error.message);
+                }
+            } else {
+                addResult('getStatusInfo Function', 'error', 'Function not found');
+            }
+        }
+        
+        function testDropdown() {
+            addResult('Dropdown Test', 'info', 'Attempting to toggle dropdown...');
+            
+            if (typeof window.toggleStatusDropdown === 'function') {
+                try {
+                    window.toggleStatusDropdown('test-123');
+                    addResult('Dropdown Toggle', 'success', 'Toggle function called successfully');
+                } catch (error) {
+                    addResult('Dropdown Toggle Error', 'error', error.message);
+                }
+            } else {
+                addResult('Dropdown Toggle', 'error', 'toggleStatusDropdown function not available');
+            }
+        }
+        
+        function inspectHTML() {
+            addResult('HTML Inspection', 'info', 'Inspecting current HTML structure...');
+            
+            const container = document.querySelector('.status-dropdown-container');
+            if (container) {
+                addResult('Container HTML', 'info', `<pre>${container.outerHTML}</pre>`);
+            } else {
+                addResult('Container HTML', 'error', 'Status dropdown container not found');
+            }
+            
+            // Check for CSS issues
+            const dropdown = document.getElementById('statusDropdown-test-123');
+            if (dropdown) {
+                const styles = window.getComputedStyle(dropdown);
+                addResult('Dropdown Styles', 'info', 
+                    `Display: ${styles.display}, Position: ${styles.position}, Z-index: ${styles.zIndex}`);
+            }
+        }
+        
+        // Manual toggle function for testing
+        function toggleStatusDropdown(deliveryId) {
+            console.log('Manual toggle called for:', deliveryId);
+            
+            // Close all other dropdowns first
+            document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+                if (dropdown.id !== `statusDropdown-${deliveryId}`) {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            // Toggle current dropdown
+            const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+            if (dropdown) {
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                addResult('Manual Toggle', 'success', `Dropdown ${dropdown.style.display === 'block' ? 'opened' : 'closed'}`);
+            } else {
+                addResult('Manual Toggle', 'error', `Dropdown not found: statusDropdown-${deliveryId}`);
+            }
+        }
+        
+        // Manual generateStatusOptions for testing
+        function generateStatusOptions(currentStatus, deliveryId) {
+            const availableStatuses = ['In Transit', 'On Schedule', 'Delayed', 'Sold Undelivered'];
+            
+            // Don't allow changing from Completed or Signed status
+            if (currentStatus === 'Completed' || currentStatus === 'Signed') {
+                return `<div class="status-option disabled">Status cannot be changed</div>`;
+            }
+            
+            return availableStatuses.map(status => {
+                const isSelected = status === currentStatus ? 'selected' : '';
+                return `
+                    <div class="status-option ${isSelected}" 
+                         onclick="updateDeliveryStatusById('${deliveryId}', '${status}')">
+                        <i class="bi bi-truck"></i> ${status}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Manual updateDeliveryStatusById for testing
+        function updateDeliveryStatusById(deliveryId, newStatus) {
+            addResult('Status Update', 'info', `Would update delivery ${deliveryId} to status: ${newStatus}`);
+            
+            // Close dropdown
+            const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+            if (dropdown) {
+                dropdown.style.display = 'none';
+            }
+        }
+        
+        // Make functions available globally for testing
+        window.toggleStatusDropdown = toggleStatusDropdown;
+        window.generateStatusOptions = generateStatusOptions;
+        window.updateDeliveryStatusById = updateDeliveryStatusById;
+        
+        // Auto-run debug on load
+        setTimeout(() => {
+            runDebug();
+        }, 1000);
+    </script>
+</body>
+</html>
