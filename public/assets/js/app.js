@@ -788,7 +788,6 @@ console.log('app.js loaded');
                 day: 'numeric'
             });
         }
-        }
         
         // Fallback if no timestamp found
         console.warn('📅 BOOKED DATE: No timestamp found for', delivery.drNumber || delivery.dr_number, ', available fields:', Object.keys(delivery));
