@@ -1316,6 +1316,18 @@ The page will refresh to show your new data.`);
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
+                            <div class="btn-group" role="group">
+                                <span class="btn btn-outline-secondary" style="pointer-events: none; border-right: none;">
+                                    <i class="bi bi-funnel"></i>
+                                </span>
+                                <select class="form-select" id="statusFilterSelect" style="min-width: 150px;">
+                                    <option value="all">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="In Transit">In Transit</option>
+                                    <option value="On Schedule">On Schedule</option>
+                                    <option value="Delayed">Sold Undelivered</option>
+                                </select>
+                            </div>
                             <button class="btn btn-outline-secondary" id="exportActiveDeliveriesBtn"><i
                                     class="bi bi-download"></i> Export</button>
                             <button class="btn btn-primary" id="eSignatureBtn" disabled><i class="bi bi-pen"></i>
