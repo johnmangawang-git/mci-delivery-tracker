@@ -714,16 +714,12 @@
                     }
                     
                     // Show success message
-                    alert(`🎉 Upload Successful!
-
-Saved ${savedCount} deliveries to the system.
-
-The page will refresh to show your new data.`);
+                    alert(`🎉 Upload Successful!\r\n\r\nSaved ${savedCount} deliveries to the system.`);
                     
-                    // Refresh the page to show new data
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                    // Refresh the active deliveries table
+                    if (typeof window.loadActiveDeliveries === 'function') {
+                        window.loadActiveDeliveries();
+                    }
                 });
                 
             } catch (error) {
@@ -1331,7 +1327,7 @@ The page will refresh to show your new data.`);
                                     <option value="Active">Active</option>
                                     <option value="In Transit">In Transit</option>
                                     <option value="On Schedule">On Schedule</option>
-                                    <option value="Delayed">Sold Undelivered</option>
+                                    <option value="Delayed">Canceled</option>
                                 </select>
                             </div>
                             <button class="btn btn-outline-secondary" id="exportActiveDeliveriesBtn"><i

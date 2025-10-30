@@ -1,6 +1,6 @@
 /**
  * Safe UI Text Replacement Fix
- * Replaces "Delayed" with "Sold Undelivered" in ALL UI elements
+ * Replaces "Delayed" with "Canceled" in ALL UI elements
  * Fixed version that prevents recursive call stack errors
  */
 
@@ -10,7 +10,7 @@ window.safeUITextReplacementFix = {
     
     // Text mapping for UI display
     textReplacements: {
-        'Delayed': 'Sold Undelivered'
+        'Delayed': 'Canceled'
     },
     
     // Flag to prevent recursive calls
@@ -102,10 +102,10 @@ window.safeUITextReplacementFix = {
                 const options = select.querySelectorAll('option');
                 options.forEach(option => {
                     if (option.textContent.includes('Delayed')) {
-                        option.textContent = option.textContent.replace('Delayed', 'Sold Undelivered');
+                        option.textContent = option.textContent.replace('Delayed', 'Canceled');
                     }
                     if (option.text && option.text.includes('Delayed')) {
-                        option.text = option.text.replace('Delayed', 'Sold Undelivered');
+                        option.text = option.text.replace('Delayed', 'Canceled');
                     }
                 });
             });
@@ -114,7 +114,7 @@ window.safeUITextReplacementFix = {
             const statusElements = document.querySelectorAll('.badge, .status, [class*="status"]');
             statusElements.forEach(element => {
                 if (element.textContent.includes('Delayed')) {
-                    element.textContent = element.textContent.replace('Delayed', 'Sold Undelivered');
+                    element.textContent = element.textContent.replace('Delayed', 'Canceled');
                 }
             });
             

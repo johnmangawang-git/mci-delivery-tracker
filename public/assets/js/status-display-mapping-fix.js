@@ -1,6 +1,6 @@
 /**
  * Status Display Mapping Fix
- * Changes UI display of "Delayed" to "SUD - Sold Undelivered" while keeping code unchanged
+ * Changes UI display of "Delayed" to "Canceled" while keeping code unchanged
  */
 
 console.log('🏷️ Loading Status Display Mapping Fix...');
@@ -9,7 +9,7 @@ window.statusDisplayMapping = {
     
     // Mapping from internal status to display text
     statusMap: {
-        'Delayed': 'SUD - Sold Undelivered',
+        'Delayed': 'Canceled',
         'In Transit': 'In Transit',
         'On Schedule': 'On Schedule',
         'Completed': 'Completed',
@@ -20,7 +20,7 @@ window.statusDisplayMapping = {
     
     // Reverse mapping for internal use
     reverseMap: {
-        'SUD - Sold Undelivered': 'Delayed',
+        'Canceled': 'Delayed',
         'In Transit': 'In Transit',
         'On Schedule': 'On Schedule',
         'Completed': 'Completed',
@@ -56,7 +56,7 @@ window.statusDisplayMapping = {
             
             // Override with display mapping
             window.generateStatusOptions = (currentStatus, deliveryId) => {
-                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed', 'Sold Undelivered'];
+                const availableStatuses = ['In Transit', 'On Schedule', 'Delayed', 'Canceled'];
                 
                 // Don't allow changing from Completed or Signed status
                 if (currentStatus === 'Completed' || currentStatus === 'Signed') {
@@ -69,11 +69,10 @@ window.statusDisplayMapping = {
                     
                     // Use proper display text mapping
                     let displayText = status;
-                    if (status === 'Delayed') {
-                        displayText = 'SUD - Sold Undelivered';
-                    } else if (status === 'Sold Undelivered') {
-                        displayText = 'Sold Undelivered';
-                    }
+                                if (status === 'Delayed') {
+                                    displayText = 'Canceled';
+                                } else if (status === 'Canceled') {
+                                    displayText = 'Canceled';                    }
                     
                     return `
                         <div class="status-option ${isSelected}" 
@@ -194,7 +193,7 @@ window.statusDisplayMapping = {
         }, 5000); // Every 5 seconds
         
         console.log('✅ Status display mapping initialized');
-        console.log('📋 Status mapping: "Delayed" → "SUD - Sold Undelivered"');
+        console.log('📋 Status mapping: "Delayed" → "Canceled"');
     }
 };
 

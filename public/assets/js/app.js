@@ -861,7 +861,7 @@ console.log('app.js loaded');
         // Generate table rows
         activeDeliveriesTableBody.innerHTML = filteredDeliveries.map((delivery, index) => {
             const statusInfo = getStatusInfo(delivery.status);
-            const displayStatus = delivery.status === 'Delayed' ? 'SUD - Sold Undelivered' : delivery.status;
+            const displayStatus = delivery.status === 'Delayed' ? 'Canceled' : delivery.status;
             
             // Debug logging for first few deliveries to identify field structure
             if (index < 3) {
