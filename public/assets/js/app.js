@@ -950,9 +950,6 @@ console.log('app.js loaded');
                 window.updateBookingViewDashboard();
             }, 100);
         }
-    }ashboard();
-            }, 100);
-        }
     }
 
 // Load delivery history

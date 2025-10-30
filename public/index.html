@@ -146,6 +146,9 @@
     <!-- Supabase CDN with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js" onload="this.onload=null;window.supabaseLoaded=true;" onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
     
+    <!-- ERROR HANDLING FIX - Comprehensive error handling to prevent crashes -->
+    <script src="assets/js/error-handling-fix.js"></script>
+    
     <!-- LOCALSTORAGE SAFE FIX - CRITICAL: Must load first to prevent recursive errors -->
     <script src="assets/js/localStorage-safe-fix.js"></script>
     

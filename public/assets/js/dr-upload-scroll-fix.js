@@ -190,17 +190,34 @@ console.log('🔧 Loading DR Upload Scroll Fix...');
     }
     
     // Re-initialize when confirmDRUpload function is redefined
-    const observer = new MutationObserver(() => {
-        if (typeof window.confirmDRUpload === 'function' && 
-            !window.confirmDRUpload.toString().includes('Enhanced confirmDRUpload with scroll fix')) {
-            wrapConfirmDRUpload();
+    try {
+        const observer = new MutationObserver(() => {
+            if (typeof window.confirmDRUpload === 'function' && 
+                !window.confirmDRUpload.toString().includes('Enhanced confirmDRUpload with scroll fix')) {
+                wrapConfirmDRUpload();
+            }
+        });
+        
+        // Only observe if document.body exists
+        if (document.body) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        } else {
+            // Wait for body to be available
+            document.addEventListener('DOMContentLoaded', () => {
+                if (document.body) {
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
+            });
         }
-    });
-    
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    } catch (error) {
+        console.warn('⚠️ Could not set up MutationObserver:', error);
+    }
     
     // Export for global access
     window.drUploadScrollFix = {
