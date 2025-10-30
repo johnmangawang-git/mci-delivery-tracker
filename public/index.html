@@ -217,6 +217,9 @@
     <!-- E-SIGNATURE LOGIC FIX - Corrects behavior for multiple same vs different DRs -->
     <script src="assets/js/e-signature-logic-fix.js"></script>
     
+    <!-- DELIVERY HISTORY TABLE FIX - Updates table structure to match Active Deliveries -->
+    <script src="assets/js/delivery-history-table-fix.js"></script>
+    
     <!-- SUPABASE-FIRST ARCHITECTURE FIX - Eliminates localStorage quota issues by using Supabase as primary storage -->
     <script src="assets/js/supabase-first-architecture-fix.js"></script>
     
@@ -1446,14 +1449,14 @@
                                     <th style="width: 40px;">
                                         <input type="checkbox" class="form-check-input" id="selectAllHistory" style="display: none;">
                                     </th>
-                                    <th>Date Delivered</th>
                                     <th>DR Number</th>
                                     <th>Customer Name</th>
                                     <th>Vendor Number</th>
                                     <th>Origin</th>
                                     <th>Destination</th>
-                                    <th>Additional Costs</th>
+                                    <th>Truck</th>
                                     <th>Status</th>
+                                    <th>Date Delivered</th>
                                     <th>Item #</th>
                                     <th>Mobile#</th>
                                     <th>Item Description</th>
