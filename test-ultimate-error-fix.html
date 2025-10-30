@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Error Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Ultimate Supabase Error Fix Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Actions</h3>
+        <button onclick="testDeliveryInsert()">Test Delivery Insert</button>
+        <button onclick="testConflictHandling()">Test Conflict Handling</button>
+        <button onclick="testSchemaValidation()">Test Schema Validation</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Log</h3>
+        <div id="logOutput" class="log"></div>
+    </div>
+
+    <!-- Load Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Load credentials -->
+    <script src="assets/js/core/supabase-init.js"></script>
+    
+    <!-- Load Ultimate Fix -->
+    <script src="assets/js/supabase-ultimate-error-fix.js"></script>
+
+    <script>
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logOutput = document.getElementById('logOutput');
+            logOutput.textContent += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('logOutput').textContent = '';
+            log('Log cleared');
+        }
+
+        async function testDeliveryInsert() {
+            log('🧪 Testing delivery insert...');
+            
+            const testData = {
+                dr_number: 'TEST-' + Date.now(),
+                customer_name: 'Test Customer',
+                status: 'Active',
+                additionalCostItems: [
+                    { description: 'Test Cost', amount: 50.00 }
+                ]
+            };
+
+            try {
+                const result = await window.ultimateDeliveryInsert(testData);
+                if (result.data && !result.error) {
+                    log('✅ Delivery insert successful: ' + result.data[0]?.id);
+                } else {
+                    log('❌ Delivery insert failed: ' + (result.error?.message || 'Unknown error'));
+                }
+            } catch (error) {
+                log('❌ Test failed: ' + error.message);
+            }
+        }
+
+        async function testConflictHandling() {
+            log('🧪 Testing conflict handling...');
+            
+            const drNumber = 'CONFLICT-TEST-' + Date.now();
+            const testData = {
+                dr_number: drNumber,
+                customer_name: 'Conflict Test Customer',
+                status: 'Active'
+            };
+
+            try {
+                // First insert
+                log('📤 First insert...');
+                const result1 = await window.ultimateDeliveryInsert(testData);
+                
+                if (result1.data) {
+                    log('✅ First insert successful');
+                    
+                    // Second insert with same DR number
+                    log('📤 Second insert (should update)...');
+                    const result2 = await window.ultimateDeliveryInsert({
+                        ...testData,
+                        customer_name: 'Updated Customer Name'
+                    });
+                    
+                    if (result2.data) {
+                        log('✅ Conflict handling successful - record updated');
+                    } else {
+                        log('❌ Conflict handling failed: ' + (result2.error?.message || 'Unknown error'));
+                    }
+                } else {
+                    log('❌ First insert failed: ' + (result1.error?.message || 'Unknown error'));
+                }
+            } catch (error) {
+                log('❌ Conflict test failed: ' + error.message);
+            }
+        }
+
+        async function testSchemaValidation() {
+            log('🧪 Testing schema validation...');
+            
+            const invalidData = {
+                dr_number: 'SCHEMA-TEST-' + Date.now(),
+                customer_name: 'Schema Test Customer',
+                additionalCostItems: [
+                    { description: 'Invalid Field Test', amount: 25.00 }
+                ],
+                invalidField: 'This should be removed'
+            };
+
+            try {
+                const result = await window.ultimateDeliveryInsert(invalidData);
+                if (result.data && !result.error) {
+                    log('✅ Schema validation successful - invalid fields handled');
+                } else {
+                    log('❌ Schema validation failed: ' + (result.error?.message || 'Unknown error'));
+                }
+            } catch (error) {
+                log('❌ Schema test failed: ' + error.message);
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            log('🚀 Ultimate Error Fix Test initialized');
+            log('📋 Ready to test all error scenarios');
+        });
+    </script>
+</body>
+</html>

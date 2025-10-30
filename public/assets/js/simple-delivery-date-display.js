@@ -60,32 +60,32 @@
     function overrideWithSimpleDisplay() {
         console.log('📅 SIMPLE: AGGRESSIVELY overriding all date functions...');
         
-        // Override formatActiveDeliveryDate - SIMPLE VERSION (FINAL)
+        // Override formatActiveDeliveryDate - SIMPLE VERSION (USES EACH RECORD'S OWN DATE)
         window.formatActiveDeliveryDate = function(delivery) {
-            console.log('📅 SIMPLE: FINAL OVERRIDE - Formatting delivery date for', delivery.drNumber || delivery.dr_number);
+            console.log('📅 SIMPLE: Formatting delivery date for', delivery.drNumber || delivery.dr_number);
             
-            // Get user's delivery date
-            const userDate = getUserDeliveryDate();
-            if (userDate) {
-                const formatted = formatDeliveryDateSimple(userDate);
-                console.log('📅 SIMPLE: FINAL - Using user date:', formatted);
-                return formatted;
-            }
-            
-            // Try delivery data
-            if (delivery.created_date) {
-                const formatted = formatDeliveryDateSimple(delivery.created_date);
-                console.log('📅 SIMPLE: FINAL - Using delivery created_date:', formatted);
-                return formatted;
-            }
-            
+            // PRIORITY 1: Use this delivery's stored delivery date
             if (delivery.deliveryDate) {
                 const formatted = formatDeliveryDateSimple(delivery.deliveryDate);
-                console.log('📅 SIMPLE: FINAL - Using delivery deliveryDate:', formatted);
+                console.log('📅 SIMPLE: Using delivery.deliveryDate:', formatted);
                 return formatted;
             }
             
-            console.log('📅 SIMPLE: FINAL - No date available');
+            // PRIORITY 2: Use this delivery's created_date
+            if (delivery.created_date) {
+                const formatted = formatDeliveryDateSimple(delivery.created_date);
+                console.log('📅 SIMPLE: Using delivery.created_date:', formatted);
+                return formatted;
+            }
+            
+            // PRIORITY 3: Use this delivery's bookedDate
+            if (delivery.bookedDate) {
+                const formatted = formatDeliveryDateSimple(delivery.bookedDate);
+                console.log('📅 SIMPLE: Using delivery.bookedDate:', formatted);
+                return formatted;
+            }
+            
+            console.log('📅 SIMPLE: No date available for', delivery.drNumber || delivery.dr_number);
             return 'No Date';
         };
         
@@ -104,26 +104,8 @@
             }
         });
         
-        // Override populateActiveDeliveriesTable to force simple dates
-        const originalPopulateActiveDeliveriesTable = window.populateActiveDeliveriesTable;
-        if (typeof originalPopulateActiveDeliveriesTable === 'function') {
-            window.populateActiveDeliveriesTable = function(deliveries) {
-                console.log('📅 SIMPLE: Intercepting populateActiveDeliveriesTable');
-                
-                const userDate = getUserDeliveryDate();
-                if (userDate && Array.isArray(deliveries)) {
-                    // Force all deliveries to use user's simple date
-                    deliveries.forEach(delivery => {
-                        delivery.created_date = userDate;
-                        delivery.deliveryDate = userDate;
-                        delivery.bookedDate = userDate;
-                        console.log('📅 SIMPLE: Set simple date for', delivery.drNumber || delivery.dr_number, 'to:', userDate);
-                    });
-                }
-                
-                return originalPopulateActiveDeliveriesTable.call(this, deliveries);
-            };
-        }
+        // DON'T override populateActiveDeliveriesTable - let each record keep its own dates
+        console.log('📅 SIMPLE: NOT overriding populateActiveDeliveriesTable - preserving individual record dates');
         
         console.log('📅 SIMPLE: All date functions overridden with simple display');
     }

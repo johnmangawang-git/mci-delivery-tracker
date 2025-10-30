@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,11 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <div class="container mt-4">
         <h2>Test Analytics Dashboard - Option C Integration</h2>
-        <p class="text-muted">This page tests that the Analytics Dashboard correctly shows cost data from DR uploads using Option C logic.</p>
-        
+        <p class="text-muted">This page tests that the Analytics Dashboard correctly shows cost data from DR uploads
+            using Option C logic.</p>
+
         <div class="alert alert-info">
             <h5>Test Scenario:</h5>
             <p>Simulate DR upload with 3 records and ₱2,500 total costs:</p>
@@ -23,7 +26,7 @@
             </ul>
             <p><strong>Expected Analytics:</strong> Total Additional Cost = ₱2,500 (not ₱7,500)</p>
         </div>
-        
+
         <!-- Mock Analytics Dashboard -->
         <div class="row mb-4">
             <div class="col-md-4">
@@ -51,7 +54,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Charts -->
         <div class="row">
             <div class="col-md-6">
@@ -75,7 +78,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Test Controls -->
         <div class="card mt-4">
             <div class="card-header">
@@ -100,14 +103,15 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div id="dataInspector" class="mt-3" style="display: none;">
                     <h6>Data Inspector:</h6>
-                    <pre id="dataInspectorContent" class="bg-light p-3" style="font-size: 12px; max-height: 300px; overflow-y: auto;"></pre>
+                    <pre id="dataInspectorContent" class="bg-light p-3"
+                        style="font-size: 12px; max-height: 300px; overflow-y: auto;"></pre>
                 </div>
             </div>
         </div>
-        
+
         <!-- Test Results -->
         <div id="testResults" class="mt-3" style="display: none;">
             <div class="alert alert-success">
@@ -119,21 +123,21 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // Mock global variables
         window.activeDeliveries = [];
         window.deliveryHistory = [];
-        
+
         let costsChart, costBreakdownChart;
-        
+
         function simulateOptionCUpload() {
             console.log('🧪 Simulating Option C DR Upload...');
-            
+
             // Clear existing data
             window.activeDeliveries = [];
             window.deliveryHistory = [];
-            
+
             // Mock DR upload with Option C logic
             const mockDRData = [
                 {
@@ -192,62 +196,62 @@
                     additionalCostItems: []
                 }
             ];
-            
+
             // Add to activeDeliveries
             window.activeDeliveries = mockDRData;
-            
+
             console.log('✅ Option C DR Upload simulated:', window.activeDeliveries);
-            
+
             // Show success message
             showAlert('success', 'Option C DR Upload simulated successfully! 3 DRs created with costs only on first DR.');
         }
-        
+
         function updateAnalyticsDashboard() {
             console.log('📊 Updating Analytics Dashboard...');
-            
+
             // Get data (same logic as analytics.js)
             const activeDeliveries = window.activeDeliveries || [];
             const deliveryHistory = window.deliveryHistory || [];
             const allDeliveries = [...activeDeliveries, ...deliveryHistory];
-            
+
             // Calculate metrics
             const totalBookings = allDeliveries.length;
             let totalAdditionalCost = 0;
-            
+
             allDeliveries.forEach(delivery => {
                 if (typeof delivery.additionalCosts === 'number') {
                     totalAdditionalCost += delivery.additionalCosts;
                 }
             });
-            
+
             const avgCostPerBooking = totalBookings > 0 ? totalAdditionalCost / totalBookings : 0;
-            
+
             // Update UI
             document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = totalBookings;
             document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = `₱${totalAdditionalCost.toLocaleString()}`;
             document.querySelector('.metric-card:nth-child(3) .metric-value .crossed-out').textContent = avgCostPerBooking.toFixed(2);
-            
+
             // Update charts
             updateCharts(allDeliveries);
-            
+
             // Show test results
             showTestResults(totalBookings, totalAdditionalCost, avgCostPerBooking);
-            
+
             console.log('✅ Analytics Dashboard updated:', {
                 totalBookings,
                 totalAdditionalCost,
                 avgCostPerBooking
             });
         }
-        
+
         function updateCharts(deliveries) {
             // Costs Chart (Line Chart)
             const costsData = processDataForCostsChart(deliveries);
-            
+
             if (costsChart) {
                 costsChart.destroy();
             }
-            
+
             const costsCtx = document.getElementById('costsChart');
             costsChart = new Chart(costsCtx, {
                 type: 'line',
@@ -272,7 +276,7 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     return `₱${context.parsed.y.toLocaleString()}`;
                                 }
                             }
@@ -282,7 +286,7 @@
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function(value) {
+                                callback: function (value) {
                                     return `₱${value.toLocaleString()}`;
                                 }
                             }
@@ -290,14 +294,14 @@
                     }
                 }
             });
-            
+
             // Cost Breakdown Chart (Pie Chart)
             const breakdownData = processDataForBreakdownChart(deliveries);
-            
+
             if (costBreakdownChart) {
                 costBreakdownChart.destroy();
             }
-            
+
             const breakdownCtx = document.getElementById('costBreakdownChart');
             costBreakdownChart = new Chart(breakdownCtx, {
                 type: 'pie',
@@ -321,7 +325,7 @@
                         legend: { position: 'right' },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
                                     const currentValue = context.dataset.data[context.dataIndex];
                                     const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(1) : 0;
@@ -333,20 +337,20 @@
                 }
             });
         }
-        
+
         function processDataForCostsChart(deliveries) {
             // Simple daily data for demo
             const today = new Date();
             const labels = [];
             const values = [];
-            
+
             for (let i = 6; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(today.getDate() - i);
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                 const dayKey = `${dayName} ${date.getMonth() + 1}/${date.getDate()}`;
                 labels.push(dayKey);
-                
+
                 // Only today has costs (from our test data)
                 if (i === 0) {
                     const totalCosts = deliveries.reduce((sum, d) => sum + (d.additionalCosts || 0), 0);
@@ -355,10 +359,10 @@
                     values.push(0);
                 }
             }
-            
+
             return { labels, values };
         }
-        
+
         function processDataForBreakdownChart(deliveries) {
             const costBreakdown = {
                 'Fuel Surcharge': 0,
@@ -366,7 +370,7 @@
                 'Toll Fees': 0,
                 'Other': 0
             };
-            
+
             deliveries.forEach(delivery => {
                 if (delivery.additionalCostItems && Array.isArray(delivery.additionalCostItems)) {
                     delivery.additionalCostItems.forEach(item => {
@@ -375,68 +379,68 @@
                     });
                 }
             });
-            
+
             const labels = Object.keys(costBreakdown).filter(key => costBreakdown[key] > 0);
             const values = labels.map(label => costBreakdown[label]);
-            
+
             return { labels, values };
         }
-        
+
         function showDataInspector() {
             const inspector = document.getElementById('dataInspector');
             const content = document.getElementById('dataInspectorContent');
-            
+
             const data = {
                 activeDeliveries: window.activeDeliveries,
                 deliveryHistory: window.deliveryHistory,
                 totalDeliveries: (window.activeDeliveries || []).length + (window.deliveryHistory || []).length
             };
-            
+
             content.textContent = JSON.stringify(data, null, 2);
             inspector.style.display = inspector.style.display === 'none' ? 'block' : 'none';
         }
-        
+
         function clearTestData() {
             window.activeDeliveries = [];
             window.deliveryHistory = [];
-            
+
             // Reset UI
             document.querySelector('.metric-card:nth-child(1) .metric-value').textContent = '0';
             document.querySelector('.metric-card:nth-child(2) .metric-value').textContent = '₱0';
             document.querySelector('.metric-card:nth-child(3) .metric-value .crossed-out').textContent = '0.00';
-            
+
             // Clear charts
             if (costsChart) costsChart.destroy();
             if (costBreakdownChart) costBreakdownChart.destroy();
-            
+
             // Hide results
             document.getElementById('testResults').style.display = 'none';
             document.getElementById('dataInspector').style.display = 'none';
-            
+
             showAlert('info', 'Test data cleared successfully!');
         }
-        
+
         function showTestResults(totalBookings, totalAdditionalCost, avgCostPerBooking) {
             const resultsDiv = document.getElementById('testResults');
             const contentDiv = document.getElementById('testResultsContent');
-            
+
             const isCorrect = totalBookings === 3 && totalAdditionalCost === 2500;
-            
+
             contentDiv.innerHTML = `
                 <p><strong>Total Bookings:</strong> ${totalBookings} ${totalBookings === 3 ? '✅' : '❌'}</p>
                 <p><strong>Total Additional Cost:</strong> ₱${totalAdditionalCost.toLocaleString()} ${totalAdditionalCost === 2500 ? '✅' : '❌'}</p>
                 <p><strong>Average Cost per Booking:</strong> ₱${avgCostPerBooking.toFixed(2)} ${Math.abs(avgCostPerBooking - 833.33) < 0.01 ? '✅' : '❌'}</p>
                 <hr>
                 <p><strong>Option C Test Result:</strong> ${isCorrect ? '✅ PASSED' : '❌ FAILED'}</p>
-                ${isCorrect ? 
-                    '<p class="text-success">The analytics correctly shows ₱2,500 total cost (not inflated to ₱7,500)!</p>' : 
+                ${isCorrect ?
+                    '<p class="text-success">The analytics correctly shows ₱2,500 total cost (not inflated to ₱7,500)!</p>' :
                     '<p class="text-danger">The analytics is not showing the expected values.</p>'
                 }
             `;
-            
+
             resultsDiv.style.display = 'block';
         }
-        
+
         function showAlert(type, message) {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
@@ -444,13 +448,14 @@
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            
+
             document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
-            
+
             setTimeout(() => {
                 alertDiv.remove();
             }, 5000);
         }
     </script>
 </body>
+
 </html>
