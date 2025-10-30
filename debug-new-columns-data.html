@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug New Columns Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Debug New Columns Data</h2>
+        
+        <div class="alert alert-info">
+            <strong>Debug Tool:</strong> This will help identify why the new columns aren't showing data.
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Active Deliveries Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-primary" onclick="checkActiveDeliveries()">Check Active Deliveries</button>
+                        <div id="activeDeliveriesData" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>localStorage Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-secondary" onclick="checkLocalStorage()">Check localStorage</button>
+                        <div id="localStorageData" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Field Mapping Test</h5>
+                    </div>
+                    <div class="card-body">
+                        <button class="btn btn-success" onclick="testFieldMapping()">Test Field Mapping</button>
+                        <div id="fieldMappingResults" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Raw Data Inspector</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="rawDataOutput" class="form-control" rows="20" readonly placeholder="Raw data will appear here..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkActiveDeliveries() {
+            const resultsDiv = document.getElementById('activeDeliveriesData');
+            
+            try {
+                const activeDeliveries = window.activeDeliveries || [];
+                
+                if (activeDeliveries.length === 0) {
+                    resultsDiv.innerHTML = '<div class="alert alert-warning">No active deliveries found in window.activeDeliveries</div>';
+                    return;
+                }
+                
+                let html = `<div class="alert alert-success">Found ${activeDeliveries.length} active deliveries</div>`;
+                
+                // Check first few deliveries for new fields
+                activeDeliveries.slice(0, 3).forEach((delivery, index) => {
+                    html += `<div class="card mb-2">
+                        <div class="card-header">Delivery ${index + 1}: ${delivery.drNumber || delivery.dr_number || 'Unknown'}</div>
+                        <div class="card-body">
+                            <small>
+                                <strong>Item Number:</strong> "${delivery.itemNumber || delivery.item_number || 'MISSING'}"<br>
+                                <strong>Mobile Number:</strong> "${delivery.mobileNumber || delivery.mobile_number || 'MISSING'}"<br>
+                                <strong>Item Description:</strong> "${delivery.itemDescription || delivery.item_description || 'MISSING'}"<br>
+                                <strong>Serial Number:</strong> "${delivery.serialNumber || delivery.serial_number || 'MISSING'}"<br>
+                                <strong>Booked Date:</strong> "${delivery.bookedDate || delivery.booked_date || delivery.deliveryDate || 'MISSING'}"<br>
+                                <strong>All Fields:</strong> ${Object.keys(delivery).join(', ')}
+                            </small>
+                        </div>
+                    </div>`;
+                });
+                
+                resultsDiv.innerHTML = html;
+                
+                // Update raw data output
+                document.getElementById('rawDataOutput').value = JSON.stringify(activeDeliveries, null, 2);
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        }
+        
+        function checkLocalStorage() {
+            const resultsDiv = document.getElementById('localStorageData');
+            
+            try {
+                const keys = ['mci-active-deliveries', 'activeDeliveries'];
+                let html = '';
+                
+                keys.forEach(key => {
+                    const data = localStorage.getItem(key);
+                    if (data) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            html += `<div class="alert alert-info">
+                                <strong>${key}:</strong> ${parsed.length} items<br>
+                                <small>Sample fields: ${parsed.length > 0 ? Object.keys(parsed[0]).join(', ') : 'No items'}</small>
+                            </div>`;
+                        } catch (e) {
+                            html += `<div class="alert alert-warning"><strong>${key}:</strong> Invalid JSON</div>`;
+                        }
+                    } else {
+                        html += `<div class="alert alert-secondary"><strong>${key}:</strong> Not found</div>`;
+                    }
+                });
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        }
+        
+        function testFieldMapping() {
+            const resultsDiv = document.getElementById('fieldMappingResults');
+            
+            // Test data with different field name variations
+            const testDelivery = {
+                drNumber: 'DR001',
+                itemNumber: 'ITEM001',
+                mobileNumber: '09123456789',
+                itemDescription: 'Test Item',
+                serialNumber: 'SN001',
+                // Also test snake_case
+                item_number: 'ITEM001_SNAKE',
+                mobile_number: '09123456789_SNAKE',
+                item_description: 'Test Item Snake',
+                serial_number: 'SN001_SNAKE'
+            };
+            
+            // Test the field mapping function
+            const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            
+            let html = '<div class="alert alert-info">Field Mapping Test Results:</div>';
+            
+            const fields = ['itemNumber', 'mobileNumber', 'itemDescription', 'serialNumber'];
+            
+            fields.forEach(field => {
+                const camelCase = testDelivery[field];
+                const snakeCase = testDelivery[field.replace(/([A-Z])/g, '_$1').toLowerCase()];
+                const mapped = getField(testDelivery, field);
+                
+                html += `<div class="card mb-2">
+                    <div class="card-body">
+                        <strong>${field}:</strong><br>
+                        <small>
+                            CamelCase: "${camelCase}"<br>
+                            Snake_case: "${snakeCase}"<br>
+                            Mapped: "${mapped}"<br>
+                            Function available: ${typeof window.getFieldValue}
+                        </small>
+                    </div>
+                </div>`;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Auto-run checks when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                checkActiveDeliveries();
+                checkLocalStorage();
+                testFieldMapping();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
