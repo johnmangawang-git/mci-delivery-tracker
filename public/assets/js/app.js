@@ -1262,21 +1262,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Extract DR numbers for validation
                     const drNumbers = selectedDeliveryData.map(d => d.drNumber);
                     
-                    // VALIDATION: Check if all selected items have the same DR number
+                    // CORRECTED LOGIC: Check DR number patterns
                     const uniqueDRNumbers = [...new Set(drNumbers)];
                     
-                    if (uniqueDRNumbers.length > 1) {
-                        // Multiple different DR numbers selected - show warning
+                    if (uniqueDRNumbers.length === 1) {
+                        // Multiple SAME DR numbers - this is NORMAL, proceed smoothly
+                        console.log(`✅ Multiple same DRs (${uniqueDRNumbers[0]}) - proceeding normally`);
+                        showToast(`Signing ${selectedDeliveryData.length} items with DR: ${uniqueDRNumbers[0]}`, 'info');
+                    } else {
+                        // Multiple DIFFERENT DR numbers - this is UNUSUAL, show warning
                         const drNumbersList = uniqueDRNumbers.join(', ');
-                        showToast(
-                            `⚠️ Multi E-Signature Error: Please select items with the same DR number only.\n\nSelected DR numbers: ${drNumbersList}\n\nFor multi E-signature to work, all selected items must have the same DR number.`, 
-                            'warning'
+                        const proceed = confirm(
+                            `⚠️ UNUSUAL SELECTION DETECTED!\n\nYou selected ${selectedDeliveryData.length} deliveries with ${uniqueDRNumbers.length} DIFFERENT DR numbers:\n${drNumbersList}\n\nThis is unusual. Typically you would sign multiple items with the SAME DR number.\n\nAre you sure you want to sign all these different DRs with one signature?`
                         );
-                        console.warn('🚫 Multi E-signature blocked: Different DR numbers selected:', uniqueDRNumbers);
-                        return; // Stop execution
+                        
+                        if (!proceed) {
+                            console.log('❌ User cancelled signing multiple different DRs');
+                            showToast('E-signature cancelled', 'info');
+                            return; // Stop execution
+                        }
+                        
+                        console.log('⚠️ User confirmed signing multiple different DRs:', uniqueDRNumbers);
+                        showToast(`Signing ${selectedDeliveryData.length} deliveries with different DR numbers`, 'warning');
                     }
                     
-                    // All items have the same DR number - proceed with multi E-signature
+                    // Proceed with e-signature (either same DRs normally, or different DRs after confirmation)
                     const customerNames = selectedDeliveryData.map(d => d.customerName).join(', ');
                     const firstDelivery = selectedDeliveryData[0];
                     
