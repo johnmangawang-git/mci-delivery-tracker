@@ -56,40 +56,7 @@ console.log('🚨 Loading New Columns Emergency Fix...');
         
     }, 3000); // Wait 3 seconds for everything to load
     
-    // Also add a manual button
-    setTimeout(() => {
-        const button = document.createElement('button');
-        button.innerHTML = '🚨 EMERGENCY FIX';
-        button.className = 'btn btn-danger btn-sm';
-        button.style.cssText = `
-            position: fixed;
-            top: 50px;
-            right: 10px;
-            z-index: 9999;
-            font-size: 12px;
-        `;
-        
-        button.onclick = () => {
-            const tableBody = document.querySelector('#activeDeliveriesTable tbody');
-            const rows = tableBody?.querySelectorAll('tr') || [];
-            
-            rows.forEach((row, index) => {
-                const cells = row.querySelectorAll('td');
-                
-                if (cells.length >= 13) {
-                    if (cells[9]) cells[9].textContent = `2024-01-${10 + index}`;
-                    if (cells[10]) cells[10].textContent = `ITEM${String(index + 1).padStart(3, '0')}`;
-                    if (cells[11]) cells[11].textContent = `0912345${String(index).padStart(4, '0')}`;
-                    if (cells[12]) cells[12].textContent = `Test Item ${index + 1}`;
-                    if (cells[13]) cells[13].textContent = `SN${String(index + 1).padStart(6, '0')}`;
-                }
-            });
-            
-            alert('Emergency fix applied! Check the new columns.');
-        };
-        
-        document.body.appendChild(button);
-    }, 1000);
+    // Manual button removed as requested
     
 })();
 

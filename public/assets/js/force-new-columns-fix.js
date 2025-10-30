@@ -145,24 +145,11 @@ console.log('🔧 Loading Force New Columns Fix...');
     }
     
     /**
-     * Add manual trigger button for testing
+     * Manual trigger button removed as requested
      */
     function addManualTrigger() {
-        // Add a floating button for manual testing
-        const button = document.createElement('button');
-        button.innerHTML = '🔄 Fix Columns';
-        button.className = 'btn btn-warning btn-sm';
-        button.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 9999;
-            font-size: 12px;
-        `;
-        button.onclick = forcePopulateNewColumns;
-        
-        document.body.appendChild(button);
-        console.log('✅ Manual trigger button added');
+        // Manual trigger button removed
+        console.log('ℹ️ Manual trigger button disabled');
     }
     
     /**
