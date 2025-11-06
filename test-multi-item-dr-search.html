@@ -23,7 +23,7 @@
                                 <input type="text" 
                                        id="trackingInput" 
                                        class="form-control form-control-lg" 
-                                       placeholder="Enter DR Number (e.g., DR-2024-001)"
+                                       placeholder="Enter Tracking Number (DR# or Serial Number)"
                                        required>
                                 <button type="submit" 
                                         id="trackingButton" 
@@ -33,12 +33,16 @@
                             </div>
                         </form>
 
-                        <!-- Test Data Generator -->
+                        <!-- Search Instructions -->
                         <div class="alert alert-info">
-                            <h6><i class="bi bi-info-circle me-2"></i>Test Data</h6>
-                            <p class="mb-2">Click to generate test data for DR search:</p>
+                            <h6><i class="bi bi-info-circle me-2"></i>How to Search</h6>
+                            <p class="mb-2">You can search using your Tracking Number:</p>
+                            <ul class="mb-2">
+                                <li><strong>DR Number:</strong> e.g., DR-2024-001</li>
+                                <li><strong>Serial Number:</strong> e.g., ABC123456789</li>
+                            </ul>
                             <button onclick="generateTestData()" class="btn btn-sm btn-outline-primary me-2">
-                                Generate Test DR Data
+                                Generate Test Data
                             </button>
                             <button onclick="clearTestData()" class="btn btn-sm btn-outline-danger">
                                 Clear Test Data
@@ -150,7 +154,7 @@
             
             displayTestData();
             
-            alert('Test data generated! You can now search for:\n- DR-2024-001 (3 items)\n- DR-2024-002 (2 items)');
+            alert('Test data generated! You can now search for:\n- DR-2024-001 (3 items)\n- DR-2024-002 (2 items)\n- Serial Numbers: ABC123456789, DEF987654321, GHI456789123, JKL789123456, MNO123456789');
         }
 
         // Clear test data

@@ -51,16 +51,16 @@ async function performDeliverySearch() {
         return;
     }
     
-    const drNumber = trackingInput.value.trim();
+    const searchInput = trackingInput.value.trim();
     
-    if (!drNumber) {
-        showTrackingError('Please enter a DR number to track your delivery');
+    if (!searchInput) {
+        showTrackingError('Please enter a Tracking number to track your delivery');
         return;
     }
     
-    // Validate DR number format
-    if (!isValidDRNumber(drNumber)) {
-        showTrackingError('Please enter a valid delivery number (at least 3 characters)');
+    // Validate search input format
+    if (!isValidDRNumber(searchInput)) {
+        showTrackingError('Please enter a valid Tracking number (at least 3 characters)');
         return;
     }
     
@@ -68,13 +68,13 @@ async function performDeliverySearch() {
     showTrackingLoading();
     
     try {
-        // Search for delivery items
-        const deliveryItems = await searchDelivery(drNumber);
+        // Search for delivery items by DR number or Serial number
+        const deliveryItems = await searchDelivery(searchInput);
         
         if (deliveryItems && deliveryItems.length > 0) {
             displayMultiItemDelivery(deliveryItems);
         } else {
-            showTrackingError('Delivery not found. Please check your DR number and try again.');
+            showTrackingError('Delivery not found. Please check your Tracking number and try again.');
         }
         
     } catch (error) {
@@ -83,24 +83,24 @@ async function performDeliverySearch() {
     }
 }
 
-// Validate delivery number - very flexible
-function isValidDRNumber(drNumber) {
-    // Accept any reasonable delivery number format
-    if (!drNumber || drNumber.trim().length < 3) return false;
+// Validate search input - accepts DR Number or Serial Number
+function isValidDRNumber(searchInput) {
+    // Accept any reasonable delivery number or serial number format
+    if (!searchInput || searchInput.trim().length < 3) return false;
     
     // Accept any alphanumeric string with at least 3 characters
     const flexiblePattern = /^[A-Za-z0-9-_]+$/;
-    return flexiblePattern.test(drNumber.trim()) && drNumber.trim().length >= 3;
+    return flexiblePattern.test(searchInput.trim()) && searchInput.trim().length >= 3;
 }
 
-// Search for delivery in data sources
-async function searchDelivery(drNumber) {
-    console.log('🔍 Searching for delivery:', drNumber);
+// Search for delivery in data sources by DR Number or Serial Number
+async function searchDelivery(searchInput) {
+    console.log('🔍 Searching for delivery by DR Number or Serial Number:', searchInput);
     
     try {
         // Try Supabase first
         if (window.supabase && window.dataService) {
-            const delivery = await searchInSupabase(drNumber);
+            const delivery = await searchInSupabase(searchInput);
             if (delivery) {
                 console.log('✅ Found delivery in Supabase');
                 return delivery;
@@ -108,7 +108,7 @@ async function searchDelivery(drNumber) {
         }
         
         // Fallback to localStorage
-        const delivery = searchInLocalStorage(drNumber);
+        const delivery = searchInLocalStorage(searchInput);
         if (delivery) {
             console.log('✅ Found delivery in localStorage');
             return delivery;
@@ -123,19 +123,19 @@ async function searchDelivery(drNumber) {
     }
 }
 
-// Search in Supabase - GET ALL ITEMS for the DR
-async function searchInSupabase(drNumber) {
+// Search in Supabase - GET ALL ITEMS for the DR Number or Serial Number
+async function searchInSupabase(searchInput) {
     try {
         if (!window.supabase) {
             console.log('⚠️ Supabase not available');
             return null;
         }
         
-        // Search in deliveries table - GET ALL ITEMS, not just one
+        // Search in deliveries table by DR Number OR Serial Number
         const { data, error } = await window.supabase
             .from('deliveries')
             .select('*')
-            .ilike('dr_number', `%${drNumber}%`)
+            .or(`dr_number.ilike.%${searchInput}%,serial_number.ilike.%${searchInput}%`)
             .order('created_at', { ascending: true });
         
         if (error) {
@@ -151,23 +151,33 @@ async function searchInSupabase(drNumber) {
     }
 }
 
-// Search in localStorage - GET ALL ITEMS for the DR
-function searchInLocalStorage(drNumber) {
+// Search in localStorage - GET ALL ITEMS for the DR Number or Serial Number
+function searchInLocalStorage(searchInput) {
     try {
         let allItems = [];
         
-        // Search in active deliveries - GET ALL MATCHING ITEMS
+        // Search in active deliveries - GET ALL MATCHING ITEMS by DR Number OR Serial Number
         const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-        const activeMatches = activeDeliveries.filter(d => 
-            d.drNumber && d.drNumber.toLowerCase().includes(drNumber.toLowerCase())
-        );
+        const activeMatches = activeDeliveries.filter(d => {
+            const drMatch = d.drNumber && d.drNumber.toLowerCase().includes(searchInput.toLowerCase());
+            const dr_numberMatch = d.dr_number && d.dr_number.toLowerCase().includes(searchInput.toLowerCase());
+            const serialMatch = d.serialNumber && d.serialNumber.toLowerCase().includes(searchInput.toLowerCase());
+            const serial_numberMatch = d.serial_number && d.serial_number.toLowerCase().includes(searchInput.toLowerCase());
+            
+            return drMatch || dr_numberMatch || serialMatch || serial_numberMatch;
+        });
         allItems = allItems.concat(activeMatches);
         
-        // Search in delivery history - GET ALL MATCHING ITEMS
+        // Search in delivery history - GET ALL MATCHING ITEMS by DR Number OR Serial Number
         const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-        const historyMatches = deliveryHistory.filter(d => 
-            d.drNumber && d.drNumber.toLowerCase().includes(drNumber.toLowerCase())
-        );
+        const historyMatches = deliveryHistory.filter(d => {
+            const drMatch = d.drNumber && d.drNumber.toLowerCase().includes(searchInput.toLowerCase());
+            const dr_numberMatch = d.dr_number && d.dr_number.toLowerCase().includes(searchInput.toLowerCase());
+            const serialMatch = d.serialNumber && d.serialNumber.toLowerCase().includes(searchInput.toLowerCase());
+            const serial_numberMatch = d.serial_number && d.serial_number.toLowerCase().includes(searchInput.toLowerCase());
+            
+            return drMatch || dr_numberMatch || serialMatch || serial_numberMatch;
+        });
         allItems = allItems.concat(historyMatches);
         
         return allItems.length > 0 ? allItems : null; // Return array of all items
