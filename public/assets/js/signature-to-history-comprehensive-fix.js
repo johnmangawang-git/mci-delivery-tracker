@@ -96,13 +96,16 @@ console.log('🔧 Loading Comprehensive Signature to History Fix...');
             normalizedDelivery.lastStatusUpdate = new Date().toISOString();
             
             if (newStatus === 'Completed') {
-                normalizedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                normalizedDelivery.completedTime = new Date().toLocaleTimeString();
-                normalizedDelivery.signedAt = new Date().toISOString();
+                // Only set completion date if it doesn't already exist to preserve original completion time
+                if (!normalizedDelivery.completedDate && !normalizedDelivery.completedDateTime && !normalizedDelivery.signedAt) {
+                    normalizedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    normalizedDelivery.completedTime = new Date().toLocaleTimeString();
+                    normalizedDelivery.signedAt = new Date().toISOString();
+                }
             }
             
             console.log(`✅ Updated delivery: ${normalizedDelivery.drNumber} -> ${newStatus}`);

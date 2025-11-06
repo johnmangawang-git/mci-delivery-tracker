@@ -1277,11 +1277,15 @@ function updateDeliveryStatus(drNumber, newStatus) {
         if (deliveryIndex !== -1) {
             const delivery = window.activeDeliveries[deliveryIndex];
             delivery.status = newStatus;
-            delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
+            
+            // Only set completion date if it doesn't already exist to preserve original completion time
+            if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
             
             // Move to history if completed
             if (newStatus === 'Completed') {

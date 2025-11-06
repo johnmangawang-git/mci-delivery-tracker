@@ -143,11 +143,15 @@ function updateSingleDeliveryStatusDROnly(delivery, newStatus) {
         
         // Update delivery object
         delivery.status = newStatus;
-        delivery.completedDate = new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        
+        // Only set completion date if it doesn't already exist to preserve original completion time
+        if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+            delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
         
         // Add e-signature timestamp
         delivery.eSignatureDate = new Date().toISOString();
@@ -221,14 +225,18 @@ function moveDeliveryToHistoryDROnly(delivery) {
             // Enhanced Group Signature metadata
             movedToHistoryDate: new Date().toISOString(),
             completionMethod: 'Enhanced Group Signature (DR-Only)',
-            groupedWithDR: deliveryDR,
-            completedDate: new Date().toLocaleDateString('en-US', {
+            groupedWithDR: deliveryDR
+        };
+        
+        // Only set completion date if it doesn't already exist to preserve original completion time
+        if (!historyEntry.completedDate && !historyEntry.completedDateTime && !historyEntry.signedAt) {
+            historyEntry.completedDate = new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
-            }),
+            });
             // Enhanced timestamp with date and time for precise tracking
-            completedDateTime: new Date().toLocaleString('en-US', {
+            historyEntry.completedDateTime = new Date().toLocaleString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',

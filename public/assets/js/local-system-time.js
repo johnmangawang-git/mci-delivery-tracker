@@ -204,6 +204,7 @@ function createBookingTimestamp() {
 
 /**
  * Create completion timestamp (for when DR is e-signed/completed)
+ * This function should only be called when setting completion date for the first time
  */
 function createCompletionTimestamp() {
     return {

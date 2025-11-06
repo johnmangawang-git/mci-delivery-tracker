@@ -162,17 +162,20 @@ console.log('app.js loaded');
                 // If status is Completed, move to delivery history
                 if (newStatus === 'Completed') {
                     // COMPLETION TIMESTAMP (when DR is e-signed/completed)
-                    if (window.createCompletionTimestamp) {
-                        const completionData = window.createCompletionTimestamp();
-                        Object.assign(delivery, completionData);
-                    } else {
-                        // Fallback for backward compatibility
-                        delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        });
-                        delivery.completedDateTime = new Date().toISOString();
+                    // Only set completion date if it doesn't already exist to preserve original completion time
+                    if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                        if (window.createCompletionTimestamp) {
+                            const completionData = window.createCompletionTimestamp();
+                            Object.assign(delivery, completionData);
+                        } else {
+                            // Fallback for backward compatibility
+                            delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            });
+                            delivery.completedDateTime = new Date().toISOString();
+                        }
                     }
                     
                     // Add to delivery history
@@ -249,17 +252,20 @@ console.log('app.js loaded');
             if (newStatus === 'Completed') {
                 const completedDelivery = activeDeliveries[deliveryIndex];
                 // COMPLETION TIMESTAMP (when DR is e-signed/completed)
-                if (window.createCompletionTimestamp) {
-                    const completionData = window.createCompletionTimestamp();
-                    Object.assign(completedDelivery, completionData);
-                } else {
-                    // Fallback for backward compatibility
-                    completedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                    completedDelivery.completedDateTime = new Date().toISOString();
+                // Only set completion date if it doesn't already exist to preserve original completion time
+                if (!completedDelivery.completedDate && !completedDelivery.completedDateTime && !completedDelivery.signedAt) {
+                    if (window.createCompletionTimestamp) {
+                        const completionData = window.createCompletionTimestamp();
+                        Object.assign(completedDelivery, completionData);
+                    } else {
+                        // Fallback for backward compatibility
+                        completedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        completedDelivery.completedDateTime = new Date().toISOString();
+                    }
                 }
                 
                 // Move to history

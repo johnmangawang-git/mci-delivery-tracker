@@ -37,13 +37,17 @@ console.log('🔧 Loading Delivery History Fix...');
                 
                 // Update delivery status
                 delivery.status = newStatus;
-                delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                delivery.completedTime = new Date().toLocaleTimeString();
-                delivery.signedAt = new Date().toISOString();
+                
+                // Only set completion date if it doesn't already exist to preserve original completion time
+                if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                    delivery.completedDate = new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    delivery.completedTime = new Date().toLocaleTimeString();
+                    delivery.signedAt = new Date().toISOString();
+                }
                 
                 console.log(`✅ Updated delivery: ${delivery.drNumber || delivery.dr_number} -> ${newStatus}`);
                 
