@@ -242,44 +242,68 @@ window.createBookingTimestamp = createBookingTimestamp;
 window.createCompletionTimestamp = createCompletionTimestamp;
 
 /**
- * Format COMPLETION timestamp for Delivery History in MMDDYYYYHHmmss format
- * This shows when the DR was completed/e-signed (moved to history)
+ * FORCE FORMAT: Convert ANY date to MMDDYYYYHHmmss format for Delivery History
+ * This function will aggressively convert any date format to MMDDYYYYHHmmss
  */
 function formatDeliveryHistoryDateMMDD(delivery) {
-    // Priority order for COMPLETION timestamps
-    const completionDateValue = delivery.completedDateTime ||
-                               delivery.completed_date_time ||
-                               delivery.signedAt ||
-                               delivery.signed_at ||
-                               delivery.completedDate ||
-                               delivery.completed_date;
+    let date = null;
     
-    if (!completionDateValue) {
-        return 'No completion time recorded';
-    }
+    // Try multiple date sources in priority order
+    const dateSources = [
+        delivery.completedDateTime,
+        delivery.completed_date_time,
+        delivery.signedAt,
+        delivery.signed_at,
+        delivery.completedDate,
+        delivery.completed_date,
+        delivery.lastStatusUpdate,
+        delivery.timestamp,
+        delivery.created_at
+    ];
     
-    let date;
-    
-    if (typeof completionDateValue === 'string') {
-        // If it's already in MMDDYYYYHHmmss format, return as is
-        if (/^\d{14}$/.test(completionDateValue)) {
-            return completionDateValue;
+    // Find the first valid date source
+    for (const dateSource of dateSources) {
+        if (dateSource) {
+            // If it's already in MMDDYYYYHHmmss format (14 digits), return as is
+            if (typeof dateSource === 'string' && /^\d{14}$/.test(dateSource)) {
+                return dateSource;
+            }
+            
+            // Try to parse the date
+            try {
+                if (typeof dateSource === 'string') {
+                    // Handle various string formats
+                    if (dateSource.includes('T') || dateSource.includes('-') || dateSource.includes('/')) {
+                        date = new Date(dateSource);
+                    } else if (dateSource.includes(',')) {
+                        // Handle "Nov 6, 2025" format
+                        date = new Date(dateSource);
+                    } else {
+                        date = new Date(dateSource);
+                    }
+                } else if (dateSource instanceof Date) {
+                    date = dateSource;
+                } else {
+                    date = new Date(dateSource);
+                }
+                
+                // If we got a valid date, break out of the loop
+                if (date && !isNaN(date.getTime())) {
+                    break;
+                }
+            } catch (e) {
+                // Continue to next date source
+                continue;
+            }
         }
-        // Try to parse it as a date string
-        date = new Date(completionDateValue);
-    } else if (completionDateValue instanceof Date) {
-        date = completionDateValue;
-    } else {
-        // Default to current time
-        date = new Date();
     }
     
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-        return 'Invalid date';
+    // If no valid date found, use current local time
+    if (!date || isNaN(date.getTime())) {
+        date = new Date(); // Use current local computer time
     }
     
-    // Format using MMDDYYYYHHmmss format
+    // FORCE FORMAT to MMDDYYYYHHmmss using local computer time
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const year = date.getFullYear();

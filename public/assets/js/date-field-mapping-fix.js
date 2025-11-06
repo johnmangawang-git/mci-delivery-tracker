@@ -226,35 +226,69 @@ console.log('🔧 Loading Date Field Mapping Fix...');
             const deliveryDrNumber = normalizedDelivery.drNumber || normalizedDelivery.dr_number || '';
             const isSigned = ePodRecords.some(record => (record.dr_number || record.drNumber || '') === deliveryDrNumber);
             
-            // Enhanced date display with multiple fallbacks
-            let displayDate = normalizedDelivery.completedDate || 
-                             normalizedDelivery.completed_date ||
-                             normalizedDelivery.deliveryDate ||
-                             normalizedDelivery.delivery_date ||
-                             normalizedDelivery.createdDate ||
-                             normalizedDelivery.created_date ||
-                             normalizedDelivery.timestamp;
+            // FORCE MMDDYYYYHHmmss format for delivery history display
+            let displayDate = null;
+            let date = null;
             
-            // If still no date, try to parse from signedAt
-            if (!displayDate || displayDate === '') {
-                if (normalizedDelivery.signedAt) {
+            const dateSources = [
+                normalizedDelivery.completedDateTime,
+                normalizedDelivery.completed_date_time,
+                normalizedDelivery.signedAt,
+                normalizedDelivery.signed_at,
+                normalizedDelivery.completedDate,
+                normalizedDelivery.completed_date,
+                normalizedDelivery.deliveryDate,
+                normalizedDelivery.delivery_date,
+                normalizedDelivery.createdDate,
+                normalizedDelivery.created_date,
+                normalizedDelivery.timestamp,
+                normalizedDelivery.lastStatusUpdate
+            ];
+            
+            // Find first valid date
+            for (const dateSource of dateSources) {
+                if (dateSource) {
+                    // If it's already in MMDDYYYYHHmmss format, use it
+                    if (typeof dateSource === 'string' && /^\d{14}$/.test(dateSource)) {
+                        displayDate = dateSource;
+                        break;
+                    }
+                    
                     try {
-                        const signedDate = new Date(normalizedDelivery.signedAt);
-                        displayDate = signedDate.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        });
-                    } catch (error) {
-                        console.warn('Error parsing signedAt date:', error);
+                        date = new Date(dateSource);
+                        if (!isNaN(date.getTime())) {
+                            break;
+                        }
+                    } catch (e) {
+                        continue;
                     }
                 }
             }
             
-            // Final fallback
-            if (!displayDate || displayDate === '') {
-                displayDate = 'N/A';
-                console.warn(`⚠️ No date found for delivery ${deliveryDrNumber}:`, normalizedDelivery);
+            // If we found a valid date, format it to MMDDYYYYHHmmss
+            if (date && !isNaN(date.getTime())) {
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                
+                displayDate = `${month}${day}${year}${hours}${minutes}${seconds}`;
+            }
+            
+            // Final fallback - use current time in MMDDYYYYHHmmss format
+            if (!displayDate) {
+                const now = new Date();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const year = now.getFullYear();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                
+                displayDate = `${month}${day}${year}${hours}${minutes}${seconds}`;
+                console.warn(`⚠️ No date found for delivery ${deliveryDrNumber}, using current time:`, displayDate);
             }
             
             console.log(`📅 Date for ${deliveryDrNumber}: ${displayDate}`);

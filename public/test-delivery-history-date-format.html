@@ -113,6 +113,25 @@
                     }
                 }
                 
+                // Test 6: Test with "Nov 6, 2025" format (common existing format)
+                const testDeliveryReadable = {
+                    drNumber: 'TEST-003',
+                    completedDate: 'Nov 6, 2025'
+                };
+                
+                if (window.formatDeliveryHistoryDateMMDD) {
+                    const readableFormattedDate = window.formatDeliveryHistoryDateMMDD(testDeliveryReadable);
+                    results.innerHTML += `<div class="date-example">Readable Date Input: "Nov 6, 2025"</div>`;
+                    results.innerHTML += `<div class="date-example">Converted to: ${readableFormattedDate}</div>`;
+                    
+                    // Should start with 11062025 (Nov 6, 2025)
+                    if (readableFormattedDate.startsWith('11062025')) {
+                        results.innerHTML += '<p class="success">✅ Readable dates are converted correctly</p>';
+                    } else {
+                        results.innerHTML += '<p class="error">❌ Readable dates are not converted correctly</p>';
+                    }
+                }
+                
                 results.innerHTML += '<p class="success"><strong>🎉 Test completed!</strong></p>';
                 
             } catch (error) {

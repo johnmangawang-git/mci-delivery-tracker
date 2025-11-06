@@ -216,7 +216,48 @@ console.log('🔧 Loading Delivery History Fix...');
                     <td>
                         <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
-                    <td>${delivery.completedDate || 'N/A'}</td>
+                    <td>${(() => {
+                        // FORCE MMDDYYYYHHmmss format for delivery history
+                        let date = null;
+                        const dateSources = [
+                            delivery.completedDateTime,
+                            delivery.completed_date_time,
+                            delivery.signedAt,
+                            delivery.signed_at,
+                            delivery.completedDate,
+                            delivery.completed_date,
+                            delivery.lastStatusUpdate,
+                            delivery.timestamp,
+                            delivery.created_at
+                        ];
+                        
+                        // Find first valid date
+                        for (const dateSource of dateSources) {
+                            if (dateSource) {
+                                if (typeof dateSource === 'string' && /^\d{14}$/.test(dateSource)) {
+                                    return dateSource; // Already in correct format
+                                }
+                                try {
+                                    date = new Date(dateSource);
+                                    if (!isNaN(date.getTime())) break;
+                                } catch (e) { continue; }
+                            }
+                        }
+                        
+                        if (!date || isNaN(date.getTime())) {
+                            date = new Date(); // Use current time if no valid date found
+                        }
+                        
+                        // Format to MMDDYYYYHHmmss
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const year = date.getFullYear();
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        const seconds = String(date.getSeconds()).padStart(2, '0');
+                        
+                        return `${month}${day}${year}${hours}${minutes}${seconds}`;
+                    })()}</td>
                     <td><strong>${deliveryDrNumber}</strong></td>
                     <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
