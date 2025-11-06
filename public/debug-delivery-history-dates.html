@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug: Delivery History Dates</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .warning { color: orange; }
+        button { margin: 5px; padding: 10px; }
+        .date-record { background: #f5f5f5; padding: 10px; margin: 5px 0; font-family: monospace; }
+        .date-field { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug: Delivery History Dates</h1>
+    <p>This tool helps debug date issues in delivery history records.</p>
+
+    <div class="debug-section">
+        <h3>Debug Actions</h3>
+        <button onclick="debugLocalStorageData()">🔍 Debug localStorage Data</button>
+        <button onclick="debugCurrentHistoryData()">📊 Debug Current History Data</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>Debug Results</h3>
+        <div id="debugResults"></div>
+    </div>
+
+    <script>
+        function debugLocalStorageData() {
+            const results = document.getElementById('debugResults');
+            results.innerHTML = '<p class="info">🔄 Debugging localStorage data...</p>';
+            
+            try {
+                const savedHistory = localStorage.getItem('mci-delivery-history');
+                if (!savedHistory) {
+                    results.innerHTML += '<p class="warning">⚠️ No delivery history found in localStorage</p>';
+                    return;
+                }
+                
+                const historyData = JSON.parse(savedHistory);
+                results.innerHTML += `<p class="info">📊 Found ${historyData.length} records in localStorage</p>`;
+                
+                historyData.forEach((delivery, index) => {
+                    const drNumber = delivery.drNumber || delivery.dr_number || `Record ${index + 1}`;
+                    
+                    results.innerHTML += `
+                        <div class="date-record">
+                            <strong>DR: ${drNumber}</strong>
+                            <div class="date-field">completedDate: ${delivery.completedDate || 'N/A'}</div>
+                            <div class="date-field">completedDateTime: ${delivery.completedDateTime || 'N/A'}</div>
+                            <div class="date-field">completed_date: ${delivery.completed_date || 'N/A'}</div>
+                            <div class="date-field">completed_date_time: ${delivery.completed_date_time || 'N/A'}</div>
+                            <div class="date-field">signedAt: ${delivery.signedAt || 'N/A'}</div>
+                            <div class="date-field">signed_at: ${delivery.signed_at || 'N/A'}</div>
+                            <div class="date-field">timestamp: ${delivery.timestamp || 'N/A'}</div>
+                            <div class="date-field">lastStatusUpdate: ${delivery.lastStatusUpdate || 'N/A'}</div>
+                        </div>
+                    `;
+                });
+                
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Error debugging localStorage: ${error.message}</p>`;
+            }
+        }
+        
+        function debugCurrentHistoryData() {
+            const results = document.getElementById('debugResults');
+            results.innerHTML = '<p class="info">🔄 Debugging current history data...</p>';
+            
+            try {
+                if (!window.deliveryHistory) {
+                    results.innerHTML += '<p class="warning">⚠️ No window.deliveryHistory found</p>';
+                    return;
+                }
+                
+                const historyData = window.deliveryHistory;
+                results.innerHTML += `<p class="info">📊 Found ${historyData.length} records in window.deliveryHistory</p>`;
+                
+                historyData.forEach((delivery, index) => {
+                    const drNumber = delivery.drNumber || delivery.dr_number || `Record ${index + 1}`;
+                    
+                    results.innerHTML += `
+                        <div class="date-record">
+                            <strong>DR: ${drNumber}</strong>
+                            <div class="date-field">completedDate: ${delivery.completedDate || 'N/A'}</div>
+                            <div class="date-field">completedDateTime: ${delivery.completedDateTime || 'N/A'}</div>
+                            <div class="date-field">completed_date: ${delivery.completed_date || 'N/A'}</div>
+                            <div class="date-field">completed_date_time: ${delivery.completed_date_time || 'N/A'}</div>
+                            <div class="date-field">signedAt: ${delivery.signedAt || 'N/A'}</div>
+                            <div class="date-field">signed_at: ${delivery.signed_at || 'N/A'}</div>
+                            <div class="date-field">timestamp: ${delivery.timestamp || 'N/A'}</div>
+                            <div class="date-field">lastStatusUpdate: ${delivery.lastStatusUpdate || 'N/A'}</div>
+                        </div>
+                    `;
+                });
+                
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Error debugging current data: ${error.message}</p>`;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('debugResults').innerHTML = '';
+        }
+        
+        // Auto-debug on page load
+        window.onload = function() {
+            setTimeout(() => {
+                debugLocalStorageData();
+                setTimeout(debugCurrentHistoryData, 1000);
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

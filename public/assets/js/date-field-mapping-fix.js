@@ -277,18 +277,16 @@ console.log('🔧 Loading Date Field Mapping Fix...');
                 displayDate = `${month}${day}${year}${hours}${minutes}${seconds}`;
             }
             
-            // Final fallback - use current time in MMDDYYYYHHmmss format
+            // Final fallback - preserve original date value if parsing fails
             if (!displayDate) {
-                const now = new Date();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const year = now.getFullYear();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
+                // Try to preserve any original date value
+                const originalDate = normalizedDelivery.completedDate || 
+                                   normalizedDelivery.completed_date ||
+                                   normalizedDelivery.completedDateTime ||
+                                   normalizedDelivery.signedAt;
                 
-                displayDate = `${month}${day}${year}${hours}${minutes}${seconds}`;
-                console.warn(`⚠️ No date found for delivery ${deliveryDrNumber}, using current time:`, displayDate);
+                displayDate = originalDate || 'N/A';
+                console.warn(`⚠️ No valid date found for delivery ${deliveryDrNumber}, preserving original:`, originalDate);
             }
             
             console.log(`📅 Date for ${deliveryDrNumber}: ${displayDate}`);

@@ -245,7 +245,9 @@ console.log('🔧 Loading Delivery History Fix...');
                         }
                         
                         if (!date || isNaN(date.getTime())) {
-                            date = new Date(); // Use current time if no valid date found
+                            // Preserve original date value if parsing fails
+                            const originalDate = delivery.completedDate || delivery.completedDateTime || delivery.signedAt;
+                            return originalDate || 'N/A';
                         }
                         
                         // Format to MMDDYYYYHHmmss
