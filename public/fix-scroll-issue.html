@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Scroll Issue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Fix Scroll Issue</h2>
+        
+        <div class="alert alert-info">
+            <strong>Purpose:</strong> This tool diagnoses and fixes scrolling issues caused by lingering modal states.
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Scroll Diagnostics & Fix</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="diagnoseScrollIssue()">Diagnose Scroll Issue</button>
+                <button class="btn btn-success" onclick="fixScrollIssue()">Fix Scroll Issue</button>
+                <button class="btn btn-warning" onclick="forceScrollFix()">Force Complete Fix</button>
+                <div id="output" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function diagnoseScrollIssue() {
+            const output = document.getElementById('output');
+            let html = '<h6>Scroll Issue Diagnosis:</h6>';
+            
+            // Check body classes
+            const bodyClasses = Array.from(document.body.classList);
+            html += `<p><strong>Body Classes:</strong> ${bodyClasses.join(', ') || 'None'}</p>`;
+            
+            // Check body styles
+            const bodyStyles = {
+                overflow: document.body.style.overflow || 'default',
+                paddingRight: document.body.style.paddingRight || 'default',
+                position: document.body.style.position || 'default'
+            };
+            html += `<p><strong>Body Styles:</strong></p><ul>`;
+            Object.entries(bodyStyles).forEach(([key, value]) => {
+                html += `<li>${key}: ${value}</li>`;
+            });
+            html += '</ul>';
+            
+            // Check for modal backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            html += `<p><strong>Modal Backdrops:</strong> ${backdrops.length} found</p>`;
+            
+            // Check for open modals
+            const openModals = document.querySelectorAll('.modal.show');
+            html += `<p><strong>Open Modals:</strong> ${openModals.length} found</p>`;
+            
+            // Check computed styles
+            const computedStyle = window.getComputedStyle(document.body);
+            html += `<p><strong>Computed Body Overflow:</strong> ${computedStyle.overflow}</p>`;
+            
+            // Identify issues
+            html += '<h6>Issues Found:</h6>';
+            const issues = [];
+            
+            if (bodyClasses.includes('modal-open')) {
+                issues.push('❌ Body has modal-open class (prevents scrolling)');
+            }
+            
+            if (document.body.style.overflow === 'hidden') {
+                issues.push('❌ Body overflow is set to hidden');
+            }
+            
+            if (backdrops.length > 0) {
+                issues.push(`❌ ${backdrops.length} modal backdrop(s) still present`);
+            }
+            
+            if (openModals.length > 0) {
+                issues.push(`❌ ${openModals.length} modal(s) still open`);
+            }
+            
+            if (issues.length === 0) {
+                issues.push('✅ No obvious scroll issues detected');
+            }
+            
+            html += '<ul>';
+            issues.forEach(issue => {
+                html += `<li>${issue}</li>`;
+            });
+            html += '</ul>';
+            
+            output.innerHTML = html;
+        }
+        
+        function fixScrollIssue() {
+            const output = document.getElementById('output');
+            let html = '<h6>Fixing Scroll Issue:</h6>';
+            let fixed = [];
+            
+            // Remove modal-open class
+            if (document.body.classList.contains('modal-open')) {
+                document.body.classList.remove('modal-open');
+                fixed.push('✅ Removed modal-open class from body');
+            }
+            
+            // Reset body styles
+            if (document.body.style.overflow === 'hidden') {
+                document.body.style.overflow = '';
+                fixed.push('✅ Reset body overflow style');
+            }
+            
+            if (document.body.style.paddingRight) {
+                document.body.style.paddingRight = '';
+                fixed.push('✅ Reset body padding-right');
+            }
+            
+            // Remove modal backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                backdrops.forEach(backdrop => backdrop.remove());
+                fixed.push(`✅ Removed ${backdrops.length} modal backdrop(s)`);
+            }
+            
+            // Close any open modals
+            const openModals = document.querySelectorAll('.modal.show');
+            if (openModals.length > 0) {
+                openModals.forEach(modal => {
+                    modal.classList.remove('show');
+                    modal.style.display = 'none';
+                });
+                fixed.push(`✅ Closed ${openModals.length} open modal(s)`);
+            }
+            
+            if (fixed.length === 0) {
+                fixed.push('ℹ️ No issues found to fix');
+            }
+            
+            html += '<ul>';
+            fixed.forEach(fix => {
+                html += `<li>${fix}</li>`;
+            });
+            html += '</ul>';
+            
+            html += '<div class="alert alert-success mt-3">Scroll fix applied! Try scrolling the page now.</div>';
+            output.innerHTML = html;
+        }
+        
+        function forceScrollFix() {
+            const output = document.getElementById('output');
+            
+            // Force complete cleanup
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.body.style.paddingRight = '0';
+            document.body.style.position = '';
+            
+            // Remove all modal backdrops
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+            
+            // Close all modals
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            });
+            
+            // Force body to be scrollable
+            document.documentElement.style.overflow = 'auto';
+            document.documentElement.style.height = 'auto';
+            
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <h6>✅ Force Complete Fix Applied!</h6>
+                    <p>All modal states cleared and scrolling forcibly enabled.</p>
+                    <p>Try scrolling the page now. If it still doesn't work, there might be custom CSS preventing scrolling.</p>
+                </div>
+            `;
+        }
+        
+        // Auto-diagnose on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(diagnoseScrollIssue, 1000);
+        });
+    </script>
+</body>
+</html>
