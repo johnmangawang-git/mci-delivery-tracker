@@ -39,7 +39,9 @@ console.log('🔧 Loading Delivery History Fix...');
                 delivery.status = newStatus;
                 
                 // Only set completion date if it doesn't already exist to preserve original completion time
-                if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                if ((!delivery.completedDate || delivery.completedDate === '') && 
+                    (!delivery.completedDateTime || delivery.completedDateTime === '') && 
+                    (!delivery.signedAt || delivery.signedAt === '')) {
                     delivery.completedDate = new Date().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
@@ -265,7 +267,7 @@ console.log('🔧 Loading Delivery History Fix...');
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
                     <td>${delivery.origin || 'N/A'}</td>
                     <td>${delivery.destination || 'N/A'}</td>
-                    <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
+                    <td style="display: none;">${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>${statusDisplay}</td>
                     <td>
                         <button class="btn btn-sm btn-outline-info" onclick="showEPodModal('${deliveryDrNumber}')">

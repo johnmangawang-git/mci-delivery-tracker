@@ -97,13 +97,16 @@ console.log('🔧 Loading Comprehensive Signature to History Fix...');
             
             if (newStatus === 'Completed') {
                 // Only set completion date if it doesn't already exist to preserve original completion time
-                if (!normalizedDelivery.completedDate && !normalizedDelivery.completedDateTime && !normalizedDelivery.signedAt) {
+                if ((!normalizedDelivery.completedDate || normalizedDelivery.completedDate === '') && 
+                    (!normalizedDelivery.completedDateTime || normalizedDelivery.completedDateTime === '') && 
+                    (!normalizedDelivery.signedAt || normalizedDelivery.signedAt === '')) {
                     normalizedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric'
                     });
                     normalizedDelivery.completedTime = new Date().toLocaleTimeString();
+                    normalizedDelivery.completedDateTime = new Date().toISOString();
                     normalizedDelivery.signedAt = new Date().toISOString();
                 }
             }

@@ -652,12 +652,16 @@ function updateDeliveryStatus(drNumber, newStatus) {
                 delivery.status = newStatus;
                 
                 // Only set completion date if it doesn't already exist to preserve original completion time
-                if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                if ((!delivery.completedDate || delivery.completedDate === '') && 
+                    (!delivery.completedDateTime || delivery.completedDateTime === '') && 
+                    (!delivery.signedAt || delivery.signedAt === '')) {
                     delivery.completedDate = new Date().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric'
                     });
+                    delivery.completedDateTime = new Date().toISOString();
+                    delivery.signedAt = new Date().toISOString();
                 }
                 
                 // If status is Completed, move to delivery history

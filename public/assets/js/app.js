@@ -163,7 +163,9 @@ console.log('app.js loaded');
                 if (newStatus === 'Completed') {
                     // COMPLETION TIMESTAMP (when DR is e-signed/completed)
                     // Only set completion date if it doesn't already exist to preserve original completion time
-                    if (!delivery.completedDate && !delivery.completedDateTime && !delivery.signedAt) {
+                    if ((!delivery.completedDate || delivery.completedDate === '') && 
+                        (!delivery.completedDateTime || delivery.completedDateTime === '') && 
+                        (!delivery.signedAt || delivery.signedAt === '')) {
                         if (window.createCompletionTimestamp) {
                             const completionData = window.createCompletionTimestamp();
                             Object.assign(delivery, completionData);
@@ -253,7 +255,9 @@ console.log('app.js loaded');
                 const completedDelivery = activeDeliveries[deliveryIndex];
                 // COMPLETION TIMESTAMP (when DR is e-signed/completed)
                 // Only set completion date if it doesn't already exist to preserve original completion time
-                if (!completedDelivery.completedDate && !completedDelivery.completedDateTime && !completedDelivery.signedAt) {
+                if ((!completedDelivery.completedDate || completedDelivery.completedDate === '') && 
+                    (!completedDelivery.completedDateTime || completedDelivery.completedDateTime === '') && 
+                    (!completedDelivery.signedAt || completedDelivery.signedAt === '')) {
                     if (window.createCompletionTimestamp) {
                         const completionData = window.createCompletionTimestamp();
                         Object.assign(completedDelivery, completionData);
@@ -1044,7 +1048,7 @@ function loadDeliveryHistory() {
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
                     <td>${delivery.origin || 'N/A'}</td>
                     <td>${delivery.destination || 'N/A'}</td>
-                    <td>${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
+                    <td style="display: none;">${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
                         ${statusDisplay}
                     </td>
