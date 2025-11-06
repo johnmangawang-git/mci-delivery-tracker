@@ -25,10 +25,10 @@ window.getEnhancedColumnValue = function(row, possibleNames, fallbackIndex = nul
     // Fallback to column index if provided
     if (fallbackIndex !== null && row[fallbackIndex] !== undefined && row[fallbackIndex] !== null) {
         const value = String(row[fallbackIndex]).trim();
-        return value !== '' ? value : 'N/A';
+        return value !== '' ? value : '';
     }
     
-    return 'N/A';
+    return '';
 };
 
 // Enhanced showInlinePreview function with improved column mapping
@@ -151,25 +151,25 @@ window.showEnhancedInlinePreview = function(data, filename) {
                 const itemNumValue = window.getEnhancedColumnValue(sampleRow, [
                     'Item Number', 'Item number', 'item_number', 'Item #', 'Item#'
                 ], 9);
-                if (itemNumValue !== 'N/A') detectedMappings.push('Item Number');
+                if (itemNumValue !== '' && itemNumValue) detectedMappings.push('Item Number');
                 
                 // Check mobile number detection
                 const mobileValue = window.getEnhancedColumnValue(sampleRow, [
                     'Mobile#', 'Mobile Number', 'Mobile', 'mobile_number'
                 ], 10);
-                if (mobileValue !== 'N/A') detectedMappings.push('Mobile Number');
+                if (mobileValue !== '' && mobileValue) detectedMappings.push('Mobile Number');
                 
                 // Check item description detection
                 const descValue = window.getEnhancedColumnValue(sampleRow, [
                     'Item Description', 'Item description', 'item_description', 'Description'
                 ], 11);
-                if (descValue !== 'N/A') detectedMappings.push('Item Description');
+                if (descValue !== '' && descValue) detectedMappings.push('Item Description');
                 
                 // Check serial number detection
                 const serialValue = window.getEnhancedColumnValue(sampleRow, [
                     'Serial Number', 'Serial number', 'serial_number', 'Serial'
                 ], 14);
-                if (serialValue !== 'N/A') detectedMappings.push('Serial Number');
+                if (serialValue !== '' && serialValue) detectedMappings.push('Serial Number');
             }
             
             summaryDiv.innerHTML = `
