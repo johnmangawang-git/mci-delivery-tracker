@@ -24,6 +24,7 @@
         <h3>Debug Actions</h3>
         <button onclick="debugLocalStorageData()">🔍 Debug localStorage Data</button>
         <button onclick="debugCurrentHistoryData()">📊 Debug Current History Data</button>
+        <button onclick="testDatePreservation()">🧪 Test Date Preservation</button>
         <button onclick="clearResults()">🧹 Clear Results</button>
     </div>
 
@@ -108,6 +109,37 @@
         
         function clearResults() {
             document.getElementById('debugResults').innerHTML = '';
+        }
+        
+        function testDatePreservation() {
+            const results = document.getElementById('debugResults');
+            results.innerHTML += '<p class="info">🧪 Testing date preservation...</p>';
+            
+            // Create test data with different dates
+            const testData = [
+                {
+                    drNumber: 'TEST-001',
+                    completedDate: 'Nov 5, 2025',
+                    completedDateTime: '2025-11-05T10:30:00.000Z',
+                    status: 'Completed'
+                },
+                {
+                    drNumber: 'TEST-002', 
+                    completedDate: 'Nov 6, 2025',
+                    signedAt: '2025-11-06T14:45:00.000Z',
+                    status: 'Completed'
+                }
+            ];
+            
+            // Save test data
+            localStorage.setItem('mci-delivery-history', JSON.stringify(testData));
+            results.innerHTML += '<p class="success">✅ Saved test data with different dates</p>';
+            
+            // Simulate page refresh by reloading data
+            setTimeout(() => {
+                debugLocalStorageData();
+                results.innerHTML += '<p class="info">📊 Check if dates remained unchanged after "refresh"</p>';
+            }, 500);
         }
         
         // Auto-debug on page load

@@ -16,60 +16,52 @@ console.log('🔧 Loading Date Field Mapping Fix...');
     function enhancedNormalizeDateFields(delivery) {
         if (!delivery) return delivery;
         
-        // Get the current date in various formats for fallback
-        const now = new Date();
-        const currentDateFormatted = now.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-        const currentISODate = now.toISOString();
-        const currentTimeFormatted = now.toLocaleTimeString();
+        // NO MORE CURRENT DATE FALLBACKS - preserve original dates only
         
-        // Normalize all date-related fields with comprehensive fallbacks
+        // Normalize all date-related fields WITHOUT current date fallbacks to prevent overwriting
         const normalizedDelivery = {
             ...delivery,
             
-            // Completion date fields (multiple formats)
+            // Completion date fields (multiple formats) - NO CURRENT DATE FALLBACKS
             completedDate: delivery.completedDate || 
                           delivery.completed_date || 
                           delivery.completionDate || 
                           delivery.completion_date ||
                           delivery.finishedDate ||
                           delivery.finished_date ||
-                          (delivery.status === 'Completed' ? currentDateFormatted : ''),
+                          '',
             
             completed_date: delivery.completedDate || 
                            delivery.completed_date || 
                            delivery.completionDate || 
                            delivery.completion_date ||
-                           (delivery.status === 'Completed' ? currentDateFormatted : ''),
+                           '',
             
-            // Completion time fields
+            // Completion time fields - NO CURRENT TIME FALLBACKS
             completedTime: delivery.completedTime || 
                           delivery.completed_time || 
                           delivery.completionTime ||
                           delivery.completion_time ||
-                          (delivery.status === 'Completed' ? currentTimeFormatted : ''),
+                          '',
             
             completed_time: delivery.completedTime || 
                            delivery.completed_time || 
                            delivery.completionTime ||
-                           (delivery.status === 'Completed' ? currentTimeFormatted : ''),
+                           '',
             
-            // Signed date/time fields
+            // Signed date/time fields - NO CURRENT DATE FALLBACKS
             signedAt: delivery.signedAt || 
                      delivery.signed_at || 
                      delivery.signedDate ||
                      delivery.signed_date ||
-                     (delivery.status === 'Completed' ? currentISODate : ''),
+                     '',
             
             signed_at: delivery.signedAt || 
                       delivery.signed_at || 
                       delivery.signedDate ||
-                      (delivery.status === 'Completed' ? currentISODate : ''),
+                      '',
             
-            // Created date fields (for original booking date)
+            // Created date fields (for original booking date) - PRESERVE ORIGINAL VALUES
             createdDate: delivery.createdDate || 
                         delivery.created_date || 
                         delivery.timestamp || 
@@ -77,31 +69,31 @@ console.log('🔧 Loading Date Field Mapping Fix...');
                         delivery.booking_date ||
                         delivery.deliveryDate ||
                         delivery.delivery_date ||
-                        currentDateFormatted,
+                        '',
             
             created_date: delivery.createdDate || 
                          delivery.created_date || 
                          delivery.timestamp || 
                          delivery.bookingDate ||
-                         currentDateFormatted,
+                         '',
             
-            // Delivery date fields
+            // Delivery date fields - PRESERVE ORIGINAL VALUES
             deliveryDate: delivery.deliveryDate || 
                          delivery.delivery_date || 
                          delivery.createdDate || 
                          delivery.created_date ||
-                         currentDateFormatted,
+                         '',
             
             delivery_date: delivery.deliveryDate || 
                           delivery.delivery_date || 
                           delivery.createdDate ||
-                          currentDateFormatted,
+                          '',
             
-            // Timestamp fields
+            // Timestamp fields - PRESERVE ORIGINAL VALUES
             timestamp: delivery.timestamp || 
                       delivery.createdDate || 
                       delivery.created_date ||
-                      currentISODate,
+                      '',
             
             // Last status update
             lastStatusUpdate: delivery.lastStatusUpdate || 
