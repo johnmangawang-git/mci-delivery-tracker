@@ -241,9 +241,59 @@ window.formatCompletionTimestamp = formatCompletionTimestamp;
 window.createBookingTimestamp = createBookingTimestamp;
 window.createCompletionTimestamp = createCompletionTimestamp;
 
+/**
+ * Format COMPLETION timestamp for Delivery History in MMDDYYYYHHmmss format
+ * This shows when the DR was completed/e-signed (moved to history)
+ */
+function formatDeliveryHistoryDateMMDD(delivery) {
+    // Priority order for COMPLETION timestamps
+    const completionDateValue = delivery.completedDateTime ||
+                               delivery.completed_date_time ||
+                               delivery.signedAt ||
+                               delivery.signed_at ||
+                               delivery.completedDate ||
+                               delivery.completed_date;
+    
+    if (!completionDateValue) {
+        return 'No completion time recorded';
+    }
+    
+    let date;
+    
+    if (typeof completionDateValue === 'string') {
+        // If it's already in MMDDYYYYHHmmss format, return as is
+        if (/^\d{14}$/.test(completionDateValue)) {
+            return completionDateValue;
+        }
+        // Try to parse it as a date string
+        date = new Date(completionDateValue);
+    } else if (completionDateValue instanceof Date) {
+        date = completionDateValue;
+    } else {
+        // Default to current time
+        date = new Date();
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return 'Invalid date';
+    }
+    
+    // Format using MMDDYYYYHHmmss format
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${month}${day}${year}${hours}${minutes}${seconds}`;
+}
+
 // Override enhanced date formatter functions with specific purposes
 window.formatActiveDeliveryDate = formatActiveDeliveryTimestamp;  // Shows BOOKING time
-window.formatDeliveryHistoryDate = formatCompletionTimestamp;     // Shows COMPLETION time
+window.formatDeliveryHistoryDate = formatCompletionTimestamp;     // Shows COMPLETION time (original format)
+window.formatDeliveryHistoryDateMMDD = formatDeliveryHistoryDateMMDD; // Shows COMPLETION time in MMDDYYYYHHmmss format
 
 // Initialize
 overrideTimestampFunctions();

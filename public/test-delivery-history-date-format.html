@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Delivery History Date Format</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 10px; }
+        .date-example { background: #f5f5f5; padding: 10px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test: Delivery History Date Format</h1>
+    <p>This test verifies that delivery history dates are displayed in MMDDYYYYHHmmss format.</p>
+
+    <div class="test-section">
+        <h3>Expected Format: MMDDYYYYHHmmss</h3>
+        <p>Example: November 6, 2025 at 2:30:45 PM should display as: <strong>11062025143045</strong></p>
+        
+        <button onclick="runTest()">🚀 Run Test</button>
+        <button onclick="clearResults()">🧹 Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results</h3>
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load the local system time module -->
+    <script src="assets/js/local-system-time.js"></script>
+
+    <script>
+        function runTest() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<p class="info">🔄 Running test...</p>';
+            
+            try {
+                // Test 1: Check if formatDeliveryHistoryDate function exists
+                if (typeof window.formatDeliveryHistoryDate === 'function') {
+                    results.innerHTML += '<p class="success">✅ formatDeliveryHistoryDate function exists</p>';
+                } else {
+                    results.innerHTML += '<p class="error">❌ formatDeliveryHistoryDate function not found</p>';
+                }
+                
+                // Test 2: Check if formatWithLocalTime function exists
+                if (typeof window.formatWithLocalTime === 'function') {
+                    results.innerHTML += '<p class="success">✅ formatWithLocalTime function exists</p>';
+                } else {
+                    results.innerHTML += '<p class="error">❌ formatWithLocalTime function not found</p>';
+                }
+                
+                // Test 3: Test the date formatting with a known date
+                const testDate = new Date('2025-11-06T14:30:45');
+                const expectedFormat = '11062025143045';
+                
+                if (window.formatWithLocalTime) {
+                    const formattedDate = window.formatWithLocalTime(testDate);
+                    results.innerHTML += `<div class="date-example">Test Date: ${testDate.toString()}</div>`;
+                    results.innerHTML += `<div class="date-example">Formatted: ${formattedDate}</div>`;
+                    results.innerHTML += `<div class="date-example">Expected: ${expectedFormat}</div>`;
+                    
+                    if (formattedDate === expectedFormat) {
+                        results.innerHTML += '<p class="success">✅ Date formatting is correct!</p>';
+                    } else {
+                        results.innerHTML += '<p class="error">❌ Date formatting is incorrect</p>';
+                    }
+                } else {
+                    results.innerHTML += '<p class="error">❌ Cannot test formatting - function not available</p>';
+                }
+                
+                // Test 4: Test delivery history date formatting with new MMDD function
+                const testDelivery = {
+                    drNumber: 'TEST-001',
+                    completedDateTime: '2025-11-06T14:30:45.000Z',
+                    completedDate: 'Nov 6, 2025',
+                    signedAt: '2025-11-06T14:30:45.000Z'
+                };
+                
+                if (window.formatDeliveryHistoryDateMMDD) {
+                    const historyFormattedDate = window.formatDeliveryHistoryDateMMDD(testDelivery);
+                    results.innerHTML += `<div class="date-example">Delivery History Format (MMDD): ${historyFormattedDate}</div>`;
+                    
+                    // Check if it matches the MMDDYYYYHHmmss pattern
+                    const mmddyyyyhhmmssPattern = /^\d{14}$/;
+                    if (mmddyyyyhhmmssPattern.test(historyFormattedDate)) {
+                        results.innerHTML += '<p class="success">✅ Delivery history date format is correct (14 digits)</p>';
+                    } else {
+                        results.innerHTML += '<p class="error">❌ Delivery history date format is not MMDDYYYYHHmmss</p>';
+                    }
+                } else {
+                    results.innerHTML += '<p class="error">❌ Cannot test delivery history MMDD formatting - function not available</p>';
+                }
+                
+                // Test 5: Test with already formatted date
+                const testDeliveryFormatted = {
+                    drNumber: 'TEST-002',
+                    completedDateTime: '11062025143045' // Already in MMDDYYYYHHmmss format
+                };
+                
+                if (window.formatDeliveryHistoryDateMMDD) {
+                    const alreadyFormattedDate = window.formatDeliveryHistoryDateMMDD(testDeliveryFormatted);
+                    results.innerHTML += `<div class="date-example">Already Formatted Date: ${alreadyFormattedDate}</div>`;
+                    
+                    if (alreadyFormattedDate === '11062025143045') {
+                        results.innerHTML += '<p class="success">✅ Already formatted dates are preserved correctly</p>';
+                    } else {
+                        results.innerHTML += '<p class="error">❌ Already formatted dates are not preserved</p>';
+                    }
+                }
+                
+                results.innerHTML += '<p class="success"><strong>🎉 Test completed!</strong></p>';
+                
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Test failed with error: ${error.message}</p>`;
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+        }
+        
+        // Auto-run test on page load
+        window.onload = function() {
+            setTimeout(runTest, 1000);
+        };
+    </script>
+</body>
+</html>

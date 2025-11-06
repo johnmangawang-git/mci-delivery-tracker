@@ -995,7 +995,7 @@ function loadDeliveryHistory() {
                     <td>
                         <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
-                    <td>${window.formatDeliveryHistoryDate ? window.formatDeliveryHistoryDate(delivery) : (delivery.completedDateTime || delivery.completedDate || 'N/A')}</td>
+                    <td>${window.formatDeliveryHistoryDateMMDD ? window.formatDeliveryHistoryDateMMDD(delivery) : 'N/A'}</td>
                     <td><strong>${deliveryDrNumber}</strong></td>
                     <td>${delivery.customerName || delivery.customer_name || 'N/A'}</td>
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
