@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Old Timestamp Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Clear Old Timestamp Data</h2>
+        
+        <div class="alert alert-warning">
+            <strong>Purpose:</strong> This tool clears old cached data that might have incorrect timestamp formats, 
+            forcing the system to use fresh data with the new MMDDYYYYHHmmss format.
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Clear Cached Data</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-warning" onclick="clearOldData()">Clear Old Timestamp Data</button>
+                <button class="btn btn-info" onclick="showCurrentData()">Show Current Data</button>
+                <div id="output" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function clearOldData() {
+            const output = document.getElementById('output');
+            let html = '<h6>Clearing Old Data:</h6>';
+            
+            // Clear localStorage data
+            const keys = ['mci-active-deliveries', 'mci-delivery-history', 'activeDeliveries', 'deliveryHistory'];
+            
+            keys.forEach(key => {
+                const data = localStorage.getItem(key);
+                if (data) {
+                    localStorage.removeItem(key);
+                    html += `<p>✅ Cleared: ${key}</p>`;
+                } else {
+                    html += `<p>⚠️ Not found: ${key}</p>`;
+                }
+            });
+            
+            html += '<div class="alert alert-success mt-3">Old timestamp data cleared! Upload a new DR file to test the new MMDDYYYYHHmmss format.</div>';
+            output.innerHTML = html;
+        }
+        
+        function showCurrentData() {
+            const output = document.getElementById('output');
+            let html = '<h6>Current Data:</h6>';
+            
+            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
+            
+            if (activeDeliveries.length > 0) {
+                html += `<p><strong>Active Deliveries:</strong> ${activeDeliveries.length} records</p>`;
+                html += '<div class="table-responsive"><table class="table table-sm">';
+                html += '<thead><tr><th>DR Number</th><th>deliveryDate</th><th>bookedDate</th><th>created_at</th></tr></thead><tbody>';
+                
+                activeDeliveries.slice(0, 3).forEach(delivery => {
+                    html += `
+                        <tr>
+                            <td>${delivery.drNumber || delivery.dr_number || 'N/A'}</td>
+                            <td><code>${delivery.deliveryDate || 'N/A'}</code></td>
+                            <td><code>${delivery.bookedDate || 'N/A'}</code></td>
+                            <td><code>${delivery.created_at || 'N/A'}</code></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p class="text-muted">No active deliveries found</p>';
+            }
+            
+            output.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

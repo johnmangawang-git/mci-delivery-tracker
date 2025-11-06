@@ -130,16 +130,15 @@ function formatWithLocalTime(dateInput) {
         date = new Date();
     }
     
-    // Format using local system time
-    return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
+    // Format using MMDDYYYYHHmmss format as requested
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${month}${day}${year}${hours}${minutes}${seconds}`;
 }
 
 /**
@@ -147,13 +146,13 @@ function formatWithLocalTime(dateInput) {
  * This shows when the DR was originally uploaded/booked
  */
 function formatActiveDeliveryTimestamp(delivery) {
-    // Priority order for BOOKING timestamps
-    const bookingDateValue = delivery.deliveryDate || 
+    // Priority order for BOOKING timestamps - prioritize most recent/accurate timestamps
+    const bookingDateValue = delivery.created_at ||           // Most recent timestamp
+                            delivery.timestamp ||             // Backup timestamp
+                            delivery.deliveryDate || 
                             delivery.delivery_date ||
                             delivery.bookedDate || 
                             delivery.booked_date ||
-                            delivery.created_at ||
-                            delivery.timestamp ||
                             delivery.localTime;
     
     if (!bookingDateValue) {
