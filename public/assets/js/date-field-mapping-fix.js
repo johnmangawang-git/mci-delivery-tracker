@@ -95,14 +95,15 @@ console.log('🔧 Loading Date Field Mapping Fix...');
                       delivery.created_date ||
                       '',
             
-            // Last status update
+            // Last status update - NO CURRENT DATE FALLBACKS
             lastStatusUpdate: delivery.lastStatusUpdate || 
                              delivery.last_status_update ||
-                             (delivery.status === 'Completed' ? currentISODate : delivery.timestamp || currentISODate),
+                             delivery.timestamp ||
+                             '',
             
             last_status_update: delivery.lastStatusUpdate || 
                                delivery.last_status_update ||
-                               (delivery.status === 'Completed' ? currentISODate : currentISODate)
+                               ''
         };
         
         console.log('📅 Date field normalization:', {

@@ -263,15 +263,7 @@ function displayMultiItemDelivery(deliveryItems) {
         `;
     });
     
-    // Add contact information
-    html += `
-        <div class="delivery-contact mt-3 p-3 bg-light rounded">
-            <p class="text-muted small mb-0">
-                <i class="bi bi-info-circle me-1"></i>
-                For questions about your delivery, please contact us at <strong>+63 912 345 6789</strong>
-            </p>
-        </div>
-    `;
+    // Contact information removed as requested
     
     trackingResults.innerHTML = html;
     trackingResults.style.display = 'block';
