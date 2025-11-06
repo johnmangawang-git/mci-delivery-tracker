@@ -188,9 +188,9 @@ function formatCompletionTimestamp(delivery) {
  */
 function createBookingTimestamp() {
     return {
-        // For Active Deliveries display
-        deliveryDate: getLocalSystemDate(),
-        bookedDate: getLocalSystemDate(), 
+        // For Active Deliveries display - USE FULL TIMESTAMP WITH TIME
+        deliveryDate: getLocalSystemTimeISO(),
+        bookedDate: getLocalSystemTimeISO(), 
         timestamp: getLocalSystemTimeISO(),
         created_at: getLocalSystemTimeISO(),
         
