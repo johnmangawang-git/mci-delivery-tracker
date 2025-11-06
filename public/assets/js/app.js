@@ -747,8 +747,10 @@ console.log('app.js loaded');
             return;
         }
         
-        // Ensure we have the latest data
-        activeDeliveries = window.activeDeliveries || [];
+        // Ensure we have the latest data and filter out completed deliveries
+        activeDeliveries = (window.activeDeliveries || []).filter(delivery => 
+            delivery.status !== 'Completed'
+        );
         
         // Apply search filter using global field mapper
         filteredDeliveries = currentSearchTerm ? 

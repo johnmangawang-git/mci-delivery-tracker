@@ -54,8 +54,8 @@ const INVALID_FIELDS = [
     'customerName', // This should be customer_name
     'vendorNumber', // This should be vendor_number
     'truckType', // This should be truck_type
-    'truckPlateNumber', // This should be truck_plate_number
-    'additionalCosts' // This should be additional_costs
+    'truckPlateNumber' // This should be truck_plate_number
+    // NOTE: additionalCosts removed from invalid fields - it should be mapped to additional_costs
 ];
 
 // Field mappings for camelCase to snake_case conversion
