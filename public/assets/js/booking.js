@@ -822,7 +822,7 @@ async function saveBooking() {
                 status: 'Active',
                 distance: '',
                 additional_costs: parseFloat(additionalCostsTotal) || 0.00,
-                created_date: deliveryDate || (window.getLocalSystemDate ? window.getLocalSystemDate() : new Date().toISOString().split('T')[0]),
+                created_date: deliveryDate || (window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()),
                 created_by: 'Manual',
                 created_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
                 updated_at: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString(),
@@ -833,7 +833,7 @@ async function saveBooking() {
                 vendorNumber: vendorNumber || '',
                 truckType: truckType || '',
                 truckPlateNumber: truckPlateNumber || '',
-                deliveryDate: deliveryDate || (window.getLocalSystemDate ? window.getLocalSystemDate() : new Date().toISOString().split('T')[0]),
+                deliveryDate: deliveryDate || (window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()),
                 timestamp: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()
             };
             
