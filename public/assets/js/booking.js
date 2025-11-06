@@ -2388,8 +2388,8 @@ function mapDRData(data) {
             
             // Date and timing - BOOKING TIMESTAMP (when DR is uploaded)
             ...(window.createBookingTimestamp ? window.createBookingTimestamp() : {
-                deliveryDate: new Date().toISOString().split('T')[0],
-                bookedDate: new Date().toISOString().split('T')[0],
+                deliveryDate: new Date().toISOString(),
+                bookedDate: new Date().toISOString(),
                 timestamp: new Date().toISOString()
             }),
             
@@ -2697,7 +2697,7 @@ async function createBookingFromDR(bookingData) {
         }
         
         // Ensure all display fields are properly set
-        bookingData.bookedDate = bookingData.bookedDate || bookingData.deliveryDate || new Date().toISOString().split('T')[0];
+        bookingData.bookedDate = bookingData.bookedDate || bookingData.deliveryDate || new Date().toISOString();
         bookingData.truck = bookingData.truck || (bookingData.truckType && bookingData.truckPlateNumber ? 
             `${bookingData.truckType} (${bookingData.truckPlateNumber})` : 'N/A');
         
@@ -2717,7 +2717,7 @@ async function createBookingFromDR(bookingData) {
                     status: 'Active', // Changed to match manual booking
                     distance: '', // Add distance field
                     additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
-                    created_date: bookingData.bookedDate || new Date().toISOString().split('T')[0],
+                    created_date: bookingData.bookedDate || new Date().toISOString(),
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
