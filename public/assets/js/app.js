@@ -166,12 +166,11 @@ console.log('app.js loaded');
                     throw new Error('Supabase client not available');
                 }
                 
-                // Update ONLY the status and lastStatusUpdate fields - nothing else
+                // Update ONLY the status field - nothing else (NO OVERWRITE)
                 const { data, error } = await client
                     .from('deliveries')
                     .update({ 
                         status: newStatus,
-                        last_status_update: delivery.lastStatusUpdate,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', deliveryUUID)
@@ -189,7 +188,6 @@ console.log('app.js loaded');
                         .from('deliveries')
                         .update({ 
                             status: newStatus,
-                            last_status_update: delivery.lastStatusUpdate,
                             updated_at: new Date().toISOString()
                         })
                         .eq('dr_number', drNumber)
