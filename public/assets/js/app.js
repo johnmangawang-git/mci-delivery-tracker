@@ -243,7 +243,7 @@ console.log('app.js loaded');
     }
 
     // Update delivery status by DR number (for signature completion)
-    function updateDeliveryStatus(drNumber, newStatus) {
+    async function updateDeliveryStatus(drNumber, newStatus) {
         console.log(`Updating DR ${drNumber} status to: ${newStatus}`);
         
         try {
