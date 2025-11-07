@@ -1053,7 +1053,7 @@ function loadDeliveryHistory() {
         if (filteredHistory.length === 0) {
             deliveryHistoryTableBody.innerHTML = `
                 <tr>
-                    <td colspan="14" class="text-center py-5">
+                    <td colspan="15" class="text-center py-5">
                         <i class="bi bi-clipboard-check" style="font-size: 3rem; opacity: 0.3;"></i>
                         <h4 class="mt-3">No delivery history found</h4>
                         <p class="text-muted">
@@ -1100,8 +1100,16 @@ function loadDeliveryHistory() {
                 `;
             }
             
-            // Get new fields - FIXED: Use the field mapper for consistency
+            // Get fields - FIXED: Use the field mapper for consistency
             const getField = window.getFieldValue || ((obj, field) => obj[field]);
+            
+            // Get truck information
+            const truckType = getField(delivery, 'truckType') || getField(delivery, 'truck_type') || '';
+            const truckPlate = getField(delivery, 'truckPlateNumber') || getField(delivery, 'truck_plate_number') || '';
+            const truckInfo = delivery.truck || 
+                             (truckType && truckPlate ? `${truckPlate} (${truckType})` : truckPlate || truckType || 'N/A');
+            
+            // Get other fields
             const itemNumber = getField(delivery, 'itemNumber') || getField(delivery, 'item_number') || '';
             const mobileNumber = getField(delivery, 'mobileNumber') || getField(delivery, 'mobile_number') || '';
             const itemDescription = getField(delivery, 'itemDescription') || getField(delivery, 'item_description') || '';
@@ -1161,6 +1169,7 @@ function loadDeliveryHistory() {
                     <td>${delivery.vendorNumber || delivery.vendor_number || 'N/A'}</td>
                     <td>${delivery.origin || 'N/A'}</td>
                     <td>${delivery.destination || 'N/A'}</td>
+                    <td>${truckInfo}</td>
                     <td style="display: none;">${delivery.additionalCosts ? `₱${delivery.additionalCosts.toFixed(2)}` : '₱0.00'}</td>
                     <td>
                         ${statusDisplay}
