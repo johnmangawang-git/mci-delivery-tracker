@@ -68,32 +68,10 @@ console.log('🔧 Loading GitHub Pages compatibility fix...');
         }
     }
     
-    // Enhanced save function with error handling
+    // DISABLED: localStorage save function (using Supabase only as centralized database)
     function saveAllDataToStorage() {
-        try {
-            // Save active deliveries
-            if (window.activeDeliveries) {
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                console.log(`💾 Saved ${window.activeDeliveries.length} active deliveries`);
-            }
-            
-            // Save delivery history
-            if (window.deliveryHistory) {
-                localStorage.setItem('mci-delivery-history', JSON.stringify(window.deliveryHistory));
-                console.log(`💾 Saved ${window.deliveryHistory.length} delivery history items`);
-            }
-            
-            // Save customers
-            if (window.customers) {
-                localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-                console.log(`💾 Saved ${window.customers.length} customers`);
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Error saving data to localStorage:', error);
-            return false;
-        }
+        console.log('⚠️ saveAllDataToStorage called but disabled - using Supabase only');
+        return true; // Return true to not break existing code
     }
     
     // Enhanced Excel upload processing
@@ -242,10 +220,10 @@ console.log('🔧 Loading GitHub Pages compatibility fix...');
         
         console.log(`📊 Current data: ${activeCount} active, ${historyCount} history, ${customerCount} customers`);
         
-        // Auto-save every 30 seconds to prevent data loss
-        setInterval(() => {
-            saveAllDataToStorage();
-        }, 30000);
+        // DISABLED: Auto-save to localStorage (using Supabase only as centralized database)
+        // setInterval(() => {
+        //     saveAllDataToStorage();
+        // }, 30000);
     }
     
     // Initialize when DOM is ready

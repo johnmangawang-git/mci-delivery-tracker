@@ -694,52 +694,46 @@ console.log('app.js loaded');
     }
 
     // Load active deliveries
-    function loadActiveDeliveries() {
-        console.log('=== LOAD ACTIVE DELIVERIES FUNCTION CALLED ===');
+    async function loadActiveDeliveries() {
+        console.log('=== LOAD ACTIVE DELIVERIES FROM SUPABASE (CENTRALIZED DATABASE) ===');
         
-        // CRITICAL FIX: Ensure we're always working with the global arrays
-        activeDeliveries = window.activeDeliveries;
-        deliveryHistory = window.deliveryHistory;
-        
-        console.log('✅ Using global activeDeliveries directly:', activeDeliveries.length);
-        
-        // If global arrays are empty, try to load from localStorage immediately
-        if (activeDeliveries.length === 0) {
-            try {
-                const savedActive = localStorage.getItem('mci-active-deliveries');
-                if (savedActive) {
-                    const parsedActive = JSON.parse(savedActive);
-                    if (parsedActive && parsedActive.length > 0) {
-                        window.activeDeliveries = parsedActive;
-                        activeDeliveries = window.activeDeliveries; // Update reference
-                        console.log('✅ Loaded activeDeliveries from localStorage:', activeDeliveries.length);
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading from localStorage:', error);
-            }
-        }
-        
-        // CRITICAL FIX: Always populate table immediately with current data
-        populateActiveDeliveriesTable();
-        
-        // Also try to load from database in background (but don't wait for it)
-        loadFromDatabase().then(success => {
-            if (!success) {
-                loadFromLocalStorage();
-            }
+        try {
+            // Load directly from Supabase (centralized database)
+            await loadFromDatabase();
             
-            // Re-sync and re-populate after database load
+            // Update local references
             activeDeliveries = window.activeDeliveries;
             deliveryHistory = window.deliveryHistory;
-            console.log('✅ Post-database-load sync: activeDeliveries count:', activeDeliveries.length);
             
-            // Re-populate table with potentially updated data
+            console.log('✅ Loaded from Supabase:', activeDeliveries.length, 'active deliveries');
+            
+            // Populate table with fresh data from database
             populateActiveDeliveriesTable();
-        }).catch(error => {
-            console.error('Error loading from database:', error);
-            // Even if database fails, we still have the table populated from above
-        });
+            
+        } catch (error) {
+            console.error('❌ Error loading from Supabase:', error);
+            
+            // If we have existing data in memory, use it
+            if (window.activeDeliveries && window.activeDeliveries.length > 0) {
+                console.log('⚠️ Using existing in-memory data:', window.activeDeliveries.length, 'deliveries');
+                activeDeliveries = window.activeDeliveries;
+                populateActiveDeliveriesTable();
+            } else {
+                // Show error message
+                const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
+                if (activeDeliveriesTableBody) {
+                    activeDeliveriesTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="13" class="text-center py-5">
+                                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                                <h4 class="mt-3">Failed to load deliveries from database</h4>
+                                <p class="text-muted">Please check your connection and try again</p>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
     }
 
     // Separate function to populate the Active Deliveries table
@@ -1112,7 +1106,7 @@ function initApp() {
 window.loadActiveDeliveries = loadActiveDeliveries;
 window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
-window.saveToLocalStorage = saveToLocalStorage;
+// REMOVED: window.saveToLocalStorage - using Supabase only
 window.toggleStatusDropdown = toggleStatusDropdown;
 window.updateDeliveryStatusById = updateDeliveryStatusById;
 window.updateDeliveryStatus = updateDeliveryStatus;
@@ -1678,7 +1672,7 @@ function debugActiveDeliveries() {
 window.loadActiveDeliveries = loadActiveDeliveries;
 window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
-window.saveToLocalStorage = saveToLocalStorage;
+// REMOVED: window.saveToLocalStorage - using Supabase only
 window.toggleStatusDropdown = toggleStatusDropdown;
 window.updateDeliveryStatusById = updateDeliveryStatusById;
 window.updateDeliveryStatus = updateDeliveryStatus;
