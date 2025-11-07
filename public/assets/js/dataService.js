@@ -124,30 +124,54 @@ class DataService {
                 updated_at: new Date().toISOString()
             };
             
-            // Remove custom ID if it's not a valid UUID format
-            if (supabaseData.id && !supabaseData.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-                console.log('🔧 Removing custom ID for Supabase UUID generation:', supabaseData.id);
-                delete supabaseData.id;
+            // Check if record already exists (by ID or DR number)
+            let existingRecord = null;
+            
+            // First, check by UUID if it's valid
+            if (supabaseData.id && supabaseData.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                const { data: recordById } = await client
+                    .from('deliveries')
+                    .select('*')
+                    .eq('id', supabaseData.id)
+                    .maybeSingle();
+                
+                if (recordById) {
+                    existingRecord = recordById;
+                    console.log('✅ Found existing record by ID:', supabaseData.id);
+                }
             }
             
-            // Check if record with this DR number already exists
-            if (supabaseData.dr_number) {
-                const { data: existingRecord } = await client
+            // If not found by ID, check by DR number
+            if (!existingRecord && supabaseData.dr_number) {
+                const { data: recordByDr } = await client
                     .from('deliveries')
                     .select('*')
                     .eq('dr_number', supabaseData.dr_number)
-                    .single();
+                    .maybeSingle();
                 
-                if (existingRecord) {
-                    console.log('✅ DR number already exists, updating existing record:', supabaseData.dr_number);
-                    // Update existing record
-                    const { data, error } = await client
-                        .from('deliveries')
-                        .update(supabaseData)
-                        .eq('dr_number', supabaseData.dr_number)
-                        .select();
-                    
-                    if (error) throw error;
+                if (recordByDr) {
+                    existingRecord = recordByDr;
+                    console.log('✅ Found existing record by DR number:', supabaseData.dr_number);
+                    // Use the existing record's ID to avoid conflicts
+                    supabaseData.id = recordByDr.id;
+                }
+            }
+            
+            // If record exists, UPDATE it
+            if (existingRecord) {
+                console.log('🔄 Updating existing delivery:', supabaseData.dr_number || supabaseData.id);
+                
+                // Remove id from update data to avoid conflicts
+                const updateData = { ...supabaseData };
+                delete updateData.id;
+                
+                const { data, error } = await client
+                    .from('deliveries')
+                    .update(updateData)
+                    .eq('id', existingRecord.id)
+                    .select();
+                
+                if (error) throw error;
                     
                     // ENHANCED: Also update individual cost items in additional_cost_items table
                     const updatedDelivery = data[0];
@@ -198,35 +222,37 @@ class DataService {
                 }
             }
             
-            // Use schema-aware complete delivery save
+            // INSERT new record (no existing record found)
+            console.log('➕ Inserting new delivery:', supabaseData.dr_number);
+            
+            // Remove ID to let Supabase generate a new UUID
+            const insertData = { ...supabaseData };
+            delete insertData.id;
+            
+            // Basic validation
+            if (!insertData.dr_number || !insertData.customer_name) {
+                throw new Error('Missing required fields: dr_number and customer_name are required');
+            }
+            
             let data, error;
+            
+            // Use schema-aware functions if available
             if (window.completeDeliverySave) {
-                console.log('🔄 Using complete delivery save with schema validation:', supabaseData.dr_number);
-                const result = await window.completeDeliverySave(supabaseData);
-                data = result.data;
-                error = result.error;
-            } else if (window.safeDeliveryUpsert) {
-                console.log('🔄 Using schema-aware safe upsert for delivery:', supabaseData.dr_number);
-                const result = await window.safeDeliveryUpsert(supabaseData);
+                console.log('🔄 Using complete delivery save with schema validation');
+                const result = await window.completeDeliverySave(insertData);
                 data = result.data;
                 error = result.error;
             } else if (window.safeInsertDelivery) {
-                console.log('🔄 Using validated safe insert for delivery:', supabaseData.dr_number);
-                const result = await window.safeInsertDelivery(supabaseData);
+                console.log('🔄 Using validated safe insert for delivery');
+                const result = await window.safeInsertDelivery(insertData);
                 data = result.data;
                 error = result.error;
             } else {
-                // Fallback with validation
-                console.log('⚠️ Schema-aware functions not available, using fallback with validation');
-                
-                // Basic validation
-                if (!supabaseData.dr_number || !supabaseData.customer_name) {
-                    throw new Error('Missing required fields: dr_number and customer_name are required');
-                }
-                
+                // Fallback: direct insert
+                console.log('⚠️ Using direct insert (no schema validation available)');
                 const result = await client
                     .from('deliveries')
-                    .upsert(supabaseData, { onConflict: 'dr_number' })
+                    .insert(insertData)
                     .select();
                 data = result.data;
                 error = result.error;
