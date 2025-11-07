@@ -257,23 +257,31 @@ console.log('app.js loaded');
                 
                 // If status is Completed, move to delivery history
                 if (newStatus === 'Completed') {
-                    // COMPLETION TIMESTAMP (when DR is e-signed/completed)
-                    // Only set completion date if it doesn't already exist to preserve original completion time
+                    // NO OVERWRITE: Set completion timestamp ONLY if it doesn't exist
                     if ((!delivery.completedDate || delivery.completedDate === '') && 
                         (!delivery.completedDateTime || delivery.completedDateTime === '') && 
                         (!delivery.signedAt || delivery.signedAt === '')) {
-                        if (window.createCompletionTimestamp) {
-                            const completionData = window.createCompletionTimestamp();
-                            Object.assign(delivery, completionData);
-                        } else {
-                            // Fallback for backward compatibility
-                            delivery.completedDate = new Date().toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                            });
-                            delivery.completedDateTime = new Date().toISOString();
-                        }
+                        
+                        const now = new Date();
+                        delivery.completedDate = now.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        delivery.completedDateTime = now.toISOString();
+                        delivery.signedAt = now.toISOString();
+                        
+                        console.log('🔒 Set completion timestamp (NO OVERWRITE):', {
+                            dr: drNumber,
+                            completedDate: delivery.completedDate,
+                            completedDateTime: delivery.completedDateTime
+                        });
+                    } else {
+                        console.log('🔒 Completion date already exists, preserving original:', {
+                            dr: drNumber,
+                            completedDate: delivery.completedDate,
+                            completedDateTime: delivery.completedDateTime
+                        });
                     }
                     
                     // Add to delivery history
@@ -286,24 +294,17 @@ console.log('app.js loaded');
                     // Remove from active deliveries
                     activeDeliveries.splice(deliveryIndex, 1);
                     
-                    console.log(`Moved DR ${drNumber} from active to history`);
+                    console.log(`✅ Moved DR ${drNumber} from active to history with preserved dates`);
                 }
                 
-                // Save to localStorage and database - FIXED: Ensure proper saving to both
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-                localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
-                
-                // Also save to Supabase if dataService is available
-                if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveDelivery === 'function') {
-                    // Save the delivery that was updated
-                    window.dataService.saveDelivery(delivery).catch(error => {
-                        console.error('Error saving delivery to Supabase:', error);
-                    });
-                    
-                    // Also save all deliveries to ensure consistency
-                    saveToDatabase();
-                } else {
-                    saveToDatabase();
+                // Save to Supabase ONLY (centralized database)
+                if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
+                    try {
+                        await window.dataService.saveDelivery(delivery);
+                        console.log('✅ Delivery saved to Supabase with completion dates');
+                    } catch (error) {
+                        console.error('❌ Error saving delivery to Supabase:', error);
+                    }
                 }
                 
                 // Refresh the display
@@ -546,6 +547,45 @@ console.log('app.js loaded');
     // REMOVED: localStorage functions - using Supabase only (centralized database)
     // No more localStorage fallbacks to prevent quota issues and ensure data consistency
 
+    // NO OVERWRITE: Preserve original completion dates
+    function preserveCompletionDates(newDeliveries, existingDeliveries) {
+        if (!existingDeliveries || existingDeliveries.length === 0) {
+            return newDeliveries;
+        }
+        
+        // Create a map of existing deliveries by DR number for quick lookup
+        const existingMap = new Map();
+        existingDeliveries.forEach(d => {
+            const drNumber = d.dr_number || d.drNumber;
+            if (drNumber) {
+                existingMap.set(drNumber, d);
+            }
+        });
+        
+        // Preserve completion dates from existing deliveries
+        return newDeliveries.map(newDelivery => {
+            const drNumber = newDelivery.dr_number || newDelivery.drNumber;
+            const existing = existingMap.get(drNumber);
+            
+            if (existing) {
+                // Preserve original completion dates if they exist in memory
+                if (existing.completedDate && !newDelivery.completedDate) {
+                    newDelivery.completedDate = existing.completedDate;
+                }
+                if (existing.completedDateTime && !newDelivery.completedDateTime) {
+                    newDelivery.completedDateTime = existing.completedDateTime;
+                }
+                if (existing.signedAt && !newDelivery.signedAt) {
+                    newDelivery.signedAt = existing.signedAt;
+                }
+                
+                console.log('🔒 Preserved dates for DR:', drNumber);
+            }
+            
+            return newDelivery;
+        });
+    }
+
     // Load data from database (Supabase only - centralized database)
     async function loadFromDatabase() {
         try {
@@ -561,15 +601,24 @@ console.log('app.js loaded');
                 window.normalizeDeliveryArray(deliveries) : deliveries;
             
             // Properly separate active deliveries from history based on status
-            activeDeliveries = normalizedDeliveries.filter(d => 
+            const newActiveDeliveries = normalizedDeliveries.filter(d => 
                 d.status !== 'Completed' && d.status !== 'Signed'
             );
-            deliveryHistory = normalizedDeliveries.filter(d => 
+            const newDeliveryHistory = normalizedDeliveries.filter(d => 
                 d.status === 'Completed' || d.status === 'Signed'
             );
             
+            // NO OVERWRITE: Preserve completion dates from existing data in memory
+            const preservedHistory = preserveCompletionDates(
+                newDeliveryHistory, 
+                window.deliveryHistory
+            );
+            
+            activeDeliveries = newActiveDeliveries;
+            deliveryHistory = preservedHistory;
+            
             console.log('✅ Active deliveries loaded from Supabase:', activeDeliveries.length);
-            console.log('✅ Delivery history loaded from Supabase:', deliveryHistory.length);
+            console.log('✅ Delivery history loaded from Supabase (dates preserved):', deliveryHistory.length);
             
             // Update global references
             window.activeDeliveries = activeDeliveries;
