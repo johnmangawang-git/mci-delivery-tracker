@@ -129,7 +129,7 @@ console.log('app.js loaded');
     }
 
     // Update delivery status by delivery ID (for dropdown)
-    function updateDeliveryStatusById(deliveryId, newStatus) {
+    async function updateDeliveryStatusById(deliveryId, newStatus) {
         console.log(`🔄 updateDeliveryStatusById called - Delivery: ${deliveryId}, New Status: ${newStatus}`);
         console.log('Active deliveries count:', activeDeliveries.length);
         
@@ -147,28 +147,17 @@ console.log('app.js loaded');
             // Update timestamp for status change - USING LOCAL SYSTEM TIME
             activeDeliveries[deliveryIndex].lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
             
-            // Save to database first (Supabase is primary storage)
-            saveToDatabase();
-            
-            // Try to save to localStorage with quota error handling
+            // Save ONLY to Supabase (centralized database)
             try {
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-                console.log('✅ Saved to localStorage successfully');
+                console.log('💾 Saving status update to Supabase...');
+                await saveToDatabase();
+                console.log('✅ Status saved to Supabase successfully');
             } catch (error) {
-                if (error.name === 'QuotaExceededError') {
-                    console.warn('⚠️ localStorage quota exceeded, clearing old data...');
-                    // Clear localStorage and save only essential data
-                    try {
-                        localStorage.removeItem('mci-active-deliveries');
-                        localStorage.removeItem('mci-delivery-history');
-                        console.log('✅ Cleared localStorage, data is safe in Supabase');
-                        showToast('Status updated (localStorage cleared due to quota)', 'warning');
-                    } catch (clearError) {
-                        console.error('❌ Failed to clear localStorage:', clearError);
-                    }
-                } else {
-                    console.error('❌ localStorage error:', error);
-                }
+                console.error('❌ Failed to save to Supabase:', error);
+                showToast('Failed to update status in database', 'danger');
+                // Revert the status change
+                activeDeliveries[deliveryIndex].status = oldStatus;
+                return;
             }
             
             // Refresh only the table display, don't reload all data
@@ -473,179 +462,72 @@ console.log('app.js loaded');
         alert(`E-POD functionality for ${drNumber} would be implemented here`);
     }
 
-    // Save data to database
+    // Save data to database (Supabase only - centralized database)
     async function saveToDatabase() {
         try {
-            if (window.dataService) {
-                // Save active deliveries
-                for (const delivery of activeDeliveries) {
-                    await window.dataService.saveDelivery(delivery);
-                }
-                
-                // Save delivery history
-                for (const delivery of deliveryHistory) {
-                    await window.dataService.saveDelivery(delivery);
-                }
-                
-                console.log('Data saved to Supabase successfully');
-            } else {
-                throw new Error('DataService not available');
+            if (!window.dataService) {
+                throw new Error('DataService not available - cannot save to Supabase');
             }
+            
+            // Save active deliveries to Supabase
+            for (const delivery of activeDeliveries) {
+                await window.dataService.saveDelivery(delivery);
+            }
+            
+            // Save delivery history to Supabase
+            for (const delivery of deliveryHistory) {
+                await window.dataService.saveDelivery(delivery);
+            }
+            
+            console.log('✅ Data saved to Supabase successfully (centralized database)');
+            return true;
         } catch (error) {
-            console.error('Error saving to Supabase:', error);
-            // Fallback to localStorage
-            saveToLocalStorage();
+            console.error('❌ Error saving to Supabase:', error);
+            throw error; // Re-throw to let caller handle the error
         }
     }
 
-    // Save data to localStorage (fallback)
-    function saveToLocalStorage() {
-        // Always use the current global arrays
-        const currentActiveDeliveries = window.activeDeliveries || [];
-        const currentDeliveryHistory = window.deliveryHistory || [];
-        
-        // Use dataService to save deliveries if available
-        if (typeof window.dataService !== 'undefined') {
-            // Save each active delivery
-            currentActiveDeliveries.forEach(delivery => {
-                window.dataService.saveDelivery(delivery).catch(error => {
-                    console.error('Error saving delivery to dataService:', error);
-                    // Fallback to localStorage
-                    fallbackSaveToLocalStorage();
-                });
-            });
-            
-            // Save each delivery history item
-            currentDeliveryHistory.forEach(delivery => {
-                window.dataService.saveDelivery(delivery).catch(error => {
-                    console.error('Error saving delivery history to dataService:', error);
-                    // Fallback to localStorage
-                    fallbackSaveToLocalStorage();
-                });
-            });
-            
-            console.log('Data saved using dataService');
-        } else {
-            // Fallback to localStorage
-            fallbackSaveToLocalStorage();
-        }
-    }
+    // REMOVED: localStorage functions - using Supabase only (centralized database)
+    // No more localStorage fallbacks to prevent quota issues and ensure data consistency
 
-    function fallbackSaveToLocalStorage() {
-        try {
-            // Always use the current global arrays
-            const currentActiveDeliveries = window.activeDeliveries || [];
-            const currentDeliveryHistory = window.deliveryHistory || [];
-            
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(currentActiveDeliveries));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(currentDeliveryHistory));
-            console.log(`Data saved to localStorage: ${currentActiveDeliveries.length} active, ${currentDeliveryHistory.length} history`);
-        } catch (error) {
-            console.error('Error saving to localStorage:', error);
-        }
-    }
-
-    // Load data from database
+    // Load data from database (Supabase only - centralized database)
     async function loadFromDatabase() {
         try {
-            // Use dataService to load deliveries if available
-            if (typeof window.dataService !== 'undefined') {
-                const deliveries = await window.dataService.getDeliveries();
-                
-                // Use global field mapper to normalize all delivery objects
-                const normalizedDeliveries = window.normalizeDeliveryArray ? 
-                    window.normalizeDeliveryArray(deliveries) : deliveries;
-                
-                // Properly separate active deliveries from history based on status
-                activeDeliveries = normalizedDeliveries.filter(d => 
-                    d.status !== 'Completed' && d.status !== 'Signed'
-                );
-                deliveryHistory = normalizedDeliveries.filter(d => 
-                    d.status === 'Completed' || d.status === 'Signed'
-                );
-                
-                console.log('Active deliveries loaded from Supabase:', activeDeliveries.length);
-                console.log('Delivery history loaded from Supabase:', deliveryHistory.length);
-                
-                // Update global references
-                window.activeDeliveries = activeDeliveries;
-                window.deliveryHistory = deliveryHistory;
-                
-                return true;
-            } else {
-                // Fallback to current implementation
-                return await fallbackLoadFromDatabase();
-            }
-        } catch (error) {
-            console.error('Error loading from Supabase, using fallback:', error);
-            // Fallback to current implementation
-            return await fallbackLoadFromDatabase();
-        }
-    }
-
-    // Fallback implementation for loading from database
-    async function fallbackLoadFromDatabase() {
-        try {
-            // Load active deliveries
-            const getDeliveries = typeof window.getDeliveries === 'function' ? window.getDeliveries : null;
-            if (getDeliveries) {
-                const deliveries = await getDeliveries();
-                // Use global field mapper to normalize all delivery objects
-                const normalizedDeliveries = window.normalizeDeliveryArray ? 
-                    window.normalizeDeliveryArray(deliveries) : deliveries;
-                activeDeliveries = normalizedDeliveries.filter(d => d.status !== 'Completed');
-                deliveryHistory = normalizedDeliveries.filter(d => d.status === 'Completed');
-                
-                console.log('Active deliveries loaded from database:', activeDeliveries.length);
-                console.log('Delivery history loaded from database:', deliveryHistory.length);
-                
-                // Update global references
-                window.activeDeliveries = activeDeliveries;
-                window.deliveryHistory = deliveryHistory;
-                
-                return true;
-            } else {
-                return false;
-            }
-        } catch (error) {
-            console.error('Error loading from database:', error);
-            return false;
-        }
-    }
-
-    // Load data from localStorage (fallback)
-    function loadFromLocalStorage() {
-        try {
-            const savedActive = localStorage.getItem('mci-active-deliveries');
-            const savedHistory = localStorage.getItem('mci-delivery-history');
-            
-            if (savedActive) {
-                let parsedActive = JSON.parse(savedActive);
-                // Use global field mapper to normalize all delivery objects
-                parsedActive = window.normalizeDeliveryArray ? 
-                    window.normalizeDeliveryArray(parsedActive) : parsedActive;
-                window.activeDeliveries = parsedActive;
-                activeDeliveries = window.activeDeliveries; // Update reference
-                console.log('Active deliveries loaded from localStorage:', activeDeliveries.length);
+            if (!window.dataService) {
+                throw new Error('DataService not available - cannot load from Supabase');
             }
             
-            if (savedHistory) {
-                let parsedHistory = JSON.parse(savedHistory);
-                // Use global field mapper to normalize all delivery objects
-                parsedHistory = window.normalizeDeliveryArray ? 
-                    window.normalizeDeliveryArray(parsedHistory) : parsedHistory;
-                window.deliveryHistory = parsedHistory;
-                deliveryHistory = window.deliveryHistory; // Update reference
-                console.log('Delivery history loaded from localStorage:', deliveryHistory.length);
-            }
+            console.log('📥 Loading deliveries from Supabase (centralized database)...');
+            const deliveries = await window.dataService.getDeliveries();
+            
+            // Use global field mapper to normalize all delivery objects
+            const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                window.normalizeDeliveryArray(deliveries) : deliveries;
+            
+            // Properly separate active deliveries from history based on status
+            activeDeliveries = normalizedDeliveries.filter(d => 
+                d.status !== 'Completed' && d.status !== 'Signed'
+            );
+            deliveryHistory = normalizedDeliveries.filter(d => 
+                d.status === 'Completed' || d.status === 'Signed'
+            );
+            
+            console.log('✅ Active deliveries loaded from Supabase:', activeDeliveries.length);
+            console.log('✅ Delivery history loaded from Supabase:', deliveryHistory.length);
             
             // Update global references
             window.activeDeliveries = activeDeliveries;
             window.deliveryHistory = deliveryHistory;
+            
+            return true;
         } catch (error) {
-            console.error('Error loading from localStorage:', error);
+            console.error('❌ Error loading from Supabase:', error);
+            throw error; // Re-throw to let caller handle the error
         }
     }
+
+    // REMOVED: localStorage fallback functions - using Supabase only (centralized database)
+    // This ensures all data operations go through the centralized database
 
     // Show toast notification
     function showToast(message, type = 'success') {
