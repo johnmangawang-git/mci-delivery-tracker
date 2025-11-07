@@ -579,24 +579,52 @@ function saveEditedCustomer() {
 }
 
 // Delete customer function
-function deleteCustomer(customerId) {
+async function deleteCustomer(customerId) {
     console.log('Deleting customer:', customerId);
     
-    if (!confirm('Are you sure you want to delete this customer?')) {
+    if (!confirm('Are you sure you want to delete this customer? This will permanently remove the customer from both local storage and Supabase.')) {
         return;
     }
     
-    // Remove customer from array
-    window.customers = window.customers.filter(customer => customer.id !== customerId);
-    
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-    
-    // Refresh display
-    displayCustomers();
-    
-    // Show success message
-    showToast('Customer deleted successfully!');
+    try {
+        // Find the customer to delete
+        const customerToDelete = window.customers.find(customer => customer.id === customerId);
+        
+        if (!customerToDelete) {
+            console.error('Customer not found:', customerId);
+            showError('Customer not found');
+            return;
+        }
+        
+        // Delete from Supabase first if dataService is available
+        if (window.dataService && typeof window.dataService.deleteCustomer === 'function') {
+            try {
+                await window.dataService.deleteCustomer(customerId);
+                console.log('✅ Customer deleted from Supabase successfully');
+            } catch (supabaseError) {
+                console.error('❌ Failed to delete customer from Supabase:', supabaseError);
+                showError('Failed to delete customer from database. Please try again.');
+                return;
+            }
+        } else {
+            console.log('⚠️ dataService.deleteCustomer not available, deleting from localStorage only');
+        }
+        
+        // Remove customer from array
+        window.customers = window.customers.filter(customer => customer.id !== customerId);
+        
+        // Save to localStorage
+        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        
+        // Refresh display
+        displayCustomers();
+        
+        // Show success message
+        showToast('Customer deleted successfully from all sources!');
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        showError('An error occurred while deleting the customer');
+    }
 }
 
 // Add event listeners when DOM is loaded
