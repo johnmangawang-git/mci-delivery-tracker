@@ -84,7 +84,8 @@ console.log('app.js loaded');
             const statusInfo = getStatusInfo(status);
             return `
                 <div class="status-option ${isSelected}" 
-                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')"
+                     data-delivery-id="${deliveryId}" 
+                     data-status="${status}"
                      style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; border-left: 4px solid ${statusInfo.color};"
                      onmouseover="this.style.backgroundColor='${statusInfo.color}15'; this.style.paddingLeft='15px';"
                      onmouseout="this.style.backgroundColor=''; this.style.paddingLeft='10px';">
@@ -243,8 +244,35 @@ console.log('app.js loaded');
         }
     }
 
-    // Close dropdowns when clicking outside
+    // Event delegation for status clicks
     document.addEventListener('click', function(event) {
+        // Handle status badge clicks to toggle dropdown
+        const statusBadge = event.target.closest('.status-clickable');
+        if (statusBadge) {
+            event.stopPropagation();
+            const deliveryId = statusBadge.dataset.deliveryId;
+            if (deliveryId) {
+                console.log('Status badge clicked, toggling dropdown for:', deliveryId);
+                toggleStatusDropdown(deliveryId);
+            }
+            return;
+        }
+        
+        // Handle status option clicks
+        const statusOption = event.target.closest('.status-option:not(.disabled)');
+        if (statusOption) {
+            event.stopPropagation();
+            const deliveryId = statusOption.dataset.deliveryId;
+            const newStatus = statusOption.dataset.status;
+            
+            if (deliveryId && newStatus) {
+                console.log('Status option clicked:', { deliveryId, newStatus });
+                updateDeliveryStatusById(deliveryId, newStatus);
+            }
+            return;
+        }
+        
+        // Close dropdowns when clicking outside
         if (!event.target.closest('.status-dropdown-container')) {
             document.querySelectorAll('.status-dropdown').forEach(dropdown => {
                 dropdown.style.display = 'none';
@@ -885,8 +913,7 @@ console.log('app.js loaded');
                         <div class="status-dropdown-container">
                             <span class="badge ${statusInfo.class} status-clickable" 
                                   data-delivery-id="${delivery.id}" 
-                                  data-current-status="${delivery.status}"
-                                  onclick="toggleStatusDropdown('${delivery.id}')">
+                                  data-current-status="${delivery.status}">
                                 <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
                                 <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
                             </span>
