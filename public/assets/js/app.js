@@ -141,22 +141,43 @@ console.log('app.js loaded');
         console.log('Found delivery at index:', deliveryIndex);
         
         if (deliveryIndex !== -1) {
-            const oldStatus = activeDeliveries[deliveryIndex].status;
-            activeDeliveries[deliveryIndex].status = newStatus;
+            const delivery = activeDeliveries[deliveryIndex];
+            const oldStatus = delivery.status;
             
-            // Update timestamp for status change - USING LOCAL SYSTEM TIME
-            activeDeliveries[deliveryIndex].lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
+            console.log('📦 Delivery before update:', {
+                id: delivery.id,
+                dr_number: delivery.dr_number || delivery.drNumber,
+                oldStatus: oldStatus,
+                newStatus: newStatus
+            });
             
-            // Save ONLY to Supabase (centralized database)
+            // Update status in memory
+            delivery.status = newStatus;
+            
+            // Update timestamp for status change
+            delivery.lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
+            
+            // Save ONLY this specific delivery to Supabase (centralized database)
             try {
-                console.log('💾 Saving status update to Supabase...');
-                await saveToDatabase();
-                console.log('✅ Status saved to Supabase successfully');
+                console.log('💾 Saving single delivery status update to Supabase...');
+                
+                if (!window.dataService) {
+                    throw new Error('DataService not available');
+                }
+                
+                // Save only this delivery
+                await window.dataService.saveDelivery(delivery);
+                
+                console.log('✅ Status saved to Supabase successfully for delivery:', delivery.dr_number || delivery.drNumber);
+                
+                // Update the global array
+                window.activeDeliveries[deliveryIndex] = delivery;
+                
             } catch (error) {
                 console.error('❌ Failed to save to Supabase:', error);
                 showToast('Failed to update status in database', 'danger');
                 // Revert the status change
-                activeDeliveries[deliveryIndex].status = oldStatus;
+                delivery.status = oldStatus;
                 return;
             }
             
@@ -706,6 +727,14 @@ console.log('app.js loaded');
             deliveryHistory = window.deliveryHistory;
             
             console.log('✅ Loaded from Supabase:', activeDeliveries.length, 'active deliveries');
+            
+            // Log first few deliveries to see their status
+            if (activeDeliveries.length > 0) {
+                console.log('📊 Sample deliveries loaded:');
+                activeDeliveries.slice(0, 3).forEach((d, i) => {
+                    console.log(`  ${i + 1}. DR: ${d.dr_number || d.drNumber}, Status: ${d.status}`);
+                });
+            }
             
             // Populate table with fresh data from database
             populateActiveDeliveriesTable();
