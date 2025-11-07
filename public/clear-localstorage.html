@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear LocalStorage - MCI Delivery Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="bi bi-trash"></i> Clear LocalStorage</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> This tool helps you clear localStorage when it gets full. Your data is safe in Supabase.
+                        </div>
+
+                        <div id="storageInfo" class="mb-4">
+                            <h5>Current Storage Usage:</h5>
+                            <div id="storageDetails"></div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-warning btn-lg" onclick="clearActiveDeliveries()">
+                                <i class="bi bi-trash"></i> Clear Active Deliveries Only
+                            </button>
+                            <button class="btn btn-warning btn-lg" onclick="clearDeliveryHistory()">
+                                <i class="bi bi-trash"></i> Clear Delivery History Only
+                            </button>
+                            <button class="btn btn-danger btn-lg" onclick="clearAllData()">
+                                <i class="bi bi-trash-fill"></i> Clear All LocalStorage Data
+                            </button>
+                            <button class="btn btn-success btn-lg" onclick="reloadFromSupabase()">
+                                <i class="bi bi-cloud-download"></i> Reload Data from Supabase
+                            </button>
+                        </div>
+
+                        <div id="result" class="mt-4"></div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="index.html" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Display storage info
+        function displayStorageInfo() {
+            let totalSize = 0;
+            let items = [];
+            
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    const size = localStorage[key].length + key.length;
+                    totalSize += size;
+                    items.push({
+                        key: key,
+                        size: (size / 1024).toFixed(2) + ' KB'
+                    });
+                }
+            }
+            
+            const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
+            
+            let html = `
+                <div class="alert ${totalSize > 4 * 1024 * 1024 ? 'alert-danger' : 'alert-success'}">
+                    <strong>Total Size:</strong> ${sizeInMB} MB
+                </div>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            items.forEach(item => {
+                html += `<tr><td>${item.key}</td><td>${item.size}</td></tr>`;
+            });
+            
+            html += `</tbody></table>`;
+            
+            document.getElementById('storageDetails').innerHTML = html;
+        }
+
+        function showResult(message, type = 'success') {
+            document.getElementById('result').innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            displayStorageInfo();
+        }
+
+        function clearActiveDeliveries() {
+            if (confirm('Clear active deliveries from localStorage? Data will be reloaded from Supabase.')) {
+                localStorage.removeItem('mci-active-deliveries');
+                showResult('Active deliveries cleared from localStorage!', 'success');
+            }
+        }
+
+        function clearDeliveryHistory() {
+            if (confirm('Clear delivery history from localStorage? Data will be reloaded from Supabase.')) {
+                localStorage.removeItem('mci-delivery-history');
+                showResult('Delivery history cleared from localStorage!', 'success');
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('Clear ALL data from localStorage? This will clear everything but data is safe in Supabase.')) {
+                localStorage.clear();
+                showResult('All localStorage data cleared!', 'warning');
+            }
+        }
+
+        function reloadFromSupabase() {
+            showResult('Redirecting to dashboard to reload data from Supabase...', 'info');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
+
+        // Display storage info on load
+        displayStorageInfo();
+    </script>
+</body>
+</html>

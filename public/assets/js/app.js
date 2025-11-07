@@ -147,9 +147,29 @@ console.log('app.js loaded');
             // Update timestamp for status change - USING LOCAL SYSTEM TIME
             activeDeliveries[deliveryIndex].lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
             
-            // Save to localStorage and database
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+            // Save to database first (Supabase is primary storage)
             saveToDatabase();
+            
+            // Try to save to localStorage with quota error handling
+            try {
+                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
+                console.log('✅ Saved to localStorage successfully');
+            } catch (error) {
+                if (error.name === 'QuotaExceededError') {
+                    console.warn('⚠️ localStorage quota exceeded, clearing old data...');
+                    // Clear localStorage and save only essential data
+                    try {
+                        localStorage.removeItem('mci-active-deliveries');
+                        localStorage.removeItem('mci-delivery-history');
+                        console.log('✅ Cleared localStorage, data is safe in Supabase');
+                        showToast('Status updated (localStorage cleared due to quota)', 'warning');
+                    } catch (clearError) {
+                        console.error('❌ Failed to clear localStorage:', clearError);
+                    }
+                } else {
+                    console.error('❌ localStorage error:', error);
+                }
+            }
             
             // Refresh only the table display, don't reload all data
             if (typeof populateActiveDeliveriesTable === 'function') {
@@ -306,11 +326,41 @@ console.log('app.js loaded');
         }
     }, true); // Use capture phase
 
+    // Utility function to check and clean localStorage if needed
+    function checkAndCleanLocalStorage() {
+        try {
+            // Try to estimate localStorage usage
+            let totalSize = 0;
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    totalSize += localStorage[key].length + key.length;
+                }
+            }
+            
+            const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
+            console.log(`📊 localStorage usage: ~${sizeInMB} MB`);
+            
+            // If over 4MB, warn and suggest cleanup
+            if (totalSize > 4 * 1024 * 1024) {
+                console.warn('⚠️ localStorage is getting full. Consider clearing old data.');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Error checking localStorage:', error);
+            return false;
+        }
+    }
+    
+    // Check localStorage on load
+    checkAndCleanLocalStorage();
+
     // Make status functions globally accessible
     window.toggleStatusDropdown = toggleStatusDropdown;
     window.updateDeliveryStatusById = updateDeliveryStatusById;
     window.generateStatusOptions = generateStatusOptions;
     window.getStatusInfo = getStatusInfo;
+    window.checkAndCleanLocalStorage = checkAndCleanLocalStorage;
 
     // Legacy function for status change handling (keeping for compatibility)
     function handleStatusChange(e) {
