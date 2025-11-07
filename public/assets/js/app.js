@@ -51,26 +51,32 @@ console.log('app.js loaded');
     // Functions
     function getStatusInfo(status) {
         switch (status) {
-            case 'On Schedule':
-                return { class: 'bg-success', icon: 'bi-check-circle' };
             case 'In Transit':
-                return { class: 'bg-primary', icon: 'bi-truck' };
+                return { class: 'bg-primary', icon: 'bi-truck', color: '#0d6efd' };
+            case 'On Schedule':
+                return { class: 'bg-success', icon: 'bi-check-circle', color: '#198754' };
+            case 'Sold Undelivered':
+                return { class: 'bg-warning', icon: 'bi-exclamation-triangle', color: '#ffc107' };
+            case 'Active':
+                return { class: 'bg-info', icon: 'bi-arrow-repeat', color: '#0dcaf0' };
             case 'Delayed':
-                return { class: 'bg-warning', icon: 'bi-exclamation-triangle' };
+                return { class: 'bg-danger', icon: 'bi-exclamation-circle', color: '#dc3545' };
             case 'Completed':
-                return { class: 'bg-success', icon: 'bi-check-circle' };
+                return { class: 'bg-success', icon: 'bi-check-circle-fill', color: '#198754' };
+            case 'Signed':
+                return { class: 'bg-success', icon: 'bi-check-circle-fill', color: '#198754' };
             default:
-                return { class: 'bg-secondary', icon: 'bi-question-circle' };
+                return { class: 'bg-secondary', icon: 'bi-question-circle', color: '#6c757d' };
         }
     }
 
     // Generate status options based on current status and business rules
     function generateStatusOptions(currentStatus, deliveryId) {
-        const availableStatuses = ['In Transit', 'On Schedule', 'Delayed'];
+        const availableStatuses = ['In Transit', 'On Schedule', 'Sold Undelivered', 'Active'];
         
         // Don't allow changing from Completed or Signed status
         if (currentStatus === 'Completed' || currentStatus === 'Signed') {
-            return `<div class="status-option disabled">Status cannot be changed</div>`;
+            return `<div class="status-option disabled" style="padding: 10px; text-align: center; color: #6c757d;">Status cannot be changed</div>`;
         }
         
         return availableStatuses.map(status => {
@@ -78,8 +84,15 @@ console.log('app.js loaded');
             const statusInfo = getStatusInfo(status);
             return `
                 <div class="status-option ${isSelected}" 
-                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')">
-                    <i class="bi ${statusInfo.icon}"></i> ${status}
+                     onclick="updateDeliveryStatusById('${deliveryId}', '${status}')"
+                     style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; border-left: 4px solid ${statusInfo.color};"
+                     onmouseover="this.style.backgroundColor='${statusInfo.color}15'; this.style.paddingLeft='15px';"
+                     onmouseout="this.style.backgroundColor=''; this.style.paddingLeft='10px';">
+                    <span class="badge ${statusInfo.class}" style="min-width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi ${statusInfo.icon}"></i>
+                    </span>
+                    <span style="font-weight: ${isSelected ? '600' : '400'}; color: ${isSelected ? statusInfo.color : '#212529'};">${status}</span>
+                    ${isSelected ? '<i class="bi bi-check2 ms-auto" style="color: ' + statusInfo.color + ';"></i>' : ''}
                 </div>
             `;
         }).join('');
@@ -238,6 +251,12 @@ console.log('app.js loaded');
             });
         }
     });
+
+    // Make status functions globally accessible
+    window.toggleStatusDropdown = toggleStatusDropdown;
+    window.updateDeliveryStatusById = updateDeliveryStatusById;
+    window.generateStatusOptions = generateStatusOptions;
+    window.getStatusInfo = getStatusInfo;
 
     // Legacy function for status change handling (keeping for compatibility)
     function handleStatusChange(e) {

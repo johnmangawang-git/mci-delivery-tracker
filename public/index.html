@@ -928,6 +928,95 @@ The page will refresh to show your new data.`);
             justify-content: space-between;
             margin-bottom: 5px;
         }
+
+        /* Status Dropdown Styles */
+        .status-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .status-clickable {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-clickable:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-clickable:active {
+            transform: translateY(0);
+        }
+
+        .status-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 200px;
+            overflow: hidden;
+            animation: dropdownSlideIn 0.2s ease;
+        }
+
+        @keyframes dropdownSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .status-option {
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .status-option:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding-left: 15px;
+        }
+
+        .status-option.selected {
+            background-color: rgba(13, 110, 253, 0.1);
+            font-weight: 600;
+        }
+
+        .status-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            padding: 10px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .status-option .badge {
+            min-width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
     </style>
 
     <!-- Service Worker Registration -->
