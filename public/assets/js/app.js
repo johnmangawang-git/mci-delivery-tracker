@@ -101,28 +101,45 @@ console.log('app.js loaded');
 
     // Toggle status dropdown visibility
     function toggleStatusDropdown(deliveryId) {
+        console.log('🔄 toggleStatusDropdown called for delivery:', deliveryId);
+        
         // Close all other dropdowns first
         document.querySelectorAll('.status-dropdown').forEach(dropdown => {
             if (dropdown.id !== `statusDropdown-${deliveryId}`) {
                 dropdown.style.display = 'none';
+                console.log('Closed dropdown:', dropdown.id);
             }
         });
         
         // Toggle current dropdown
         const dropdown = document.getElementById(`statusDropdown-${deliveryId}`);
+        console.log('Found dropdown element:', dropdown);
+        
         if (dropdown) {
-            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            const newDisplay = dropdown.style.display === 'none' || dropdown.style.display === '' ? 'block' : 'none';
+            dropdown.style.display = newDisplay;
+            console.log('Dropdown display changed to:', newDisplay);
+            
+            if (newDisplay === 'block') {
+                console.log('Dropdown content:', dropdown.innerHTML);
+            }
+        } else {
+            console.error('❌ Dropdown not found for delivery:', deliveryId);
         }
     }
 
     // Update delivery status by delivery ID (for dropdown)
     function updateDeliveryStatusById(deliveryId, newStatus) {
-        console.log(`Updating status for delivery ${deliveryId} to ${newStatus}`);
+        console.log(`🔄 updateDeliveryStatusById called - Delivery: ${deliveryId}, New Status: ${newStatus}`);
+        console.log('Active deliveries count:', activeDeliveries.length);
         
         // Find the delivery and update its status (handle both id formats)
         const deliveryIndex = activeDeliveries.findIndex(d => 
             d.id === deliveryId || d.delivery_id === deliveryId || 
             String(d.id) === String(deliveryId));
+        
+        console.log('Found delivery at index:', deliveryIndex);
+        
         if (deliveryIndex !== -1) {
             const oldStatus = activeDeliveries[deliveryIndex].status;
             activeDeliveries[deliveryIndex].status = newStatus;
@@ -244,29 +261,34 @@ console.log('app.js loaded');
         }
     }
 
-    // Event delegation for status clicks
+    // Event delegation for status clicks - using capture phase for better reliability
     document.addEventListener('click', function(event) {
+        console.log('Click detected on:', event.target, 'Classes:', event.target.className);
+        
         // Handle status badge clicks to toggle dropdown
         const statusBadge = event.target.closest('.status-clickable');
         if (statusBadge) {
+            event.preventDefault();
             event.stopPropagation();
             const deliveryId = statusBadge.dataset.deliveryId;
+            console.log('✅ Status badge clicked! Delivery ID:', deliveryId);
             if (deliveryId) {
-                console.log('Status badge clicked, toggling dropdown for:', deliveryId);
                 toggleStatusDropdown(deliveryId);
             }
             return;
         }
         
         // Handle status option clicks
-        const statusOption = event.target.closest('.status-option:not(.disabled)');
-        if (statusOption) {
+        const statusOption = event.target.closest('.status-option');
+        if (statusOption && !statusOption.classList.contains('disabled')) {
+            event.preventDefault();
             event.stopPropagation();
             const deliveryId = statusOption.dataset.deliveryId;
             const newStatus = statusOption.dataset.status;
             
+            console.log('✅ Status option clicked! Delivery ID:', deliveryId, 'New Status:', newStatus);
+            
             if (deliveryId && newStatus) {
-                console.log('Status option clicked:', { deliveryId, newStatus });
                 updateDeliveryStatusById(deliveryId, newStatus);
             }
             return;
@@ -274,11 +296,15 @@ console.log('app.js loaded');
         
         // Close dropdowns when clicking outside
         if (!event.target.closest('.status-dropdown-container')) {
-            document.querySelectorAll('.status-dropdown').forEach(dropdown => {
-                dropdown.style.display = 'none';
-            });
+            const dropdowns = document.querySelectorAll('.status-dropdown');
+            if (dropdowns.length > 0) {
+                console.log('Closing', dropdowns.length, 'dropdowns');
+                dropdowns.forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+            }
         }
-    });
+    }, true); // Use capture phase
 
     // Make status functions globally accessible
     window.toggleStatusDropdown = toggleStatusDropdown;
