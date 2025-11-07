@@ -128,7 +128,7 @@ console.log('app.js loaded');
         }
     }
 
-    // Update delivery status by delivery ID (for dropdown)
+    // Update delivery status by delivery ID (for dropdown) - NO OVERWRITE
     async function updateDeliveryStatusById(deliveryId, newStatus) {
         console.log(`🔄 updateDeliveryStatusById called - Delivery: ${deliveryId}, New Status: ${newStatus}`);
         console.log('Active deliveries count:', activeDeliveries.length);
@@ -143,32 +143,69 @@ console.log('app.js loaded');
         if (deliveryIndex !== -1) {
             const delivery = activeDeliveries[deliveryIndex];
             const oldStatus = delivery.status;
+            const drNumber = delivery.dr_number || delivery.drNumber;
+            const deliveryUUID = delivery.id;
             
             console.log('📦 Delivery before update:', {
-                id: delivery.id,
-                dr_number: delivery.dr_number || delivery.drNumber,
+                id: deliveryUUID,
+                dr_number: drNumber,
                 oldStatus: oldStatus,
                 newStatus: newStatus
             });
             
             // Update status in memory
             delivery.status = newStatus;
+            delivery.lastStatusUpdate = new Date().toISOString();
             
-            // Update timestamp for status change
-            delivery.lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
-            
-            // Save ONLY this specific delivery to Supabase (centralized database)
+            // DIRECT SUPABASE UPDATE - NO OVERWRITE, ONLY UPDATE STATUS FIELD
             try {
-                console.log('💾 Saving single delivery status update to Supabase...');
+                console.log('💾 Directly updating status in Supabase (NO OVERWRITE)...');
                 
-                if (!window.dataService) {
-                    throw new Error('DataService not available');
+                const client = window.supabaseClient ? window.supabaseClient() : null;
+                if (!client) {
+                    throw new Error('Supabase client not available');
                 }
                 
-                // Save only this delivery
-                await window.dataService.saveDelivery(delivery);
+                // Update ONLY the status and lastStatusUpdate fields - nothing else
+                const { data, error } = await client
+                    .from('deliveries')
+                    .update({ 
+                        status: newStatus,
+                        last_status_update: delivery.lastStatusUpdate,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', deliveryUUID)
+                    .select();
                 
-                console.log('✅ Status saved to Supabase successfully for delivery:', delivery.dr_number || delivery.drNumber);
+                if (error) {
+                    console.error('❌ Supabase update error:', error);
+                    throw error;
+                }
+                
+                if (!data || data.length === 0) {
+                    console.warn('⚠️ No rows updated, trying by dr_number...');
+                    // Fallback: try updating by dr_number
+                    const { data: data2, error: error2 } = await client
+                        .from('deliveries')
+                        .update({ 
+                            status: newStatus,
+                            last_status_update: delivery.lastStatusUpdate,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('dr_number', drNumber)
+                        .select();
+                    
+                    if (error2) throw error2;
+                    if (!data2 || data2.length === 0) {
+                        throw new Error('Delivery not found in database');
+                    }
+                    
+                    console.log('✅ Status updated by dr_number:', drNumber);
+                } else {
+                    console.log('✅ Status updated by ID:', deliveryUUID);
+                }
+                
+                console.log('✅ Status saved to Supabase successfully - DR:', drNumber, 'Status:', newStatus);
                 
                 // Update the global array
                 window.activeDeliveries[deliveryIndex] = delivery;
