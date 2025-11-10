@@ -1617,8 +1617,24 @@ async function populateDeliveryHistoryTable() {
 }
 
 // Initialize the application
-function initApp() {
+async function initApp() {
     console.log('=== INIT APP FUNCTION CALLED ===');
+    
+    // Initialize DataService first (CRITICAL - must be done before any data operations)
+    if (window.dataService) {
+        try {
+            await window.dataService.initialize();
+            console.log('✅ DataService initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize DataService:', error);
+            showToast('Failed to initialize application. Please refresh the page.', 'danger');
+            return; // Stop initialization if DataService fails
+        }
+    } else {
+        console.error('❌ DataService not available');
+        showToast('Application error. Please refresh the page.', 'danger');
+        return;
+    }
     
     // Initialize network status monitoring
     // Requirement 9.1: Display offline indicator when connection lost
@@ -1985,11 +2001,11 @@ window.handleStatusChange = handleStatusChange;
 window.testModalFunctionality = testModalFunctionality;
 
 // Add event listeners when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('App.js: DOMContentLoaded event fired');
     
-    // Initialize the app
-    initApp();
+    // Initialize the app (await since it's now async)
+    await initApp();
     
     // Add event listeners for search inputs
     const drSearchInput = document.getElementById('drSearchInput');
