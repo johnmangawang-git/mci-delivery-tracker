@@ -168,24 +168,18 @@
     <!-- GLOBAL SUPABASE INITIALIZER - Must load immediately after Supabase library -->
     <script src="assets/js/core/supabase-init.js"></script>
 
-    <!-- SUPABASE GLOBAL FIX - Patches all dependent modules -->
-    <script src="assets/js/supabase-global-fix.js"></script>
-
-    <!-- SUPABASE CONNECTION DIAGNOSTIC - Comprehensive connection testing -->
-    <script src="assets/js/supabase-connection-diagnostic.js"></script>
+    <!-- REMOVED: Old fix files incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/supabase-global-fix.js"></script> -->
+    <!-- <script src="assets/js/supabase-connection-diagnostic.js"></script> -->
     <!-- Signature Pad Library with fallback -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"
         onload="this.onload=null;window.signaturePadLoaded=true;"
         onerror="this.onerror=null;window.signaturePadLoaded=false;loadLocalSignaturePad();"></script>
 
-    <!-- RUNTIME ERRORS FIX - Fixes all current console errors -->
-    <script src="assets/js/runtime-errors-fix.js"></script>
-
-    <!-- SUPABASE PERMANENT FIX - Fixes all initialization and runtime errors -->
-    <script src="assets/js/supabase-permanent-fix.js"></script>
-
-    <!-- SUPABASE SCHEMA VALIDATION FIX - Fixes data validation and schema errors -->
-    <script src="assets/js/supabase-schema-validation-fix.js"></script>
+    <!-- REMOVED: Old fix files incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/runtime-errors-fix.js"></script> -->
+    <!-- <script src="assets/js/supabase-permanent-fix.js"></script> -->
+    <!-- <script src="assets/js/supabase-schema-validation-fix.js"></script> -->
 
     <!-- BOOKING & EXCEL UPLOAD FIX -->
     <script src="assets/js/booking-excel-fix.js"></script>
@@ -200,16 +194,14 @@
     <!-- Local System Time - Uses your computer's system clock directly -->
     <script src="assets/js/local-system-time.js"></script>
 
-    <!-- COMPREHENSIVE CONSOLE ERRORS FIX - Fixes all 4 major console errors -->
-    <script src="assets/js/console-errors-comprehensive-fix.js"></script>
+    <!-- REMOVED: Old fix incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/console-errors-comprehensive-fix.js"></script> -->
     <script src="assets/js/modal-utils.js"></script>
     <script src="assets/js/calendar.js"></script>
 
-    <!-- AUTO-SYNC SERVICE - Automatically syncs localStorage with Supabase -->
-    <script src="assets/js/auto-sync-service.js"></script>
-
-    <!-- STORAGE PRIORITY CONFIGURATION - Supabase-primary with offline resilience -->
-    <script src="assets/js/storage-priority-config.js"></script>
+    <!-- REMOVED: Old localStorage sync files - no longer needed with database-centric architecture -->
+    <!-- <script src="assets/js/auto-sync-service.js"></script> -->
+    <!-- <script src="assets/js/storage-priority-config.js"></script> -->
 
     <!-- DISABLE MANUAL BOOKING - REDIRECT TO EXCEL UPLOAD (Must load after calendar.js) -->
     <script src="assets/js/disable-manual-booking.js"></script>
@@ -250,14 +242,14 @@
     <!-- Main application functionality -->
     <script src="assets/js/main.js"></script>
 
-    <!-- AUTO-SYNC INTEGRATION - Integrates auto-sync with existing functions -->
-    <script src="assets/js/auto-sync-integration.js"></script>
+    <!-- REMOVED: Old fix files incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/auto-sync-integration.js"></script> -->
 
     <!-- ROW CLICK SELECTION - Toggle checkboxes by clicking table rows -->
     <script src="assets/js/row-click-selection.js"></script>
 
-    <!-- Minimal booking fix - ensures booking system works (status update parts disabled) -->
-    <script src="assets/js/minimal-booking-fix.js"></script>
+    <!-- REMOVED: Old fix incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/minimal-booking-fix.js"></script> -->
 
     <!-- Signature completion fix - prevents signature_pad.ts:136 error -->
     <script src="assets/js/signature-completion-fix.js"></script>
@@ -294,8 +286,8 @@
     <!-- CUSTOMER DUPLICATE MANAGEMENT - Comprehensive duplicate detection and merging system -->
     <script src="assets/js/customer-duplicate-management.js"></script>
 
-    <!-- ADDITIONAL COSTS SUPABASE FIX - Ensures cost breakdown data is saved to Supabase -->
-    <script src="assets/js/additional-costs-supabase-fix.js"></script>
+    <!-- REMOVED: Old fix incompatible with database-centric architecture -->
+    <!-- <script src="assets/js/additional-costs-supabase-fix.js"></script> -->
 
     <!-- FIX 409 CONFLICT DR UNIQUE - Handles duplicate DR number conflicts for multi-item deliveries -->
     <script src="assets/js/fix-409-conflict-dr-unique.js"></script>
