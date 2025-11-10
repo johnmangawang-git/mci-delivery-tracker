@@ -905,6 +905,12 @@ console.log('app.js loaded');
                 throw new Error('DataService not available');
             }
             
+            // CRITICAL: Check if DataService is initialized
+            if (!window.dataService.isInitialized) {
+                console.warn('⚠️ DataService not initialized yet, initializing now...');
+                await window.dataService.initialize();
+            }
+            
             const result = await window.dataService.getDeliveriesWithPagination({
                 page: targetPage,
                 pageSize: paginationState.active.pageSize,
@@ -1191,6 +1197,12 @@ console.log('app.js loaded');
             // Load directly from DataService with pagination
             if (!window.dataService) {
                 throw new Error('DataService not available');
+            }
+            
+            // CRITICAL: Check if DataService is initialized
+            if (!window.dataService.isInitialized) {
+                console.warn('⚠️ DataService not initialized yet, initializing now...');
+                await window.dataService.initialize();
             }
             
             const result = await window.dataService.getDeliveriesWithPagination({
