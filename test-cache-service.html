@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CacheService Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .stats-table th,
+        .stats-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .stats-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 CacheService Test Suite</h1>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <button onclick="showCacheStats()">Show Cache Stats</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Cache Statistics</h2>
+        <div id="stats"></div>
+    </div>
+
+    <script src="public/assets/js/cacheService.js"></script>
+    <script>
+        let cacheService;
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            document.getElementById('results').appendChild(resultDiv);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = [];
+        }
+
+        function showCacheStats() {
+            if (!cacheService) {
+                log('CacheService not initialized', 'error');
+                return;
+            }
+
+            const stats = cacheService.getStats();
+            const statsDiv = document.getElementById('stats');
+            
+            statsDiv.innerHTML = `
+                <table class="stats-table">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                    </tr>
+                    <tr>
+                        <td>Cache Size</td>
+                        <td>${stats.size}</td>
+                    </tr>
+                    <tr>
+                        <td>Cache Hits</td>
+                        <td>${stats.hits}</td>
+                    </tr>
+                    <tr>
+                        <td>Cache Misses</td>
+                        <td>${stats.misses}</td>
+                    </tr>
+                    <tr>
+                        <td>Hit Rate</td>
+                        <td>${stats.hitRate}</td>
+                    </tr>
+                    <tr>
+                        <td>Sets</td>
+                        <td>${stats.sets}</td>
+                    </tr>
+                    <tr>
+                        <td>Clears</td>
+                        <td>${stats.clears}</td>
+                    </tr>
+                </table>
+                <h3>Cache Keys:</h3>
+                <pre>${JSON.stringify(cacheService.getKeys(), null, 2)}</pre>
+            `;
+        }
+
+        async function runAllTests() {
+            clearResults();
+            log('Starting CacheService Test Suite...', 'info');
+            
+            try {
+                // Initialize cache service
+                cacheService = new CacheService(2000); // 2 second TTL for testing
+                log('✓ CacheService initialized with 2000ms TTL', 'success');
+
+                // Test 1: Basic set and get
+                await testBasicSetGet();
+
+                // Test 2: TTL expiration
+                await testTTLExpiration();
+
+                // Test 3: Custom TTL
+                await testCustomTTL();
+
+                // Test 4: Cache invalidation
+                await testCacheInvalidation();
+
+                // Test 5: Clear cache
+                await testClearCache();
+
+                // Test 6: Has method
+                await testHasMethod();
+
+                // Test 7: Delete method
+                await testDeleteMethod();
+
+                // Test 8: Clear expired entries
+                await testClearExpired();
+
+                // Test 9: Pattern-based invalidation
+                await testPatternInvalidation();
+
+                // Test 10: Statistics tracking
+                await testStatistics();
+
+                // Test 11: Edge cases
+                await testEdgeCases();
+
+                log('✓ All tests completed!', 'success');
+                showCacheStats();
+
+            } catch (error) {
+                log(`✗ Test suite failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function testBasicSetGet() {
+            log('Test 1: Basic set and get operations', 'info');
+            
+            const testData = { id: 1, name: 'Test User', email: 'test@example.com' };
+            cacheService.set('user:1', testData);
+            
+            const retrieved = cacheService.get('user:1');
+            
+            if (JSON.stringify(retrieved) === JSON.stringify(testData)) {
+                log('✓ Basic set/get works correctly', 'success');
+            } else {
+                throw new Error('Retrieved data does not match stored data');
+            }
+        }
+
+        async function testTTLExpiration() {
+            log('Test 2: TTL expiration', 'info');
+            
+            // Create a cache with very short TTL
+            const shortCache = new CacheService(500); // 500ms TTL
+            shortCache.set('temp:data', 'This will expire');
+            
+            // Immediately retrieve - should work
+            const immediate = shortCache.get('temp:data');
+            if (immediate === 'This will expire') {
+                log('✓ Data retrieved immediately after set', 'success');
+            } else {
+                throw new Error('Failed to retrieve data immediately');
+            }
+            
+            // Wait for expiration
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            const expired = shortCache.get('temp:data');
+            if (expired === null) {
+                log('✓ Data correctly expired after TTL', 'success');
+            } else {
+                throw new Error('Data should have expired but was still retrieved');
+            }
+        }
+
+        async function testCustomTTL() {
+            log('Test 3: Custom TTL per entry', 'info');
+            
+            cacheService.set('short:lived', 'Quick data', 500); // 500ms custom TTL
+            cacheService.set('long:lived', 'Persistent data', 5000); // 5s custom TTL
+            
+            // Both should be available immediately
+            if (cacheService.get('short:lived') && cacheService.get('long:lived')) {
+                log('✓ Both entries available immediately', 'success');
+            }
+            
+            // Wait for short TTL to expire
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            const shortExpired = cacheService.get('short:lived');
+            const longStillValid = cacheService.get('long:lived');
+            
+            if (shortExpired === null && longStillValid === 'Persistent data') {
+                log('✓ Custom TTL works correctly per entry', 'success');
+            } else {
+                throw new Error('Custom TTL not working as expected');
+            }
+        }
+
+        async function testCacheInvalidation() {
+            log('Test 4: Cache invalidation on updates', 'info');
+            
+            // Simulate data update scenario
+            cacheService.set('delivery:DR-001', { status: 'Active' });
+            cacheService.set('delivery:DR-002', { status: 'Active' });
+            
+            // Invalidate specific entry
+            cacheService.delete('delivery:DR-001');
+            
+            const deleted = cacheService.get('delivery:DR-001');
+            const stillExists = cacheService.get('delivery:DR-002');
+            
+            if (deleted === null && stillExists !== null) {
+                log('✓ Selective cache invalidation works', 'success');
+            } else {
+                throw new Error('Cache invalidation failed');
+            }
+        }
+
+        async function testClearCache() {
+            log('Test 5: Clear all cache', 'info');
+            
+            cacheService.set('key1', 'value1');
+            cacheService.set('key2', 'value2');
+            cacheService.set('key3', 'value3');
+            
+            const sizeBefore = cacheService.getSize();
+            cacheService.clear();
+            const sizeAfter = cacheService.getSize();
+            
+            if (sizeBefore > 0 && sizeAfter === 0) {
+                log('✓ Clear cache works correctly', 'success');
+            } else {
+                throw new Error('Clear cache failed');
+            }
+        }
+
+        async function testHasMethod() {
+            log('Test 6: Has method', 'info');
+            
+            cacheService.set('exists', 'I am here');
+            
+            const exists = cacheService.has('exists');
+            const notExists = cacheService.has('does-not-exist');
+            
+            if (exists === true && notExists === false) {
+                log('✓ Has method works correctly', 'success');
+            } else {
+                throw new Error('Has method failed');
+            }
+        }
+
+        async function testDeleteMethod() {
+            log('Test 7: Delete method', 'info');
+            
+            cacheService.set('to-delete', 'Delete me');
+            const deleted = cacheService.delete('to-delete');
+            const notDeleted = cacheService.delete('non-existent');
+            
+            if (deleted === true && notDeleted === false) {
+                log('✓ Delete method works correctly', 'success');
+            } else {
+                throw new Error('Delete method failed');
+            }
+        }
+
+        async function testClearExpired() {
+            log('Test 8: Clear expired entries', 'info');
+            
+            const testCache = new CacheService(500);
+            testCache.set('expire1', 'data1');
+            testCache.set('expire2', 'data2');
+            testCache.set('keep', 'data3', 5000); // Long TTL
+            
+            await new Promise(resolve => setTimeout(resolve, 600));
+            
+            const removed = testCache.clearExpired();
+            const remaining = testCache.getSize();
+            
+            if (removed === 2 && remaining === 1) {
+                log('✓ Clear expired entries works correctly', 'success');
+            } else {
+                throw new Error(`Expected 2 removed and 1 remaining, got ${removed} removed and ${remaining} remaining`);
+            }
+        }
+
+        async function testPatternInvalidation() {
+            log('Test 9: Pattern-based invalidation', 'info');
+            
+            cacheService.clear();
+            cacheService.set('delivery:DR-001', 'data1');
+            cacheService.set('delivery:DR-002', 'data2');
+            cacheService.set('customer:C-001', 'data3');
+            cacheService.set('customer:C-002', 'data4');
+            
+            const invalidated = cacheService.invalidate(/^delivery:/);
+            const deliveriesGone = cacheService.get('delivery:DR-001') === null;
+            const customersRemain = cacheService.get('customer:C-001') !== null;
+            
+            if (invalidated === 2 && deliveriesGone && customersRemain) {
+                log('✓ Pattern-based invalidation works correctly', 'success');
+            } else {
+                throw new Error('Pattern invalidation failed');
+            }
+        }
+
+        async function testStatistics() {
+            log('Test 10: Statistics tracking', 'info');
+            
+            cacheService.clear();
+            cacheService.resetStats();
+            
+            // Generate some activity
+            cacheService.set('stat1', 'value1');
+            cacheService.set('stat2', 'value2');
+            cacheService.get('stat1'); // Hit
+            cacheService.get('stat1'); // Hit
+            cacheService.get('nonexistent'); // Miss
+            
+            const stats = cacheService.getStats();
+            
+            if (stats.sets === 2 && stats.hits === 2 && stats.misses === 1) {
+                log('✓ Statistics tracking works correctly', 'success');
+                log(`  Hit rate: ${stats.hitRate}`, 'info');
+            } else {
+                throw new Error(`Stats incorrect: ${JSON.stringify(stats)}`);
+            }
+        }
+
+        async function testEdgeCases() {
+            log('Test 11: Edge cases', 'info');
+            
+            // Test null/undefined keys
+            cacheService.set(null, 'value');
+            cacheService.set(undefined, 'value');
+            const nullGet = cacheService.get(null);
+            const undefinedGet = cacheService.get(undefined);
+            
+            if (nullGet === null && undefinedGet === null) {
+                log('✓ Handles null/undefined keys gracefully', 'success');
+            }
+            
+            // Test complex objects
+            const complexObj = {
+                nested: {
+                    array: [1, 2, 3],
+                    date: new Date().toISOString()
+                }
+            };
+            cacheService.set('complex', complexObj);
+            const retrieved = cacheService.get('complex');
+            
+            if (JSON.stringify(retrieved) === JSON.stringify(complexObj)) {
+                log('✓ Handles complex objects correctly', 'success');
+            }
+            
+            // Test overwriting existing key
+            cacheService.set('overwrite', 'original');
+            cacheService.set('overwrite', 'updated');
+            const overwritten = cacheService.get('overwrite');
+            
+            if (overwritten === 'updated') {
+                log('✓ Overwrites existing keys correctly', 'success');
+            }
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('Page loaded. Click "Run All Tests" to begin.', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataValidator Test Suite</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #6c757d;
+            padding-bottom: 5px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-case.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-case.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-result {
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .summary {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .summary h3 {
+            margin: 0 0 10px 0;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error-list {
+            color: #721c24;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DataValidator Test Suite</h1>
+    
+    <div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="summary" class="summary" style="display: none;">
+        <h3>Test Summary</h3>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="total-tests">0</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="passed-tests">0</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="failed-tests">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script src="public/assets/js/dataValidator.js"></script>
+    <script>
+        let testResults = [];
+
+        function runTest(testName, testFn) {
+            try {
+                const result = testFn();
+                testResults.push({ name: testName, passed: result.passed, details: result.details });
+                return result;
+            } catch (error) {
+                testResults.push({ name: testName, passed: false, details: `Error: ${error.message}` });
+                return { passed: false, details: `Error: ${error.message}` };
+            }
+        }
+
+        function displayResults() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '';
+
+            let passed = 0;
+            let failed = 0;
+
+            // Group tests by category
+            const categories = {
+                'Delivery Validation': [],
+                'Customer Validation': [],
+                'EPOD Validation': [],
+                'Batch Validation': [],
+                'Error Formatting': []
+            };
+
+            testResults.forEach(result => {
+                if (result.name.includes('Delivery')) {
+                    categories['Delivery Validation'].push(result);
+                } else if (result.name.includes('Customer')) {
+                    categories['Customer Validation'].push(result);
+                } else if (result.name.includes('EPOD')) {
+                    categories['EPOD Validation'].push(result);
+                } else if (result.name.includes('Batch') || result.name.includes('Multiple')) {
+                    categories['Batch Validation'].push(result);
+                } else {
+                    categories['Error Formatting'].push(result);
+                }
+
+                if (result.passed) passed++;
+                else failed++;
+            });
+
+            // Display by category
+            Object.keys(categories).forEach(category => {
+                if (categories[category].length > 0) {
+                    const section = document.createElement('div');
+                    section.className = 'test-section';
+                    section.innerHTML = `<h2>${category}</h2>`;
+
+                    categories[category].forEach(result => {
+                        const testCase = document.createElement('div');
+                        testCase.className = `test-case ${result.passed ? 'pass' : 'fail'}`;
+                        testCase.innerHTML = `
+                            <div class="test-name">${result.passed ? '✓' : '✗'} ${result.name}</div>
+                            <div class="test-result">${result.details}</div>
+                        `;
+                        section.appendChild(testCase);
+                    });
+
+                    resultsDiv.appendChild(section);
+                }
+            });
+
+            // Update summary
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('total-tests').textContent = testResults.length;
+            document.getElementById('passed-tests').textContent = passed;
+            document.getElementById('failed-tests').textContent = failed;
+        }
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+        }
+
+        function runAllTests() {
+            clearResults();
+
+            // Delivery Validation Tests
+            runTest('Valid Delivery - All Fields', () => {
+                const delivery = {
+                    dr_number: 'DR-001',
+                    customer_name: 'Test Customer',
+                    vendor_number: 'V123',
+                    origin: 'Manila',
+                    destination: 'Cebu',
+                    truck_plate_number: 'ABC-1234',
+                    status: 'Active',
+                    booked_date: '2025-01-01',
+                    additional_cost_items: [
+                        { description: 'Fuel', amount: 500 },
+                        { description: 'Toll', amount: 200 }
+                    ]
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Valid Delivery - Minimum Required Fields', () => {
+                const delivery = {
+                    dr_number: 'DR-002',
+                    customer_name: 'Minimal Customer'
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Delivery - Missing DR Number', () => {
+                const delivery = {
+                    customer_name: 'Test Customer'
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: !result.isValid && result.errors.length > 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Delivery - Missing Customer Name', () => {
+                const delivery = {
+                    dr_number: 'DR-003'
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: !result.isValid && result.errors.length > 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Delivery - Invalid Status', () => {
+                const delivery = {
+                    dr_number: 'DR-004',
+                    customer_name: 'Test Customer',
+                    status: 'InvalidStatus'
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('Status')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Delivery - Invalid Date', () => {
+                const delivery = {
+                    dr_number: 'DR-005',
+                    customer_name: 'Test Customer',
+                    booked_date: 'not-a-date'
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('date')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Delivery - Invalid Additional Cost Items', () => {
+                const delivery = {
+                    dr_number: 'DR-006',
+                    customer_name: 'Test Customer',
+                    additional_cost_items: [
+                        { description: 'Fuel' }, // Missing amount
+                        { amount: 200 } // Missing description
+                    ]
+                };
+                const result = DataValidator.validateDelivery(delivery);
+                return {
+                    passed: !result.isValid && result.errors.length > 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            // Customer Validation Tests
+            runTest('Valid Customer - All Fields', () => {
+                const customer = {
+                    name: 'Test Customer Inc.',
+                    phone: '+63-912-345-6789',
+                    contact_person: 'John Doe',
+                    email: 'john@example.com',
+                    address: '123 Main St, Manila',
+                    account_type: 'Corporate',
+                    status: 'active',
+                    notes: 'VIP customer',
+                    bookings_count: 10,
+                    last_delivery: 'DR-100'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Valid Customer - Minimum Required Fields', () => {
+                const customer = {
+                    name: 'Minimal Customer',
+                    phone: '09123456789'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Customer - Missing Name', () => {
+                const customer = {
+                    phone: '09123456789'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('name')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Customer - Missing Phone', () => {
+                const customer = {
+                    name: 'Test Customer'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('Phone')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Customer - Invalid Email', () => {
+                const customer = {
+                    name: 'Test Customer',
+                    phone: '09123456789',
+                    email: 'invalid-email'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('email')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Customer - Invalid Account Type', () => {
+                const customer = {
+                    name: 'Test Customer',
+                    phone: '09123456789',
+                    account_type: 'InvalidType'
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('Account type')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid Customer - Negative Bookings Count', () => {
+                const customer = {
+                    name: 'Test Customer',
+                    phone: '09123456789',
+                    bookings_count: -5
+                };
+                const result = DataValidator.validateCustomer(customer);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('Bookings count')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            // EPOD Validation Tests
+            runTest('Valid EPOD - All Fields', () => {
+                const epod = {
+                    dr_number: 'DR-001',
+                    customer_name: 'Test Customer',
+                    customer_contact: '09123456789',
+                    truck_plate: 'ABC-1234',
+                    delivery_route: 'Manila to Cebu',
+                    signature_data: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                    signed_at: '2025-01-01T10:00:00Z'
+                };
+                const result = DataValidator.validateEPodRecord(epod);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Valid EPOD - Minimum Required Fields', () => {
+                const epod = {
+                    dr_number: 'DR-002'
+                };
+                const result = DataValidator.validateEPodRecord(epod);
+                return {
+                    passed: result.isValid && result.errors.length === 0,
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid EPOD - Missing DR Number', () => {
+                const epod = {
+                    customer_name: 'Test Customer'
+                };
+                const result = DataValidator.validateEPodRecord(epod);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('DR number')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid EPOD - Invalid Signature Data', () => {
+                const epod = {
+                    dr_number: 'DR-003',
+                    signature_data: 'invalid-signature-data!'
+                };
+                const result = DataValidator.validateEPodRecord(epod);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('Signature data')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            runTest('Invalid EPOD - Invalid Date', () => {
+                const epod = {
+                    dr_number: 'DR-004',
+                    signed_at: 'not-a-date'
+                };
+                const result = DataValidator.validateEPodRecord(epod);
+                return {
+                    passed: !result.isValid && result.errors.some(e => e.includes('date')),
+                    details: `Valid: ${result.isValid}\nErrors: ${JSON.stringify(result.errors, null, 2)}`
+                };
+            });
+
+            // Batch Validation Tests
+            runTest('Batch Validate Multiple Deliveries', () => {
+                const deliveries = [
+                    { dr_number: 'DR-001', customer_name: 'Customer 1' },
+                    { dr_number: 'DR-002', customer_name: 'Customer 2' },
+                    { dr_number: 'DR-003' } // Invalid - missing customer_name
+                ];
+                const result = DataValidator.validateDeliveries(deliveries);
+                return {
+                    passed: !result.isValid && result.summary.valid === 2 && result.summary.invalid === 1,
+                    details: `Valid: ${result.isValid}\nSummary: ${JSON.stringify(result.summary, null, 2)}`
+                };
+            });
+
+            runTest('Batch Validate Multiple Customers', () => {
+                const customers = [
+                    { name: 'Customer 1', phone: '09111111111' },
+                    { name: 'Customer 2', phone: '09222222222' },
+                    { name: 'Customer 3' } // Invalid - missing phone
+                ];
+                const result = DataValidator.validateCustomers(customers);
+                return {
+                    passed: !result.isValid && result.summary.valid === 2 && result.summary.invalid === 1,
+                    details: `Valid: ${result.isValid}\nSummary: ${JSON.stringify(result.summary, null, 2)}`
+                };
+            });
+
+            runTest('Batch Validate Multiple EPOD Records', () => {
+                const epods = [
+                    { dr_number: 'DR-001' },
+                    { dr_number: 'DR-002' },
+                    { customer_name: 'Test' } // Invalid - missing dr_number
+                ];
+                const result = DataValidator.validateEPodRecords(epods);
+                return {
+                    passed: !result.isValid && result.summary.valid === 2 && result.summary.invalid === 1,
+                    details: `Valid: ${result.isValid}\nSummary: ${JSON.stringify(result.summary, null, 2)}`
+                };
+            });
+
+            // Error Formatting Tests
+            runTest('Format Single Error', () => {
+                const errors = ['DR number is required'];
+                const formatted = DataValidator.formatErrors(errors);
+                return {
+                    passed: formatted === 'DR number is required',
+                    details: `Formatted: "${formatted}"`
+                };
+            });
+
+            runTest('Format Multiple Errors', () => {
+                const errors = ['DR number is required', 'Customer name is required'];
+                const formatted = DataValidator.formatErrors(errors);
+                const expected = 'Validation errors:\n• DR number is required\n• Customer name is required';
+                return {
+                    passed: formatted === expected,
+                    details: `Formatted:\n"${formatted}"`
+                };
+            });
+
+            runTest('Format Empty Errors', () => {
+                const errors = [];
+                const formatted = DataValidator.formatErrors(errors);
+                return {
+                    passed: formatted === '',
+                    details: `Formatted: "${formatted}"`
+                };
+            });
+
+            displayResults();
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', () => {
+            console.log('DataValidator Test Suite loaded. Click "Run All Tests" to begin.');
+        });
+    </script>
+</body>
+</html>

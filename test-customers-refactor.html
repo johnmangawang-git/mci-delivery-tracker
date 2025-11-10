@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Customers.js Refactor - Database-Centric Architecture</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .log-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">
+            <i class="bi bi-clipboard-check"></i>
+            Test Customers.js Refactor - Task 6
+        </h1>
+        
+        <div class="alert alert-info">
+            <strong>Test Objective:</strong> Verify that customers.js has been successfully refactored to remove all localStorage dependencies and use DataService exclusively.
+        </div>
+
+        <!-- Test Results Container -->
+        <div id="testResults"></div>
+
+        <!-- Test Controls -->
+        <div class="test-section">
+            <h3>Test Controls</h3>
+            <button class="btn btn-primary" onclick="runAllTests()">
+                <i class="bi bi-play-circle"></i> Run All Tests
+            </button>
+            <button class="btn btn-secondary" onclick="clearResults()">
+                <i class="bi bi-trash"></i> Clear Results
+            </button>
+        </div>
+
+        <!-- Console Log Output -->
+        <div class="test-section">
+            <h3>Console Output</h3>
+            <div id="consoleOutput" class="log-output"></div>
+        </div>
+    </div>
+
+    <!-- Load required scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Load application scripts -->
+    <script src="public/assets/js/dataValidator.js"></script>
+    <script src="public/assets/js/errorHandler.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/customers.js"></script>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const logs = [];
+
+        function captureLog(type, ...args) {
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            logs.push({ type, message, timestamp: new Date().toISOString() });
+            updateConsoleOutput();
+        }
+
+        console.log = (...args) => {
+            originalLog(...args);
+            captureLog('log', ...args);
+        };
+
+        console.error = (...args) => {
+            originalError(...args);
+            captureLog('error', ...args);
+        };
+
+        console.warn = (...args) => {
+            originalWarn(...args);
+            captureLog('warn', ...args);
+        };
+
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML = logs.map(log => {
+                const color = log.type === 'error' ? 'red' : log.type === 'warn' ? 'orange' : 'black';
+                return `<div style="color: ${color};">[${log.type.toUpperCase()}] ${log.message}</div>`;
+            }).join('');
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '';
+            logs.length = 0;
+            updateConsoleOutput();
+        }
+
+        function addTestResult(title, passed, message) {
+            const resultsDiv = document.getElementById('testResults');
+            const resultClass = passed ? 'test-pass' : 'test-fail';
+            const icon = passed ? 'check-circle-fill' : 'x-circle-fill';
+            
+            const resultHtml = `
+                <div class="test-section">
+                    <h4><i class="bi bi-${icon}"></i> ${title}</h4>
+                    <div class="test-result ${resultClass}">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
+        }
+
+        // Test functions
+        async function testLoadCustomersNoLocalStorage() {
+            console.log('=== TEST: loadCustomers() does not use localStorage ===');
+            
+            try {
+                // Check if loadCustomers function exists
+                if (typeof window.loadCustomers !== 'function') {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() function exists',
+                        false,
+                        'loadCustomers function is not available on window object'
+                    );
+                    return;
+                }
+
+                // Check the function source code for localStorage references
+                const funcSource = window.loadCustomers.toString();
+                const hasLocalStorage = funcSource.includes('localStorage.getItem') || 
+                                       funcSource.includes('localStorage.setItem');
+                
+                if (hasLocalStorage) {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() removes localStorage',
+                        false,
+                        'loadCustomers() still contains localStorage references'
+                    );
+                } else {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() removes localStorage',
+                        true,
+                        'loadCustomers() successfully removed all localStorage references'
+                    );
+                }
+
+                // Check if it uses dataService
+                const usesDataService = funcSource.includes('dataService.getCustomers');
+                
+                if (usesDataService) {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() uses DataService',
+                        true,
+                        'loadCustomers() correctly calls dataService.getCustomers()'
+                    );
+                } else {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() uses DataService',
+                        false,
+                        'loadCustomers() does not call dataService.getCustomers()'
+                    );
+                }
+
+                // Check for error handling
+                const hasErrorHandler = funcSource.includes('ErrorHandler') || funcSource.includes('catch');
+                
+                if (hasErrorHandler) {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() has error handling',
+                        true,
+                        'loadCustomers() includes proper error handling'
+                    );
+                } else {
+                    addTestResult(
+                        'Test 6.1: loadCustomers() has error handling',
+                        false,
+                        'loadCustomers() missing error handling'
+                    );
+                }
+
+            } catch (error) {
+                addTestResult(
+                    'Test 6.1: loadCustomers() verification',
+                    false,
+                    `Error during test: ${error.message}`
+                );
+            }
+        }
+
+        async function testAutoCreateCustomer() {
+            console.log('=== TEST: autoCreateCustomer() refactored ===');
+            
+            try {
+                if (typeof window.autoCreateCustomer !== 'function') {
+                    addTestResult(
+                        'Test 6.2: autoCreateCustomer() function exists',
+                        false,
+                        'autoCreateCustomer function is not available'
+                    );
+                    return;
+                }
+
+                const funcSource = window.autoCreateCustomer.toString();
+                
+                // Check for localStorage removal
+                const hasLocalStorage = funcSource.includes('localStorage.setItem') || 
+                                       funcSource.includes('localStorage.getItem');
+                
+                addTestResult(
+                    'Test 6.2: autoCreateCustomer() removes localStorage',
+                    !hasLocalStorage,
+                    hasLocalStorage ? 
+                        'autoCreateCustomer() still contains localStorage references' :
+                        'autoCreateCustomer() successfully removed localStorage references'
+                );
+
+                // Check for dataService usage
+                const usesDataService = funcSource.includes('dataService.saveCustomer');
+                
+                addTestResult(
+                    'Test 6.2: autoCreateCustomer() uses DataService',
+                    usesDataService,
+                    usesDataService ?
+                        'autoCreateCustomer() correctly calls dataService.saveCustomer()' :
+                        'autoCreateCustomer() does not use dataService.saveCustomer()'
+                );
+
+                // Check for validation
+                const hasValidation = funcSource.includes('DataValidator');
+                
+                addTestResult(
+                    'Test 6.2: autoCreateCustomer() includes validation',
+                    hasValidation,
+                    hasValidation ?
+                        'autoCreateCustomer() includes DataValidator validation' :
+                        'autoCreateCustomer() missing validation'
+                );
+
+            } catch (error) {
+                addTestResult(
+                    'Test 6.2: autoCreateCustomer() verification',
+                    false,
+                    `Error during test: ${error.message}`
+                );
+            }
+        }
+
+        async function testDeleteCustomer() {
+            console.log('=== TEST: deleteCustomer() refactored ===');
+            
+            try {
+                if (typeof window.deleteCustomer !== 'function') {
+                    addTestResult(
+                        'Test 6.3: deleteCustomer() function exists',
+                        false,
+                        'deleteCustomer function is not available'
+                    );
+                    return;
+                }
+
+                const funcSource = window.deleteCustomer.toString();
+                
+                // Check for localStorage removal
+                const hasLocalStorage = funcSource.includes('localStorage.setItem') || 
+                                       funcSource.includes('localStorage.removeItem');
+                
+                addTestResult(
+                    'Test 6.3: deleteCustomer() removes localStorage',
+                    !hasLocalStorage,
+                    hasLocalStorage ?
+                        'deleteCustomer() still contains localStorage references' :
+                        'deleteCustomer() successfully removed localStorage references'
+                );
+
+                // Check for dataService usage
+                const usesDataService = funcSource.includes('dataService.deleteCustomer');
+                
+                addTestResult(
+                    'Test 6.3: deleteCustomer() uses DataService',
+                    usesDataService,
+                    usesDataService ?
+                        'deleteCustomer() correctly calls dataService.deleteCustomer()' :
+                        'deleteCustomer() does not use dataService.deleteCustomer()'
+                );
+
+                // Check for confirmation dialog
+                const hasConfirmation = funcSource.includes('confirm');
+                
+                addTestResult(
+                    'Test 6.3: deleteCustomer() has confirmation dialog',
+                    hasConfirmation,
+                    hasConfirmation ?
+                        'deleteCustomer() includes confirmation dialog' :
+                        'deleteCustomer() missing confirmation dialog'
+                );
+
+            } catch (error) {
+                addTestResult(
+                    'Test 6.3: deleteCustomer() verification',
+                    false,
+                    `Error during test: ${error.message}`
+                );
+            }
+        }
+
+        async function testMergeDuplicateCustomersRemoved() {
+            console.log('=== TEST: mergeDuplicateCustomers() removed ===');
+            
+            try {
+                // Check if the function still exists
+                const functionExists = typeof window.mergeDuplicateCustomers === 'function';
+                
+                addTestResult(
+                    'Test 6.4: mergeDuplicateCustomers() removed',
+                    !functionExists,
+                    functionExists ?
+                        'mergeDuplicateCustomers() still exists - should be removed' :
+                        'mergeDuplicateCustomers() successfully removed from global scope'
+                );
+
+                // Check customers.js source for any merge logic
+                // This would require loading the source file, so we'll just verify the function is gone
+                
+            } catch (error) {
+                addTestResult(
+                    'Test 6.4: mergeDuplicateCustomers() verification',
+                    false,
+                    `Error during test: ${error.message}`
+                );
+            }
+        }
+
+        async function testSaveEditedCustomer() {
+            console.log('=== TEST: saveEditedCustomer() refactored ===');
+            
+            try {
+                if (typeof window.saveEditedCustomer !== 'function') {
+                    addTestResult(
+                        'Test 6.2: saveEditedCustomer() function exists',
+                        false,
+                        'saveEditedCustomer function is not available'
+                    );
+                    return;
+                }
+
+                const funcSource = window.saveEditedCustomer.toString();
+                
+                // Check for localStorage removal
+                const hasLocalStorage = funcSource.includes('localStorage.setItem');
+                
+                addTestResult(
+                    'Test 6.2: saveEditedCustomer() removes localStorage',
+                    !hasLocalStorage,
+                    hasLocalStorage ?
+                        'saveEditedCustomer() still contains localStorage references' :
+                        'saveEditedCustomer() successfully removed localStorage references'
+                );
+
+                // Check for async/await
+                const isAsync = funcSource.includes('async') || funcSource.includes('await');
+                
+                addTestResult(
+                    'Test 6.2: saveEditedCustomer() is async',
+                    isAsync,
+                    isAsync ?
+                        'saveEditedCustomer() properly uses async/await' :
+                        'saveEditedCustomer() should be async'
+                );
+
+            } catch (error) {
+                addTestResult(
+                    'Test 6.2: saveEditedCustomer() verification',
+                    false,
+                    `Error during test: ${error.message}`
+                );
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            addTestResult(
+                'Test Suite Started',
+                true,
+                'Running all tests for Task 6: Refactor customers.js to remove localStorage dependencies'
+            );
+
+            await testLoadCustomersNoLocalStorage();
+            await testAutoCreateCustomer();
+            await testSaveEditedCustomer();
+            await testDeleteCustomer();
+            await testMergeDuplicateCustomersRemoved();
+
+            addTestResult(
+                'Test Suite Completed',
+                true,
+                'All tests have been executed. Review results above.'
+            );
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 1000);
+        });
+    </script>
+</body>
+</html>

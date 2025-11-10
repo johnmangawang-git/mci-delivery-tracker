@@ -845,47 +845,13 @@ async function saveBooking() {
             console.log('🔧 Converted delivery data for Supabase:', newDelivery);
 
             // Save to Supabase using dataService
-            if (window.dataService) {
-                try {
-                    const savedDelivery = await window.dataService.saveDelivery(newDelivery);
-                    console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
-                } catch (error) {
-                    console.error('❌ Failed to save to Supabase:', error);
-                    // Fallback to localStorage with original format for compatibility
-                    const localDelivery = {
-                        id: 'DEL-' + Date.now() + '-' + drNumber,
-                        drNumber: drNumber,
-                        customerName: customerName,
-                        vendorNumber: vendorNumber,
-                        origin: origin,
-                        destination: destinations.join('; '),
-                        truckType: truckType,
-                        truckPlateNumber: truckPlateNumber,
-                        status: 'On Schedule',
-                        deliveryDate: deliveryDate,
-                        additionalCosts: additionalCostsTotal,
-                        additionalCostItems: additionalCostItems,
-                        timestamp: window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString()
-                    };
-                    if (typeof window.activeDeliveries !== 'undefined') {
-                        window.activeDeliveries.push(localDelivery);
-                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                        console.log('✅ Saved to localStorage as fallback');
-                    }
-                }
-            } else {
-                // Fallback to localStorage if dataService not available
-                if (typeof window.activeDeliveries !== 'undefined') {
-                    window.activeDeliveries.push(newDelivery);
-                    console.log(`✅ Added delivery to window.activeDeliveries. Total: ${window.activeDeliveries.length}`);
-                    
-                    try {
-                        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                        console.log('✅ Saved activeDeliveries to localStorage');
-                    } catch (error) {
-                        console.error('Error saving to localStorage:', error);
-                    }
-                }
+            if (!window.dataService) {
+                throw new Error('DataService not available. Cannot save delivery.');
+            }
+            
+            try {
+                const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+                console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
                 
                 // Force immediate refresh of Active Deliveries display
                 console.log('🔄 Forcing immediate refresh of Active Deliveries...');
@@ -1023,17 +989,6 @@ function ensureCustomerManagementReady() {
         console.log('Initialized window.customers array');
     }
     
-    // Try to load existing customers from localStorage
-    const savedCustomers = localStorage.getItem('mci-customers');
-    if (savedCustomers && window.customers.length === 0) {
-        try {
-            window.customers = JSON.parse(savedCustomers);
-            console.log('Loaded customers from localStorage:', window.customers.length);
-        } catch (error) {
-            console.error('Error loading customers from localStorage:', error);
-        }
-    }
-    
     // Sync with HTML customers array if it exists
     if (typeof customers !== 'undefined') {
         console.log('HTML customers array found with length:', customers.length);
@@ -1115,9 +1070,6 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
                 }
             }
             
-            // Save updated customer data to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-            
             // Always refresh customers view to ensure updated data is visible
             if (typeof window.loadCustomers === 'function') {
                 window.loadCustomers();
@@ -1163,10 +1115,6 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
             customers.push(newCustomer);
             console.log('Added to HTML customers array, new length:', customers.length);
         }
-        
-        // Save to localStorage
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-        console.log('Saved to localStorage');
         
         // Always refresh customers view to ensure new customer is visible
         console.log('=== REFRESHING CUSTOMER DISPLAY ===');
@@ -2744,95 +2692,18 @@ async function createBookingFromDR(bookingData) {
                         }
                     } catch (error) {
                         console.error('❌ Failed to save with storage priority:', error);
-                        // Fallback to localStorage with original format for compatibility
-                        const localDelivery = {
-                            id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
-                            drNumber: bookingData.drNumber,
-                            customerName: bookingData.customerName,
-                            vendorNumber: bookingData.vendorNumber,
-                            origin: bookingData.origin,
-                            destination: bookingData.destination,
-                            truckType: bookingData.truckType,
-                            truckPlateNumber: bookingData.truckPlateNumber,
-                            status: 'On Schedule',
-                            deliveryDate: bookingData.deliveryDate,
-                            additionalCosts: bookingData.additionalCosts,
-                            timestamp: new Date().toISOString(),
-                            // NEW: Add the new fields to the localStorage object with both naming conventions
-                            itemNumber: bookingData.itemNumber || '',
-                            mobileNumber: bookingData.mobileNumber || '',
-                            itemDescription: bookingData.itemDescription || '',
-                            serialNumber: bookingData.serialNumber || '',
-                            // Also add snake_case versions for consistency
-                            item_number: bookingData.itemNumber || '',
-                            mobile_number: bookingData.mobileNumber || '',
-                            item_description: bookingData.itemDescription || '',
-                            serial_number: bookingData.serialNumber || ''
-                        };
-                        if (typeof window.activeDeliveries !== 'undefined') {
-                            window.activeDeliveries.push(localDelivery);
-                            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                            console.log('✅ Saved to localStorage as fallback');
-                        }
+                        throw error;
                     }
                 } else {
                     console.error('❌ dataService is not available');
+                    throw new Error('DataService is required for saving deliveries');
                 }
             } catch (error) {
                 console.error('❌ Failed to save to Supabase:', error);
-                // Fallback to localStorage with original format for compatibility
-                const localDelivery = {
-                    id: 'DEL-' + Date.now() + '-' + bookingData.drNumber,
-                    drNumber: bookingData.drNumber,
-                    customerName: bookingData.customerName,
-                    vendorNumber: bookingData.vendorNumber,
-                    origin: bookingData.origin,
-                    destination: bookingData.destination,
-                    truckType: bookingData.truckType,
-                    truckPlateNumber: bookingData.truckPlateNumber,
-                    status: 'On Schedule',
-                    deliveryDate: bookingData.deliveryDate,
-                    additionalCosts: bookingData.additionalCosts,
-                    timestamp: new Date().toISOString(),
-                    // NEW: Add the new fields to the localStorage object with both naming conventions
-                    itemNumber: bookingData.itemNumber || '',
-                    mobileNumber: bookingData.mobileNumber || '',
-                    itemDescription: bookingData.itemDescription || '',
-                    serialNumber: bookingData.serialNumber || '',
-                    // Also add snake_case versions for consistency
-                    item_number: bookingData.itemNumber || '',
-                    mobile_number: bookingData.mobileNumber || '',
-                    item_description: bookingData.itemDescription || '',
-                    serial_number: bookingData.serialNumber || ''
-                };
-                if (typeof window.activeDeliveries !== 'undefined') {
-                    window.activeDeliveries.push(localDelivery);
-                    localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                    console.log('✅ Saved to localStorage as fallback');
-                }
+                throw error;
             }
         } else {
-            // Fallback to localStorage if dataService not available
-            window.activeDeliveries = window.activeDeliveries || [];
-            // Ensure the bookingData has the new fields with both naming conventions
-            const normalizedBookingData = {
-                ...bookingData,
-                // Ensure new fields are present with both naming conventions
-                itemNumber: bookingData.itemNumber || bookingData.item_number || '',
-                mobileNumber: bookingData.mobileNumber || bookingData.mobile_number || '',
-                itemDescription: bookingData.itemDescription || bookingData.item_description || '',
-                serialNumber: bookingData.serialNumber || bookingData.serial_number || '',
-                // Also ensure snake_case versions for consistency
-                item_number: bookingData.itemNumber || bookingData.item_number || '',
-                mobile_number: bookingData.mobileNumber || bookingData.mobile_number || '',
-                item_description: bookingData.itemDescription || bookingData.item_description || '',
-                serial_number: bookingData.serialNumber || bookingData.serial_number || ''
-            };
-            window.activeDeliveries.push(normalizedBookingData);
-            const activeDeliveriesData = JSON.stringify(window.activeDeliveries);
-            localStorage.setItem('mci-active-deliveries', activeDeliveriesData);
-            localStorage.setItem('activeDeliveries', activeDeliveriesData);
-            console.log('✅ Saved to localStorage (dataService not available)');
+            throw new Error('DataService not available. Cannot save delivery.');
         }
         
         // Auto-create customer if needed
@@ -3134,10 +3005,6 @@ async function createBookingFromDREnhanced(bookingData) {
         // Add to active deliveries
         window.activeDeliveries.push(bookingData);
         
-        // Save to localStorage
-        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-        localStorage.setItem('activeDeliveries', JSON.stringify(window.activeDeliveries));
-        
         // Auto-create customer if needed
         if (typeof autoCreateCustomer === 'function') {
             await autoCreateCustomer(bookingData.customerName, bookingData.vendorNumber, bookingData.destination);
@@ -3158,50 +3025,15 @@ async function createBookingFromDREnhanced(bookingData) {
 
 // Update analytics with cost breakdown data
 function updateAnalyticsWithCostBreakdown(costBreakdown) {
-    try {
-        // Get existing cost breakdown data from localStorage
-        let existingBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
-        
-        // Add new cost breakdown items
-        costBreakdown.forEach(cost => {
-            const existingIndex = existingBreakdown.findIndex(item => item.description === cost.description);
-            
-            if (existingIndex >= 0) {
-                // Update existing cost category
-                existingBreakdown[existingIndex].amount += cost.amount;
-                existingBreakdown[existingIndex].count += 1;
-            } else {
-                // Add new cost category
-                existingBreakdown.push({
-                    description: cost.description,
-                    amount: cost.amount,
-                    count: 1,
-                    lastUpdated: new Date().toISOString()
-                });
-            }
-        });
-        
-        // Save updated breakdown
-        localStorage.setItem('analytics-cost-breakdown', JSON.stringify(existingBreakdown));
-        
-        console.log('Updated analytics cost breakdown:', existingBreakdown);
-        
-    } catch (error) {
-        console.error('Error updating analytics cost breakdown:', error);
-    }
+    // NOTE: This function is deprecated in database-centric architecture
+    // Analytics data should be calculated from database queries, not localStorage
+    console.log('updateAnalyticsWithCostBreakdown called (deprecated - analytics should use database queries)');
+    // No-op: Analytics should query the database directly for cost breakdown data
 }
 
 // Debug function to verify DR upload data integration
 function debugDRUploadIntegration() {
     console.log('=== DR UPLOAD INTEGRATION DEBUG ===');
-    
-    // Check localStorage data
-    const activeDeliveriesData = localStorage.getItem('mci-active-deliveries');
-    const activeDeliveriesBackup = localStorage.getItem('activeDeliveries');
-    
-    console.log('localStorage data:');
-    console.log('- mci-active-deliveries:', activeDeliveriesData ? JSON.parse(activeDeliveriesData).length + ' items' : 'Not found');
-    console.log('- activeDeliveries backup:', activeDeliveriesBackup ? JSON.parse(activeDeliveriesBackup).length + ' items' : 'Not found');
     
     // Check global arrays
     console.log('Global arrays:');
@@ -3306,10 +3138,6 @@ function debugManualBookingFlow() {
         console.log('Latest booking:', window.activeDeliveries[window.activeDeliveries.length - 1]);
     }
     
-    // Check localStorage
-    const savedData = localStorage.getItem('mci-active-deliveries');
-    console.log('localStorage data:', savedData ? JSON.parse(savedData).length + ' items' : 'Not found');
-    
     // Check if loadActiveDeliveries function exists
     console.log('loadActiveDeliveries function:', typeof window.loadActiveDeliveries);
     
@@ -3361,14 +3189,6 @@ function testManualBookingFlow() {
     }
     window.activeDeliveries.push(testBooking);
     console.log('✅ Added to window.activeDeliveries. Total:', window.activeDeliveries.length);
-    
-    // Save to localStorage
-    try {
-        localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-        console.log('✅ Saved to localStorage');
-    } catch (error) {
-        console.error('❌ Error saving to localStorage:', error);
-    }
     
     // Test loading
     if (typeof window.loadActiveDeliveries === 'function') {

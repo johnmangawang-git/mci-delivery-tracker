@@ -1,124 +1,290 @@
 /**
- * Data Service Layer
- * Provides unified interface for all data operations with Supabase/localStorage fallback
+ * Data Service Layer - Database-Centric Architecture
+ * Provides unified interface for all data operations with Supabase as single source of truth
+ * All localStorage dependencies have been removed - Supabase is the only persistent storage
  */
 
 console.log('🔧 Loading Data Service...');
 
 class DataService {
     constructor() {
-        this.isOnline = true;
-        this.retryQueue = [];
+        this.client = null;
+        this.isInitialized = false;
     }
 
     /**
-     * Check if Supabase is available and online
+     * Initialize Supabase client
+     * Must be called before any data operations
      */
-    isSupabaseAvailable() {
-        const client = window.supabaseClient && window.supabaseClient();
-        const isOnline = window.isSupabaseOnline && window.isSupabaseOnline();
-        
-        console.log('🔍 Supabase availability check:', {
-            clientAvailable: !!client,
-            isOnline: isOnline,
-            clientType: typeof client
-        });
-        
-        return client && isOnline;
+    async initialize() {
+        if (!window.supabaseClient) {
+            throw new Error('Supabase client not available. Ensure supabase is loaded before DataService.');
+        }
+        this.client = window.supabaseClient();
+        this.isInitialized = true;
+        console.log('✅ DataService initialized with Supabase client');
     }
 
     /**
-     * Execute operation with storage priority (NEW APPROACH)
+     * Ensure client is initialized before operations
+     * @private
      */
-    async executeWithStoragePriority(operation, tableName, data, localStorageKey) {
-        // Use storage priority service if available
-        if (window.storagePriorityService) {
-            console.log(`🔄 Using storage priority service for ${tableName}`);
-            try {
-                const result = await window.storagePriorityService.executeWithPriority(operation, tableName, data);
-                console.log(`✅ Storage priority operation successful:`, result);
-                return result.data;
-            } catch (error) {
-                console.warn(`⚠️ Storage priority operation failed, using fallback:`, error);
+    _ensureInitialized() {
+        if (!this.isInitialized || !this.client) {
+            throw new Error('DataService not initialized. Call initialize() first.');
+        }
+    }
+
+    /**
+     * Check network status before operations
+     * @private
+     * @throws {Error} If offline
+     */
+    _checkNetworkStatus() {
+        if (window.networkStatusService && !window.networkStatusService.getStatus()) {
+            const error = new Error('No internet connection. This operation requires network access.');
+            error.code = 'NETWORK_OFFLINE';
+            throw error;
+        }
+    }
+
+    /**
+     * GENERIC CRUD OPERATIONS
+     */
+
+    /**
+     * Create a new record in the specified table
+     * @param {string} table - Table name
+     * @param {object} data - Data to insert
+     * @returns {Promise<object>} Created record
+     */
+    async create(table, data) {
+        this._ensureInitialized();
+        this._checkNetworkStatus();
+        
+        try {
+            // Log the operation
+            if (window.Logger) {
+                window.Logger.info(`Creating record in ${table}`, { table, data });
             }
-        }
-        
-        // Fallback to original auto-sync approach
-        if (window.autoSyncService) {
-            console.log(`🔄 Using auto-sync for ${tableName}`);
-            return await window.autoSyncService.syncData(operation, tableName, data, localStorageKey);
-        }
-        
-        // Fallback to original method
-        return await this.executeWithFallback(
-            async () => {
-                const client = window.supabaseClient();
-                const { data: result, error } = await client.from(tableName).upsert(data).select();
-                if (error) throw error;
-                return result;
-            },
-            async () => {
-                // Save to localStorage
-                const existing = JSON.parse(localStorage.getItem(localStorageKey) || '[]');
-                const updated = Array.isArray(data) ? [...existing, ...data] : [...existing, data];
-                localStorage.setItem(localStorageKey, JSON.stringify(updated));
-                return data;
-            },
-            tableName
-        );
-    }
-
-    /**
-     * Execute operation with fallback (legacy method)
-     */
-    async executeWithFallback(supabaseOperation, localStorageOperation, tableName = '') {
-        // NEW APPROACH: Try Supabase first as primary storage
-        if (this.isSupabaseAvailable()) {
-            try {
-                console.log(`Attempting Supabase operation for ${tableName} (primary storage)`);
-                const result = await supabaseOperation();
-                // Only save to localStorage as backup after successful Supabase operation
-                try {
-                    await localStorageOperation();
-                    console.log(`✅ Saved to localStorage as backup for ${tableName}`);
-                } catch (localStorageError) {
-                    console.warn(`⚠️ Failed to save to localStorage backup for ${tableName}:`, localStorageError);
-                    // Don't fail the operation if localStorage backup fails
+            
+            const { data: result, error } = await this.client
+                .from(table)
+                .insert({
+                    ...data,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .select();
+            
+            if (error) {
+                console.error(`❌ Error creating record in ${table}:`, error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, `DataService.create(${table})`);
                 }
-                return result;
-            } catch (error) {
-                console.warn(`⚠️ Supabase operation failed for ${tableName}, using localStorage fallback:`, error);
-                this.isOnline = false;
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error(`Failed to create record in ${table}`, {
+                        table,
+                        error: error.message,
+                        code: error.code,
+                        details: error.details
+                    });
+                }
+                
+                throw error;
             }
-        } else {
-            console.log(`Supabase not available for ${tableName}, using localStorage fallback`);
+            
+            console.log(`✅ Created record in ${table}:`, result[0]);
+            return result[0];
+        } catch (error) {
+            // Re-throw after logging
+            throw error;
         }
+    }
 
-        // Fallback to localStorage when Supabase is not available or fails
-        return await localStorageOperation();
+    /**
+     * Read records from the specified table
+     * @param {string} table - Table name
+     * @param {object} filters - Filter conditions
+     * @returns {Promise<Array>} Array of records
+     */
+    async read(table, filters = {}) {
+        this._ensureInitialized();
+        
+        try {
+            // Log the operation
+            if (window.Logger) {
+                window.Logger.info(`Reading records from ${table}`, { table, filters });
+            }
+            
+            let query = this.client.from(table).select('*');
+            
+            // Apply filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (Array.isArray(value)) {
+                    query = query.in(key, value);
+                } else {
+                    query = query.eq(key, value);
+                }
+            });
+            
+            const { data, error } = await query.order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error(`❌ Error reading from ${table}:`, error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, `DataService.read(${table})`);
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error(`Failed to read records from ${table}`, {
+                        table,
+                        filters,
+                        error: error.message,
+                        code: error.code,
+                        details: error.details
+                    });
+                }
+                
+                throw error;
+            }
+            
+            console.log(`✅ Read ${data?.length || 0} records from ${table}`);
+            return data || [];
+        } catch (error) {
+            // Re-throw after logging
+            throw error;
+        }
+    }
+
+    /**
+     * Update a record in the specified table
+     * @param {string} table - Table name
+     * @param {string} id - Record ID
+     * @param {object} data - Data to update
+     * @returns {Promise<object>} Updated record
+     */
+    async update(table, id, data) {
+        this._ensureInitialized();
+        this._checkNetworkStatus();
+        
+        try {
+            // Log the operation
+            if (window.Logger) {
+                window.Logger.info(`Updating record in ${table}`, { table, id, data });
+            }
+            
+            const { data: result, error } = await this.client
+                .from(table)
+                .update({
+                    ...data,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
+                .select();
+            
+            if (error) {
+                console.error(`❌ Error updating record in ${table}:`, error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, `DataService.update(${table})`);
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error(`Failed to update record in ${table}`, {
+                        table,
+                        id,
+                        error: error.message,
+                        code: error.code,
+                        details: error.details
+                    });
+                }
+                
+                throw error;
+            }
+            
+            console.log(`✅ Updated record in ${table}:`, result[0]);
+            return result[0];
+        } catch (error) {
+            // Re-throw after logging
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a record from the specified table
+     * @param {string} table - Table name
+     * @param {string} id - Record ID
+     * @returns {Promise<boolean>} Success status
+     */
+    async delete(table, id) {
+        this._ensureInitialized();
+        this._checkNetworkStatus();
+        
+        try {
+            // Log the operation
+            if (window.Logger) {
+                window.Logger.info(`Deleting record from ${table}`, { table, id });
+            }
+            
+            const { error } = await this.client
+                .from(table)
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                console.error(`❌ Error deleting record from ${table}:`, error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, `DataService.delete(${table})`);
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error(`Failed to delete record from ${table}`, {
+                        table,
+                        id,
+                        error: error.message,
+                        code: error.code,
+                        details: error.details
+                    });
+                }
+                
+                throw error;
+            }
+            
+            console.log(`✅ Deleted record from ${table} with id: ${id}`);
+            return true;
+        } catch (error) {
+            // Re-throw after logging
+            throw error;
+        }
     }
 
     /**
      * DELIVERY OPERATIONS
      */
 
+    /**
+     * Save a delivery (create or update)
+     * @param {object} delivery - Delivery data
+     * @returns {Promise<object>} Saved delivery
+     */
     async saveDelivery(delivery) {
-        // NEW APPROACH: Use storage priority service
-        if (window.storagePriorityService) {
-            try {
-                const result = await window.storagePriorityService.executeWithPriority('upsert', 'deliveries', delivery);
-                console.log('✅ Delivery saved with storage priority:', result);
-                return result.data;
-            } catch (error) {
-                console.warn('⚠️ Storage priority save failed:', error);
-            }
-        }
-
-        // Fallback to original approach
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            
-            // Prepare data for Supabase - remove custom ID to let Supabase generate UUID
+        this._ensureInitialized();
+        
+        try {
+            // Prepare data for Supabase
             const supabaseData = {
                 ...delivery,
                 updated_at: new Date().toISOString()
@@ -129,7 +295,7 @@ class DataService {
             
             // First, check by UUID if it's valid
             if (supabaseData.id && supabaseData.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-                const { data: recordById } = await client
+                const { data: recordById } = await this.client
                     .from('deliveries')
                     .select('*')
                     .eq('id', supabaseData.id)
@@ -143,7 +309,7 @@ class DataService {
             
             // If not found by ID, check by DR number
             if (!existingRecord && supabaseData.dr_number) {
-                const { data: recordByDr } = await client
+                const { data: recordByDr } = await this.client
                     .from('deliveries')
                     .select('*')
                     .eq('dr_number', supabaseData.dr_number)
@@ -165,61 +331,25 @@ class DataService {
                 const updateData = { ...supabaseData };
                 delete updateData.id;
                 
-                const { data, error } = await client
+                const { data, error } = await this.client
                     .from('deliveries')
                     .update(updateData)
                     .eq('id', existingRecord.id)
                     .select();
                 
                 if (error) throw error;
-                    
-                    // ENHANCED: Also update individual cost items in additional_cost_items table
-                    const updatedDelivery = data[0];
-                    if (updatedDelivery && supabaseData.additional_cost_items && Array.isArray(supabaseData.additional_cost_items)) {
-                        console.log('💾 Updating individual cost items in additional_cost_items table...');
-                        
-                        try {
-                            // First, delete existing cost items for this delivery
-                            const { error: deleteError } = await client
-                                .from('additional_cost_items')
-                                .delete()
-                                .eq('delivery_id', updatedDelivery.id);
-                            
-                            if (deleteError) {
-                                console.warn('⚠️ Could not delete existing cost items:', deleteError);
-                            } else {
-                                console.log('🗑️ Deleted existing cost items for delivery:', updatedDelivery.id);
-                            }
-                            
-                            // Then, insert new cost items if any
-                            if (supabaseData.additional_cost_items.length > 0) {
-                                const costItemsToInsert = supabaseData.additional_cost_items.map(item => ({
-                                    delivery_id: updatedDelivery.id,
-                                    description: item.description || 'Unknown Cost',
-                                    amount: parseFloat(item.amount) || 0,
-                                    category: item.category || 'Other',
-                                    created_at: new Date().toISOString(),
-                                    updated_at: new Date().toISOString()
-                                }));
-                                
-                                const { data: costItemsData, error: costItemsError } = await client
-                                    .from('additional_cost_items')
-                                    .insert(costItemsToInsert)
-                                    .select();
-                                
-                                if (costItemsError) {
-                                    console.warn('⚠️ Could not insert updated cost items:', costItemsError);
-                                } else {
-                                    console.log('✅ Successfully updated cost items in additional_cost_items table:', costItemsData?.length || 0);
-                                }
-                            }
-                        } catch (costItemsException) {
-                            console.warn('⚠️ Exception updating cost items:', costItemsException.message);
-                        }
-                    }
-                    
-                    return updatedDelivery;
+                
+                const updatedDelivery = data[0];
+                
+                // Update individual cost items in additional_cost_items table
+                if (updatedDelivery && supabaseData.additional_cost_items && Array.isArray(supabaseData.additional_cost_items)) {
+                    await this._updateAdditionalCostItems(updatedDelivery.id, supabaseData.additional_cost_items);
                 }
+                
+                // Invalidate deliveries cache after update
+                this.invalidateCache('deliveries');
+                
+                return updatedDelivery;
             }
             
             // INSERT new record (no existing record found)
@@ -250,7 +380,7 @@ class DataService {
             } else {
                 // Fallback: direct insert
                 console.log('⚠️ Using direct insert (no schema validation available)');
-                const result = await client
+                const result = await this.client
                     .from('deliveries')
                     .insert(insertData)
                     .select();
@@ -260,145 +390,198 @@ class DataService {
             
             if (error) throw error;
             
-            // ENHANCED: Also save individual cost items to additional_cost_items table
             const savedDelivery = data[0];
+            
+            // Save individual cost items to additional_cost_items table
             if (savedDelivery && supabaseData.additional_cost_items && Array.isArray(supabaseData.additional_cost_items) && supabaseData.additional_cost_items.length > 0) {
-                console.log('💾 Saving individual cost items to additional_cost_items table...', supabaseData.additional_cost_items.length);
-                
-                try {
-                    // Prepare cost items for insertion
-                    const costItemsToInsert = supabaseData.additional_cost_items.map(item => ({
-                        delivery_id: savedDelivery.id,
-                        description: item.description || 'Unknown Cost',
-                        amount: parseFloat(item.amount) || 0,
-                        category: item.category || 'Other',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }));
-                    
-                    // Insert cost items to dedicated table
-                    const { data: costItemsData, error: costItemsError } = await client
-                        .from('additional_cost_items')
-                        .insert(costItemsToInsert)
-                        .select();
-                    
-                    if (costItemsError) {
-                        console.warn('⚠️ Could not save cost items to additional_cost_items table:', costItemsError);
-                        // Don't fail the whole operation, just log the warning
-                    } else {
-                        console.log('✅ Successfully saved cost items to additional_cost_items table:', costItemsData?.length || 0);
-                    }
-                } catch (costItemsException) {
-                    console.warn('⚠️ Exception saving cost items:', costItemsException.message);
-                    // Don't fail the whole operation
-                }
+                await this._updateAdditionalCostItems(savedDelivery.id, supabaseData.additional_cost_items);
             }
+            
+            // Invalidate deliveries cache after insert
+            this.invalidateCache('deliveries');
             
             return savedDelivery;
-        };
-
-        const localStorageOp = async () => {
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
-            // Remove from both arrays first using both id and dr_number for robustness
-            const filteredActive = activeDeliveries.filter(d => 
-                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
-            );
-            const filteredHistory = deliveryHistory.filter(d => 
-                (d.id !== delivery.id && (d.dr_number || d.drNumber) !== (delivery.dr_number || delivery.drNumber))
-            );
-            
-            // Add to appropriate array based on status
-            if (delivery.status === 'Completed') {
-                // For completed deliveries, ensure we're not duplicating in active
-                filteredHistory.unshift(delivery);
-                localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-                
-                // Update global arrays
-                window.deliveryHistory = filteredHistory;
-                window.activeDeliveries = filteredActive;
-                
-                // Update analytics dashboard stats
-                if (typeof window.updateDashboardStats === 'function') {
-                    setTimeout(() => {
-                        window.updateDashboardStats();
-                    }, 100);
-                }
-            } else {
-                // For active deliveries, ensure we're not duplicating in history
-                filteredActive.push(delivery);
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-                localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-                
-                // Update global arrays
-                window.activeDeliveries = filteredActive;
-                window.deliveryHistory = filteredHistory;
-                
-                // Update analytics dashboard stats
-                if (typeof window.updateDashboardStats === 'function') {
-                    setTimeout(() => {
-                        window.updateDashboardStats();
-                    }, 100);
-                }
-            }
-            
-            return delivery;
-        };
-
-        return this.executeWithStoragePriority('upsert', 'deliveries', delivery, 'mci-active-deliveries');
+        } catch (error) {
+            console.error('❌ Error saving delivery:', error);
+            throw error;
+        }
     }
 
-    async getDeliveries(filters = {}) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            let query = client.from('deliveries').select('*');
+    /**
+     * Update additional cost items for a delivery
+     * @private
+     * @param {string} deliveryId - Delivery ID
+     * @param {Array} costItems - Array of cost items
+     */
+    async _updateAdditionalCostItems(deliveryId, costItems) {
+        try {
+            console.log('💾 Updating individual cost items in additional_cost_items table...');
             
-            if (filters.status) {
-                query = query.eq('status', filters.status);
+            // First, delete existing cost items for this delivery
+            const { error: deleteError } = await this.client
+                .from('additional_cost_items')
+                .delete()
+                .eq('delivery_id', deliveryId);
+            
+            if (deleteError) {
+                console.warn('⚠️ Could not delete existing cost items:', deleteError);
+            } else {
+                console.log('🗑️ Deleted existing cost items for delivery:', deliveryId);
             }
+            
+            // Then, insert new cost items if any
+            if (costItems.length > 0) {
+                const costItemsToInsert = costItems.map(item => ({
+                    delivery_id: deliveryId,
+                    description: item.description || 'Unknown Cost',
+                    amount: parseFloat(item.amount) || 0,
+                    category: item.category || 'Other',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }));
+                
+                const { data: costItemsData, error: costItemsError } = await this.client
+                    .from('additional_cost_items')
+                    .insert(costItemsToInsert)
+                    .select();
+                
+                if (costItemsError) {
+                    console.warn('⚠️ Could not insert updated cost items:', costItemsError);
+                } else {
+                    console.log('✅ Successfully updated cost items in additional_cost_items table:', costItemsData?.length || 0);
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Exception updating cost items:', error.message);
+        }
+    }
+
+    /**
+     * Get deliveries with optional filters
+     * @param {object} filters - Filter conditions
+     * @returns {Promise<Array>} Array of deliveries
+     */
+    async getDeliveries(filters = {}) {
+        this._ensureInitialized();
+        
+        try {
+            let query = this.client.from('deliveries').select('*');
+            
+            // Apply status filter
+            if (filters.status) {
+                if (Array.isArray(filters.status)) {
+                    query = query.in('status', filters.status);
+                } else {
+                    query = query.eq('status', filters.status);
+                }
+            }
+            
+            // Apply other filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (key !== 'status') {
+                    query = query.eq(key, value);
+                }
+            });
             
             const { data, error } = await query.order('created_at', { ascending: false });
             
             if (error) throw error;
+            
+            console.log(`✅ Retrieved ${data?.length || 0} deliveries`);
             return data || [];
-        };
+            
+        } catch (error) {
+            console.error('❌ Error getting deliveries:', error);
+            throw error;
+        }
+    }
 
-        const localStorageOp = async () => {
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
+    /**
+     * Get deliveries with pagination support
+     * @param {object} options - Pagination and filter options
+     * @param {number} options.page - Page number (1-based)
+     * @param {number} options.pageSize - Number of items per page
+     * @param {object} options.filters - Filter conditions
+     * @returns {Promise<object>} Paginated result with data and metadata
+     */
+    async getDeliveriesWithPagination(options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            page = 1,
+            pageSize = 50,
+            filters = {}
+        } = options;
+        
+        try {
+            // Calculate range for pagination
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
             
-            let allDeliveries = [...activeDeliveries, ...deliveryHistory];
+            // Build query with count
+            let query = this.client
+                .from('deliveries')
+                .select('*', { count: 'exact' });
             
-            // Ensure we're using the correct field name for status filtering
+            // Apply status filter
             if (filters.status) {
-                if (filters.status === 'Completed') {
-                    // For completed status, filter by both field name formats
-                    allDeliveries = allDeliveries.filter(d => 
-                        (d.status === 'Completed') || 
-                        (d.status === 'Signed') ||
-                        (d.status === 'Completed' && (d.dr_number || d.drNumber))
-                    );
+                if (Array.isArray(filters.status)) {
+                    query = query.in('status', filters.status);
                 } else {
-                    // For other statuses, exclude completed deliveries
-                    allDeliveries = allDeliveries.filter(d => 
-                        (d.status !== 'Completed') && 
-                        (d.status !== 'Signed')
-                    );
+                    query = query.eq('status', filters.status);
                 }
             }
             
-            return allDeliveries;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+            // Apply other filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (key !== 'status') {
+                    query = query.eq(key, value);
+                }
+            });
+            
+            // Apply pagination and ordering
+            query = query
+                .order('created_at', { ascending: false })
+                .range(from, to);
+            
+            const { data, error, count } = await query;
+            
+            if (error) throw error;
+            
+            const totalPages = Math.ceil(count / pageSize);
+            
+            console.log(`✅ Retrieved page ${page}/${totalPages} (${data?.length || 0} of ${count} deliveries)`);
+            
+            return {
+                data: data || [],
+                pagination: {
+                    page,
+                    pageSize,
+                    totalCount: count,
+                    totalPages,
+                    hasNextPage: page < totalPages,
+                    hasPreviousPage: page > 1
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Error getting deliveries with pagination:', error);
+            throw error;
+        }
     }
 
-    async updateDeliveryStatusInSupabase(drNumber, newStatus) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
+    /**
+     * Update delivery status
+     * @param {string} drNumber - DR number
+     * @param {string} newStatus - New status
+     * @returns {Promise<object>} Updated delivery
+     */
+    async updateDeliveryStatus(drNumber, newStatus) {
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('deliveries')
                 .update({ 
                     status: newStatus,
@@ -408,73 +591,61 @@ class DataService {
                 .select();
 
             if (error) {
-                console.error(`Error updating status in Supabase for DR ${drNumber}:`, error);
+                console.error(`❌ Error updating status for DR ${drNumber}:`, error);
                 throw error;
             }
-            console.log(`Successfully updated status to ${newStatus} for DR ${drNumber} in Supabase.`, data);
-            return data;
-        };
-
-        // This operation is critical for Supabase, so the fallback is just to log an error.
-        const localStorageOp = async () => {
-            console.warn(`Supabase is offline. Could not update status for DR ${drNumber} to ${newStatus}.`);
-            // We can try to update the local storage as a fallback, but the source of truth is Supabase
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
-            if (deliveryIndex !== -1) {
-                activeDeliveries[deliveryIndex].status = newStatus;
-                localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-            }
-            return null; // Indicate that the primary operation failed.
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+            
+            console.log(`✅ Successfully updated status to ${newStatus} for DR ${drNumber}`);
+            return data[0];
+            
+        } catch (error) {
+            console.error('❌ Error updating delivery status:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Delete a delivery
+     * @param {string} deliveryId - Delivery ID
+     * @returns {Promise<boolean>} Success status
+     */
     async deleteDelivery(deliveryId) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { error } = await this.client
                 .from('deliveries')
                 .delete()
                 .eq('id', deliveryId);
             
             if (error) throw error;
+            
+            // Invalidate deliveries cache after delete
+            this.invalidateCache('deliveries');
+            
+            console.log(`✅ Deleted delivery with id: ${deliveryId}`);
             return true;
-        };
-
-        const localStorageOp = async () => {
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
             
-            // Filter using both id and dr_number/drNumber for robustness
-            const filteredActive = activeDeliveries.filter(d => 
-                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
-            );
-            const filteredHistory = deliveryHistory.filter(d => 
-                d.id !== deliveryId && (d.dr_number || d.drNumber) !== deliveryId
-            );
-            
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(filteredActive));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(filteredHistory));
-            
-            // Update global arrays
-            window.activeDeliveries = filteredActive;
-            window.deliveryHistory = filteredHistory;
-            
-            return true;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'deliveries');
+        } catch (error) {
+            console.error('❌ Error deleting delivery:', error);
+            throw error;
+        }
     }
 
     /**
      * CUSTOMER OPERATIONS
      */
 
+    /**
+     * Save a customer (create or update)
+     * @param {object} customer - Customer data
+     * @returns {Promise<object>} Saved customer
+     */
     async saveCustomer(customer) {
-        const supabaseOp = async () => {
-            // Use validated safe insert for customers
+        this._ensureInitialized();
+        
+        try {
+            // Use validated safe insert for customers if available
             if (window.safeInsertCustomer) {
                 console.log('🔄 Using validated safe insert for customer:', customer.name || customer.customer_name);
                 const result = await window.safeInsertCustomer({
@@ -484,112 +655,107 @@ class DataService {
                 
                 if (result.error) throw result.error;
                 return result.data[0];
-            } else {
-                // Fallback with validation
-                const client = window.supabaseClient();
-                
-                // Ensure name field is properly set
-                const customerData = {
-                    ...customer,
-                    name: customer.name || customer.customer_name || customer.customerName || '',
-                    updated_at: new Date().toISOString()
-                };
-                
-                // Validate required fields
-                if (!customerData.name || customerData.name.trim() === '') {
-                    throw new Error('Customer name is required and cannot be empty');
-                }
-                
-                const { data, error } = await client
-                    .from('customers')
-                    .upsert(customerData)
-                    .select();
-                
-                if (error) {
-                    console.error('❌ Customer save error:', error);
-                    throw error;
-                }
-                return data[0];
-            }
-        };
-
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            const existingIndex = customers.findIndex(c => c.id === customer.id);
-            
-            if (existingIndex >= 0) {
-                customers[existingIndex] = customer;
-            } else {
-                customers.push(customer);
             }
             
-            localStorage.setItem('mci-customers', JSON.stringify(customers));
+            // Fallback with validation
+            const customerData = {
+                ...customer,
+                name: customer.name || customer.customer_name || customer.customerName || '',
+                updated_at: new Date().toISOString()
+            };
             
-            // Update global array
-            window.customers = customers;
+            // Validate required fields
+            if (!customerData.name || customerData.name.trim() === '') {
+                throw new Error('Customer name is required and cannot be empty');
+            }
             
-            return customer;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+            const { data, error } = await this.client
+                .from('customers')
+                .upsert(customerData)
+                .select();
+            
+            if (error) {
+                console.error('❌ Customer save error:', error);
+                throw error;
+            }
+            
+            // Invalidate customers cache after save
+            this.invalidateCache('customers');
+            
+            console.log('✅ Saved customer:', data[0]);
+            return data[0];
+            
+        } catch (error) {
+            console.error('❌ Error saving customer:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Get all customers
+     * @returns {Promise<Array>} Array of customers
+     */
     async getCustomers() {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('customers')
                 .select('*')
                 .order('name', { ascending: true });
             
             if (error) throw error;
+            
+            console.log(`✅ Retrieved ${data?.length || 0} customers`);
             return data || [];
-        };
-
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            return customers;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+            
+        } catch (error) {
+            console.error('❌ Error getting customers:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Delete a customer
+     * @param {string} customerId - Customer ID
+     * @returns {Promise<boolean>} Success status
+     */
     async deleteCustomer(customerId) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { error } = await this.client
                 .from('customers')
                 .delete()
                 .eq('id', customerId);
             
             if (error) throw error;
+            
+            // Invalidate customers cache after delete
+            this.invalidateCache('customers');
+            
+            console.log(`✅ Deleted customer with id: ${customerId}`);
             return true;
-        };
-
-        const localStorageOp = async () => {
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            const filtered = customers.filter(c => c.id !== customerId);
             
-            localStorage.setItem('mci-customers', JSON.stringify(filtered));
-            
-            // Update global array
-            window.customers = filtered;
-            
-            return true;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'customers');
+        } catch (error) {
+            console.error('❌ Error deleting customer:', error);
+            throw error;
+        }
     }
 
     /**
      * E-POD OPERATIONS
      */
 
+    /**
+     * Save an E-POD record
+     * @param {object} epodRecord - E-POD record data
+     * @returns {Promise<object>} Saved E-POD record
+     */
     async saveEPodRecord(epodRecord) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            
-            // Log the EPOD record being saved for debugging
+        this._ensureInitialized();
+        
+        try {
             console.log('📝 Saving EPOD record to Supabase:', epodRecord);
             
             // Validate required fields
@@ -597,16 +763,7 @@ class DataService {
                 throw new Error('Missing required field: dr_number');
             }
             
-            console.log('🔍 Supabase client status:', {
-                clientAvailable: !!client,
-                clientType: typeof client
-            });
-            
-            if (!client) {
-                throw new Error('Supabase client not available');
-            }
-            
-            const { data, error } = await client
+            const { data, error } = await this.client
                 .from('epod_records')
                 .insert(epodRecord)
                 .select();
@@ -618,36 +775,27 @@ class DataService {
                     details: error.details,
                     hint: error.hint
                 });
-                console.error('📝 EPOD record that failed to save:', epodRecord);
                 throw error;
             }
+            
+            console.log('✅ Saved EPOD record:', data[0]);
             return data[0];
-        };
-
-        const localStorageOp = async () => {
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            epodRecords.push(epodRecord);
-            localStorage.setItem('ePodRecords', JSON.stringify(epodRecords));
-            return epodRecord;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'epod_records');
+            
+        } catch (error) {
+            console.error('❌ Error saving EPOD record:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Get all E-POD records
+     * @returns {Promise<Array>} Array of E-POD records
+     */
     async getEPodRecords() {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            
-            console.log('🔍 Supabase client status for getEPodRecords:', {
-                clientAvailable: !!client,
-                clientType: typeof client
-            });
-            
-            if (!client) {
-                throw new Error('Supabase client not available');
-            }
-            
-            const { data, error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('epod_records')
                 .select('*')
                 .order('signed_at', { ascending: false });
@@ -661,25 +809,30 @@ class DataService {
                 });
                 throw error;
             }
+            
+            console.log(`✅ Retrieved ${data?.length || 0} EPOD records`);
             return data || [];
-        };
-
-        const localStorageOp = async () => {
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            return epodRecords;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'epod_records');
+            
+        } catch (error) {
+            console.error('❌ Error getting EPOD records:', error);
+            throw error;
+        }
     }
 
     /**
      * ADDITIONAL COST ITEMS OPERATIONS
      */
 
+    /**
+     * Get additional cost items with optional filters
+     * @param {object} filters - Filter conditions
+     * @returns {Promise<Array>} Array of cost items
+     */
     async getAdditionalCostItems(filters = {}) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            let query = client.from('additional_cost_items').select('*');
+        this._ensureInitialized();
+        
+        try {
+            let query = this.client.from('additional_cost_items').select('*');
             
             if (filters.delivery_id) {
                 query = query.eq('delivery_id', filters.delivery_id);
@@ -692,46 +845,26 @@ class DataService {
             const { data, error } = await query.order('created_at', { ascending: false });
             
             if (error) throw error;
+            
+            console.log(`✅ Retrieved ${data?.length || 0} cost items`);
             return data || [];
-        };
-
-        const localStorageOp = async () => {
-            // DISCONNECTED: No longer read from localStorage for cost breakdown
-            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
-            // return costBreakdown;
             
-            // Instead, extract from delivery records' additional_cost_items field
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            const allDeliveries = [...activeDeliveries, ...deliveryHistory];
-            
-            const costItems = [];
-            
-            allDeliveries.forEach(delivery => {
-                if (delivery.additional_cost_items && Array.isArray(delivery.additional_cost_items)) {
-                    delivery.additional_cost_items.forEach(item => {
-                        costItems.push({
-                            id: `local-${Date.now()}-${Math.random()}`,
-                            delivery_id: delivery.id,
-                            description: item.description,
-                            amount: parseFloat(item.amount) || 0,
-                            category: item.category || 'Other',
-                            created_at: delivery.created_at || new Date().toISOString()
-                        });
-                    });
-                }
-            });
-            
-            return costItems;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+        } catch (error) {
+            console.error('❌ Error getting cost items:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Save an additional cost item
+     * @param {object} costItem - Cost item data
+     * @returns {Promise<object>} Saved cost item
+     */
     async saveAdditionalCostItem(costItem) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('additional_cost_items')
                 .insert({
                     ...costItem,
@@ -740,31 +873,30 @@ class DataService {
                 .select();
             
             if (error) throw error;
-            return data[0];
-        };
-
-        const localStorageOp = async () => {
-            // DISCONNECTED: No longer save to localStorage analytics-cost-breakdown
-            // const costBreakdown = JSON.parse(localStorage.getItem('analytics-cost-breakdown') || '[]');
-            // costBreakdown.push(costItem);
-            // localStorage.setItem('analytics-cost-breakdown', JSON.stringify(costBreakdown));
             
-            // Instead, this should be handled by the delivery save process
-            console.warn('⚠️ Cost item save fallback - should be handled by delivery save process');
-            return costItem;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'additional_cost_items');
+            console.log('✅ Saved cost item:', data[0]);
+            return data[0];
+            
+        } catch (error) {
+            console.error('❌ Error saving cost item:', error);
+            throw error;
+        }
     }
 
     /**
      * USER PROFILE OPERATIONS
      */
 
+    /**
+     * Save a user profile
+     * @param {object} profile - User profile data
+     * @returns {Promise<object>} Saved profile
+     */
     async saveUserProfile(profile) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('user_profiles')
                 .upsert({
                     ...profile,
@@ -773,201 +905,428 @@ class DataService {
                 .select();
             
             if (error) throw error;
+            
+            console.log('✅ Saved user profile:', data[0]);
             return data[0];
-        };
-
-        const localStorageOp = async () => {
-            localStorage.setItem('mci-user-profile', JSON.stringify(profile));
-            return profile;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'user_profiles');
+            
+        } catch (error) {
+            console.error('❌ Error saving user profile:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Get a user profile
+     * @param {string} userId - User ID
+     * @returns {Promise<object|null>} User profile or null
+     */
     async getUserProfile(userId) {
-        const supabaseOp = async () => {
-            const client = window.supabaseClient();
-            const { data, error } = await client
+        this._ensureInitialized();
+        
+        try {
+            const { data, error } = await this.client
                 .from('user_profiles')
                 .select('*')
                 .eq('id', userId)
                 .single();
             
             if (error && error.code !== 'PGRST116') throw error;
+            
+            console.log('✅ Retrieved user profile:', data);
             return data;
-        };
-
-        const localStorageOp = async () => {
-            const profile = localStorage.getItem('mci-user-profile');
-            return profile ? JSON.parse(profile) : null;
-        };
-
-        return this.executeWithFallback(supabaseOp, localStorageOp, 'user_profiles');
-    }
-
-    /**
-     * MIGRATION OPERATIONS
-     */
-
-    async migrateLocalStorageToSupabase() {
-        if (!this.isSupabaseAvailable()) {
-            console.warn('Supabase not available, cannot migrate data');
-            return false;
-        }
-
-        try {
-            console.log('🔄 Starting data migration to Supabase...');
-            
-            // Migrate active deliveries
-            const activeDeliveries = JSON.parse(localStorage.getItem('mci-active-deliveries') || '[]');
-            for (const delivery of activeDeliveries) {
-                await this.saveDelivery(delivery);
-            }
-            console.log(`✅ Migrated ${activeDeliveries.length} active deliveries`);
-            
-            // Migrate delivery history
-            const deliveryHistory = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            for (const delivery of deliveryHistory) {
-                await this.saveDelivery(delivery);
-            }
-            console.log(`✅ Migrated ${deliveryHistory.length} delivery history items`);
-            
-            // Migrate customers
-            const customers = JSON.parse(localStorage.getItem('mci-customers') || '[]');
-            for (const customer of customers) {
-                await this.saveCustomer(customer);
-            }
-            console.log(`✅ Migrated ${customers.length} customers`);
-            
-            // Migrate E-POD records
-            const epodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-            for (const record of epodRecords) {
-                await this.saveEPodRecord(record);
-            }
-            console.log(`✅ Migrated ${epodRecords.length} E-POD records`);
-            
-            console.log('🎉 Data migration completed successfully!');
-            return true;
             
         } catch (error) {
-            console.error('❌ Data migration failed:', error);
-            return false;
+            console.error('❌ Error getting user profile:', error);
+            throw error;
         }
     }
 
     /**
-     * SYNC OPERATIONS
+     * QUERY OPTIMIZATION METHODS
+     * Task 19: Optimize database queries and add indexes
+     * Requirements: 5.2, 5.5, 8.1
      */
 
-    async syncData() {
-        if (!this.isSupabaseAvailable()) {
-            console.log('Supabase not available, skipping sync');
+    /**
+     * Get deliveries with optimized query and caching
+     * Uses composite indexes and query result caching
+     * @param {object} options - Query options
+     * @param {string|string[]} options.status - Status filter
+     * @param {string} options.userId - User ID filter
+     * @param {number} options.limit - Limit results
+     * @param {boolean} options.useCache - Whether to use cache (default: true)
+     * @param {number} options.cacheTTL - Cache TTL in ms (default: 30000)
+     * @returns {Promise<Array>} Array of deliveries
+     */
+    async getDeliveriesOptimized(options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            status = null,
+            userId = null,
+            limit = null,
+            useCache = true,
+            cacheTTL = 30000 // 30 seconds default
+        } = options;
+
+        try {
+            // Generate cache key
+            const cacheKey = `deliveries:${JSON.stringify({ status, userId, limit })}`;
+            
+            // Check cache if enabled
+            if (useCache && window.cacheService) {
+                const cached = window.cacheService.get(cacheKey);
+                if (cached) {
+                    console.log('✅ Retrieved deliveries from cache');
+                    return cached;
+                }
+            }
+
+            // Build optimized query
+            // Uses idx_deliveries_status_user_created composite index
+            let query = this.client
+                .from('deliveries')
+                .select('*');
+            
+            // Apply filters in optimal order (matches composite index)
+            if (status) {
+                if (Array.isArray(status)) {
+                    query = query.in('status', status);
+                } else {
+                    query = query.eq('status', status);
+                }
+            }
+            
+            if (userId) {
+                query = query.eq('user_id', userId);
+            }
+            
+            // Order by created_at DESC (matches index)
+            query = query.order('created_at', { ascending: false });
+            
+            // Apply limit if specified
+            if (limit) {
+                query = query.limit(limit);
+            }
+
+            const startTime = performance.now();
+            const { data, error } = await query;
+            const queryTime = performance.now() - startTime;
+
+            if (error) throw error;
+
+            // Log query performance
+            if (window.Logger) {
+                window.Logger.info('Query executed', {
+                    table: 'deliveries',
+                    filters: { status, userId, limit },
+                    resultCount: data?.length || 0,
+                    queryTime: `${queryTime.toFixed(2)}ms`
+                });
+            }
+
+            // Cache results if enabled
+            if (useCache && window.cacheService && data) {
+                window.cacheService.set(cacheKey, data, cacheTTL);
+            }
+
+            console.log(`✅ Retrieved ${data?.length || 0} deliveries (${queryTime.toFixed(2)}ms)`);
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Error getting optimized deliveries:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search customers by name with optimized case-insensitive search
+     * Uses idx_customers_name_lower index
+     * @param {string} searchTerm - Search term
+     * @param {object} options - Search options
+     * @param {number} options.limit - Limit results (default: 50)
+     * @param {boolean} options.useCache - Whether to use cache (default: true)
+     * @returns {Promise<Array>} Array of matching customers
+     */
+    async searchCustomersByName(searchTerm, options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            limit = 50,
+            useCache = true
+        } = options;
+
+        try {
+            if (!searchTerm || searchTerm.trim() === '') {
+                return [];
+            }
+
+            const normalizedSearch = searchTerm.toLowerCase().trim();
+            const cacheKey = `customers:search:${normalizedSearch}:${limit}`;
+
+            // Check cache
+            if (useCache && window.cacheService) {
+                const cached = window.cacheService.get(cacheKey);
+                if (cached) {
+                    console.log('✅ Retrieved customer search from cache');
+                    return cached;
+                }
+            }
+
+            const startTime = performance.now();
+            
+            // Use case-insensitive search with index
+            const { data, error } = await this.client
+                .from('customers')
+                .select('*')
+                .ilike('name', `%${normalizedSearch}%`)
+                .order('name', { ascending: true })
+                .limit(limit);
+
+            const queryTime = performance.now() - startTime;
+
+            if (error) throw error;
+
+            // Log performance
+            if (window.Logger) {
+                window.Logger.info('Customer search executed', {
+                    searchTerm: normalizedSearch,
+                    resultCount: data?.length || 0,
+                    queryTime: `${queryTime.toFixed(2)}ms`
+                });
+            }
+
+            // Cache results
+            if (useCache && window.cacheService && data) {
+                window.cacheService.set(cacheKey, data, 60000); // 1 minute cache
+            }
+
+            console.log(`✅ Found ${data?.length || 0} customers (${queryTime.toFixed(2)}ms)`);
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Error searching customers:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get deliveries with cost summary using optimized view
+     * @param {string} status - 'active' or 'completed'
+     * @param {object} options - Query options
+     * @returns {Promise<Array>} Array of deliveries with cost summary
+     */
+    async getDeliveriesWithCostSummary(status = 'active', options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            useCache = true,
+            cacheTTL = 30000
+        } = options;
+
+        try {
+            const viewName = status === 'active' 
+                ? 'active_deliveries_summary' 
+                : 'completed_deliveries_summary';
+            
+            const cacheKey = `deliveries:summary:${status}`;
+
+            // Check cache
+            if (useCache && window.cacheService) {
+                const cached = window.cacheService.get(cacheKey);
+                if (cached) {
+                    console.log(`✅ Retrieved ${status} deliveries summary from cache`);
+                    return cached;
+                }
+            }
+
+            const startTime = performance.now();
+            
+            const { data, error } = await this.client
+                .from(viewName)
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const queryTime = performance.now() - startTime;
+
+            if (error) throw error;
+
+            // Log performance
+            if (window.Logger) {
+                window.Logger.info('Delivery summary query executed', {
+                    status,
+                    resultCount: data?.length || 0,
+                    queryTime: `${queryTime.toFixed(2)}ms`
+                });
+            }
+
+            // Cache results
+            if (useCache && window.cacheService && data) {
+                window.cacheService.set(cacheKey, data, cacheTTL);
+            }
+
+            console.log(`✅ Retrieved ${data?.length || 0} ${status} deliveries with costs (${queryTime.toFixed(2)}ms)`);
+            return data || [];
+            
+        } catch (error) {
+            console.error(`❌ Error getting ${status} deliveries summary:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Batch get deliveries by DR numbers (optimized for multiple lookups)
+     * Uses idx_deliveries_dr_number index
+     * @param {string[]} drNumbers - Array of DR numbers
+     * @returns {Promise<Array>} Array of deliveries
+     */
+    async getDeliveriesByDrNumbers(drNumbers) {
+        this._ensureInitialized();
+        
+        try {
+            if (!drNumbers || drNumbers.length === 0) {
+                return [];
+            }
+
+            const startTime = performance.now();
+            
+            // Use IN query with index
+            const { data, error } = await this.client
+                .from('deliveries')
+                .select('*')
+                .in('dr_number', drNumbers);
+
+            const queryTime = performance.now() - startTime;
+
+            if (error) throw error;
+
+            // Log performance
+            if (window.Logger) {
+                window.Logger.info('Batch DR lookup executed', {
+                    requestedCount: drNumbers.length,
+                    foundCount: data?.length || 0,
+                    queryTime: `${queryTime.toFixed(2)}ms`
+                });
+            }
+
+            console.log(`✅ Retrieved ${data?.length || 0} deliveries by DR numbers (${queryTime.toFixed(2)}ms)`);
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Error getting deliveries by DR numbers:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get recent deliveries with limit (optimized for dashboard)
+     * Uses idx_deliveries_created_at index
+     * @param {number} limit - Number of recent deliveries to fetch
+     * @param {object} options - Query options
+     * @returns {Promise<Array>} Array of recent deliveries
+     */
+    async getRecentDeliveries(limit = 10, options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            useCache = true,
+            cacheTTL = 15000 // 15 seconds for recent data
+        } = options;
+
+        try {
+            const cacheKey = `deliveries:recent:${limit}`;
+
+            // Check cache
+            if (useCache && window.cacheService) {
+                const cached = window.cacheService.get(cacheKey);
+                if (cached) {
+                    console.log('✅ Retrieved recent deliveries from cache');
+                    return cached;
+                }
+            }
+
+            const startTime = performance.now();
+            
+            // Optimized query using created_at index
+            const { data, error } = await this.client
+                .from('deliveries')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            const queryTime = performance.now() - startTime;
+
+            if (error) throw error;
+
+            // Log performance
+            if (window.Logger) {
+                window.Logger.info('Recent deliveries query executed', {
+                    limit,
+                    resultCount: data?.length || 0,
+                    queryTime: `${queryTime.toFixed(2)}ms`
+                });
+            }
+
+            // Cache results
+            if (useCache && window.cacheService && data) {
+                window.cacheService.set(cacheKey, data, cacheTTL);
+            }
+
+            console.log(`✅ Retrieved ${data?.length || 0} recent deliveries (${queryTime.toFixed(2)}ms)`);
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Error getting recent deliveries:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Invalidate cache for specific data types
+     * Call this after data modifications to ensure cache consistency
+     * @param {string} dataType - Type of data to invalidate ('deliveries', 'customers', 'all')
+     */
+    invalidateCache(dataType = 'all') {
+        if (!window.cacheService) {
             return;
         }
 
         try {
-            console.log('🔄 Syncing data with Supabase...');
-            
-            // Load fresh data from Supabase
-            const deliveries = await this.getDeliveries();
-            const customers = await this.getCustomers();
-            
-            // Update local storage and global arrays
-            const activeDeliveries = deliveries.filter(d => d.status !== 'Completed');
-            const deliveryHistory = deliveries.filter(d => d.status === 'Completed');
-            
-            localStorage.setItem('mci-active-deliveries', JSON.stringify(activeDeliveries));
-            localStorage.setItem('mci-delivery-history', JSON.stringify(deliveryHistory));
-            localStorage.setItem('mci-customers', JSON.stringify(customers));
-            
-            // Update global arrays
-            window.activeDeliveries = activeDeliveries;
-            window.deliveryHistory = deliveryHistory;
-            window.customers = customers;
-            
-            console.log('✅ Data sync completed');
-            
+            switch (dataType) {
+                case 'deliveries':
+                    window.cacheService.invalidate(/^deliveries:/);
+                    console.log('✅ Invalidated deliveries cache');
+                    break;
+                case 'customers':
+                    window.cacheService.invalidate(/^customers:/);
+                    console.log('✅ Invalidated customers cache');
+                    break;
+                case 'all':
+                    window.cacheService.clear();
+                    console.log('✅ Cleared all cache');
+                    break;
+                default:
+                    window.cacheService.invalidate(new RegExp(`^${dataType}:`));
+                    console.log(`✅ Invalidated ${dataType} cache`);
+            }
         } catch (error) {
-            console.error('❌ Data sync failed:', error);
+            console.warn('⚠️ Error invalidating cache:', error);
         }
     }
 
     /**
-     * AUTO-SYNC INTEGRATION METHODS
+     * Get query performance statistics
+     * @returns {object} Performance statistics
      */
-    
-    /**
-     * Save delivery with auto-sync
-     */
-    async saveDeliveryWithSync(delivery) {
-        console.log('💾 Saving delivery with auto-sync:', delivery.dr_number);
-        
-        if (window.syncDelivery) {
-            return await window.syncDelivery(delivery);
-        } else {
-            // Fallback to original method
-            return await this.saveDelivery(delivery);
-        }
-    }
-    
-    /**
-     * Save customer with auto-sync
-     */
-    async saveCustomerWithSync(customer) {
-        console.log('💾 Saving customer with auto-sync:', customer.name);
-        
-        if (window.syncCustomer) {
-            return await window.syncCustomer(customer);
-        } else {
-            // Fallback to original method
-            return await this.saveCustomer(customer);
-        }
-    }
-    
-    /**
-     * Save delivery history with auto-sync
-     */
-    async saveDeliveryHistoryWithSync(historyItem) {
-        console.log('💾 Saving delivery history with auto-sync:', historyItem.dr_number);
-        
-        if (window.syncDeliveryHistory) {
-            return await window.syncDeliveryHistory(historyItem);
-        } else {
-            // Fallback to localStorage
-            const history = JSON.parse(localStorage.getItem('mci-delivery-history') || '[]');
-            history.push(historyItem);
-            localStorage.setItem('mci-delivery-history', JSON.stringify(history));
-            return historyItem;
-        }
-    }
-    
-    /**
-     * Force sync all data
-     */
-    async forceSyncAll() {
-        console.log('🚀 Force syncing all data...');
-        
-        if (window.forceSyncAll) {
-            return await window.forceSyncAll();
-        } else {
-            console.warn('⚠️ Auto-sync service not available');
-        }
-    }
-    
-    /**
-     * Get sync status
-     */
-    getSyncStatus() {
-        if (window.getSyncStatus) {
-            return window.getSyncStatus();
-        } else {
-            return { 
-                online: navigator.onLine, 
-                queueLength: 0, 
-                syncInProgress: false,
-                autoSyncAvailable: false
-            };
-        }
+    getPerformanceStats() {
+        const stats = {
+            cacheEnabled: !!window.cacheService,
+            cacheStats: window.cacheService ? window.cacheService.getStats() : null,
+            optimizationsActive: true
+        };
+
+        console.log('📊 Performance Statistics:', stats);
+        return stats;
     }
 }
 
@@ -976,13 +1335,5 @@ const dataService = new DataService();
 
 // Export to global scope
 window.dataService = dataService;
-
-// Auto-sync every 30 seconds if online
-// DISABLED: This might be interfering with status updates
-// setInterval(() => {
-//     if (dataService.isSupabaseAvailable()) {
-//         dataService.syncData();
-//     }
-// }, 30000);
 
 console.log('✅ Data Service loaded successfully');

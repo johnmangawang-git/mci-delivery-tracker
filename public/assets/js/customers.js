@@ -1,6 +1,9 @@
 // Customer Management System
 console.log('=== CUSTOMERS.JS LOADED ===');
 
+// Real-time service instance
+let realtimeService = null;
+
 // Show toast notification
 function showToast(message, type = 'success') {
     // Create toast element if it doesn't exist
@@ -45,7 +48,7 @@ function showError(message) {
 // Global customers array
 window.customers = [];
 
-// Load customers from Supabase/localStorage
+// Load customers from Supabase only
 async function loadCustomers() {
     console.log('=== LOAD CUSTOMERS FUNCTION CALLED ===');
     
@@ -58,241 +61,42 @@ async function loadCustomers() {
     window.loadingCustomers = true;
     
     try {
-        let customersLoaded = false;
-        
-        // Try to load from Supabase first (if getCustomers function exists)
-        if (window.dataService && typeof window.dataService.getCustomers === 'function') {
-            try {
-                const customers = await window.dataService.getCustomers();
-                if (customers && customers.length > 0) {
-                    window.customers = customers;
-                    customersLoaded = true;
-                    console.log(`✅ Loaded ${customers.length} customers from Supabase`);
-                } else {
-                    console.log('📊 Supabase returned empty customer list, checking localStorage...');
-                }
-            } catch (supabaseError) {
-                console.log('⚠️ Supabase customer loading failed:', supabaseError.message);
-            }
-        } else {
-            console.log('📊 dataService.getCustomers not available, using localStorage...');
+        // Ensure dataService is available
+        if (!window.dataService || typeof window.dataService.getCustomers !== 'function') {
+            throw new Error('DataService not available. Please ensure the application is properly initialized.');
         }
         
-        // If Supabase didn't provide data, load from localStorage
-        if (!customersLoaded) {
-            const savedCustomers = localStorage.getItem('mci-customers');
-            console.log('📊 Checking localStorage for customers:', savedCustomers ? 'Found data' : 'No data');
-            
-            if (savedCustomers) {
-                try {
-                    const parsed = JSON.parse(savedCustomers);
-                    console.log('📊 Parsed localStorage data:', parsed.length, 'customers');
-                    
-                    if (parsed && parsed.length > 0) {
-                        window.customers = parsed;
-                        customersLoaded = true;
-                        console.log(`✅ Loaded ${window.customers.length} customers from localStorage`);
-                    }
-                } catch (parseError) {
-                    console.error('❌ Error parsing localStorage customers:', parseError);
-                }
-            }
-        }
-        
-        // Initialize empty array if no data found
-        if (!customersLoaded) {
-            window.customers = window.customers || [];
-            console.log('📊 No customer data found, initialized empty array');
-        }
-        
-    } catch (error) {
-        console.error('❌ Error loading customers:', error);
-        // Ensure we have an array even if loading fails
-        window.customers = window.customers || [];
-    } finally {
-        window.loadingCustomers = false;
-    }
-    
-    try {
-        // Only merge duplicates if we have customers loaded
-        if (window.customers && window.customers.length > 0) {
-            console.log('Merging duplicate customers...');
-            mergeDuplicateCustomers();
-        } else {
-            console.log('No customers found in any data source');
-            // Only initialize with mock data if absolutely no data exists anywhere
-            const hasLocalStorage = localStorage.getItem('mci-customers');
-            console.log('📊 Final check - hasLocalStorage:', !!hasLocalStorage, 'window.customers length:', window.customers?.length || 0);
-            
-            if (!window.customers || (window.customers.length === 0 && !hasLocalStorage)) {
-                console.log('🔧 Initializing with mock data (no real data found)');
-                window.customers = [
-                    {
-                        id: 'CUST-001',
-                        contactPerson: 'John Doe',
-                        phone: '+63 917 123 4567',
-                        address: '123 Main Street, Makati City',
-                        accountType: 'Individual',
-                        email: '',
-                        status: 'active',
-                        notes: 'Regular customer',
-                        bookingsCount: 3,
-                        lastDelivery: 'Oct 24, 2023',
-                        createdAt: new Date('2023-10-01')
-                    },
-                    {
-                        id: 'CUST-002',
-                        contactPerson: 'Jane Smith',
-                        phone: '+63 918 765 4321',
-                        address: '456 Oak Avenue, Quezon City',
-                        accountType: 'Individual',
-                        email: '',
-                        status: 'active',
-                        notes: 'Auto-created from delivery booking',
-                        bookingsCount: 1,
-                        lastDelivery: 'Oct 25, 2023',
-                        createdAt: new Date('2023-10-25')
-                    }
-                ];
-                console.log('Initialized with mock customer data');
-            } else {
-                console.log('📊 Skipping mock data initialization - real data exists');
-            }
-        }
+        // Load customers from Supabase
+        const customers = await window.dataService.getCustomers();
+        window.customers = customers || [];
+        console.log(`✅ Loaded ${window.customers.length} customers from Supabase`);
         
         // Display customers in the UI
         displayCustomers();
         
         console.log('Customers loaded successfully');
     } catch (error) {
-        console.error('Error loading customers:', error);
-        // Initialize with empty array if there's an error
-        window.customers = [
-            {
-                id: 'CUST-001',
-                contactPerson: 'John Doe',
-                phone: '+63 917 123 4567',
-                address: '123 Main Street, Makati City',
-                accountType: 'Individual',
-                email: '',
-                status: 'active',
-                notes: 'Regular customer',
-                bookingsCount: 3,
-                lastDelivery: 'Oct 24, 2023',
-                createdAt: new Date('2023-10-01')
-            },
-            {
-                id: 'CUST-002',
-                contactPerson: 'Jane Smith',
-                phone: '+63 918 765 4321',
-                address: '456 Oak Avenue, Quezon City',
-                accountType: 'Individual',
-                email: '',
-                status: 'active',
-                notes: 'Auto-created from delivery booking',
-                bookingsCount: 1,
-                lastDelivery: 'Oct 25, 2023',
-                createdAt: new Date('2023-10-25')
-            }
-        ];
+        console.error('❌ Error loading customers:', error);
+        
+        // Use ErrorHandler for consistent error handling
+        if (window.ErrorHandler) {
+            window.ErrorHandler.handle(error, 'loadCustomers');
+        } else {
+            showError('Failed to load customers. Please try again.');
+        }
+        
+        // Initialize empty array on error
+        window.customers = [];
         displayCustomers();
+    } finally {
+        window.loadingCustomers = false;
     }
 }
 
-// Function to merge duplicate customers based on name and phone number
-function mergeDuplicateCustomers() {
-    console.log('=== MERGE DUPLICATE CUSTOMERS FUNCTION CALLED ===');
-    console.log('Customers before merge:', window.customers.length);
-    
-    // Create a map to group customers by name and phone
-    const customerGroups = new Map();
-    
-    // Group customers by name and phone number
-    window.customers.forEach(customer => {
-        const key = `${customer.contactPerson.toLowerCase()}|${customer.phone}`;
-        if (!customerGroups.has(key)) {
-            customerGroups.set(key, []);
-        }
-        customerGroups.get(key).push(customer);
-    });
-    
-    // Process groups to merge duplicates
-    const mergedCustomers = [];
-    let mergeCount = 0;
-    
-    customerGroups.forEach((group, key) => {
-        if (group.length === 1) {
-            // No duplicates, just add the customer
-            mergedCustomers.push(group[0]);
-        } else {
-            // Merge duplicates
-            console.log(`Merging ${group.length} duplicate customers for: ${key}`);
-            mergeCount += group.length - 1;
-            
-            // Sort by createdAt to get the most recent one as the primary
-            group.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            
-            // Use the most recent customer as the base
-            const primaryCustomer = { ...group[0] };
-            
-            // Merge data from all duplicates
-            let totalBookings = 0;
-            let latestDeliveryDate = null;
-            
-            group.forEach(customer => {
-                totalBookings += customer.bookingsCount || 0;
-                
-                // Get the latest delivery date
-                if (customer.lastDelivery) {
-                    const customerDate = new Date(customer.lastDelivery);
-                    if (!latestDeliveryDate || customerDate > latestDeliveryDate) {
-                        latestDeliveryDate = customerDate;
-                    }
-                }
-                
-                // Merge notes
-                if (customer.notes && !primaryCustomer.notes.includes(customer.notes)) {
-                    primaryCustomer.notes = primaryCustomer.notes ? 
-                        `${primaryCustomer.notes}; ${customer.notes}` : 
-                        customer.notes;
-                }
-                
-                // Keep the most complete address if available
-                if (customer.address && customer.address.length > (primaryCustomer.address?.length || 0)) {
-                    primaryCustomer.address = customer.address;
-                }
-                
-                // Keep the most complete email if available
-                if (customer.email && customer.email.length > (primaryCustomer.email?.length || 0)) {
-                    primaryCustomer.email = customer.email;
-                }
-            });
-            
-            // Update the primary customer with merged data
-            primaryCustomer.bookingsCount = totalBookings;
-            if (latestDeliveryDate) {
-                primaryCustomer.lastDelivery = latestDeliveryDate.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-            }
-            
-            mergedCustomers.push(primaryCustomer);
-        }
-    });
-    
-    // Update the global customers array
-    window.customers = mergedCustomers;
-    
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-    
-    console.log(`Merged ${mergeCount} duplicate customers`);
-    console.log('Customers after merge:', window.customers.length);
-    
-    return mergeCount;
-}
+// Note: Duplicate customer prevention is now handled at the database level
+// through unique constraints on the customers table in Supabase.
+// The database schema ensures that duplicate customers (by name and phone)
+// cannot be created, eliminating the need for client-side merge logic.
 
 // Display customers in the UI
 function displayCustomers() {
@@ -420,92 +224,93 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
         console.log('Customer Name:', customerName);
         console.log('Vendor Number:', vendorNumber);
         console.log('Destination:', destination);
-        console.log('Window.customers exists:', !!window.customers);
-        console.log('Window.customers array:', window.customers);
         
-        // Ensure customers array exists
-        if (!window.customers) {
-            console.log('No customers array found, initializing...');
-            window.customers = [];
+        // Ensure dataService is available
+        if (!window.dataService || typeof window.dataService.getCustomers !== 'function') {
+            throw new Error('DataService not available');
         }
         
+        // Load current customers from database
+        const customers = await window.dataService.getCustomers();
+        window.customers = customers || [];
+        
         // Check if customer already exists (by name or phone)
-        const existingCustomer = window.customers?.find(customer => 
-            customer.contactPerson.toLowerCase() === customerName.toLowerCase() ||
+        const existingCustomer = window.customers.find(customer => 
+            customer.name?.toLowerCase() === customerName.toLowerCase() ||
             customer.phone === vendorNumber
         );
         
         console.log('Existing customer found:', existingCustomer);
 
         if (existingCustomer) {
-            console.log('Customer already exists:', existingCustomer.contactPerson);
+            console.log('Customer already exists:', existingCustomer.name);
             
             // Update booking count and last delivery date for existing customer
-            existingCustomer.bookingsCount = (existingCustomer.bookingsCount || 0) + 1;
-            existingCustomer.lastDelivery = new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            });
+            const updatedCustomer = {
+                ...existingCustomer,
+                bookings_count: (existingCustomer.bookings_count || 0) + 1,
+                last_delivery: new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                })
+            };
             
-            // Save updated customer data to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-            
-            // Always refresh customers view to ensure updated data is visible
-            if (typeof window.loadCustomers === 'function') {
-                window.loadCustomers();
+            // Validate before saving
+            if (window.DataValidator) {
+                const validation = window.DataValidator.validateCustomer(updatedCustomer);
+                if (!validation.isValid) {
+                    console.warn('Customer validation failed:', validation.errors);
+                    throw new Error(window.DataValidator.formatErrors(validation.errors));
+                }
             }
+            
+            // Save updated customer to Supabase
+            await window.dataService.saveCustomer(updatedCustomer);
+            
+            // Refresh customers view
+            await loadCustomers();
             
             // Show update message
             showToast(`Customer "${customerName}" booking count updated in Customer Management!`);
             
-            return existingCustomer;
+            return updatedCustomer;
         }
 
-        // Create new customer
+        // Create new customer object with database schema field names
         const newCustomer = {
-            id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
-            contactPerson: customerName,
+            id: 'CUST-' + String((window.customers.length || 0) + 1).padStart(3, '0'),
+            name: customerName,
+            contact_person: customerName,
             phone: vendorNumber,
-            address: destination, // Use destination as address
-            accountType: 'Individual', // Default account type for individual customers
-            email: '', // Empty email - can be filled later
+            address: destination,
+            account_type: 'Individual',
+            email: '',
             status: 'active',
             notes: 'Auto-created from delivery booking',
-            bookingsCount: 1,
-            lastDelivery: new Date().toLocaleDateString('en-US', { 
+            bookings_count: 1,
+            last_delivery: new Date().toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'short', 
                 day: 'numeric' 
-            }),
-            createdAt: new Date()
+            })
         };
 
-        // Add to customers array
-        window.customers.push(newCustomer);
-        console.log('New customer auto-created:', newCustomer.contactPerson);
-        console.log('Updated window.customers array:', window.customers);
-        
-        // Save to localStorage
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-        console.log('Saved to localStorage');
-        
-        // Always refresh customers view to ensure new customer is visible
-        console.log('=== REFRESHING CUSTOMER DISPLAY ===');
-        
-        if (typeof window.loadCustomers === 'function') {
-            console.log('Calling window.loadCustomers()');
-            window.loadCustomers();
-        } else {
-            console.log('window.loadCustomers function not available');
+        // Validate before saving
+        if (window.DataValidator) {
+            const validation = window.DataValidator.validateCustomer(newCustomer);
+            if (!validation.isValid) {
+                console.warn('Customer validation failed:', validation.errors);
+                throw new Error(window.DataValidator.formatErrors(validation.errors));
+            }
         }
+
+        // Save to Supabase
+        await window.dataService.saveCustomer(newCustomer);
+        console.log('New customer auto-created:', newCustomer.name);
         
-        // Force refresh by triggering a custom event
-        const customerUpdateEvent = new CustomEvent('customerUpdated', {
-            detail: { customer: newCustomer, action: 'created' }
-        });
-        window.dispatchEvent(customerUpdateEvent);
-        console.log('Dispatched customerUpdated event');
+        // Refresh customers view
+        await loadCustomers();
         
         // Show success message
         showToast(`Customer "${customerName}" automatically added to Customer Management section!`);
@@ -513,6 +318,14 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
         return newCustomer;
     } catch (error) {
         console.error('Error auto-creating customer:', error);
+        
+        // Use ErrorHandler for consistent error handling
+        if (window.ErrorHandler) {
+            window.ErrorHandler.handle(error, 'autoCreateCustomer');
+        } else {
+            showError('Failed to auto-create customer. Booking will continue without customer record.');
+        }
+        
         // Don't fail the booking if customer creation fails
         return null;
     }
@@ -544,45 +357,75 @@ function editCustomer(customerId) {
 }
 
 // Save edited customer
-function saveEditedCustomer() {
+async function saveEditedCustomer() {
     console.log('Saving edited customer');
     
-    const customerId = document.getElementById('editCustomerId').value;
-    const customer = window.customers.find(c => c.id === customerId);
-    
-    if (!customer) {
-        console.error('Customer not found:', customerId);
-        return;
+    try {
+        const customerId = document.getElementById('editCustomerId').value;
+        const customer = window.customers.find(c => c.id === customerId);
+        
+        if (!customer) {
+            throw new Error('Customer not found: ' + customerId);
+        }
+        
+        // Update customer data with database schema field names
+        const updatedCustomer = {
+            ...customer,
+            name: document.getElementById('editCustomerName').value,
+            contact_person: document.getElementById('editCustomerName').value,
+            phone: document.getElementById('editCustomerPhone').value,
+            email: document.getElementById('editCustomerEmail').value,
+            address: document.getElementById('editCustomerAddress').value,
+            account_type: document.getElementById('editCustomerAccountType').value,
+            status: document.getElementById('editCustomerStatus').value,
+            notes: document.getElementById('editNotes').value
+        };
+        
+        // Validate before saving
+        if (window.DataValidator) {
+            const validation = window.DataValidator.validateCustomer(updatedCustomer);
+            if (!validation.isValid) {
+                throw new Error(window.DataValidator.formatErrors(validation.errors));
+            }
+        }
+        
+        // Ensure dataService is available
+        if (!window.dataService || typeof window.dataService.saveCustomer !== 'function') {
+            throw new Error('DataService not available');
+        }
+        
+        // Save to Supabase
+        await window.dataService.saveCustomer(updatedCustomer);
+        
+        // Refresh display
+        await loadCustomers();
+        
+        // Hide modal
+        const editCustomerModal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
+        if (editCustomerModal) {
+            editCustomerModal.hide();
+        }
+        
+        // Show success message
+        showToast('Customer updated successfully!');
+    } catch (error) {
+        console.error('Error saving edited customer:', error);
+        
+        // Use ErrorHandler for consistent error handling
+        if (window.ErrorHandler) {
+            window.ErrorHandler.handle(error, 'saveEditedCustomer');
+        } else {
+            showError('Failed to update customer. Please try again.');
+        }
     }
-    
-    // Update customer data
-    customer.contactPerson = document.getElementById('editCustomerName').value;
-    customer.phone = document.getElementById('editCustomerPhone').value;
-    customer.email = document.getElementById('editCustomerEmail').value;
-    customer.address = document.getElementById('editCustomerAddress').value;
-    customer.accountType = document.getElementById('editCustomerAccountType').value;
-    customer.status = document.getElementById('editCustomerStatus').value;
-    customer.notes = document.getElementById('editNotes').value;
-    
-    // Save to localStorage
-    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-    
-    // Refresh display
-    displayCustomers();
-    
-    // Hide modal
-    const editCustomerModal = bootstrap.Modal.getInstance(document.getElementById('editCustomerModal'));
-    editCustomerModal.hide();
-    
-    // Show success message
-    showToast('Customer updated successfully!');
 }
 
 // Delete customer function
 async function deleteCustomer(customerId) {
     console.log('Deleting customer:', customerId);
     
-    if (!confirm('Are you sure you want to delete this customer? This will permanently remove the customer from both local storage and Supabase.')) {
+    // Confirmation dialog before deletion
+    if (!confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
         return;
     }
     
@@ -591,41 +434,233 @@ async function deleteCustomer(customerId) {
         const customerToDelete = window.customers.find(customer => customer.id === customerId);
         
         if (!customerToDelete) {
-            console.error('Customer not found:', customerId);
-            showError('Customer not found');
+            throw new Error('Customer not found: ' + customerId);
+        }
+        
+        // Ensure dataService is available
+        if (!window.dataService || typeof window.dataService.deleteCustomer !== 'function') {
+            throw new Error('DataService not available');
+        }
+        
+        // Delete from Supabase
+        await window.dataService.deleteCustomer(customerId);
+        console.log('✅ Customer deleted from Supabase successfully');
+        
+        // Refresh display from database
+        await loadCustomers();
+        
+        // Show success message
+        showToast('Customer deleted successfully!');
+    } catch (error) {
+        console.error('Error deleting customer:', error);
+        
+        // Use ErrorHandler for consistent error handling
+        if (window.ErrorHandler) {
+            window.ErrorHandler.handle(error, 'deleteCustomer');
+        } else {
+            showError('Failed to delete customer. Please try again.');
+        }
+    }
+}
+
+// Initialize real-time subscriptions for customers
+// Requirement 4.1: Real-time updates across all connected clients
+// Requirement 4.2: Use Supabase real-time features
+// Requirement 4.3: Automatic UI updates on data changes
+function initCustomerRealtimeSubscriptions() {
+    console.log('=== INITIALIZING CUSTOMER REAL-TIME SUBSCRIPTIONS ===');
+    
+    try {
+        // Check if RealtimeService and DataService are available
+        if (!window.RealtimeService) {
+            console.warn('RealtimeService not available. Real-time updates disabled.');
             return;
         }
         
-        // Delete from Supabase first if dataService is available
-        if (window.dataService && typeof window.dataService.deleteCustomer === 'function') {
-            try {
-                await window.dataService.deleteCustomer(customerId);
-                console.log('✅ Customer deleted from Supabase successfully');
-            } catch (supabaseError) {
-                console.error('❌ Failed to delete customer from Supabase:', supabaseError);
-                showError('Failed to delete customer from database. Please try again.');
-                return;
-            }
-        } else {
-            console.log('⚠️ dataService.deleteCustomer not available, deleting from localStorage only');
+        if (!window.dataService) {
+            console.warn('DataService not available. Real-time updates disabled.');
+            return;
         }
         
-        // Remove customer from array
-        window.customers = window.customers.filter(customer => customer.id !== customerId);
+        // Create RealtimeService instance
+        realtimeService = new window.RealtimeService(window.dataService);
         
-        // Save to localStorage
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        // Subscribe to customers table changes
+        realtimeService.subscribeToTable('customers', handleCustomerChange);
         
-        // Refresh display
-        displayCustomers();
+        console.log('✅ Customer real-time subscriptions initialized successfully');
         
-        // Show success message
-        showToast('Customer deleted successfully from all sources!');
+        // Show notification to user
+        showCustomerRealtimeIndicator('connected');
+        
     } catch (error) {
-        console.error('Error deleting customer:', error);
-        showError('An error occurred while deleting the customer');
+        console.error('❌ Failed to initialize customer real-time subscriptions:', error);
+        showCustomerRealtimeIndicator('error');
     }
 }
+
+// Handle real-time customer changes
+// Requirement 4.3: Automatic UI updates when data changes
+function handleCustomerChange(payload) {
+    console.log('📡 Real-time customer change detected:', payload);
+    
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    // Show visual indicator for real-time update
+    showCustomerRealtimeIndicator('update');
+    
+    try {
+        switch (eventType) {
+            case 'INSERT':
+                console.log('New customer created:', newRecord);
+                handleCustomerInsert(newRecord);
+                break;
+                
+            case 'UPDATE':
+                console.log('Customer updated:', newRecord);
+                handleCustomerUpdate(newRecord);
+                break;
+                
+            case 'DELETE':
+                console.log('Customer deleted:', oldRecord);
+                handleCustomerDelete(oldRecord);
+                break;
+                
+            default:
+                console.warn('Unknown event type:', eventType);
+        }
+        
+        // Show toast notification
+        showToast(`Customer ${eventType.toLowerCase()}d by another user`, 'info');
+        
+    } catch (error) {
+        console.error('Error handling real-time customer change:', error);
+    }
+}
+
+// Handle new customer insertion
+function handleCustomerInsert(newRecord) {
+    // Add to customers array if not already present
+    const exists = window.customers.some(c => c.id === newRecord.id);
+    if (!exists) {
+        window.customers.push(newRecord);
+        displayCustomers();
+    }
+}
+
+// Handle customer update
+function handleCustomerUpdate(newRecord) {
+    // Update customer in array
+    const index = window.customers.findIndex(c => c.id === newRecord.id);
+    if (index !== -1) {
+        window.customers[index] = newRecord;
+        displayCustomers();
+    } else {
+        // Customer not in local array, add it
+        window.customers.push(newRecord);
+        displayCustomers();
+    }
+}
+
+// Handle customer deletion
+function handleCustomerDelete(oldRecord) {
+    // Remove from customers array
+    const index = window.customers.findIndex(c => c.id === oldRecord.id);
+    if (index !== -1) {
+        window.customers.splice(index, 1);
+        displayCustomers();
+    }
+}
+
+// Show real-time connection indicator for customers
+// Requirement 4.3: Add visual indicators for real-time updates
+function showCustomerRealtimeIndicator(status) {
+    let indicator = document.getElementById('customerRealtimeIndicator');
+    
+    // Create indicator if it doesn't exist
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'customerRealtimeIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    // Update indicator based on status
+    switch (status) {
+        case 'connected':
+            indicator.innerHTML = '<i class="bi bi-wifi"></i> Real-time connected';
+            indicator.style.backgroundColor = '#d1e7dd';
+            indicator.style.color = '#0f5132';
+            // Hide after 3 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 3000);
+            break;
+            
+        case 'update':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-arrow-repeat"></i> Syncing...';
+            indicator.style.backgroundColor = '#cfe2ff';
+            indicator.style.color = '#084298';
+            // Hide after 2 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 2000);
+            break;
+            
+        case 'error':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Real-time unavailable';
+            indicator.style.backgroundColor = '#f8d7da';
+            indicator.style.color = '#842029';
+            // Hide after 5 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 5000);
+            break;
+            
+        case 'disconnected':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-wifi-off"></i> Real-time disconnected';
+            indicator.style.backgroundColor = '#fff3cd';
+            indicator.style.color = '#664d03';
+            break;
+    }
+}
+
+// Cleanup real-time subscriptions on page unload
+window.addEventListener('beforeunload', function() {
+    if (realtimeService) {
+        console.log('Cleaning up customer real-time subscriptions...');
+        realtimeService.cleanup();
+    }
+});
 
 // Add event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -638,7 +673,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.editCustomer = editCustomer;
     window.saveEditedCustomer = saveEditedCustomer;
     window.deleteCustomer = deleteCustomer;
-    window.mergeDuplicateCustomers = mergeDuplicateCustomers;
+    
+    // Initialize real-time subscriptions
+    initCustomerRealtimeSubscriptions();
     
     // Add event listeners for search and filter
     const searchInput = document.getElementById('customerSearchInput');
@@ -680,84 +717,84 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for save customer button
     const saveCustomerBtn = document.getElementById('saveCustomerBtn');
     if (saveCustomerBtn) {
-        saveCustomerBtn.addEventListener('click', function() {
-            // Get form data
-            const contactPerson = document.getElementById('contactPerson').value;
-            const phone = document.getElementById('phone').value;
-            const email = document.getElementById('email').value;
-            const address = document.getElementById('address').value;
-            const accountType = document.getElementById('accountType').value;
-            const status = document.getElementById('customerStatus').value;
-            const notes = document.getElementById('notes').value;
-            
-            // Validate required fields
-            if (!contactPerson || !phone || !address || !accountType) {
-                alert('Please fill in all required fields');
-                return;
-            }
-            
-            // Create new customer object
-            const newCustomer = {
-                id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
-                contactPerson: contactPerson,
-                phone: phone,
-                email: email,
-                address: address,
-                accountType: accountType,
-                status: status,
-                notes: notes,
-                bookingsCount: 0,
-                lastDelivery: '',
-                createdAt: new Date()
-            };
-            
-            // Save customer using dataService
-            if (window.dataService) {
-                window.dataService.saveCustomer(newCustomer).then(() => {
-                    console.log('✅ Customer saved to Supabase successfully');
-                    // Refresh display
-                    displayCustomers();
-                }).catch(error => {
-                    console.error('❌ Failed to save customer to Supabase:', error);
-                    // Fallback to localStorage
-                    if (!window.customers) {
-                        window.customers = [];
+        saveCustomerBtn.addEventListener('click', async function() {
+            try {
+                // Get form data
+                const contactPerson = document.getElementById('contactPerson').value;
+                const phone = document.getElementById('phone').value;
+                const email = document.getElementById('email').value;
+                const address = document.getElementById('address').value;
+                const accountType = document.getElementById('accountType').value;
+                const status = document.getElementById('customerStatus').value;
+                const notes = document.getElementById('notes').value;
+                
+                // Validate required fields
+                if (!contactPerson || !phone || !address || !accountType) {
+                    showError('Please fill in all required fields');
+                    return;
+                }
+                
+                // Create new customer object with database schema field names
+                const newCustomer = {
+                    id: 'CUST-' + String((window.customers?.length || 0) + 1).padStart(3, '0'),
+                    name: contactPerson,
+                    contact_person: contactPerson,
+                    phone: phone,
+                    email: email,
+                    address: address,
+                    account_type: accountType,
+                    status: status,
+                    notes: notes,
+                    bookings_count: 0,
+                    last_delivery: ''
+                };
+                
+                // Validate before saving
+                if (window.DataValidator) {
+                    const validation = window.DataValidator.validateCustomer(newCustomer);
+                    if (!validation.isValid) {
+                        throw new Error(window.DataValidator.formatErrors(validation.errors));
                     }
-                    window.customers.push(newCustomer);
-                    localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-                    displayCustomers();
-                });
-            } else {
-                // Fallback to localStorage
-                if (!window.customers) {
-                    window.customers = [];
                 }
-                window.customers.push(newCustomer);
-                localStorage.setItem('mci-customers', JSON.stringify(window.customers));
-                displayCustomers();
-            }
-            
-            // Refresh display
-            displayCustomers();
-            
-            // Hide modal using our utility function if available
-            if (typeof window.hideModal === 'function') {
-                window.hideModal('addCustomerModal');
-            } else {
-                // Fallback to Bootstrap modal
-                const addCustomerModal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
-                if (addCustomerModal) {
-                    addCustomerModal.hide();
+                
+                // Ensure dataService is available
+                if (!window.dataService || typeof window.dataService.saveCustomer !== 'function') {
+                    throw new Error('DataService not available');
                 }
-            }
-            
-            // Show success message
-            if (typeof showToast === 'function') {
+                
+                // Save customer to Supabase
+                await window.dataService.saveCustomer(newCustomer);
+                console.log('✅ Customer saved to Supabase successfully');
+                
+                // Refresh display
+                await loadCustomers();
+                
+                // Hide modal using our utility function if available
+                if (typeof window.hideModal === 'function') {
+                    window.hideModal('addCustomerModal');
+                } else {
+                    // Fallback to Bootstrap modal
+                    const addCustomerModal = bootstrap.Modal.getInstance(document.getElementById('addCustomerModal'));
+                    if (addCustomerModal) {
+                        addCustomerModal.hide();
+                    }
+                }
+                
+                // Show success message
                 showToast('Customer added successfully!');
+                
+                // Reset form
+                document.getElementById('addCustomerForm').reset();
+            } catch (error) {
+                console.error('❌ Failed to save customer:', error);
+                
+                // Use ErrorHandler for consistent error handling
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, 'saveCustomer');
+                } else {
+                    showError('Failed to save customer. Please try again.');
+                }
             }
-            
-            // Reset form
-            document.getElementById('addCustomerForm').reset();
         });
     }
     

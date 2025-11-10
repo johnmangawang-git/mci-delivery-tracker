@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RealtimeService Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+        #log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+            padding-left: 10px;
+        }
+        .log-success { border-left-color: #28a745; }
+        .log-error { border-left-color: #dc3545; }
+        .log-warning { border-left-color: #ffc107; }
+        .log-info { border-left-color: #17a2b8; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .event-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .event-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 RealtimeService Test Suite</h1>
+        <p>This page tests the RealtimeService implementation for real-time data synchronization.</p>
+    </div>
+
+    <div class="container">
+        <h2>📊 Service Statistics</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="activeSubscriptions">0</div>
+                <div class="stat-label">Active Subscriptions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="networkStatus">Unknown</div>
+                <div class="stat-label">Network Status</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="eventsReceived">0</div>
+                <div class="stat-label">Events Received</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="reconnectAttempts">0</div>
+                <div class="stat-label">Reconnect Attempts</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Test Controls</h2>
+        
+        <div class="test-section">
+            <h3>1. Initialization Tests</h3>
+            <button onclick="testInitialization()">Test Initialization</button>
+            <button onclick="testWithoutDataService()">Test Without DataService</button>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Subscription Tests</h3>
+            <button onclick="subscribeToDeliveries()">Subscribe to Deliveries</button>
+            <button onclick="subscribeToCustomers()">Subscribe to Customers</button>
+            <button onclick="subscribeWithOptions()">Subscribe with Options</button>
+            <button onclick="testDuplicateSubscription()">Test Duplicate Subscription</button>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Unsubscription Tests</h3>
+            <button onclick="unsubscribeFromDeliveries()">Unsubscribe from Deliveries</button>
+            <button onclick="unsubscribeFromCustomers()">Unsubscribe from Customers</button>
+            <button onclick="unsubscribeAll()">Unsubscribe All</button>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Lifecycle Tests</h3>
+            <button onclick="testCleanup()">Test Cleanup</button>
+            <button onclick="testGetActiveSubscriptions()">Get Active Subscriptions</button>
+            <button onclick="testIsSubscribed()">Test isSubscribed</button>
+            <button onclick="testGetStats()">Get Statistics</button>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Network Tests</h3>
+            <button onclick="simulateOffline()">Simulate Offline</button>
+            <button onclick="simulateOnline()">Simulate Online</button>
+            <button onclick="testNetworkReconnection()">Test Reconnection</button>
+        </div>
+
+        <div class="test-section">
+            <h3>6. Real Data Tests (Requires Supabase)</h3>
+            <button onclick="testRealTimeUpdates()">Test Real-Time Updates</button>
+            <button onclick="createTestDelivery()">Create Test Delivery</button>
+            <button onclick="updateTestDelivery()">Update Test Delivery</button>
+            <button onclick="deleteTestDelivery()">Delete Test Delivery</button>
+        </div>
+
+        <div class="test-section">
+            <h3>7. Error Handling Tests</h3>
+            <button onclick="testInvalidTable()">Test Invalid Table</button>
+            <button onclick="testInvalidCallback()">Test Invalid Callback</button>
+            <button onclick="testSubscriptionError()">Test Subscription Error</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📝 Recent Events</h2>
+        <div class="event-list" id="eventList">
+            <p style="color: #999;">No events yet. Subscribe to a table to see real-time updates.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Test Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="exportLog()">Export Log</button>
+        <div id="log"></div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/assets/js/config.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/realtimeService.js"></script>
+
+    <script>
+        let realtimeService = null;
+        let dataService = null;
+        let eventsReceived = 0;
+        let testDeliveryId = null;
+
+        // Initialize services
+        async function initializeServices() {
+            try {
+                log('Initializing services...', 'info');
+                
+                // Initialize DataService
+                dataService = new DataService();
+                await dataService.initialize();
+                log('DataService initialized', 'success');
+                
+                // Initialize RealtimeService
+                realtimeService = new RealtimeService(dataService);
+                log('RealtimeService initialized', 'success');
+                
+                updateStats();
+                return true;
+            } catch (error) {
+                log(`Failed to initialize services: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Logging function
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+
+        function exportLog() {
+            const logContent = document.getElementById('log').textContent;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `realtime-service-test-log-${Date.now()}.txt`;
+            a.click();
+            log('Log exported', 'success');
+        }
+
+        // Update statistics
+        function updateStats() {
+            if (!realtimeService) return;
+            
+            const stats = realtimeService.getStats();
+            document.getElementById('activeSubscriptions').textContent = stats.activeSubscriptions;
+            document.getElementById('networkStatus').textContent = stats.isOnline ? '✅ Online' : '❌ Offline';
+            document.getElementById('eventsReceived').textContent = eventsReceived;
+            
+            const totalReconnects = Object.values(stats.reconnectAttempts).reduce((a, b) => a + b, 0);
+            document.getElementById('reconnectAttempts').textContent = totalReconnects;
+        }
+
+        // Add event to list
+        function addEvent(table, eventType, data) {
+            eventsReceived++;
+            updateStats();
+            
+            const eventList = document.getElementById('eventList');
+            if (eventList.children[0]?.textContent.includes('No events yet')) {
+                eventList.innerHTML = '';
+            }
+            
+            const eventItem = document.createElement('div');
+            eventItem.className = 'event-item';
+            eventItem.innerHTML = `
+                <strong>${table}</strong> - ${eventType}<br>
+                <small>${new Date().toLocaleTimeString()}</small><br>
+                <code>${JSON.stringify(data, null, 2)}</code>
+            `;
+            eventList.insertBefore(eventItem, eventList.firstChild);
+            
+            // Keep only last 10 events
+            while (eventList.children.length > 10) {
+                eventList.removeChild(eventList.lastChild);
+            }
+        }
+
+        // Test 1: Initialization
+        async function testInitialization() {
+            log('=== Testing Initialization ===', 'info');
+            const success = await initializeServices();
+            if (success) {
+                log('✓ Initialization test passed', 'success');
+            } else {
+                log('✗ Initialization test failed', 'error');
+            }
+        }
+
+        async function testWithoutDataService() {
+            log('=== Testing Without DataService ===', 'info');
+            try {
+                const service = new RealtimeService(null);
+                log('✗ Should have thrown error', 'error');
+            } catch (error) {
+                log(`✓ Correctly threw error: ${error.message}`, 'success');
+            }
+        }
+
+        // Test 2: Subscriptions
+        async function subscribeToDeliveries() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Subscribing to Deliveries ===', 'info');
+            try {
+                const subscription = realtimeService.subscribeToTable('deliveries', (payload) => {
+                    log(`Deliveries change: ${payload.eventType}`, 'info');
+                    addEvent('deliveries', payload.eventType, payload.new || payload.old);
+                });
+                log('✓ Subscribed to deliveries table', 'success');
+                updateStats();
+            } catch (error) {
+                log(`✗ Failed to subscribe: ${error.message}`, 'error');
+            }
+        }
+
+        async function subscribeToCustomers() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Subscribing to Customers ===', 'info');
+            try {
+                const subscription = realtimeService.subscribeToTable('customers', (payload) => {
+                    log(`Customers change: ${payload.eventType}`, 'info');
+                    addEvent('customers', payload.eventType, payload.new || payload.old);
+                });
+                log('✓ Subscribed to customers table', 'success');
+                updateStats();
+            } catch (error) {
+                log(`✗ Failed to subscribe: ${error.message}`, 'error');
+            }
+        }
+
+        async function subscribeWithOptions() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Subscribing with Options ===', 'info');
+            try {
+                const subscription = realtimeService.subscribeToTable('deliveries', (payload) => {
+                    log(`Deliveries INSERT: ${payload.new.dr_number}`, 'info');
+                    addEvent('deliveries', 'INSERT', payload.new);
+                }, {
+                    event: 'INSERT' // Only listen for inserts
+                });
+                log('✓ Subscribed with event filter (INSERT only)', 'success');
+                updateStats();
+            } catch (error) {
+                log(`✗ Failed to subscribe: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDuplicateSubscription() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Duplicate Subscription ===', 'info');
+            try {
+                // Subscribe first time
+                realtimeService.subscribeToTable('deliveries', (payload) => {
+                    log('First subscription callback', 'info');
+                });
+                
+                // Subscribe again to same table
+                realtimeService.subscribeToTable('deliveries', (payload) => {
+                    log('Second subscription callback', 'info');
+                });
+                
+                log('✓ Duplicate subscription handled (previous unsubscribed)', 'success');
+                updateStats();
+            } catch (error) {
+                log(`✗ Failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 3: Unsubscriptions
+        async function unsubscribeFromDeliveries() {
+            if (!realtimeService) {
+                log('RealtimeService not initialized', 'warning');
+                return;
+            }
+            
+            log('=== Unsubscribing from Deliveries ===', 'info');
+            const success = realtimeService.unsubscribeFromTable('deliveries');
+            if (success) {
+                log('✓ Unsubscribed from deliveries', 'success');
+            } else {
+                log('✗ Failed to unsubscribe (may not be subscribed)', 'warning');
+            }
+            updateStats();
+        }
+
+        async function unsubscribeFromCustomers() {
+            if (!realtimeService) {
+                log('RealtimeService not initialized', 'warning');
+                return;
+            }
+            
+            log('=== Unsubscribing from Customers ===', 'info');
+            const success = realtimeService.unsubscribeFromTable('customers');
+            if (success) {
+                log('✓ Unsubscribed from customers', 'success');
+            } else {
+                log('✗ Failed to unsubscribe (may not be subscribed)', 'warning');
+            }
+            updateStats();
+        }
+
+        async function unsubscribeAll() {
+            if (!realtimeService) {
+                log('RealtimeService not initialized', 'warning');
+                return;
+            }
+            
+            log('=== Unsubscribing from All Tables ===', 'info');
+            const tables = realtimeService.getActiveSubscriptions();
+            tables.forEach(table => {
+                realtimeService.unsubscribeFromTable(table);
+            });
+            log(`✓ Unsubscribed from ${tables.length} tables`, 'success');
+            updateStats();
+        }
+
+        // Test 4: Lifecycle
+        async function testCleanup() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Cleanup ===', 'info');
+            
+            // Subscribe to multiple tables
+            await subscribeToDeliveries();
+            await subscribeToCustomers();
+            
+            // Cleanup
+            realtimeService.cleanup();
+            log('✓ Cleanup completed', 'success');
+            updateStats();
+        }
+
+        async function testGetActiveSubscriptions() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Getting Active Subscriptions ===', 'info');
+            const subscriptions = realtimeService.getActiveSubscriptions();
+            log(`Active subscriptions: ${JSON.stringify(subscriptions)}`, 'info');
+            log(`✓ Found ${subscriptions.length} active subscriptions`, 'success');
+        }
+
+        async function testIsSubscribed() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing isSubscribed ===', 'info');
+            const isSubDeliveries = realtimeService.isSubscribed('deliveries');
+            const isSubCustomers = realtimeService.isSubscribed('customers');
+            log(`Deliveries: ${isSubDeliveries}, Customers: ${isSubCustomers}`, 'info');
+            log('✓ isSubscribed check completed', 'success');
+        }
+
+        async function testGetStats() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Getting Statistics ===', 'info');
+            const stats = realtimeService.getStats();
+            log(JSON.stringify(stats, null, 2), 'info');
+            log('✓ Statistics retrieved', 'success');
+        }
+
+        // Test 5: Network
+        function simulateOffline() {
+            log('=== Simulating Offline ===', 'info');
+            window.dispatchEvent(new Event('offline'));
+            log('✓ Offline event dispatched', 'warning');
+            updateStats();
+        }
+
+        function simulateOnline() {
+            log('=== Simulating Online ===', 'info');
+            window.dispatchEvent(new Event('online'));
+            log('✓ Online event dispatched', 'success');
+            updateStats();
+        }
+
+        async function testNetworkReconnection() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Network Reconnection ===', 'info');
+            
+            // Subscribe to a table
+            await subscribeToDeliveries();
+            
+            // Simulate offline
+            simulateOffline();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Simulate online (should trigger reconnection)
+            simulateOnline();
+            
+            log('✓ Network reconnection test completed', 'success');
+        }
+
+        // Test 6: Real Data
+        async function testRealTimeUpdates() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Real-Time Updates ===', 'info');
+            log('Subscribe to deliveries, then create/update/delete a delivery to see real-time updates', 'info');
+            
+            await subscribeToDeliveries();
+            log('✓ Subscribed. Now perform CRUD operations to see updates.', 'success');
+        }
+
+        async function createTestDelivery() {
+            if (!dataService) await initializeServices();
+            
+            log('=== Creating Test Delivery ===', 'info');
+            try {
+                const testDelivery = {
+                    dr_number: `TEST-RT-${Date.now()}`,
+                    customer_name: 'Real-Time Test Customer',
+                    status: 'Active',
+                    origin: 'Test Origin',
+                    destination: 'Test Destination'
+                };
+                
+                const result = await dataService.saveDelivery(testDelivery);
+                testDeliveryId = result.id;
+                log(`✓ Test delivery created: ${result.dr_number}`, 'success');
+                log('Watch for real-time event in the Events section above!', 'info');
+            } catch (error) {
+                log(`✗ Failed to create delivery: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateTestDelivery() {
+            if (!dataService || !testDeliveryId) {
+                log('Create a test delivery first', 'warning');
+                return;
+            }
+            
+            log('=== Updating Test Delivery ===', 'info');
+            try {
+                await dataService.updateDeliveryStatus(testDeliveryId, 'In Transit');
+                log('✓ Test delivery updated', 'success');
+                log('Watch for real-time event in the Events section above!', 'info');
+            } catch (error) {
+                log(`✗ Failed to update delivery: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteTestDelivery() {
+            if (!dataService || !testDeliveryId) {
+                log('Create a test delivery first', 'warning');
+                return;
+            }
+            
+            log('=== Deleting Test Delivery ===', 'info');
+            try {
+                await dataService.deleteDelivery(testDeliveryId);
+                log('✓ Test delivery deleted', 'success');
+                log('Watch for real-time event in the Events section above!', 'info');
+                testDeliveryId = null;
+            } catch (error) {
+                log(`✗ Failed to delete delivery: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 7: Error Handling
+        async function testInvalidTable() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Invalid Table ===', 'info');
+            try {
+                realtimeService.subscribeToTable('', () => {});
+                log('✗ Should have thrown error', 'error');
+            } catch (error) {
+                log(`✓ Correctly threw error: ${error.message}`, 'success');
+            }
+        }
+
+        async function testInvalidCallback() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Invalid Callback ===', 'info');
+            try {
+                realtimeService.subscribeToTable('deliveries', null);
+                log('✗ Should have thrown error', 'error');
+            } catch (error) {
+                log(`✓ Correctly threw error: ${error.message}`, 'success');
+            }
+        }
+
+        async function testSubscriptionError() {
+            if (!realtimeService) await initializeServices();
+            
+            log('=== Testing Subscription Error Handling ===', 'info');
+            try {
+                // Try to subscribe to non-existent table
+                realtimeService.subscribeToTable('nonexistent_table_xyz', (payload) => {
+                    log('Received event from non-existent table', 'warning');
+                });
+                log('Subscription created (may fail on server side)', 'info');
+                log('Check console for error handling', 'info');
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            log('Page loaded. Click "Test Initialization" to begin.', 'info');
+            updateStats();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (realtimeService) {
+                realtimeService.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

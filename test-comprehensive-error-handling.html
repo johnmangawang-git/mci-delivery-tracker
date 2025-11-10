@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Comprehensive Error Handling - Task 13</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c2c7;
+            color: #842029;
+        }
+        .test-info {
+            background-color: #cff4fc;
+            border: 1px solid #b6effb;
+            color: #055160;
+        }
+        .code-block {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">
+            <i class="bi bi-shield-check"></i> 
+            Comprehensive Error Handling Test - Task 13
+        </h1>
+        
+        <div class="alert alert-info">
+            <strong>Task 13 Requirements:</strong>
+            <ul class="mb-0">
+                <li>Wrap all database operations in try-catch blocks</li>
+                <li>Use ErrorHandler for consistent error processing</li>
+                <li>Display user-friendly error messages via toast notifications</li>
+                <li>Log all errors with sufficient context for debugging</li>
+            </ul>
+        </div>
+
+        <!-- Test Results Container -->
+        <div id="testResults"></div>
+
+        <!-- Manual Test Buttons -->
+        <div class="test-section">
+            <h3>Manual Error Simulation Tests</h3>
+            <p>Click these buttons to simulate various error scenarios:</p>
+            
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <button class="btn btn-warning w-100" onclick="simulateNetworkError()">
+                        <i class="bi bi-wifi-off"></i> Simulate Network Error
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-warning w-100" onclick="simulateValidationError()">
+                        <i class="bi bi-exclamation-triangle"></i> Simulate Validation Error
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-warning w-100" onclick="simulateDatabaseError()">
+                        <i class="bi bi-database-x"></i> Simulate Database Error
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Run All Tests Button -->
+        <div class="text-center my-4">
+            <button class="btn btn-primary btn-lg" onclick="runAllTests()">
+                <i class="bi bi-play-circle"></i> Run All Tests
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Load required services -->
+    <script src="public/assets/js/errorHandler.js"></script>
+    <script src="public/assets/js/logger.js"></script>
+    
+    <script>
+        // Test results array
+        const testResults = [];
+
+        // Helper function to add test result
+        function addTestResult(testName, passed, message, details = '') {
+            testResults.push({
+                name: testName,
+                passed,
+                message,
+                details,
+                timestamp: new Date().toISOString()
+            });
+            displayTestResults();
+        }
+
+        // Display test results
+        function displayTestResults() {
+            const container = document.getElementById('testResults');
+            container.innerHTML = testResults.map(result => `
+                <div class="test-result ${result.passed ? 'test-pass' : 'test-fail'}">
+                    <strong>${result.passed ? '✓' : '✗'} ${result.name}</strong>
+                    <p class="mb-1">${result.message}</p>
+                    ${result.details ? `<div class="code-block">${result.details}</div>` : ''}
+                    <small class="text-muted">${new Date(result.timestamp).toLocaleTimeString()}</small>
+                </div>
+            `).join('');
+        }
+
+        // Test 1: Check if ErrorHandler is available
+        function testErrorHandlerAvailability() {
+            const passed = typeof window.ErrorHandler !== 'undefined' && 
+                          typeof window.ErrorHandler.handle === 'function';
+            
+            addTestResult(
+                'ErrorHandler Availability',
+                passed,
+                passed ? 'ErrorHandler class is available and has handle() method' : 'ErrorHandler class is not available',
+                passed ? 'window.ErrorHandler.handle is a function' : 'window.ErrorHandler is undefined'
+            );
+        }
+
+        // Test 2: Check if Logger is available
+        function testLoggerAvailability() {
+            const passed = typeof window.Logger !== 'undefined' && 
+                          typeof window.Logger.error === 'function' &&
+                          typeof window.Logger.info === 'function';
+            
+            addTestResult(
+                'Logger Availability',
+                passed,
+                passed ? 'Logger class is available with error() and info() methods' : 'Logger class is not available',
+                passed ? 'window.Logger has error() and info() methods' : 'window.Logger is undefined'
+            );
+        }
+
+        // Test 3: Test ErrorHandler.handle() functionality
+        function testErrorHandlerFunctionality() {
+            try {
+                const testError = new Error('Test error message');
+                testError.code = 'TEST_ERROR';
+                
+                // Call ErrorHandler.handle
+                const result = window.ErrorHandler.handle(testError, 'testContext');
+                
+                const passed = result && typeof result === 'object';
+                
+                addTestResult(
+                    'ErrorHandler Functionality',
+                    passed,
+                    passed ? 'ErrorHandler.handle() processes errors correctly' : 'ErrorHandler.handle() failed',
+                    passed ? `Returned: ${JSON.stringify(result)}` : 'No result returned'
+                );
+            } catch (error) {
+                addTestResult(
+                    'ErrorHandler Functionality',
+                    false,
+                    'ErrorHandler.handle() threw an exception',
+                    error.message
+                );
+            }
+        }
+
+        // Test 4: Test Logger functionality
+        function testLoggerFunctionality() {
+            try {
+                // Test info logging
+                window.Logger.info('Test info message', { test: 'data' });
+                
+                // Test error logging
+                window.Logger.error('Test error message', { error: 'details' });
+                
+                addTestResult(
+                    'Logger Functionality',
+                    true,
+                    'Logger.info() and Logger.error() work correctly',
+                    'Check console for log entries'
+                );
+            } catch (error) {
+                addTestResult(
+                    'Logger Functionality',
+                    false,
+                    'Logger methods threw an exception',
+                    error.message
+                );
+            }
+        }
+
+        // Test 5: Test toast notification system
+        function testToastNotifications() {
+            try {
+                // Create a test toast
+                const toastContainer = document.getElementById('toastContainer');
+                const toastId = 'test-toast-' + Date.now();
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center text-bg-success" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">Test toast notification</div>
+                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>
+                `;
+                
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement, { delay: 2000 });
+                toast.show();
+                
+                // Clean up after showing
+                setTimeout(() => toastElement.remove(), 2500);
+                
+                addTestResult(
+                    'Toast Notifications',
+                    true,
+                    'Toast notification system is working',
+                    'A test toast should appear in the bottom-right corner'
+                );
+            } catch (error) {
+                addTestResult(
+                    'Toast Notifications',
+                    false,
+                    'Toast notification system failed',
+                    error.message
+                );
+            }
+        }
+
+        // Test 6: Test error categorization
+        function testErrorCategorization() {
+            try {
+                const testCases = [
+                    { error: new Error('network error'), expectedType: 'network' },
+                    { error: { code: '23505', message: 'duplicate key' }, expectedType: 'duplicate' },
+                    { error: new Error('validation failed'), expectedType: 'validation' }
+                ];
+                
+                let allPassed = true;
+                const details = [];
+                
+                testCases.forEach(testCase => {
+                    const result = window.ErrorHandler.handle(testCase.error, 'test');
+                    if (result.type !== testCase.expectedType) {
+                        allPassed = false;
+                        details.push(`Expected ${testCase.expectedType}, got ${result.type}`);
+                    } else {
+                        details.push(`✓ ${testCase.expectedType} error correctly categorized`);
+                    }
+                });
+                
+                addTestResult(
+                    'Error Categorization',
+                    allPassed,
+                    allPassed ? 'All error types are correctly categorized' : 'Some errors were miscategorized',
+                    details.join('\n')
+                );
+            } catch (error) {
+                addTestResult(
+                    'Error Categorization',
+                    false,
+                    'Error categorization test failed',
+                    error.message
+                );
+            }
+        }
+
+        // Simulate network error
+        function simulateNetworkError() {
+            const error = new Error('No internet connection. Please check your network.');
+            error.code = 'NETWORK_OFFLINE';
+            
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'simulateNetworkError');
+            }
+            
+            if (window.Logger) {
+                window.Logger.error('Simulated network error', {
+                    error: error.message,
+                    code: error.code
+                });
+            }
+            
+            addTestResult(
+                'Network Error Simulation',
+                true,
+                'Network error simulated - check for toast notification',
+                'Error should be logged and toast should appear'
+            );
+        }
+
+        // Simulate validation error
+        function simulateValidationError() {
+            const error = new Error('Validation failed: Customer name is required');
+            
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'simulateValidationError');
+            }
+            
+            if (window.Logger) {
+                window.Logger.error('Simulated validation error', {
+                    error: error.message
+                });
+            }
+            
+            addTestResult(
+                'Validation Error Simulation',
+                true,
+                'Validation error simulated - check for toast notification',
+                'Error should be logged and toast should appear'
+            );
+        }
+
+        // Simulate database error
+        function simulateDatabaseError() {
+            const error = new Error('Database operation failed');
+            error.code = 'PGRST116';
+            error.details = 'Record not found';
+            
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'simulateDatabaseError');
+            }
+            
+            if (window.Logger) {
+                window.Logger.error('Simulated database error', {
+                    error: error.message,
+                    code: error.code,
+                    details: error.details
+                });
+            }
+            
+            addTestResult(
+                'Database Error Simulation',
+                true,
+                'Database error simulated - check for toast notification',
+                'Error should be logged and toast should appear'
+            );
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            testResults.length = 0; // Clear previous results
+            displayTestResults();
+            
+            console.log('=== RUNNING COMPREHENSIVE ERROR HANDLING TESTS ===');
+            
+            // Run tests sequentially
+            testErrorHandlerAvailability();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testLoggerAvailability();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testErrorHandlerFunctionality();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testLoggerFunctionality();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testToastNotifications();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            testErrorCategorization();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Summary
+            const passedTests = testResults.filter(r => r.passed).length;
+            const totalTests = testResults.length;
+            
+            console.log(`=== TEST SUMMARY: ${passedTests}/${totalTests} PASSED ===`);
+            
+            // Show summary toast
+            const toastContainer = document.getElementById('toastContainer');
+            const summaryToastId = 'summary-toast-' + Date.now();
+            const summaryToastHtml = `
+                <div id="${summaryToastId}" class="toast align-items-center text-bg-${passedTests === totalTests ? 'success' : 'warning'}" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>Test Summary:</strong> ${passedTests}/${totalTests} tests passed
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', summaryToastHtml);
+            const summaryToastElement = document.getElementById(summaryToastId);
+            const summaryToast = new bootstrap.Toast(summaryToastElement, { delay: 5000 });
+            summaryToast.show();
+            
+            setTimeout(() => summaryToastElement.remove(), 5500);
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, running tests...');
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>

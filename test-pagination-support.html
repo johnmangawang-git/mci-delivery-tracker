@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagination Support Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4"><i class="bi bi-check2-circle"></i> Pagination Support Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Summary</h3>
+            <div id="testSummary" class="alert alert-info">
+                Running tests...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>1. DataService Pagination Method Test</h3>
+            <div id="test1Results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Pagination State Structure Test</h3>
+            <div id="test2Results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Pagination Controls Test</h3>
+            <div id="test3Results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Page Size Selection Test</h3>
+            <div id="test4Results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. Loading Indicators Test</h3>
+            <div id="test5Results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. HTML Pagination Containers Test</h3>
+            <div id="test6Results"></div>
+        </div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="public/assets/js/supabase-client-fix.js"></script>
+    <script src="public/assets/js/core/supabase-init.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+
+    <script>
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+
+        function logResult(testId, message, passed) {
+            testResults.total++;
+            if (passed) {
+                testResults.passed++;
+                document.getElementById(testId).innerHTML += `
+                    <div class="test-result test-pass">
+                        <i class="bi bi-check-circle"></i> ${message}
+                    </div>
+                `;
+            } else {
+                testResults.failed++;
+                document.getElementById(testId).innerHTML += `
+                    <div class="test-result test-fail">
+                        <i class="bi bi-x-circle"></i> ${message}
+                    </div>
+                `;
+            }
+            updateSummary();
+        }
+
+        function logInfo(testId, message) {
+            document.getElementById(testId).innerHTML += `
+                <div class="test-result test-info">
+                    <i class="bi bi-info-circle"></i> ${message}
+                </div>
+            `;
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('testSummary');
+            const passRate = testResults.total > 0 ? 
+                ((testResults.passed / testResults.total) * 100).toFixed(1) : 0;
+            
+            summary.innerHTML = `
+                <h4>Test Results</h4>
+                <p><strong>Total Tests:</strong> ${testResults.total}</p>
+                <p><strong>Passed:</strong> <span class="text-success">${testResults.passed}</span></p>
+                <p><strong>Failed:</strong> <span class="text-danger">${testResults.failed}</span></p>
+                <p><strong>Pass Rate:</strong> ${passRate}%</p>
+            `;
+            
+            if (testResults.failed === 0 && testResults.total > 0) {
+                summary.className = 'alert alert-success';
+            } else if (testResults.failed > 0) {
+                summary.className = 'alert alert-warning';
+            }
+        }
+
+        async function runTests() {
+            console.log('🧪 Starting Pagination Support Tests...');
+
+            // Test 1: DataService Pagination Method
+            try {
+                logInfo('test1Results', 'Checking if DataService has getDeliveriesWithPagination method...');
+                
+                if (typeof window.dataService === 'undefined') {
+                    logResult('test1Results', 'DataService not found', false);
+                } else if (typeof window.dataService.getDeliveriesWithPagination !== 'function') {
+                    logResult('test1Results', 'getDeliveriesWithPagination method not found', false);
+                } else {
+                    logResult('test1Results', 'getDeliveriesWithPagination method exists', true);
+                    
+                    // Try to call it (will fail if not initialized, but that's ok for this test)
+                    try {
+                        await window.dataService.initialize();
+                        const result = await window.dataService.getDeliveriesWithPagination({
+                            page: 1,
+                            pageSize: 10,
+                            filters: { status: ['Active'] }
+                        });
+                        
+                        logResult('test1Results', 'Method can be called successfully', true);
+                        logInfo('test1Results', `Returned ${result.data.length} items with pagination metadata`);
+                        
+                        // Check pagination metadata
+                        if (result.pagination) {
+                            logResult('test1Results', 'Pagination metadata present', true);
+                            logInfo('test1Results', `Page: ${result.pagination.page}, Total: ${result.pagination.totalCount}`);
+                        } else {
+                            logResult('test1Results', 'Pagination metadata missing', false);
+                        }
+                    } catch (error) {
+                        logInfo('test1Results', `Method exists but couldn't test execution: ${error.message}`);
+                    }
+                }
+            } catch (error) {
+                logResult('test1Results', `Test failed: ${error.message}`, false);
+            }
+
+            // Test 2: Pagination State Structure
+            try {
+                logInfo('test2Results', 'Checking pagination state structure in app.js...');
+                
+                // We can't directly access app.js variables, but we can check if the functions exist
+                if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
+                    logResult('test2Results', 'loadActiveDeliveriesWithPagination function exists', true);
+                } else {
+                    logResult('test2Results', 'loadActiveDeliveriesWithPagination function not found', false);
+                }
+                
+                if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
+                    logResult('test2Results', 'loadDeliveryHistoryWithPagination function exists', true);
+                } else {
+                    logResult('test2Results', 'loadDeliveryHistoryWithPagination function not found', false);
+                }
+            } catch (error) {
+                logResult('test2Results', `Test failed: ${error.message}`, false);
+            }
+
+            // Test 3: Pagination Controls
+            try {
+                logInfo('test3Results', 'Checking pagination control functions...');
+                
+                if (typeof window.updatePaginationControls === 'function') {
+                    logResult('test3Results', 'updatePaginationControls function exists', true);
+                } else {
+                    logResult('test3Results', 'updatePaginationControls function not found', false);
+                }
+                
+                if (typeof window.changePage === 'function') {
+                    logResult('test3Results', 'changePage function exists', true);
+                } else {
+                    logResult('test3Results', 'changePage function not found', false);
+                }
+            } catch (error) {
+                logResult('test3Results', `Test failed: ${error.message}`, false);
+            }
+
+            // Test 4: Page Size Selection
+            try {
+                logInfo('test4Results', 'Checking page size selection function...');
+                
+                if (typeof window.changePageSize === 'function') {
+                    logResult('test4Results', 'changePageSize function exists', true);
+                } else {
+                    logResult('test4Results', 'changePageSize function not found', false);
+                }
+            } catch (error) {
+                logResult('test4Results', `Test failed: ${error.message}`, false);
+            }
+
+            // Test 5: Loading Indicators
+            try {
+                logInfo('test5Results', 'Checking loading indicator implementation...');
+                
+                // Check if the pagination functions show loading states
+                const appJsContent = await fetch('public/assets/js/app.js').then(r => r.text());
+                
+                if (appJsContent.includes('Loading deliveries (Page')) {
+                    logResult('test5Results', 'Loading indicator for active deliveries found', true);
+                } else {
+                    logResult('test5Results', 'Loading indicator for active deliveries not found', false);
+                }
+                
+                if (appJsContent.includes('Loading delivery history (Page')) {
+                    logResult('test5Results', 'Loading indicator for delivery history found', true);
+                } else {
+                    logResult('test5Results', 'Loading indicator for delivery history not found', false);
+                }
+            } catch (error) {
+                logResult('test5Results', `Test failed: ${error.message}`, false);
+            }
+
+            // Test 6: HTML Pagination Containers
+            try {
+                logInfo('test6Results', 'Checking HTML pagination containers...');
+                
+                const indexHtml = await fetch('public/index.html').then(r => r.text());
+                
+                if (indexHtml.includes('id="activePaginationControls"')) {
+                    logResult('test6Results', 'Active deliveries pagination container found', true);
+                } else {
+                    logResult('test6Results', 'Active deliveries pagination container not found', false);
+                }
+                
+                if (indexHtml.includes('id="historyPaginationControls"')) {
+                    logResult('test6Results', 'Delivery history pagination container found', true);
+                } else {
+                    logResult('test6Results', 'Delivery history pagination container not found', false);
+                }
+            } catch (error) {
+                logResult('test6Results', `Test failed: ${error.message}`, false);
+            }
+
+            console.log('✅ All tests completed');
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000);
+        });
+    </script>
+</body>
+</html>

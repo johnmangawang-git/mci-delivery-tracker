@@ -1,9 +1,43 @@
+/**
+ * APP.JS - Main Application Logic
+ * 
+ * DATABASE-CENTRIC ARCHITECTURE PATTERNS:
+ * 
+ * 1. DATA LOADING:
+ *    - All data is loaded from Supabase via DataService
+ *    - NO localStorage reads for business data
+ *    - Data is loaded fresh on page load and refreshed as needed
+ * 
+ * 2. DATA SAVING:
+ *    - All saves go through DataService.saveDelivery()
+ *    - NO localStorage writes for business data
+ *    - UI is updated after successful database save
+ * 
+ * 3. DATA UPDATES:
+ *    - Status updates go through DataService.updateDeliveryStatus()
+ *    - Optimistic UI updates with rollback on error
+ *    - Real-time updates via RealtimeService
+ * 
+ * 4. ERROR HANDLING:
+ *    - Network errors detected and handled gracefully
+ *    - User feedback via toast notifications
+ *    - Errors logged via Logger service
+ * 
+ * 5. REAL-TIME SYNC:
+ *    - RealtimeService subscribes to delivery table changes
+ *    - UI automatically updates when data changes in database
+ *    - Works across multiple browser tabs/windows
+ * 
+ * See docs/DATASERVICE-API.md for complete API documentation
+ */
+
 console.log('app.js loaded');
 (function() {
-    // CRITICAL FIX: Use window.activeDeliveries directly instead of local variables
+    // CRITICAL: Use window.activeDeliveries directly instead of local variables
     // This ensures data synchronization between booking.js and app.js
     
     // Initialize global arrays if they don't exist
+    // These arrays hold data loaded from Supabase for UI state only
     if (typeof window.activeDeliveries === 'undefined') {
         window.activeDeliveries = [];
     }
@@ -12,6 +46,7 @@ console.log('app.js loaded');
     }
     
     // Use references to global arrays (not local copies)
+    // Data in these arrays comes from Supabase via DataService
     let activeDeliveries = window.activeDeliveries;
     let deliveryHistory = window.deliveryHistory;
     let refreshInterval = null;
@@ -19,6 +54,50 @@ console.log('app.js loaded');
     let filteredHistory = [];
     let currentSearchTerm = '';
     let currentHistorySearchTerm = '';
+    
+    // Real-time service instance
+    let realtimeService = null;
+
+    /**
+     * Handle errors with network awareness
+     * Requirement 9.2: Show appropriate error messages for offline operations
+     */
+    function handleNetworkAwareError(error, defaultMessage) {
+        console.error('Error occurred:', error);
+        
+        // Check if it's a network error
+        if (error.code === 'NETWORK_OFFLINE' || 
+            error.message?.includes('network') || 
+            error.message?.includes('internet connection')) {
+            
+            if (window.networkStatusService) {
+                window.networkStatusService.showOfflineError();
+            } else {
+                showToast('No internet connection. Please check your network.', 'danger');
+            }
+        } else {
+            // Show the default error message
+            showToast(defaultMessage || 'An error occurred. Please try again.', 'danger');
+        }
+    }
+
+    // Pagination state
+    let paginationState = {
+        active: {
+            currentPage: 1,
+            pageSize: 50,
+            totalPages: 1,
+            totalCount: 0,
+            isLoading: false
+        },
+        history: {
+            currentPage: 1,
+            pageSize: 50,
+            totalPages: 1,
+            totalCount: 0,
+            isLoading: false
+        }
+    };
 
     // Test function to check if modals are working
     function testModalFunctionality() {
@@ -128,7 +207,7 @@ console.log('app.js loaded');
         }
     }
 
-    // Update delivery status by delivery ID (for dropdown) - NO OVERWRITE
+    // Update delivery status by delivery ID (for dropdown)
     async function updateDeliveryStatusById(deliveryId, newStatus) {
         console.log(`🔄 updateDeliveryStatusById called - Delivery: ${deliveryId}, New Status: ${newStatus}`);
         console.log('Active deliveries count:', activeDeliveries.length);
@@ -144,88 +223,88 @@ console.log('app.js loaded');
             const delivery = activeDeliveries[deliveryIndex];
             const oldStatus = delivery.status;
             const drNumber = delivery.dr_number || delivery.drNumber;
-            const deliveryUUID = delivery.id;
             
             console.log('📦 Delivery before update:', {
-                id: deliveryUUID,
+                id: delivery.id,
                 dr_number: drNumber,
                 oldStatus: oldStatus,
                 newStatus: newStatus
             });
             
-            // Update status in memory
+            // Optimistic UI update
             delivery.status = newStatus;
             delivery.lastStatusUpdate = new Date().toISOString();
             
-            // DIRECT SUPABASE UPDATE - NO OVERWRITE, ONLY UPDATE STATUS FIELD
+            // Update the global array immediately for UI responsiveness
+            window.activeDeliveries[deliveryIndex] = delivery;
+            
+            // Update UI immediately
+            if (typeof populateActiveDeliveriesTable === 'function') {
+                populateActiveDeliveriesTable();
+            }
+            
             try {
-                console.log('💾 Directly updating status in Supabase (NO OVERWRITE)...');
-                
-                const client = window.supabaseClient ? window.supabaseClient() : null;
-                if (!client) {
-                    throw new Error('Supabase client not available');
+                // Use DataService to update status
+                if (!window.dataService) {
+                    throw new Error('DataService not available');
                 }
                 
-                // Update ONLY the status field - nothing else (NO OVERWRITE)
-                const { data, error } = await client
-                    .from('deliveries')
-                    .update({ 
-                        status: newStatus,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', deliveryUUID)
-                    .select();
+                console.log('💾 Updating status via DataService...');
                 
-                if (error) {
-                    console.error('❌ Supabase update error:', error);
-                    throw error;
+                // Log the operation
+                if (window.Logger) {
+                    window.Logger.info('Updating delivery status', {
+                        drNumber,
+                        oldStatus,
+                        newStatus,
+                        deliveryId: delivery.id
+                    });
                 }
                 
-                if (!data || data.length === 0) {
-                    console.warn('⚠️ No rows updated, trying by dr_number...');
-                    // Fallback: try updating by dr_number
-                    const { data: data2, error: error2 } = await client
-                        .from('deliveries')
-                        .update({ 
-                            status: newStatus,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('dr_number', drNumber)
-                        .select();
-                    
-                    if (error2) throw error2;
-                    if (!data2 || data2.length === 0) {
-                        throw new Error('Delivery not found in database');
-                    }
-                    
-                    console.log('✅ Status updated by dr_number:', drNumber);
-                } else {
-                    console.log('✅ Status updated by ID:', deliveryUUID);
-                }
+                // Use DataService update method
+                await window.dataService.update('deliveries', delivery.id, {
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                });
                 
                 console.log('✅ Status saved to Supabase successfully - DR:', drNumber, 'Status:', newStatus);
                 
-                // Update the global array
-                window.activeDeliveries[deliveryIndex] = delivery;
+                // Show success message
+                showToast(`Status updated from "${oldStatus}" to "${newStatus}"`, 'success');
                 
             } catch (error) {
                 console.error('❌ Failed to save to Supabase:', error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, 'updateDeliveryStatusById');
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error('Failed to update delivery status', {
+                        drNumber,
+                        oldStatus,
+                        newStatus,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                }
+                
                 showToast('Failed to update status in database', 'danger');
-                // Revert the status change
+                
+                // Rollback the status change
                 delivery.status = oldStatus;
+                window.activeDeliveries[deliveryIndex] = delivery;
+                
+                // Refresh UI to show rollback
+                if (typeof populateActiveDeliveriesTable === 'function') {
+                    populateActiveDeliveriesTable();
+                } else {
+                    loadActiveDeliveries();
+                }
                 return;
             }
-            
-            // Refresh only the table display, don't reload all data
-            if (typeof populateActiveDeliveriesTable === 'function') {
-                populateActiveDeliveriesTable();
-            } else {
-                // Fallback: reload data if populate function not available
-                loadActiveDeliveries();
-            }
-            
-            // Show success message
-            showToast(`Status updated from "${oldStatus}" to "${newStatus}"`, 'success');
             
             // Update analytics dashboard stats
             if (typeof window.updateDashboardStats === 'function') {
@@ -249,63 +328,80 @@ console.log('app.js loaded');
         try {
             // Find delivery by DR number and update status
             const deliveryIndex = activeDeliveries.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
-            if (deliveryIndex !== -1) {
-                const delivery = activeDeliveries[deliveryIndex];
-                const oldStatus = delivery.status;
-                delivery.status = newStatus;
-                delivery.lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
-                
-                // If status is Completed, move to delivery history
-                if (newStatus === 'Completed') {
-                    // NO OVERWRITE: Set completion timestamp ONLY if it doesn't exist
-                    if ((!delivery.completedDate || delivery.completedDate === '') && 
-                        (!delivery.completedDateTime || delivery.completedDateTime === '') && 
-                        (!delivery.signedAt || delivery.signedAt === '')) {
-                        
-                        const now = new Date();
-                        delivery.completedDate = now.toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        });
-                        delivery.completedDateTime = now.toISOString();
-                        delivery.signedAt = now.toISOString();
-                        
-                        console.log('🔒 Set completion timestamp (NO OVERWRITE):', {
-                            dr: drNumber,
-                            completedDate: delivery.completedDate,
-                            completedDateTime: delivery.completedDateTime
-                        });
-                    } else {
-                        console.log('🔒 Completion date already exists, preserving original:', {
-                            dr: drNumber,
-                            completedDate: delivery.completedDate,
-                            completedDateTime: delivery.completedDateTime
-                        });
-                    }
+            if (deliveryIndex === -1) {
+                console.warn(`Delivery with DR ${drNumber} not found in active deliveries`);
+                showToast(`Delivery ${drNumber} not found`, 'warning');
+                return;
+            }
+            
+            const delivery = activeDeliveries[deliveryIndex];
+            const oldStatus = delivery.status;
+            
+            // Optimistic UI update
+            delivery.status = newStatus;
+            delivery.lastStatusUpdate = window.getLocalSystemTimeISO ? window.getLocalSystemTimeISO() : new Date().toISOString();
+            
+            // If status is Completed, move to delivery history
+            if (newStatus === 'Completed') {
+                // Set completion timestamp ONLY if it doesn't exist
+                if ((!delivery.completedDate || delivery.completedDate === '') && 
+                    (!delivery.completedDateTime || delivery.completedDateTime === '') && 
+                    (!delivery.signedAt || delivery.signedAt === '')) {
                     
-                    // Add to delivery history
-                    if (!deliveryHistory) {
-                        window.deliveryHistory = [];
-                        deliveryHistory = window.deliveryHistory;
-                    }
-                    deliveryHistory.unshift(delivery);
+                    const now = new Date();
+                    delivery.completedDate = now.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                    delivery.completedDateTime = now.toISOString();
+                    delivery.signedAt = now.toISOString();
                     
-                    // Remove from active deliveries
-                    activeDeliveries.splice(deliveryIndex, 1);
-                    
-                    console.log(`✅ Moved DR ${drNumber} from active to history with preserved dates`);
+                    console.log('🔒 Set completion timestamp:', {
+                        dr: drNumber,
+                        completedDate: delivery.completedDate,
+                        completedDateTime: delivery.completedDateTime
+                    });
+                } else {
+                    console.log('🔒 Completion date already exists, preserving original:', {
+                        dr: drNumber,
+                        completedDate: delivery.completedDate,
+                        completedDateTime: delivery.completedDateTime
+                    });
                 }
                 
-                // Save to Supabase ONLY (centralized database)
-                if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
-                    try {
-                        await window.dataService.saveDelivery(delivery);
-                        console.log('✅ Delivery saved to Supabase with completion dates');
-                    } catch (error) {
-                        console.error('❌ Error saving delivery to Supabase:', error);
-                    }
+                // Move to delivery history in memory
+                if (!deliveryHistory) {
+                    window.deliveryHistory = [];
+                    deliveryHistory = window.deliveryHistory;
                 }
+                deliveryHistory.unshift(delivery);
+                activeDeliveries.splice(deliveryIndex, 1);
+                window.deliveryHistory = deliveryHistory;
+                window.activeDeliveries = activeDeliveries;
+                
+                console.log(`✅ Moved DR ${drNumber} from active to history with preserved dates`);
+            }
+            
+            try {
+                // Save to Supabase using DataService
+                if (!window.dataService) {
+                    throw new Error('DataService not available');
+                }
+                
+                // Log the operation
+                if (window.Logger) {
+                    window.Logger.info('Updating delivery status', {
+                        drNumber,
+                        oldStatus,
+                        newStatus,
+                        completedDate: delivery.completedDate,
+                        completedDateTime: delivery.completedDateTime
+                    });
+                }
+                
+                await window.dataService.saveDelivery(delivery);
+                console.log('✅ Delivery saved to Supabase with completion dates');
                 
                 // Refresh the display
                 loadActiveDeliveries();
@@ -318,12 +414,67 @@ console.log('app.js loaded');
                     }, 100);
                 }
                 
+                showToast(`Delivery ${drNumber} status updated to ${newStatus}`, 'success');
                 console.log(`Successfully updated DR ${drNumber} from "${oldStatus}" to "${newStatus}"`);
-            } else {
-                console.warn(`Delivery with DR ${drNumber} not found in active deliveries`);
+                
+            } catch (error) {
+                console.error('❌ Error saving delivery to Supabase:', error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, 'updateDeliveryStatus');
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error('Failed to save delivery status update', {
+                        drNumber,
+                        oldStatus,
+                        newStatus,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                }
+                
+                // Rollback on error
+                delivery.status = oldStatus;
+                if (newStatus === 'Completed') {
+                    // Move back to active deliveries
+                    const historyIndex = deliveryHistory.findIndex(d => (d.drNumber || d.dr_number) === drNumber);
+                    if (historyIndex !== -1) {
+                        deliveryHistory.splice(historyIndex, 1);
+                        activeDeliveries.push(delivery);
+                        window.deliveryHistory = deliveryHistory;
+                        window.activeDeliveries = activeDeliveries;
+                    }
+                }
+                
+                // Refresh display to show rollback
+                loadActiveDeliveries();
+                loadDeliveryHistory();
+                
+                showToast(`Failed to update delivery ${drNumber}`, 'danger');
+                throw error;
             }
         } catch (error) {
             console.error('Error updating delivery status:', error);
+            
+            // Use ErrorHandler for consistent error processing
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'updateDeliveryStatus');
+            }
+            
+            // Log the error
+            if (window.Logger) {
+                window.Logger.error('Error in updateDeliveryStatus function', {
+                    drNumber,
+                    newStatus,
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+            
+            showToast('Error updating delivery status', 'danger');
         }
     }
 
@@ -372,44 +523,16 @@ console.log('app.js loaded');
         }
     }, true); // Use capture phase
 
-    // Utility function to check and clean localStorage if needed
-    function checkAndCleanLocalStorage() {
-        try {
-            // Try to estimate localStorage usage
-            let totalSize = 0;
-            for (let key in localStorage) {
-                if (localStorage.hasOwnProperty(key)) {
-                    totalSize += localStorage[key].length + key.length;
-                }
-            }
-            
-            const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
-            console.log(`📊 localStorage usage: ~${sizeInMB} MB`);
-            
-            // If over 4MB, warn and suggest cleanup
-            if (totalSize > 4 * 1024 * 1024) {
-                console.warn('⚠️ localStorage is getting full. Consider clearing old data.');
-                return false;
-            }
-            return true;
-        } catch (error) {
-            console.error('Error checking localStorage:', error);
-            return false;
-        }
-    }
-    
-    // Check localStorage on load
-    checkAndCleanLocalStorage();
+    // REMOVED: checkAndCleanLocalStorage() - No longer needed with database-centric architecture
 
     // Make status functions globally accessible
     window.toggleStatusDropdown = toggleStatusDropdown;
     window.updateDeliveryStatusById = updateDeliveryStatusById;
     window.generateStatusOptions = generateStatusOptions;
     window.getStatusInfo = getStatusInfo;
-    window.checkAndCleanLocalStorage = checkAndCleanLocalStorage;
 
     // Legacy function for status change handling (keeping for compatibility)
-    function handleStatusChange(e) {
+    async function handleStatusChange(e) {
         const deliveryId = e.target.dataset.deliveryId;
         const newStatus = e.target.value;
         console.log(`Status changed for delivery ${deliveryId} to ${newStatus}`);
@@ -417,52 +540,110 @@ console.log('app.js loaded');
         // Find the delivery and update its status
         const deliveryIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
         if (deliveryIndex !== -1) {
-            activeDeliveries[deliveryIndex].status = newStatus;
+            const delivery = activeDeliveries[deliveryIndex];
+            const oldStatus = delivery.status;
+            
+            // Optimistic UI update
+            delivery.status = newStatus;
             
             // If status is changed to "Completed", move to history
             if (newStatus === 'Completed') {
-                const completedDelivery = activeDeliveries[deliveryIndex];
                 // COMPLETION TIMESTAMP (when DR is e-signed/completed)
                 // Only set completion date if it doesn't already exist to preserve original completion time
-                if ((!completedDelivery.completedDate || completedDelivery.completedDate === '') && 
-                    (!completedDelivery.completedDateTime || completedDelivery.completedDateTime === '') && 
-                    (!completedDelivery.signedAt || completedDelivery.signedAt === '')) {
+                if ((!delivery.completedDate || delivery.completedDate === '') && 
+                    (!delivery.completedDateTime || delivery.completedDateTime === '') && 
+                    (!delivery.signedAt || delivery.signedAt === '')) {
                     if (window.createCompletionTimestamp) {
                         const completionData = window.createCompletionTimestamp();
-                        Object.assign(completedDelivery, completionData);
+                        Object.assign(delivery, completionData);
                     } else {
                         // Fallback for backward compatibility
-                        completedDelivery.completedDate = new Date().toLocaleDateString('en-US', {
+                        delivery.completedDate = new Date().toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric'
                         });
-                        completedDelivery.completedDateTime = new Date().toISOString();
+                        delivery.completedDateTime = new Date().toISOString();
                     }
                 }
                 
-                // Move to history
-                deliveryHistory.unshift(completedDelivery);
+                // Move to history in memory
+                deliveryHistory.unshift(delivery);
                 activeDeliveries.splice(deliveryIndex, 1);
+                window.deliveryHistory = deliveryHistory;
+                window.activeDeliveries = activeDeliveries;
+            }
+            
+            try {
+                // Save to database using DataService
+                if (!window.dataService) {
+                    throw new Error('DataService not available');
+                }
                 
-                // Save to database
-                saveToDatabase();
-            } else {
-                // Save to database
-                saveToDatabase();
+                // Log the operation
+                if (window.Logger) {
+                    window.Logger.info('Saving delivery status change', {
+                        deliveryId,
+                        oldStatus,
+                        newStatus,
+                        completedDate: delivery.completedDate
+                    });
+                }
+                
+                await window.dataService.saveDelivery(delivery);
+                console.log('✅ Delivery saved to Supabase');
+                
+                // Refresh views
+                loadActiveDeliveries();
+                loadDeliveryHistory();
+                
+                // Update analytics dashboard stats
+                if (typeof window.updateDashboardStats === 'function') {
+                    setTimeout(() => {
+                        window.updateDashboardStats();
+                    }, 100);
+                }
+                
+                showToast(`Delivery status updated to ${newStatus}`, 'success');
+                
+            } catch (error) {
+                console.error('❌ Error saving delivery:', error);
+                
+                // Use ErrorHandler for consistent error processing
+                if (window.ErrorHandler) {
+                    window.ErrorHandler.handle(error, 'handleStatusChange');
+                }
+                
+                // Log the error
+                if (window.Logger) {
+                    window.Logger.error('Failed to save delivery status change', {
+                        deliveryId,
+                        oldStatus,
+                        newStatus,
+                        error: error.message,
+                        stack: error.stack
+                    });
+                }
+                
+                // Rollback on error
+                delivery.status = oldStatus;
+                if (newStatus === 'Completed') {
+                    // Move back to active deliveries
+                    const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
+                    if (historyIndex !== -1) {
+                        deliveryHistory.splice(historyIndex, 1);
+                        activeDeliveries.push(delivery);
+                        window.deliveryHistory = deliveryHistory;
+                        window.activeDeliveries = activeDeliveries;
+                    }
+                }
+                
+                // Refresh views to show rollback
+                loadActiveDeliveries();
+                loadDeliveryHistory();
+                
+                showToast('Failed to update delivery status', 'danger');
             }
-            
-            loadActiveDeliveries();
-            loadDeliveryHistory();
-            
-            // Update analytics dashboard stats
-            if (typeof window.updateDashboardStats === 'function') {
-                setTimeout(() => {
-                    window.updateDashboardStats();
-                }, 100);
-            }
-            
-            showToast(`Delivery status updated to ${newStatus}`);
         }
     }
 
@@ -519,120 +700,10 @@ console.log('app.js loaded');
         alert(`E-POD functionality for ${drNumber} would be implemented here`);
     }
 
-    // Save data to database (Supabase only - centralized database)
-    async function saveToDatabase() {
-        try {
-            if (!window.dataService) {
-                throw new Error('DataService not available - cannot save to Supabase');
-            }
-            
-            // Save active deliveries to Supabase
-            for (const delivery of activeDeliveries) {
-                await window.dataService.saveDelivery(delivery);
-            }
-            
-            // Save delivery history to Supabase
-            for (const delivery of deliveryHistory) {
-                await window.dataService.saveDelivery(delivery);
-            }
-            
-            console.log('✅ Data saved to Supabase successfully (centralized database)');
-            return true;
-        } catch (error) {
-            console.error('❌ Error saving to Supabase:', error);
-            throw error; // Re-throw to let caller handle the error
-        }
-    }
-
-    // REMOVED: localStorage functions - using Supabase only (centralized database)
-    // No more localStorage fallbacks to prevent quota issues and ensure data consistency
-
-    // NO OVERWRITE: Preserve original completion dates
-    function preserveCompletionDates(newDeliveries, existingDeliveries) {
-        if (!existingDeliveries || existingDeliveries.length === 0) {
-            return newDeliveries;
-        }
-        
-        // Create a map of existing deliveries by DR number for quick lookup
-        const existingMap = new Map();
-        existingDeliveries.forEach(d => {
-            const drNumber = d.dr_number || d.drNumber;
-            if (drNumber) {
-                existingMap.set(drNumber, d);
-            }
-        });
-        
-        // Preserve completion dates from existing deliveries
-        return newDeliveries.map(newDelivery => {
-            const drNumber = newDelivery.dr_number || newDelivery.drNumber;
-            const existing = existingMap.get(drNumber);
-            
-            if (existing) {
-                // Preserve original completion dates if they exist in memory
-                if (existing.completedDate && !newDelivery.completedDate) {
-                    newDelivery.completedDate = existing.completedDate;
-                }
-                if (existing.completedDateTime && !newDelivery.completedDateTime) {
-                    newDelivery.completedDateTime = existing.completedDateTime;
-                }
-                if (existing.signedAt && !newDelivery.signedAt) {
-                    newDelivery.signedAt = existing.signedAt;
-                }
-                
-                console.log('🔒 Preserved dates for DR:', drNumber);
-            }
-            
-            return newDelivery;
-        });
-    }
-
-    // Load data from database (Supabase only - centralized database)
-    async function loadFromDatabase() {
-        try {
-            if (!window.dataService) {
-                throw new Error('DataService not available - cannot load from Supabase');
-            }
-            
-            console.log('📥 Loading deliveries from Supabase (centralized database)...');
-            const deliveries = await window.dataService.getDeliveries();
-            
-            // Use global field mapper to normalize all delivery objects
-            const normalizedDeliveries = window.normalizeDeliveryArray ? 
-                window.normalizeDeliveryArray(deliveries) : deliveries;
-            
-            // Properly separate active deliveries from history based on status
-            const newActiveDeliveries = normalizedDeliveries.filter(d => 
-                d.status !== 'Completed' && d.status !== 'Signed'
-            );
-            const newDeliveryHistory = normalizedDeliveries.filter(d => 
-                d.status === 'Completed' || d.status === 'Signed'
-            );
-            
-            // NO OVERWRITE: Preserve completion dates from existing data in memory
-            const preservedHistory = preserveCompletionDates(
-                newDeliveryHistory, 
-                window.deliveryHistory
-            );
-            
-            activeDeliveries = newActiveDeliveries;
-            deliveryHistory = preservedHistory;
-            
-            console.log('✅ Active deliveries loaded from Supabase:', activeDeliveries.length);
-            console.log('✅ Delivery history loaded from Supabase (dates preserved):', deliveryHistory.length);
-            
-            // Update global references
-            window.activeDeliveries = activeDeliveries;
-            window.deliveryHistory = deliveryHistory;
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Error loading from Supabase:', error);
-            throw error; // Re-throw to let caller handle the error
-        }
-    }
-
-    // REMOVED: localStorage fallback functions - using Supabase only (centralized database)
-    // This ensures all data operations go through the centralized database
+    // REMOVED: saveToDatabase() - No longer needed, using DataService directly
+    // REMOVED: loadFromDatabase() - No longer needed, using DataService directly
+    // REMOVED: preserveCompletionDates() - Dates are now managed in memory during session only
+    // All localStorage operations have been removed per database-centric architecture requirements
 
     // Show toast notification
     function showToast(message, type = 'success') {
@@ -798,19 +869,70 @@ console.log('app.js loaded');
         }
     }
 
-    // Load active deliveries
-    async function loadActiveDeliveries() {
-        console.log('=== LOAD ACTIVE DELIVERIES FROM SUPABASE (CENTRALIZED DATABASE) ===');
+    // Load active deliveries with pagination
+    async function loadActiveDeliveriesWithPagination(page = null) {
+        console.log('=== LOAD ACTIVE DELIVERIES WITH PAGINATION ===');
+        
+        // Use provided page or current page from state
+        const targetPage = page !== null ? page : paginationState.active.currentPage;
+        
+        // Prevent multiple simultaneous loads
+        if (paginationState.active.isLoading) {
+            console.log('⏳ Already loading, skipping...');
+            return;
+        }
+        
+        paginationState.active.isLoading = true;
+        
+        // Show loading state
+        const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
+        if (activeDeliveriesTableBody) {
+            activeDeliveriesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="13" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading deliveries (Page ${targetPage})...</p>
+                    </td>
+                </tr>
+            `;
+        }
         
         try {
-            // Load directly from Supabase (centralized database)
-            await loadFromDatabase();
+            // Load directly from DataService with pagination
+            if (!window.dataService) {
+                throw new Error('DataService not available');
+            }
             
-            // Update local references
-            activeDeliveries = window.activeDeliveries;
-            deliveryHistory = window.deliveryHistory;
+            const result = await window.dataService.getDeliveriesWithPagination({
+                page: targetPage,
+                pageSize: paginationState.active.pageSize,
+                filters: {
+                    status: ['In Transit', 'On Schedule', 'Sold Undelivered', 'Active']
+                }
+            });
             
-            console.log('✅ Loaded from Supabase:', activeDeliveries.length, 'active deliveries');
+            // Normalize field names
+            const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                window.normalizeDeliveryArray(result.data) : result.data;
+            
+            // Update active deliveries
+            activeDeliveries = normalizedDeliveries;
+            window.activeDeliveries = activeDeliveries;
+            
+            // Update pagination state
+            paginationState.active.currentPage = result.pagination.page;
+            paginationState.active.totalPages = result.pagination.totalPages;
+            paginationState.active.totalCount = result.pagination.totalCount;
+            
+            console.log('✅ Loaded from Supabase:', {
+                page: result.pagination.page,
+                pageSize: result.pagination.pageSize,
+                totalPages: result.pagination.totalPages,
+                totalCount: result.pagination.totalCount,
+                deliveriesOnPage: activeDeliveries.length
+            });
             
             // Log first few deliveries to see their status
             if (activeDeliveries.length > 0) {
@@ -823,30 +945,59 @@ console.log('app.js loaded');
             // Populate table with fresh data from database
             populateActiveDeliveriesTable();
             
+            // Update pagination controls
+            updatePaginationControls('active');
+            
         } catch (error) {
             console.error('❌ Error loading from Supabase:', error);
             
-            // If we have existing data in memory, use it
-            if (window.activeDeliveries && window.activeDeliveries.length > 0) {
-                console.log('⚠️ Using existing in-memory data:', window.activeDeliveries.length, 'deliveries');
-                activeDeliveries = window.activeDeliveries;
-                populateActiveDeliveriesTable();
-            } else {
-                // Show error message
-                const activeDeliveriesTableBody = document.getElementById('activeDeliveriesTableBody');
-                if (activeDeliveriesTableBody) {
-                    activeDeliveriesTableBody.innerHTML = `
-                        <tr>
-                            <td colspan="13" class="text-center py-5">
-                                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
-                                <h4 class="mt-3">Failed to load deliveries from database</h4>
-                                <p class="text-muted">Please check your connection and try again</p>
-                            </td>
-                        </tr>
-                    `;
-                }
+            // Use ErrorHandler for consistent error processing
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'loadActiveDeliveriesWithPagination');
             }
+            
+            // Log the error
+            if (window.Logger) {
+                window.Logger.error('Failed to load active deliveries with pagination', {
+                    page: targetPage,
+                    pageSize: paginationState.active.pageSize,
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+            
+            // Handle error with network awareness
+            handleNetworkAwareError(error, 'Failed to load deliveries from database');
+            
+            // Show error message in table
+            if (activeDeliveriesTableBody) {
+                const isOffline = error.code === 'NETWORK_OFFLINE' || 
+                                 error.message?.includes('network') || 
+                                 error.message?.includes('internet connection');
+                
+                activeDeliveriesTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="13" class="text-center py-5">
+                            <i class="bi bi-${isOffline ? 'wifi-off' : 'exclamation-triangle'} text-danger" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">${isOffline ? 'No Internet Connection' : 'Failed to load deliveries from database'}</h4>
+                            <p class="text-muted">${isOffline ? 'Please check your internet connection and try again' : (error.message || 'Please try again')}</p>
+                            <button class="btn btn-primary mt-3" onclick="window.loadActiveDeliveriesWithPagination()">
+                                <i class="bi bi-arrow-clockwise"></i> Retry
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            showToast('Failed to load active deliveries', 'danger');
+        } finally {
+            paginationState.active.isLoading = false;
         }
+    }
+
+    // Load active deliveries (legacy function - now uses pagination)
+    async function loadActiveDeliveries() {
+        await loadActiveDeliveriesWithPagination(1);
     }
 
     // Separate function to populate the Active Deliveries table
@@ -1006,31 +1157,271 @@ console.log('app.js loaded');
         }
     }
 
-// Load delivery history
-function loadDeliveryHistory() {
-    console.log('=== LOAD DELIVERY HISTORY FUNCTION CALLED ===');
+    // Load delivery history with pagination
+    async function loadDeliveryHistoryWithPagination(page = null) {
+        console.log('=== LOAD DELIVERY HISTORY WITH PAGINATION ===');
+        
+        // Use provided page or current page from state
+        const targetPage = page !== null ? page : paginationState.history.currentPage;
+        
+        // Prevent multiple simultaneous loads
+        if (paginationState.history.isLoading) {
+            console.log('⏳ Already loading, skipping...');
+            return;
+        }
+        
+        paginationState.history.isLoading = true;
+        
+        // Show loading state
+        const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
+        if (deliveryHistoryTableBody) {
+            deliveryHistoryTableBody.innerHTML = `
+                <tr>
+                    <td colspan="15" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading delivery history (Page ${targetPage})...</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        try {
+            // Load directly from DataService with pagination
+            if (!window.dataService) {
+                throw new Error('DataService not available');
+            }
+            
+            const result = await window.dataService.getDeliveriesWithPagination({
+                page: targetPage,
+                pageSize: paginationState.history.pageSize,
+                filters: {
+                    status: ['Completed', 'Signed']
+                }
+            });
+            
+            // Normalize field names
+            const normalizedDeliveries = window.normalizeDeliveryArray ? 
+                window.normalizeDeliveryArray(result.data) : result.data;
+            
+            // Update delivery history
+            deliveryHistory = normalizedDeliveries;
+            window.deliveryHistory = deliveryHistory;
+            
+            // Update pagination state
+            paginationState.history.currentPage = result.pagination.page;
+            paginationState.history.totalPages = result.pagination.totalPages;
+            paginationState.history.totalCount = result.pagination.totalCount;
+            
+            console.log('✅ Loaded from Supabase:', {
+                page: result.pagination.page,
+                pageSize: result.pagination.pageSize,
+                totalPages: result.pagination.totalPages,
+                totalCount: result.pagination.totalCount,
+                deliveriesOnPage: deliveryHistory.length
+            });
+            
+            // Populate table with fresh data from database
+            await populateDeliveryHistoryTable();
+            
+            // Update pagination controls
+            updatePaginationControls('history');
+            
+        } catch (error) {
+            console.error('❌ Error loading from Supabase:', error);
+            
+            // Use ErrorHandler for consistent error processing
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'loadDeliveryHistoryWithPagination');
+            }
+            
+            // Log the error
+            if (window.Logger) {
+                window.Logger.error('Failed to load delivery history with pagination', {
+                    page: targetPage,
+                    pageSize: paginationState.history.pageSize,
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
+            
+            // Handle error with network awareness
+            handleNetworkAwareError(error, 'Failed to load delivery history from database');
+            
+            // Show error message in table
+            if (deliveryHistoryTableBody) {
+                const isOffline = error.code === 'NETWORK_OFFLINE' || 
+                                 error.message?.includes('network') || 
+                                 error.message?.includes('internet connection');
+                
+                deliveryHistoryTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="15" class="text-center py-5">
+                            <i class="bi bi-${isOffline ? 'wifi-off' : 'exclamation-triangle'} text-danger" style="font-size: 3rem;"></i>
+                            <h4 class="mt-3">${isOffline ? 'No Internet Connection' : 'Failed to load delivery history from database'}</h4>
+                            <p class="text-muted">${isOffline ? 'Please check your internet connection and try again' : (error.message || 'Please try again')}</p>
+                            <button class="btn btn-primary mt-3" onclick="window.loadDeliveryHistoryWithPagination()">
+                                <i class="bi bi-arrow-clockwise"></i> Retry
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            showToast('Failed to load delivery history', 'danger');
+        } finally {
+            paginationState.history.isLoading = false;
+        }
+    }
+
+    // Update pagination controls for a specific view
+    function updatePaginationControls(view) {
+        const state = paginationState[view];
+        const containerId = view === 'active' ? 'activePaginationControls' : 'historyPaginationControls';
+        const container = document.getElementById(containerId);
+        
+        if (!container) {
+            console.warn(`Pagination container not found: ${containerId}`);
+            return;
+        }
+        
+        // Don't show pagination if there's only one page
+        if (state.totalPages <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.style.display = 'flex';
+        
+        const { currentPage, totalPages, totalCount, pageSize } = state;
+        const startItem = (currentPage - 1) * pageSize + 1;
+        const endItem = Math.min(currentPage * pageSize, totalCount);
+        
+        // Generate page numbers to display (show max 7 page buttons)
+        let pageNumbers = [];
+        if (totalPages <= 7) {
+            // Show all pages
+            pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+        } else {
+            // Show first, last, current, and nearby pages
+            if (currentPage <= 4) {
+                pageNumbers = [1, 2, 3, 4, 5, '...', totalPages];
+            } else if (currentPage >= totalPages - 3) {
+                pageNumbers = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+            } else {
+                pageNumbers = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+            }
+        }
+        
+        // Build pagination HTML
+        let paginationHTML = `
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="text-muted small">
+                    Showing ${startItem}-${endItem} of ${totalCount} deliveries
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-sm btn-outline-secondary" 
+                            onclick="window.changePage('${view}', ${currentPage - 1})"
+                            ${currentPage === 1 ? 'disabled' : ''}>
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </button>
+                    ${pageNumbers.map(pageNum => {
+                        if (pageNum === '...') {
+                            return '<button class="btn btn-sm btn-outline-secondary" disabled>...</button>';
+                        }
+                        return `
+                            <button class="btn btn-sm ${pageNum === currentPage ? 'btn-primary' : 'btn-outline-secondary'}" 
+                                    onclick="window.changePage('${view}', ${pageNum})"
+                                    ${pageNum === currentPage ? 'disabled' : ''}>
+                                ${pageNum}
+                            </button>
+                        `;
+                    }).join('')}
+                    <button class="btn btn-sm btn-outline-secondary" 
+                            onclick="window.changePage('${view}', ${currentPage + 1})"
+                            ${currentPage === totalPages ? 'disabled' : ''}>
+                        Next <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <select class="form-select form-select-sm" style="width: auto;" 
+                        onchange="window.changePageSize('${view}', this.value)">
+                    <option value="25" ${pageSize === 25 ? 'selected' : ''}>25 per page</option>
+                    <option value="50" ${pageSize === 50 ? 'selected' : ''}>50 per page</option>
+                    <option value="100" ${pageSize === 100 ? 'selected' : ''}>100 per page</option>
+                    <option value="200" ${pageSize === 200 ? 'selected' : ''}>200 per page</option>
+                </select>
+            </div>
+        `;
+        
+        container.innerHTML = paginationHTML;
+    }
+
+    // Change page for a specific view
+    window.changePage = async function(view, page) {
+        const state = paginationState[view];
+        
+        // Validate page number
+        if (page < 1 || page > state.totalPages) {
+            return;
+        }
+        
+        // Load the requested page
+        if (view === 'active') {
+            await loadActiveDeliveriesWithPagination(page);
+        } else {
+            await loadDeliveryHistoryWithPagination(page);
+        }
+        
+        // Scroll to top of table
+        const viewElement = document.getElementById(view === 'active' ? 'activeDeliveriesView' : 'deliveryHistoryView');
+        if (viewElement) {
+            viewElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    // Change page size for a specific view
+    window.changePageSize = async function(view, newSize) {
+        const state = paginationState[view];
+        state.pageSize = parseInt(newSize);
+        
+        // Reset to page 1 when changing page size
+        if (view === 'active') {
+            await loadActiveDeliveriesWithPagination(1);
+        } else {
+            await loadDeliveryHistoryWithPagination(1);
+        }
+    };
+
+    // Make pagination functions globally accessible
+    window.loadActiveDeliveriesWithPagination = loadActiveDeliveriesWithPagination;
+    window.loadDeliveryHistoryWithPagination = loadDeliveryHistoryWithPagination;
+    window.updatePaginationControls = updatePaginationControls;
+
+// Load delivery history (legacy function - now uses pagination)
+async function loadDeliveryHistory() {
+    await loadDeliveryHistoryWithPagination(1);
+}
+
+// Populate delivery history table (helper function)
+async function populateDeliveryHistoryTable() {
+    console.log('=== POPULATE DELIVERY HISTORY TABLE ===');
     
-    console.log('📊 Current delivery history length:', window.deliveryHistory ? window.deliveryHistory.length : 0);
-    
-    // CRITICAL FIX: Skip database loading for now and use current global data
-    // The database loading was overwriting our freshly updated delivery history
     const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
     if (!deliveryHistoryTableBody) {
         console.error('Delivery history table body not found');
         return;
     }
     
-    // Apply search filter - use global window.deliveryHistory
-    const currentDeliveryHistory = window.deliveryHistory || [];
-    console.log('📊 Using delivery history with', currentDeliveryHistory.length, 'items');
-    
-    filteredHistory = currentHistorySearchTerm ? 
-        currentDeliveryHistory.filter(delivery => 
-            (delivery.drNumber || delivery.dr_number || '').toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
-        ) : 
-        [...currentDeliveryHistory];
-    
-    console.log('📊 Filtered history:', filteredHistory.length, 'items');
+    try {
+        // Apply search filter
+        filteredHistory = currentHistorySearchTerm ? 
+            deliveryHistory.filter(delivery => 
+                (delivery.drNumber || delivery.dr_number || '').toLowerCase().includes(currentHistorySearchTerm.toLowerCase())
+            ) : 
+            [...deliveryHistory];
+        
+        console.log('📊 Filtered history:', filteredHistory.length, 'items');
         
         // Update search results info
         const historySearchResultsInfo = document.getElementById('historySearchResultsInfo');
@@ -1065,15 +1456,28 @@ function loadDeliveryHistory() {
             return;
         }
         
-        // Get EPOD records to check which deliveries are signed
+        // Get EPOD records from Supabase to check which deliveries are signed
         let ePodRecords = [];
         try {
-            const ePodData = localStorage.getItem('ePodRecords');
-            if (ePodData) {
-                ePodRecords = JSON.parse(ePodData);
+            if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
+                ePodRecords = await window.dataService.getEPodRecords() || [];
+                console.log('📄 Loaded E-POD records from Supabase:', ePodRecords.length);
             }
         } catch (error) {
-            console.error('Error loading EPOD records:', error);
+            console.error('Error loading EPOD records from Supabase:', error);
+            
+            // Use ErrorHandler for consistent error processing
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'populateDeliveryHistoryTable');
+            }
+            
+            // Log the error
+            if (window.Logger) {
+                window.Logger.error('Failed to load EPOD records in populateDeliveryHistoryTable', {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
         }
         
         // Generate table rows
@@ -1194,41 +1598,381 @@ function loadDeliveryHistory() {
             }, 100);
         }
         
-        console.log('Delivery history loaded successfully');
+        console.log('Delivery history table populated successfully');
+        
+    } catch (error) {
+        console.error('❌ Error populating delivery history table:', error);
+        
+        // Show error message
+        deliveryHistoryTableBody.innerHTML = `
+            <tr>
+                <td colspan="15" class="text-center py-5">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">Failed to display delivery history</h4>
+                    <p class="text-muted">${error.message || 'Please try again'}</p>
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // Initialize the application
 function initApp() {
     console.log('=== INIT APP FUNCTION CALLED ===');
     
-    // Load initial data
-    loadFromDatabase().then(success => {
-        if (!success) {
-            loadFromLocalStorage();
+    // Initialize network status monitoring
+    // Requirement 9.1: Display offline indicator when connection lost
+    // Requirement 9.2: Show appropriate error messages for offline operations
+    // Requirement 9.3: Automatic reconnection on network restore
+    if (window.networkStatusService) {
+        window.networkStatusService.initialize();
+        
+        // Add listener for network status changes
+        window.networkStatusService.addListener((isOnline, wasOnline) => {
+            console.log(`Network status changed: ${wasOnline ? 'online' : 'offline'} -> ${isOnline ? 'online' : 'offline'}`);
+            
+            if (isOnline && !wasOnline) {
+                // Network restored - reload data
+                console.log('Network restored, reloading data...');
+                loadActiveDeliveries();
+                loadDeliveryHistory();
+            }
+        });
+        
+        // Add reconnection callback for real-time service
+        window.networkStatusService.addReconnectCallback(async () => {
+            console.log('Reconnecting real-time subscriptions...');
+            if (realtimeService) {
+                // Cleanup old subscriptions
+                realtimeService.cleanup();
+                // Reinitialize
+                initRealtimeSubscriptions();
+            }
+        });
+        
+        console.log('✅ Network status monitoring initialized');
+    } else {
+        console.warn('⚠️ NetworkStatusService not available');
+    }
+    
+    // Load initial views (they will fetch from DataService directly)
+    loadActiveDeliveries();
+    loadDeliveryHistory();
+    
+    // Update booking view dashboard with real data
+    if (typeof window.updateBookingViewDashboard === 'function') {
+        setTimeout(() => {
+            window.updateBookingViewDashboard();
+        }, 100);
+    }
+    
+    // Initialize real-time subscriptions
+    initRealtimeSubscriptions();
+    
+    console.log('App initialized successfully');
+}
+
+// Initialize real-time subscriptions for deliveries
+// Requirement 4.1: Real-time updates across all connected clients
+// Requirement 4.2: Use Supabase real-time features
+// Requirement 4.3: Automatic UI updates on data changes
+function initRealtimeSubscriptions() {
+    console.log('=== INITIALIZING REAL-TIME SUBSCRIPTIONS ===');
+    
+    try {
+        // Check if RealtimeService and DataService are available
+        if (!window.RealtimeService) {
+            console.warn('RealtimeService not available. Real-time updates disabled.');
+            return;
         }
         
-        // Load initial views
-        loadActiveDeliveries();
-        loadDeliveryHistory();
+        if (!window.dataService) {
+            console.warn('DataService not available. Real-time updates disabled.');
+            return;
+        }
         
-        // Update booking view dashboard with real data
-        if (typeof window.updateBookingViewDashboard === 'function') {
+        // Create RealtimeService instance
+        realtimeService = new window.RealtimeService(window.dataService);
+        
+        // Subscribe to deliveries table changes
+        realtimeService.subscribeToTable('deliveries', handleDeliveryChange);
+        
+        console.log('✅ Real-time subscriptions initialized successfully');
+        
+        // Show notification to user
+        showRealtimeIndicator('connected');
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize real-time subscriptions:', error);
+        
+        // Use ErrorHandler for consistent error processing
+        if (window.ErrorHandler) {
+            window.ErrorHandler.handle(error, 'initRealtimeSubscriptions');
+        }
+        
+        // Log the error
+        if (window.Logger) {
+            window.Logger.error('Failed to initialize real-time subscriptions', {
+                error: error.message,
+                stack: error.stack
+            });
+        }
+        
+        showRealtimeIndicator('error');
+    }
+}
+
+// Handle real-time delivery changes
+// Requirement 4.3: Automatic UI updates when data changes
+function handleDeliveryChange(payload) {
+    console.log('📡 Real-time delivery change detected:', payload);
+    
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    // Show visual indicator for real-time update
+    showRealtimeIndicator('update');
+    
+    try {
+        switch (eventType) {
+            case 'INSERT':
+                console.log('New delivery created:', newRecord);
+                handleDeliveryInsert(newRecord);
+                break;
+                
+            case 'UPDATE':
+                console.log('Delivery updated:', newRecord);
+                handleDeliveryUpdate(newRecord, oldRecord);
+                break;
+                
+            case 'DELETE':
+                console.log('Delivery deleted:', oldRecord);
+                handleDeliveryDelete(oldRecord);
+                break;
+                
+            default:
+                console.warn('Unknown event type:', eventType);
+        }
+        
+        // Update dashboard stats after any change
+        if (typeof window.updateDashboardStats === 'function') {
             setTimeout(() => {
-                window.updateBookingViewDashboard();
+                window.updateDashboardStats();
             }, 100);
         }
         
-        console.log('App initialized successfully');
-    }).catch(error => {
-        console.error('Error initializing app:', error);
-    });
+        // Show toast notification
+        showToast(`Delivery ${eventType.toLowerCase()}d by another user`, 'info');
+        
+    } catch (error) {
+        console.error('Error handling real-time delivery change:', error);
+    }
 }
+
+// Handle new delivery insertion
+function handleDeliveryInsert(newRecord) {
+    // Check if delivery is active or completed
+    const isCompleted = newRecord.status === 'Completed' || newRecord.status === 'Signed';
+    
+    if (isCompleted) {
+        // Add to delivery history if not already present
+        const existsInHistory = deliveryHistory.some(d => d.id === newRecord.id);
+        if (!existsInHistory) {
+            deliveryHistory.unshift(newRecord);
+            window.deliveryHistory = deliveryHistory;
+            loadDeliveryHistory();
+        }
+    } else {
+        // Add to active deliveries if not already present
+        const existsInActive = activeDeliveries.some(d => d.id === newRecord.id);
+        if (!existsInActive) {
+            activeDeliveries.unshift(newRecord);
+            window.activeDeliveries = activeDeliveries;
+            loadActiveDeliveries();
+        }
+    }
+}
+
+// Handle delivery update
+function handleDeliveryUpdate(newRecord, oldRecord) {
+    const deliveryId = newRecord.id;
+    
+    // Check if status changed to/from Completed
+    const wasCompleted = oldRecord.status === 'Completed' || oldRecord.status === 'Signed';
+    const isCompleted = newRecord.status === 'Completed' || newRecord.status === 'Signed';
+    
+    if (!wasCompleted && isCompleted) {
+        // Moved from active to completed
+        const activeIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+        if (activeIndex !== -1) {
+            activeDeliveries.splice(activeIndex, 1);
+            window.activeDeliveries = activeDeliveries;
+        }
+        
+        const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
+        if (historyIndex === -1) {
+            deliveryHistory.unshift(newRecord);
+        } else {
+            deliveryHistory[historyIndex] = newRecord;
+        }
+        window.deliveryHistory = deliveryHistory;
+        
+        loadActiveDeliveries();
+        loadDeliveryHistory();
+        
+    } else if (wasCompleted && !isCompleted) {
+        // Moved from completed to active
+        const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
+        if (historyIndex !== -1) {
+            deliveryHistory.splice(historyIndex, 1);
+            window.deliveryHistory = deliveryHistory;
+        }
+        
+        const activeIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+        if (activeIndex === -1) {
+            activeDeliveries.unshift(newRecord);
+        } else {
+            activeDeliveries[activeIndex] = newRecord;
+        }
+        window.activeDeliveries = activeDeliveries;
+        
+        loadActiveDeliveries();
+        loadDeliveryHistory();
+        
+    } else if (isCompleted) {
+        // Update in history
+        const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
+        if (historyIndex !== -1) {
+            deliveryHistory[historyIndex] = newRecord;
+            window.deliveryHistory = deliveryHistory;
+            loadDeliveryHistory();
+        }
+        
+    } else {
+        // Update in active deliveries
+        const activeIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+        if (activeIndex !== -1) {
+            activeDeliveries[activeIndex] = newRecord;
+            window.activeDeliveries = activeDeliveries;
+            loadActiveDeliveries();
+        }
+    }
+}
+
+// Handle delivery deletion
+function handleDeliveryDelete(oldRecord) {
+    const deliveryId = oldRecord.id;
+    
+    // Remove from active deliveries
+    const activeIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
+    if (activeIndex !== -1) {
+        activeDeliveries.splice(activeIndex, 1);
+        window.activeDeliveries = activeDeliveries;
+        loadActiveDeliveries();
+    }
+    
+    // Remove from delivery history
+    const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
+    if (historyIndex !== -1) {
+        deliveryHistory.splice(historyIndex, 1);
+        window.deliveryHistory = deliveryHistory;
+        loadDeliveryHistory();
+    }
+}
+
+// Show real-time connection indicator
+// Requirement 4.3: Add visual indicators for real-time updates
+function showRealtimeIndicator(status) {
+    let indicator = document.getElementById('realtimeIndicator');
+    
+    // Create indicator if it doesn't exist
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'realtimeIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    // Update indicator based on status
+    switch (status) {
+        case 'connected':
+            indicator.innerHTML = '<i class="bi bi-wifi"></i> Real-time connected';
+            indicator.style.backgroundColor = '#d1e7dd';
+            indicator.style.color = '#0f5132';
+            // Hide after 3 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 3000);
+            break;
+            
+        case 'update':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-arrow-repeat"></i> Syncing...';
+            indicator.style.backgroundColor = '#cfe2ff';
+            indicator.style.color = '#084298';
+            // Hide after 2 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 2000);
+            break;
+            
+        case 'error':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Real-time unavailable';
+            indicator.style.backgroundColor = '#f8d7da';
+            indicator.style.color = '#842029';
+            // Hide after 5 seconds
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 300);
+            }, 5000);
+            break;
+            
+        case 'disconnected':
+            indicator.style.display = 'flex';
+            indicator.style.opacity = '1';
+            indicator.innerHTML = '<i class="bi bi-wifi-off"></i> Real-time disconnected';
+            indicator.style.backgroundColor = '#fff3cd';
+            indicator.style.color = '#664d03';
+            break;
+    }
+}
+
+// Cleanup real-time subscriptions on page unload
+window.addEventListener('beforeunload', function() {
+    if (realtimeService) {
+        console.log('Cleaning up real-time subscriptions...');
+        realtimeService.cleanup();
+    }
+});
 
 // Make functions globally available
 window.loadActiveDeliveries = loadActiveDeliveries;
 window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
-// REMOVED: window.saveToLocalStorage - using Supabase only
 window.toggleStatusDropdown = toggleStatusDropdown;
 window.updateDeliveryStatusById = updateDeliveryStatusById;
 window.updateDeliveryStatus = updateDeliveryStatus;
@@ -1438,54 +2182,28 @@ async function exportDeliveryHistoryToPdf() {
         exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
         exportBtn.disabled = true;
 
-        // ENHANCED: Get EPOD records from BOTH localStorage AND Supabase to find signatures
+        // Get EPOD records from Supabase to find signatures
         let ePodRecords = [];
-        
-        // Original localStorage logic (commented but preserved)
-        // try {
-        //     const ePodData = localStorage.getItem('ePodRecords');
-        //     if (ePodData) {
-        //         ePodRecords = JSON.parse(ePodData);
-        //     }
-        // } catch (error) {
-        //     console.error('Error loading EPOD records:', error);
-        // }
-        
-        // ENHANCED: Load from both localStorage and Supabase
         try {
-            // First, get from localStorage (fallback/legacy)
-            const ePodData = localStorage.getItem('ePodRecords');
-            if (ePodData) {
-                ePodRecords = JSON.parse(ePodData);
-                console.log('📄 Loaded E-POD records from localStorage:', ePodRecords.length);
-            }
-            
-            // Then, try to get from Supabase (primary source)
             if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
-                try {
-                    const supabaseRecords = await window.dataService.getEPodRecords();
-                    if (supabaseRecords && supabaseRecords.length > 0) {
-                        // Merge Supabase records with localStorage records (Supabase takes priority)
-                        const mergedRecords = [...ePodRecords];
-                        supabaseRecords.forEach(supabaseRecord => {
-                            const existingIndex = mergedRecords.findIndex(localRecord => 
-                                (localRecord.dr_number || localRecord.drNumber) === (supabaseRecord.dr_number || supabaseRecord.drNumber)
-                            );
-                            if (existingIndex >= 0) {
-                                mergedRecords[existingIndex] = supabaseRecord; // Replace with Supabase version
-                            } else {
-                                mergedRecords.push(supabaseRecord); // Add new Supabase record
-                            }
-                        });
-                        ePodRecords = mergedRecords;
-                        console.log('📄 Merged E-POD records from Supabase and localStorage:', ePodRecords.length);
-                    }
-                } catch (supabaseError) {
-                    console.warn('⚠️ Could not load E-POD records from Supabase, using localStorage only:', supabaseError);
-                }
+                ePodRecords = await window.dataService.getEPodRecords() || [];
+                console.log('📄 Loaded E-POD records from Supabase:', ePodRecords.length);
             }
         } catch (error) {
-            console.error('Error loading EPOD records:', error);
+            console.error('Error loading EPOD records from Supabase:', error);
+            
+            // Use ErrorHandler for consistent error processing
+            if (window.ErrorHandler) {
+                window.ErrorHandler.handle(error, 'exportDeliveryHistoryToPdf');
+            }
+            
+            // Log the error
+            if (window.Logger) {
+                window.Logger.error('Failed to load EPOD records in exportDeliveryHistoryToPdf', {
+                    error: error.message,
+                    stack: error.stack
+                });
+            }
         }
 
         // Get selected deliveries
@@ -1722,30 +2440,6 @@ function resetExportButton(button, originalText) {
 function debugNewFields() {
     console.log('=== DEBUG NEW FIELDS ===');
     
-    // Check localStorage data
-    try {
-        const activeData = localStorage.getItem('mci-active-deliveries');
-        if (activeData) {
-            const parsed = JSON.parse(activeData);
-            console.log('Active deliveries in localStorage:', parsed.length);
-            if (parsed.length > 0) {
-                const sample = parsed[0];
-                console.log('Sample delivery fields:', {
-                    itemNumber: sample.itemNumber,
-                    item_number: sample.item_number,
-                    mobileNumber: sample.mobileNumber,
-                    mobile_number: sample.mobile_number,
-                    itemDescription: sample.itemDescription,
-                    item_description: sample.item_description,
-                    serialNumber: sample.serialNumber,
-                    serial_number: sample.serial_number
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Error reading localStorage:', error);
-    }
-    
     // Check global arrays
     console.log('Global activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 0);
     if (window.activeDeliveries && window.activeDeliveries.length > 0) {
@@ -1783,7 +2477,6 @@ function debugActiveDeliveries() {
     console.log('=== ACTIVE DELIVERIES DEBUG ===');
     console.log('Local activeDeliveries:', activeDeliveries.length);
     console.log('Window activeDeliveries:', window.activeDeliveries ? window.activeDeliveries.length : 'undefined');
-    console.log('localStorage mci-active-deliveries:', localStorage.getItem('mci-active-deliveries') ? JSON.parse(localStorage.getItem('mci-active-deliveries')).length : 'null');
     console.log('Sample data:', activeDeliveries.length > 0 ? activeDeliveries[0] : 'No data');
     
     // Force refresh
@@ -1794,7 +2487,6 @@ function debugActiveDeliveries() {
 window.loadActiveDeliveries = loadActiveDeliveries;
 window.populateActiveDeliveriesTable = populateActiveDeliveriesTable;
 window.loadDeliveryHistory = loadDeliveryHistory;
-// REMOVED: window.saveToLocalStorage - using Supabase only
 window.toggleStatusDropdown = toggleStatusDropdown;
 window.updateDeliveryStatusById = updateDeliveryStatusById;
 window.updateDeliveryStatus = updateDeliveryStatus;

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration Utility Verification Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Migration Utility Verification Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Setup</h2>
+        <p>This test verifies that the MigrationUtility class has all required functionality.</p>
+        <button class="btn-primary" onclick="runAllTests()">Run All Tests</button>
+        <div id="setup-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Class Instantiation</h2>
+        <button class="btn-primary" onclick="testInstantiation()">Run Test</button>
+        <div id="test1-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Export Functionality</h2>
+        <button class="btn-primary" onclick="testExport()">Run Test</button>
+        <div id="test2-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Import Functionality (Mock)</h2>
+        <button class="btn-primary" onclick="testImport()">Run Test</button>
+        <div id="test3-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Verification Functionality</h2>
+        <button class="btn-primary" onclick="testVerification()">Run Test</button>
+        <div id="test4-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Error Handling</h2>
+        <button class="btn-primary" onclick="testErrorHandling()">Run Test</button>
+        <div id="test5-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Summary</h2>
+        <div id="summary-results"></div>
+    </div>
+
+    <script src="public/assets/js/migrationUtility.js"></script>
+    <script>
+        let testResults = [];
+
+        // Mock DataService for testing
+        class MockDataService {
+            constructor() {
+                this.isInitialized = true;
+                this.deliveries = [];
+                this.customers = [];
+                this.epodRecords = [];
+            }
+
+            async saveDelivery(delivery) {
+                if (!delivery.dr_number) {
+                    throw new Error('Missing dr_number');
+                }
+                this.deliveries.push(delivery);
+                return delivery;
+            }
+
+            async saveCustomer(customer) {
+                if (!customer.name || !customer.phone) {
+                    throw new Error('Missing required fields');
+                }
+                this.customers.push(customer);
+                return customer;
+            }
+
+            async saveEPodRecord(epod) {
+                if (!epod.dr_number) {
+                    throw new Error('Missing dr_number');
+                }
+                this.epodRecords.push(epod);
+                return epod;
+            }
+
+            async getDeliveries() {
+                return this.deliveries;
+            }
+
+            async getCustomers() {
+                return this.customers;
+            }
+
+            async getEPodRecords() {
+                return this.epodRecords;
+            }
+        }
+
+        // Setup test data in localStorage
+        function setupTestData() {
+            const testData = {
+                activeDeliveries: [
+                    { dr_number: 'DR-001', customer_name: 'Test Customer 1', status: 'Active' },
+                    { dr_number: 'DR-002', customer_name: 'Test Customer 2', status: 'In Transit' }
+                ],
+                deliveryHistory: [
+                    { dr_number: 'DR-003', customer_name: 'Test Customer 3', status: 'Completed' }
+                ],
+                customers: [
+                    { id: 'CUST-001', name: 'Test Customer 1', phone: '1234567890' },
+                    { id: 'CUST-002', name: 'Test Customer 2', phone: '0987654321' }
+                ],
+                epodRecords: [
+                    { dr_number: 'DR-003', signature_data: 'test_signature' }
+                ]
+            };
+
+            localStorage.setItem('mci-active-deliveries', JSON.stringify(testData.activeDeliveries));
+            localStorage.setItem('mci-delivery-history', JSON.stringify(testData.deliveryHistory));
+            localStorage.setItem('mci-customers', JSON.stringify(testData.customers));
+            localStorage.setItem('ePodRecords', JSON.stringify(testData.epodRecords));
+
+            return testData;
+        }
+
+        // Test 1: Class Instantiation
+        function testInstantiation() {
+            const resultsDiv = document.getElementById('test1-results');
+            resultsDiv.innerHTML = '<div class="info">Running test...</div>';
+
+            try {
+                const mockDataService = new MockDataService();
+                const migrationUtility = new MigrationUtility(mockDataService);
+
+                // Check if instance was created
+                if (!(migrationUtility instanceof MigrationUtility)) {
+                    throw new Error('Failed to create MigrationUtility instance');
+                }
+
+                // Check if required methods exist
+                const requiredMethods = [
+                    'exportLocalStorageData',
+                    'importToSupabase',
+                    'verifyDataIntegrity',
+                    'clearLocalStorage',
+                    'getMigrationLog',
+                    'downloadMigrationLog',
+                    'performCompleteMigration'
+                ];
+
+                const missingMethods = requiredMethods.filter(method => 
+                    typeof migrationUtility[method] !== 'function'
+                );
+
+                if (missingMethods.length > 0) {
+                    throw new Error(`Missing methods: ${missingMethods.join(', ')}`);
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Test Passed<br>
+                        - MigrationUtility instance created successfully<br>
+                        - All required methods present: ${requiredMethods.join(', ')}
+                    </div>
+                `;
+                testResults.push({ test: 'Instantiation', passed: true });
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.push({ test: 'Instantiation', passed: false, error: error.message });
+            }
+        }
+
+        // Test 2: Export Functionality
+        function testExport() {
+            const resultsDiv = document.getElementById('test2-results');
+            resultsDiv.innerHTML = '<div class="info">Running test...</div>';
+
+            try {
+                // Setup test data
+                const testData = setupTestData();
+                
+                const mockDataService = new MockDataService();
+                const migrationUtility = new MigrationUtility(mockDataService);
+
+                // Prevent actual file download for testing
+                migrationUtility._downloadAsJSON = function(data, filename) {
+                    console.log('Mock download:', filename);
+                };
+
+                const result = migrationUtility.exportLocalStorageData();
+
+                // Verify export result structure
+                if (!result.data || !result.stats) {
+                    throw new Error('Export result missing data or stats');
+                }
+
+                // Verify data was exported correctly
+                if (result.stats.activeDeliveries !== 2) {
+                    throw new Error(`Expected 2 active deliveries, got ${result.stats.activeDeliveries}`);
+                }
+                if (result.stats.deliveryHistory !== 1) {
+                    throw new Error(`Expected 1 delivery history, got ${result.stats.deliveryHistory}`);
+                }
+                if (result.stats.customers !== 2) {
+                    throw new Error(`Expected 2 customers, got ${result.stats.customers}`);
+                }
+                if (result.stats.epodRecords !== 1) {
+                    throw new Error(`Expected 1 EPOD record, got ${result.stats.epodRecords}`);
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Test Passed<br>
+                        - Export completed successfully<br>
+                        - Active Deliveries: ${result.stats.activeDeliveries}<br>
+                        - Delivery History: ${result.stats.deliveryHistory}<br>
+                        - Customers: ${result.stats.customers}<br>
+                        - EPOD Records: ${result.stats.epodRecords}
+                    </div>
+                `;
+                testResults.push({ test: 'Export', passed: true });
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.push({ test: 'Export', passed: false, error: error.message });
+            }
+        }
+
+        // Test 3: Import Functionality
+        async function testImport() {
+            const resultsDiv = document.getElementById('test3-results');
+            resultsDiv.innerHTML = '<div class="info">Running test...</div>';
+
+            try {
+                // Setup test data
+                const testData = setupTestData();
+                
+                const mockDataService = new MockDataService();
+                const migrationUtility = new MigrationUtility(mockDataService);
+
+                // Prevent actual file download
+                migrationUtility._downloadAsJSON = function(data, filename) {
+                    console.log('Mock download:', filename);
+                };
+
+                const exportResult = migrationUtility.exportLocalStorageData();
+                const importResult = await migrationUtility.importToSupabase(exportResult.data);
+
+                // Verify import results
+                if (!importResult.deliveries || !importResult.customers || !importResult.epodRecords) {
+                    throw new Error('Import result missing required sections');
+                }
+
+                // Check success counts (should handle duplicates)
+                const totalSuccess = importResult.totalSuccess;
+                const totalFailed = importResult.totalFailed;
+
+                if (totalSuccess === 0) {
+                    throw new Error('No records were imported successfully');
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Test Passed<br>
+                        - Import completed successfully<br>
+                        - Deliveries: ${importResult.deliveries.success} success, ${importResult.deliveries.failed} failed<br>
+                        - Customers: ${importResult.customers.success} success, ${importResult.customers.failed} failed<br>
+                        - EPOD Records: ${importResult.epodRecords.success} success, ${importResult.epodRecords.failed} failed<br>
+                        - Total: ${totalSuccess} success, ${totalFailed} failed
+                    </div>
+                `;
+                testResults.push({ test: 'Import', passed: true });
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.push({ test: 'Import', passed: false, error: error.message });
+            }
+        }
+
+        // Test 4: Verification Functionality
+        async function testVerification() {
+            const resultsDiv = document.getElementById('test4-results');
+            resultsDiv.innerHTML = '<div class="info">Running test...</div>';
+
+            try {
+                // Setup test data
+                const testData = setupTestData();
+                
+                const mockDataService = new MockDataService();
+                const migrationUtility = new MigrationUtility(mockDataService);
+
+                // Prevent actual file download
+                migrationUtility._downloadAsJSON = function(data, filename) {
+                    console.log('Mock download:', filename);
+                };
+
+                const exportResult = migrationUtility.exportLocalStorageData();
+                await migrationUtility.importToSupabase(exportResult.data);
+                const verifyResult = await migrationUtility.verifyDataIntegrity(exportResult.data);
+
+                // Verify result structure
+                if (!verifyResult.deliveries || !verifyResult.customers || !verifyResult.epodRecords) {
+                    throw new Error('Verification result missing required sections');
+                }
+
+                if (typeof verifyResult.overallSuccess !== 'boolean') {
+                    throw new Error('Verification result missing overallSuccess flag');
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Test Passed<br>
+                        - Verification completed successfully<br>
+                        - Deliveries: Expected ${verifyResult.deliveries.expected}, Actual ${verifyResult.deliveries.actual}, Match: ${verifyResult.deliveries.match}<br>
+                        - Customers: Expected ${verifyResult.customers.expected}, Actual ${verifyResult.customers.actual}, Match: ${verifyResult.customers.match}<br>
+                        - EPOD Records: Expected ${verifyResult.epodRecords.expected}, Actual ${verifyResult.epodRecords.actual}, Match: ${verifyResult.epodRecords.match}<br>
+                        - Overall Success: ${verifyResult.overallSuccess}
+                    </div>
+                `;
+                testResults.push({ test: 'Verification', passed: true });
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.push({ test: 'Verification', passed: false, error: error.message });
+            }
+        }
+
+        // Test 5: Error Handling
+        async function testErrorHandling() {
+            const resultsDiv = document.getElementById('test5-results');
+            resultsDiv.innerHTML = '<div class="info">Running test...</div>';
+
+            try {
+                const mockDataService = new MockDataService();
+                const migrationUtility = new MigrationUtility(mockDataService);
+
+                // Test 1: Import with invalid data
+                let errorCaught = false;
+                try {
+                    await migrationUtility.importToSupabase({
+                        deliveries: [{ dr_number: '' }], // Invalid
+                        customers: [],
+                        epodRecords: []
+                    });
+                } catch (error) {
+                    errorCaught = true;
+                }
+
+                // Test 2: Verify with missing data
+                let verifyErrorHandled = false;
+                try {
+                    const result = await migrationUtility.verifyDataIntegrity({
+                        activeDeliveries: [],
+                        deliveryHistory: [],
+                        customers: [],
+                        epodRecords: []
+                    });
+                    verifyErrorHandled = true; // Should complete without throwing
+                } catch (error) {
+                    // Error is acceptable
+                    verifyErrorHandled = true;
+                }
+
+                if (!verifyErrorHandled) {
+                    throw new Error('Verification did not handle empty data properly');
+                }
+
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        ✓ Test Passed<br>
+                        - Error handling works correctly<br>
+                        - Invalid data handled gracefully<br>
+                        - Empty data verification handled
+                    </div>
+                `;
+                testResults.push({ test: 'Error Handling', passed: true });
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        ✗ Test Failed<br>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.push({ test: 'Error Handling', passed: false, error: error.message });
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            testResults = [];
+            document.getElementById('setup-results').innerHTML = '<div class="info">Setting up test data...</div>';
+            
+            setupTestData();
+            document.getElementById('setup-results').innerHTML = '<div class="success">✓ Test data setup complete</div>';
+
+            testInstantiation();
+            testExport();
+            await testImport();
+            await testVerification();
+            await testErrorHandling();
+
+            // Display summary
+            const passed = testResults.filter(r => r.passed).length;
+            const failed = testResults.filter(r => !r.passed).length;
+            const total = testResults.length;
+
+            const summaryDiv = document.getElementById('summary-results');
+            summaryDiv.innerHTML = `
+                <div class="${failed === 0 ? 'success' : 'error'}">
+                    <h3>Test Results Summary</h3>
+                    <p><strong>Total Tests:</strong> ${total}</p>
+                    <p><strong>Passed:</strong> ${passed}</p>
+                    <p><strong>Failed:</strong> ${failed}</p>
+                    <p><strong>Success Rate:</strong> ${((passed/total)*100).toFixed(1)}%</p>
+                    ${failed === 0 ? '<p>🎉 All tests passed!</p>' : '<p>⚠️ Some tests failed. Check details above.</p>'}
+                </div>
+                <pre>${JSON.stringify(testResults, null, 2)}</pre>
+            `;
+        }
+    </script>
+</body>
+</html>

@@ -31,19 +31,25 @@ A comprehensive delivery management system with e-signature capabilities, real-t
 - **Leaflet.js** - Interactive maps
 - **Chart.js** - Data visualization
 
-### Backend
+### Backend & Data
 - **Node.js** - Server runtime
 - **Express.js** - Web framework
-- **Local Storage** - Client-side data persistence
-- **File System** - Local file operations
-- **Supabase** - Cloud database (NEW)
+- **Supabase** - Cloud database (PostgreSQL) - **Single source of truth**
+- **Real-time Subscriptions** - Live data synchronization
+
+### Architecture
+- **Database-Centric Design** - Supabase as single source of truth
+- **No localStorage for Business Data** - All data persisted in cloud database
+- **Real-time Sync** - Instant updates across all connected clients
+- **Async-First** - All data operations are asynchronous
+- **Service Layer Pattern** - Clean separation of concerns
 
 ### Libraries & Dependencies
 - **Bootstrap Icons** - Icon library
 - **Signature Pad** - Digital signature capture
 - **XLSX** - Excel file processing
 - **Leaflet** - Map functionality
-- **Supabase Client** - Cloud database integration (NEW)
+- **Supabase Client** - Cloud database integration
 
 ## 📁 Project Structure
 
@@ -57,22 +63,35 @@ mci-delivery-tracker/
 │   │   └── js/                # JavaScript files
 │   │       ├── app.js         # Main application logic
 │   │       ├── booking.js     # Booking management
-│   │       ├── calendar.js    # Calendar functionality
 │   │       ├── customers.js   # Customer management
 │   │       ├── analytics.js   # Analytics and reporting
-│   │       ├── warehouse.js   # Warehouse management
-│   │       ├── e-signature.js # E-signature functionality
-│   │       ├── delivery-history-fix.js # Delivery history fixes
-│   │       ├── signature-completion-fix.js # Signature completion fixes
-│   │       ├── minimal-booking-fix.js # Booking system fixes
-│   │       ├── storage-priority-config.js # NEW: Storage priority configuration
-│   │       ├── auto-sync-service.js # Auto-sync functionality
-│   │       ├── dataService.js # Data service layer
-│   │       └── disable-manual-booking.js # Manual booking restriction
+│   │       │
+│   │       ├── dataService.js        # Data access layer (Supabase)
+│   │       ├── realtimeService.js    # Real-time subscriptions
+│   │       ├── cacheService.js       # In-memory caching
+│   │       ├── networkStatusService.js # Network monitoring
+│   │       │
+│   │       ├── dataValidator.js      # Input validation
+│   │       ├── errorHandler.js       # Error handling
+│   │       └── logger.js             # Logging service
+│   │
+│   ├── migration-tool.html    # Data migration utility
 │   └── index.html             # Main application page
+│
 ├── docs/                      # Documentation
+│   ├── ARCHITECTURE.md        # Architecture overview
+│   ├── DATASERVICE-API.md     # DataService API docs
+│   └── MIGRATION-GUIDE.md     # Migration guide
+│
 ├── tests/                     # Test files
-├── scripts/                   # Build and deployment scripts
+│   ├── dataService.test.js    # Unit tests
+│   ├── integration-workflows.test.js # Integration tests
+│   └── README.md              # Testing guide
+│
+├── supabase/                  # Database schema and migrations
+│   ├── schema.sql             # Database schema
+│   └── migrations/            # Migration scripts
+│
 ├── package.json              # Node.js dependencies
 ├── README.md                 # This file
 └── .gitignore               # Git ignore rules
@@ -148,74 +167,145 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Storage Priority Implementation (NEW)
-The application now implements a **Supabase-primary with offline resilience** approach:
+### Database-Centric Architecture
 
-1. **Primary Storage**: Supabase cloud database
-2. **Fallback Storage**: localStorage for offline capability
-3. **Conflict Resolution**: Cloud data takes precedence
-4. **Sync Strategy**: Immediate cloud operations with background sync
+The application follows a **database-centric architecture** with Supabase as the single source of truth:
 
-### Local Storage Keys
-The application uses these localStorage keys:
-- `mci-active-deliveries` - Active delivery data
-- `mci-delivery-history` - Completed delivery history
-- `ePodRecords` - E-signature records
-- `mci-customers` - Customer database
+1. **Single Source of Truth**: All business data stored exclusively in Supabase
+2. **No localStorage**: Business data is NOT stored in localStorage (only UI preferences)
+3. **Real-time Sync**: Instant updates across all connected clients
+4. **Async Operations**: All data operations are asynchronous
+5. **Service Layer**: Clean separation between UI and data access
+
+**Key Services:**
+- `DataService` - Unified interface for all database operations
+- `RealtimeService` - Real-time data synchronization
+- `CacheService` - In-memory caching for performance
+- `NetworkStatusService` - Network connectivity monitoring
+- `DataValidator` - Input validation before database operations
+- `ErrorHandler` - Centralized error handling
+- `Logger` - Logging and monitoring
+
+**See [Architecture Documentation](./docs/ARCHITECTURE.md) for details.**
 
 ## 🧪 Testing
 
 ### Running Tests
 ```bash
+# Run all tests
 npm test
+
+# Run specific test suite
+npm test -- dataService.test.js
+npm test -- integration-workflows.test.js
+
+# Run tests in watch mode
+npm test -- --watch
 ```
 
-### Test Files Available
-- `test-final-delivery-history-fix.html` - Delivery history functionality
-- `test-signature-completion-fix.html` - E-signature process
-- `debug-missing-delivery.html` - Diagnostic tools
-- `test-storage-priority.html` - NEW: Storage priority implementation
+### Test Suites
+- **Unit Tests** (`tests/dataService.test.js`) - Test individual DataService methods
+- **Integration Tests** (`tests/integration-workflows.test.js`) - Test complete workflows
+- **Manual Tests** - HTML test files for browser testing
 
 ### Manual Testing
-1. Open test files in browser
+1. Open test files in browser (e.g., `test-dataservice-unit-tests.html`)
 2. Follow on-screen instructions
 3. Verify functionality works as expected
+
+**See [Testing Guide](./tests/README.md) for detailed testing instructions.**
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-**Deliveries not appearing in history after signature:**
-- Check browser console for errors
-- Verify localStorage is enabled
-- Run diagnostic: `delivery-history-diagnostic.js`
+**"DataService not initialized" error:**
+- Ensure `dataService.initialize()` is called before any operations
+- Check browser console for Supabase client errors
+- Verify Supabase credentials in environment variables
 
-**Signature pad not working:**
-- Ensure modern browser support
-- Check for JavaScript errors
-- Verify signature-completion-fix.js is loaded
+**Data not loading:**
+- Check network connectivity (look for offline indicator)
+- Verify Supabase connection in browser console
+- Check browser console for error messages
+- Verify data exists in Supabase dashboard
 
-**Data not persisting:**
-- Check localStorage quota
-- Verify browser permissions
-- Clear cache and reload
+**Slow performance:**
+- Check network speed
+- Verify database indexes are in place
+- Consider implementing pagination for large datasets
+- Check CacheService is working properly
+
+**Real-time updates not working:**
+- Verify RealtimeService is initialized
+- Check Supabase real-time is enabled
+- Look for subscription errors in console
+- Test in multiple browser tabs
 
 ### Debug Tools
 - Browser Developer Tools (F12)
-- Console diagnostic scripts
-- Test HTML files for isolated testing
+- Supabase Dashboard (check data and logs)
+- Logger service (check application logs)
+- Network tab (monitor API calls)
+
+**See [Migration Guide](./docs/MIGRATION-GUIDE.md) for migration-specific troubleshooting.**
 
 ## 📊 Performance
 
 ### Optimization Features
-- **Lazy Loading** - Components load on demand
-- **Data Caching** - localStorage for offline capability
+- **In-Memory Caching** - CacheService for frequently accessed data (60s TTL)
+- **Pagination** - Load large datasets in chunks (50 records per page)
+- **Optimistic UI Updates** - Immediate feedback with background sync
+- **Database Indexes** - Optimized queries for fast data retrieval
 - **Efficient Rendering** - Minimal DOM manipulation
 - **Responsive Design** - Mobile-optimized
-- **Cloud-First Approach** - Supabase-primary with offline resilience (NEW)
+- **Real-time Updates** - Instant synchronization across clients
+
+### Performance Targets
+- **Initial Load**: < 3 seconds
+- **CRUD Operations**: < 1 second
+- **Real-time Updates**: < 500ms
+- **Page Navigation**: < 200ms
 
 ### Browser Support
 - Chrome 80+
 - Firefox 75+
 - Safari 13+
 - Edge 80+
+
+## 📚 Documentation
+
+### Core Documentation
+- **[Architecture Overview](./docs/ARCHITECTURE.md)** - System architecture and design patterns
+- **[DataService API](./docs/DATASERVICE-API.md)** - Complete API reference for DataService
+- **[Migration Guide](./docs/MIGRATION-GUIDE.md)** - Guide for migrating from localStorage
+
+### Additional Documentation
+- **[Error Handling Guide](./ERROR-HANDLING-GUIDE.md)** - Error handling patterns
+- **[Testing Guide](./tests/README.md)** - Testing strategies and examples
+- **[Query Optimization Guide](./QUERY-OPTIMIZATION-GUIDE.md)** - Database query optimization
+
+## 🔄 Migration from localStorage
+
+If you're upgrading from a previous version that used localStorage:
+
+1. **Backup your data** - Export localStorage data using migration tool
+2. **Run migration** - Use `public/migration-tool.html` to migrate data to Supabase
+3. **Verify data** - Check Supabase dashboard to ensure all data migrated
+4. **Clear localStorage** - Remove old localStorage data after verification
+
+**See [Migration Guide](./docs/MIGRATION-GUIDE.md) for detailed instructions.**
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Follow the database-centric architecture patterns
+2. All data operations must go through DataService
+3. Add proper error handling and logging
+4. Write tests for new features
+5. Update documentation as needed
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

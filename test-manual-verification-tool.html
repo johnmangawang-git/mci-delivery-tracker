@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Testing Verification Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .test-suite {
+            margin-bottom: 30px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .suite-header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+        .suite-header:hover {
+            background: #eeeeee;
+        }
+        .suite-header h2 {
+            font-size: 1.3em;
+            color: #333;
+        }
+        .suite-status {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .status-pending {
+            background: #ffd700;
+            color: #333;
+        }
+        .status-pass {
+            background: #4caf50;
+            color: white;
+        }
+        .status-fail {
+            background: #f44336;
+            color: white;
+        }
+        .suite-body {
+            padding: 20px;
+            display: none;
+        }
+        .suite-body.active {
+            display: block;
+        }
+        .test-case {
+            background: #fafafa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .test-case h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .test-steps {
+            margin: 15px 0;
+        }
+        .test-steps ol {
+            margin-left: 20px;
+        }
+        .test-steps li {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+        .verification-checklist {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .verification-checklist label {
+            display: block;
+            padding: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .verification-checklist label:hover {
+            background: #f0f0f0;
+        }
+        .verification-checklist input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .test-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-pass {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-pass:hover {
+            background: #45a049;
+        }
+        .btn-fail {
+            background: #f44336;
+            color: white;
+        }
+        .btn-fail:hover {
+            background: #da190b;
+        }
+        .btn-skip {
+            background: #9e9e9e;
+            color: white;
+        }
+        .btn-skip:hover {
+            background: #757575;
+        }
+        .notes-section {
+            margin-top: 15px;
+        }
+        .notes-section textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+        .summary {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        .summary h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        .stat-card p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .export-btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            font-size: 1em;
+        }
+        .export-btn:hover {
+            background: #5568d3;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .toggle-icon {
+            transition: transform 0.3s;
+        }
+        .toggle-icon.active {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Manual Testing Verification Tool</h1>
+            <p>Task 18: Database-Centric Architecture Testing</p>
+        </div>
+        
+        <div class="content">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar">0%</div>
+            </div>
+
+            <div id="testSuites"></div>
+
+            <div class="summary">
+                <h2>📊 Test Results Summary</h2>
+                <div class="summary-stats">
+                    <div class="stat-card">
+                        <h3 id="totalTests">0</h3>
+                        <p>Total Tests</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="passedTests" style="color: #4caf50;">0</h3>
+                        <p>Passed</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="failedTests" style="color: #f44336;">0</h3>
+                        <p>Failed</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="pendingTests" style="color: #ffd700;">0</h3>
+                        <p>Pending</p>
+                    </div>
+                </div>
+                <button class="export-btn" onclick="exportResults()">📥 Export Test Results</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const testData = [
+            {
+                suite: "Delivery Creation and Verification",
+                tests: [
+                    {
+                        id: "test-1-1",
+                        name: "Create New Delivery",
+                        objective: "Verify delivery creation saves to Supabase only",
+                        steps: [
+                            "Open the application",
+                            "Navigate to 'Create Delivery' section",
+                            "Fill in delivery details (DR: TEST-DR-001, Customer: Test Customer, etc.)",
+                            "Click 'Save Delivery'",
+                            "Verify success message appears"
+                        ],
+                        verification: [
+                            "Success toast notification displayed",
+                            "Delivery appears in active deliveries table",
+                            "Verify TEST-DR-001 exists in Supabase dashboard",
+                            "All fields match input data",
+                            "localStorage does NOT contain delivery data"
+                        ]
+                    },
+                    {
+                        id: "test-1-2",
+                        name: "Create Delivery with Validation Errors",
+                        objective: "Verify validation prevents invalid data",
+                        steps: [
+                            "Try to create delivery with missing DR Number",
+                            "Try to create delivery with missing Customer Name",
+                            "Try to create duplicate DR Number"
+                        ],
+                        verification: [
+                            "Appropriate error messages displayed",
+                            "No data saved to Supabase",
+                            "User can correct and resubmit"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Delivery Status Updates and Persistence",
+                tests: [
+                    {
+                        id: "test-2-1",
+                        name: "Update Delivery Status",
+                        objective: "Verify status updates persist to database",
+                        steps: [
+                            "Find delivery TEST-DR-001 in active deliveries",
+                            "Change status to 'In Transit'",
+                            "Wait for success confirmation",
+                            "Refresh the page (F5)",
+                            "Verify status persists"
+                        ],
+                        verification: [
+                            "Status update success message shown",
+                            "Status changes immediately in UI",
+                            "After refresh, status remains 'In Transit'",
+                            "Supabase dashboard shows updated status",
+                            "localStorage does NOT contain status data"
+                        ]
+                    },
+                    {
+                        id: "test-2-2",
+                        name: "Complete Delivery",
+                        objective: "Verify delivery completion workflow",
+                        steps: [
+                            "Select delivery TEST-DR-001",
+                            "Click 'Complete Delivery'",
+                            "Verify completion timestamp set",
+                            "Check delivery moves to history"
+                        ],
+                        verification: [
+                            "Delivery removed from active deliveries",
+                            "Delivery appears in delivery history",
+                            "Completion timestamp recorded",
+                            "Supabase shows status = 'Completed'",
+                            "completed_date_time field populated"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Delivery Deletion and Database Cleanup",
+                tests: [
+                    {
+                        id: "test-3-1",
+                        name: "Delete Active Delivery",
+                        objective: "Verify deletion removes from database",
+                        steps: [
+                            "Create test delivery TEST-DR-002",
+                            "Click delete button",
+                            "Confirm deletion in dialog",
+                            "Verify removal"
+                        ],
+                        verification: [
+                            "Confirmation dialog appears",
+                            "Success message after deletion",
+                            "Delivery removed from UI",
+                            "Record deleted from Supabase",
+                            "No orphaned data in localStorage"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Customer CRUD Operations",
+                tests: [
+                    {
+                        id: "test-4-1",
+                        name: "Create Customer",
+                        objective: "Verify customer creation",
+                        steps: [
+                            "Navigate to Customers section",
+                            "Click 'Add Customer'",
+                            "Fill in details (Name: Test Customer Corp, Phone: 555-1234, etc.)",
+                            "Save customer"
+                        ],
+                        verification: [
+                            "Success message displayed",
+                            "Customer appears in customer list",
+                            "Supabase customers table contains record",
+                            "No localStorage usage"
+                        ]
+                    },
+                    {
+                        id: "test-4-2",
+                        name: "Update Customer",
+                        objective: "Verify customer updates persist",
+                        steps: [
+                            "Select Test Customer Corp",
+                            "Edit phone to 555-9999",
+                            "Save changes",
+                            "Refresh page",
+                            "Verify change persists"
+                        ],
+                        verification: [
+                            "Update success message",
+                            "Phone number updated in UI",
+                            "After refresh, phone remains 555-9999",
+                            "Supabase shows updated phone"
+                        ]
+                    },
+                    {
+                        id: "test-4-3",
+                        name: "Delete Customer",
+                        objective: "Verify customer deletion",
+                        steps: [
+                            "Select Test Customer Corp",
+                            "Click delete",
+                            "Confirm deletion",
+                            "Verify removal"
+                        ],
+                        verification: [
+                            "Confirmation dialog shown",
+                            "Customer removed from list",
+                            "Supabase record deleted",
+                            "No localStorage remnants"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Slow Network Connection Testing",
+                tests: [
+                    {
+                        id: "test-5-1",
+                        name: "Simulate Slow Network",
+                        objective: "Verify app handles slow connections gracefully",
+                        steps: [
+                            "Open Chrome DevTools → Network tab",
+                            "Set throttling to 'Slow 3G'",
+                            "Try to load deliveries",
+                            "Try to save a delivery",
+                            "Try to update status"
+                        ],
+                        verification: [
+                            "Loading indicators displayed during operations",
+                            "Operations complete successfully (just slower)",
+                            "No timeout errors",
+                            "User feedback provided during wait",
+                            "No data corruption"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Network Disconnection and Reconnection",
+                tests: [
+                    {
+                        id: "test-6-1",
+                        name: "Offline Detection",
+                        objective: "Verify offline indicator appears",
+                        steps: [
+                            "Open application",
+                            "Open DevTools → Network tab",
+                            "Check 'Offline' checkbox",
+                            "Observe UI changes"
+                        ],
+                        verification: [
+                            "Offline indicator appears in UI",
+                            "Appropriate message displayed",
+                            "User understands they're offline"
+                        ]
+                    },
+                    {
+                        id: "test-6-2",
+                        name: "Attempt Operations While Offline",
+                        objective: "Verify graceful handling of offline operations",
+                        steps: [
+                            "While offline, try to create delivery",
+                            "Try to update status",
+                            "Try to delete record",
+                            "Observe error messages"
+                        ],
+                        verification: [
+                            "Clear error messages displayed",
+                            "Messages explain network issue",
+                            "No cryptic technical errors",
+                            "UI remains stable"
+                        ]
+                    },
+                    {
+                        id: "test-6-3",
+                        name: "Reconnection Handling",
+                        objective: "Verify app recovers when connection restored",
+                        steps: [
+                            "Start offline",
+                            "Uncheck 'Offline' in DevTools",
+                            "Wait for reconnection",
+                            "Try operations again"
+                        ],
+                        verification: [
+                            "Offline indicator disappears",
+                            "Operations work again",
+                            "Data loads correctly",
+                            "No manual refresh needed"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Real-Time Updates Across Multiple Browser Tabs",
+                tests: [
+                    {
+                        id: "test-7-1",
+                        name: "Delivery Creation Real-Time Sync",
+                        objective: "Verify new deliveries appear in all tabs",
+                        steps: [
+                            "Open application in Tab 1",
+                            "Open application in Tab 2",
+                            "In Tab 1, create delivery TEST-RT-001",
+                            "Observe Tab 2"
+                        ],
+                        verification: [
+                            "Delivery appears in Tab 2 automatically",
+                            "No manual refresh needed",
+                            "Update happens within 1-2 seconds",
+                            "All fields match"
+                        ]
+                    },
+                    {
+                        id: "test-7-2",
+                        name: "Status Update Real-Time Sync",
+                        objective: "Verify status changes sync in real-time",
+                        steps: [
+                            "Open 2 tabs showing same delivery",
+                            "In Tab 1, change status to 'In Transit'",
+                            "Observe Tab 2"
+                        ],
+                        verification: [
+                            "Status updates in Tab 2 automatically",
+                            "Visual indicator shows update occurred",
+                            "No page refresh needed"
+                        ]
+                    },
+                    {
+                        id: "test-7-3",
+                        name: "Deletion Real-Time Sync",
+                        objective: "Verify deletions sync in real-time",
+                        steps: [
+                            "Open 2 tabs",
+                            "In Tab 1, delete a delivery",
+                            "Observe Tab 2"
+                        ],
+                        verification: [
+                            "Delivery removed from Tab 2 automatically",
+                            "No errors in Tab 2",
+                            "UI updates smoothly"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Error Message Verification",
+                tests: [
+                    {
+                        id: "test-8-1",
+                        name: "Network Error Messages",
+                        objective: "Verify network errors display correctly",
+                        steps: [
+                            "Go offline",
+                            "Try various operations",
+                            "Check error messages"
+                        ],
+                        verification: [
+                            "Error messages are user-friendly",
+                            "Messages explain the issue clearly",
+                            "No technical jargon",
+                            "Suggest corrective action"
+                        ]
+                    },
+                    {
+                        id: "test-8-2",
+                        name: "Validation Error Messages",
+                        objective: "Verify validation errors are clear",
+                        steps: [
+                            "Try to save delivery without required fields",
+                            "Try to save customer without phone",
+                            "Try to create duplicate DR number"
+                        ],
+                        verification: [
+                            "Specific field errors highlighted",
+                            "Messages explain what's wrong",
+                            "Messages explain how to fix",
+                            "Errors appear near relevant fields"
+                        ]
+                    },
+                    {
+                        id: "test-8-3",
+                        name: "Success Messages",
+                        objective: "Verify success feedback is clear",
+                        steps: [
+                            "Perform successful operations",
+                            "Observe success messages"
+                        ],
+                        verification: [
+                            "Success messages appear for all operations",
+                            "Messages are positive and clear",
+                            "Messages auto-dismiss after few seconds",
+                            "Messages don't obstruct UI"
+                        ]
+                    }
+                ]
+            },
+            {
+                suite: "Data Integrity Verification",
+                tests: [
+                    {
+                        id: "test-9-1",
+                        name: "No localStorage Usage",
+                        objective: "Confirm localStorage not used for business data",
+                        steps: [
+                            "Open DevTools → Application → Local Storage",
+                            "Perform various operations",
+                            "Monitor localStorage"
+                        ],
+                        verification: [
+                            "No mci-active-deliveries key",
+                            "No mci-delivery-history key",
+                            "No mci-customers key",
+                            "No ePodRecords key",
+                            "Only UI preferences stored (if any)"
+                        ]
+                    },
+                    {
+                        id: "test-9-2",
+                        name: "Database as Single Source of Truth",
+                        objective: "Verify all data comes from database",
+                        steps: [
+                            "Clear browser cache completely",
+                            "Reload application",
+                            "Verify all data loads from Supabase"
+                        ],
+                        verification: [
+                            "All deliveries load from database",
+                            "All customers load from database",
+                            "No data loss after cache clear",
+                            "Application fully functional"
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        let testResults = {};
+
+        function initializeTests() {
+            const container = document.getElementById('testSuites');
+            let totalTests = 0;
+
+            testData.forEach((suiteData, suiteIndex) => {
+                totalTests += suiteData.tests.length;
+                
+                const suiteDiv = document.createElement('div');
+                suiteDiv.className = 'test-suite';
+                
+                const suiteHeader = document.createElement('div');
+                suiteHeader.className = 'suite-header';
+                suiteHeader.onclick = () => toggleSuite(suiteIndex);
+                
+                suiteHeader.innerHTML = `
+                    <h2>${suiteData.suite}</h2>
+                    <div class="suite-status">
+                        <span class="status-badge status-pending" id="suite-status-${suiteIndex}">Pending</span>
+                        <span class="toggle-icon" id="toggle-${suiteIndex}">▼</span>
+                    </div>
+                `;
+                
+                const suiteBody = document.createElement('div');
+                suiteBody.className = 'suite-body';
+                suiteBody.id = `suite-body-${suiteIndex}`;
+                
+                suiteData.tests.forEach(test => {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'test-case';
+                    testDiv.id = test.id;
+                    
+                    testDiv.innerHTML = `
+                        <h3>${test.name}</h3>
+                        <p><strong>Objective:</strong> ${test.objective}</p>
+                        
+                        <div class="test-steps">
+                            <strong>Steps:</strong>
+                            <ol>
+                                ${test.steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                        
+                        <div class="verification-checklist">
+                            <strong>Verification Checklist:</strong>
+                            ${test.verification.map((item, idx) => `
+                                <label>
+                                    <input type="checkbox" 
+                                           onchange="updateTestProgress('${test.id}', ${idx})"
+                                           id="${test.id}-check-${idx}">
+                                    ${item}
+                                </label>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="notes-section">
+                            <strong>Notes:</strong>
+                            <textarea id="${test.id}-notes" placeholder="Add any observations or issues found..."></textarea>
+                        </div>
+                        
+                        <div class="test-actions">
+                            <button class="btn btn-pass" onclick="markTest('${test.id}', 'pass')">✓ Pass</button>
+                            <button class="btn btn-fail" onclick="markTest('${test.id}', 'fail')">✗ Fail</button>
+                            <button class="btn btn-skip" onclick="markTest('${test.id}', 'skip')">⊘ Skip</button>
+                        </div>
+                    `;
+                    
+                    suiteBody.appendChild(testDiv);
+                    testResults[test.id] = { status: 'pending', notes: '', checks: [] };
+                });
+                
+                suiteDiv.appendChild(suiteHeader);
+                suiteDiv.appendChild(suiteBody);
+                container.appendChild(suiteDiv);
+            });
+            
+            document.getElementById('totalTests').textContent = totalTests;
+            document.getElementById('pendingTests').textContent = totalTests;
+            updateProgress();
+        }
+
+        function toggleSuite(index) {
+            const body = document.getElementById(`suite-body-${index}`);
+            const icon = document.getElementById(`toggle-${index}`);
+            
+            body.classList.toggle('active');
+            icon.classList.toggle('active');
+        }
+
+        function updateTestProgress(testId, checkIndex) {
+            const checkbox = document.getElementById(`${testId}-check-${checkIndex}`);
+            if (!testResults[testId].checks) {
+                testResults[testId].checks = [];
+            }
+            testResults[testId].checks[checkIndex] = checkbox.checked;
+        }
+
+        function markTest(testId, status) {
+            const notes = document.getElementById(`${testId}-notes`).value;
+            testResults[testId].status = status;
+            testResults[testId].notes = notes;
+            
+            const testDiv = document.getElementById(testId);
+            testDiv.style.borderLeftColor = status === 'pass' ? '#4caf50' : 
+                                           status === 'fail' ? '#f44336' : '#9e9e9e';
+            
+            updateProgress();
+            updateSuiteStatus();
+            
+            // Show confirmation
+            alert(`Test marked as ${status.toUpperCase()}`);
+        }
+
+        function updateProgress() {
+            let passed = 0, failed = 0, pending = 0;
+            
+            Object.values(testResults).forEach(result => {
+                if (result.status === 'pass') passed++;
+                else if (result.status === 'fail') failed++;
+                else pending++;
+            });
+            
+            const total = Object.keys(testResults).length;
+            const completed = passed + failed;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            document.getElementById('passedTests').textContent = passed;
+            document.getElementById('failedTests').textContent = failed;
+            document.getElementById('pendingTests').textContent = pending;
+            
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+        }
+
+        function updateSuiteStatus() {
+            testData.forEach((suiteData, suiteIndex) => {
+                const suiteTests = suiteData.tests.map(t => t.id);
+                const suiteResults = suiteTests.map(id => testResults[id].status);
+                
+                let status = 'pending';
+                if (suiteResults.every(s => s === 'pass')) {
+                    status = 'pass';
+                } else if (suiteResults.some(s => s === 'fail')) {
+                    status = 'fail';
+                } else if (suiteResults.some(s => s === 'pass' || s === 'skip')) {
+                    status = 'pending';
+                }
+                
+                const badge = document.getElementById(`suite-status-${suiteIndex}`);
+                badge.className = `status-badge status-${status}`;
+                badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            });
+        }
+
+        function exportResults() {
+            const timestamp = new Date().toISOString();
+            const report = {
+                timestamp,
+                summary: {
+                    total: Object.keys(testResults).length,
+                    passed: Object.values(testResults).filter(r => r.status === 'pass').length,
+                    failed: Object.values(testResults).filter(r => r.status === 'fail').length,
+                    pending: Object.values(testResults).filter(r => r.status === 'pending').length
+                },
+                tests: testResults,
+                testData: testData
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `manual-test-results-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('Test results exported successfully!');
+        }
+
+        // Initialize on page load
+        window.onload = initializeTests;
+    </script>
+</body>
+</html>

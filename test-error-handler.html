@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ErrorHandler Test Suite</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-case.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-case.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .test-result {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .summary {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 4px;
+            min-width: 250px;
+            animation: slideIn 0.3s ease-out;
+        }
+        .toast.danger {
+            background: #dc3545;
+        }
+        .toast.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .toast.success {
+            background: #28a745;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>ErrorHandler Test Suite</h1>
+    
+    <div class="summary" id="summary">
+        <strong>Test Summary:</strong> <span id="summary-text">Ready to run tests</span>
+    </div>
+
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="clearResults()">Clear Results</button>
+
+    <div id="test-results"></div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="public/assets/js/errorHandler.js"></script>
+    <script>
+        // Mock showToast function for testing
+        let toastMessages = [];
+        
+        function showToast(message, type = 'success') {
+            toastMessages.push({ message, type });
+            
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Test results tracking
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            total: 0
+        };
+
+        function addTestResult(title, passed, details) {
+            testResults.total++;
+            if (passed) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+
+            const resultsDiv = document.getElementById('test-results');
+            const testCase = document.createElement('div');
+            testCase.className = `test-case ${passed ? 'pass' : 'fail'}`;
+            testCase.innerHTML = `
+                <div class="test-title">${passed ? '✓' : '✗'} ${title}</div>
+                <div class="test-result">${details}</div>
+            `;
+            resultsDiv.appendChild(testCase);
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryText = document.getElementById('summary-text');
+            summaryText.textContent = `${testResults.passed} passed, ${testResults.failed} failed, ${testResults.total} total`;
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            testResults = { passed: 0, failed: 0, total: 0 };
+            toastMessages = [];
+            updateSummary();
+        }
+
+        // Test Suite
+        function runAllTests() {
+            clearResults();
+            
+            console.log('Starting ErrorHandler Test Suite...');
+
+            // Test 1: Network Error Detection
+            testNetworkErrorDetection();
+
+            // Test 2: Duplicate Error Detection
+            testDuplicateErrorDetection();
+
+            // Test 3: Validation Error Detection
+            testValidationErrorDetection();
+
+            // Test 4: Generic Error Handling
+            testGenericErrorHandling();
+
+            // Test 5: Handle Method Categorization
+            testHandleMethodCategorization();
+
+            // Test 6: Error Metadata
+            testErrorMetadata();
+
+            // Test 7: Toast Integration
+            testToastIntegration();
+
+            // Test 8: Additional Error Types
+            testAdditionalErrorTypes();
+
+            console.log('Test Suite Complete!');
+        }
+
+        function testNetworkErrorDetection() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Network Error Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test network error with "network" in message
+            const networkError1 = new Error('network request failed');
+            const result1 = ErrorHandler.isNetworkError(networkError1);
+            addTestResult(
+                'Detects network error from message',
+                result1 === true,
+                `Expected: true, Got: ${result1}`
+            );
+
+            // Test network error with "timeout" in message
+            const networkError2 = new Error('Request timeout');
+            const result2 = ErrorHandler.isNetworkError(networkError2);
+            addTestResult(
+                'Detects timeout error',
+                result2 === true,
+                `Expected: true, Got: ${result2}`
+            );
+
+            // Test non-network error
+            const nonNetworkError = new Error('Something else went wrong');
+            const result3 = ErrorHandler.isNetworkError(nonNetworkError);
+            addTestResult(
+                'Does not detect non-network error',
+                result3 === false,
+                `Expected: false, Got: ${result3}`
+            );
+
+            // Test handleNetworkError
+            toastMessages = [];
+            const networkResult = ErrorHandler.handleNetworkError(networkError1);
+            addTestResult(
+                'handleNetworkError returns correct metadata',
+                networkResult.type === 'network' && networkResult.recoverable === true,
+                `Type: ${networkResult.type}, Recoverable: ${networkResult.recoverable}`
+            );
+        }
+
+        function testDuplicateErrorDetection() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Duplicate Error Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test PostgreSQL duplicate error code
+            const duplicateError1 = new Error('duplicate key value');
+            duplicateError1.code = '23505';
+            const result1 = ErrorHandler.isDuplicateError(duplicateError1);
+            addTestResult(
+                'Detects PostgreSQL duplicate error code',
+                result1 === true,
+                `Expected: true, Got: ${result1}`
+            );
+
+            // Test duplicate error from message
+            const duplicateError2 = new Error('This record already exists');
+            const result2 = ErrorHandler.isDuplicateError(duplicateError2);
+            addTestResult(
+                'Detects duplicate from message',
+                result2 === true,
+                `Expected: true, Got: ${result2}`
+            );
+
+            // Test unique constraint violation
+            const duplicateError3 = new Error('violates unique constraint');
+            const result3 = ErrorHandler.isDuplicateError(duplicateError3);
+            addTestResult(
+                'Detects unique constraint violation',
+                result3 === true,
+                `Expected: true, Got: ${result3}`
+            );
+
+            // Test handleDuplicateError
+            toastMessages = [];
+            const duplicateResult = ErrorHandler.handleDuplicateError(duplicateError1);
+            addTestResult(
+                'handleDuplicateError returns correct metadata',
+                duplicateResult.type === 'duplicate' && duplicateResult.recoverable === true,
+                `Type: ${duplicateResult.type}, Recoverable: ${duplicateResult.recoverable}`
+            );
+        }
+
+        function testValidationErrorDetection() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Validation Error Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test validation error with "validation" in message
+            const validationError1 = new Error('validation failed');
+            const result1 = ErrorHandler.isValidationError(validationError1);
+            addTestResult(
+                'Detects validation error from message',
+                result1 === true,
+                `Expected: true, Got: ${result1}`
+            );
+
+            // Test validation error with "required" in message
+            const validationError2 = new Error('Field is required');
+            const result2 = ErrorHandler.isValidationError(validationError2);
+            addTestResult(
+                'Detects required field error',
+                result2 === true,
+                `Expected: true, Got: ${result2}`
+            );
+
+            // Test validation error with "invalid" in message
+            const validationError3 = new Error('Invalid email format');
+            const result3 = ErrorHandler.isValidationError(validationError3);
+            addTestResult(
+                'Detects invalid format error',
+                result3 === true,
+                `Expected: true, Got: ${result3}`
+            );
+
+            // Test handleValidationError
+            toastMessages = [];
+            const validationResult = ErrorHandler.handleValidationError(validationError1);
+            addTestResult(
+                'handleValidationError returns correct metadata',
+                validationResult.type === 'validation' && validationResult.recoverable === true,
+                `Type: ${validationResult.type}, Recoverable: ${validationResult.recoverable}`
+            );
+        }
+
+        function testGenericErrorHandling() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Generic Error Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test generic error
+            const genericError = new Error('Something unexpected happened');
+            toastMessages = [];
+            const result = ErrorHandler.handleGenericError(genericError);
+            
+            addTestResult(
+                'handleGenericError returns correct metadata',
+                result.type === 'generic' && result.recoverable === false,
+                `Type: ${result.type}, Recoverable: ${result.recoverable}`
+            );
+
+            addTestResult(
+                'handleGenericError shows toast message',
+                toastMessages.length > 0 && toastMessages[0].type === 'danger',
+                `Toast messages: ${toastMessages.length}, Type: ${toastMessages[0]?.type}`
+            );
+        }
+
+        function testHandleMethodCategorization() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Handle Method Categorization Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test network error categorization
+            const networkError = new Error('network connection failed');
+            toastMessages = [];
+            const networkResult = ErrorHandler.handle(networkError, 'testContext');
+            addTestResult(
+                'handle() categorizes network error correctly',
+                networkResult.type === 'network',
+                `Expected: network, Got: ${networkResult.type}`
+            );
+
+            // Test duplicate error categorization
+            const duplicateError = new Error('duplicate key value');
+            duplicateError.code = '23505';
+            toastMessages = [];
+            const duplicateResult = ErrorHandler.handle(duplicateError, 'testContext');
+            addTestResult(
+                'handle() categorizes duplicate error correctly',
+                duplicateResult.type === 'duplicate',
+                `Expected: duplicate, Got: ${duplicateResult.type}`
+            );
+
+            // Test validation error categorization
+            const validationError = new Error('validation failed');
+            toastMessages = [];
+            const validationResult = ErrorHandler.handle(validationError, 'testContext');
+            addTestResult(
+                'handle() categorizes validation error correctly',
+                validationResult.type === 'validation',
+                `Expected: validation, Got: ${validationResult.type}`
+            );
+
+            // Test generic error categorization
+            const genericError = new Error('unknown error');
+            toastMessages = [];
+            const genericResult = ErrorHandler.handle(genericError, 'testContext');
+            addTestResult(
+                'handle() categorizes generic error correctly',
+                genericResult.type === 'generic',
+                `Expected: generic, Got: ${genericResult.type}`
+            );
+        }
+
+        function testErrorMetadata() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Error Metadata Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            const testError = new Error('Test error');
+            toastMessages = [];
+            const result = ErrorHandler.handle(testError, 'testContext');
+
+            addTestResult(
+                'Error metadata includes type',
+                result.hasOwnProperty('type'),
+                `Has type: ${result.hasOwnProperty('type')}`
+            );
+
+            addTestResult(
+                'Error metadata includes recoverable flag',
+                result.hasOwnProperty('recoverable'),
+                `Has recoverable: ${result.hasOwnProperty('recoverable')}`
+            );
+
+            addTestResult(
+                'Error metadata includes message',
+                result.hasOwnProperty('message'),
+                `Has message: ${result.hasOwnProperty('message')}`
+            );
+
+            addTestResult(
+                'Error metadata includes original error',
+                result.hasOwnProperty('originalError'),
+                `Has originalError: ${result.hasOwnProperty('originalError')}`
+            );
+        }
+
+        function testToastIntegration() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Toast Integration Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test network error toast
+            toastMessages = [];
+            ErrorHandler.handleNetworkError(new Error('network error'));
+            addTestResult(
+                'Network error shows danger toast',
+                toastMessages.length > 0 && toastMessages[0].type === 'danger',
+                `Toast count: ${toastMessages.length}, Type: ${toastMessages[0]?.type}`
+            );
+
+            // Test duplicate error toast
+            toastMessages = [];
+            ErrorHandler.handleDuplicateError(new Error('duplicate'));
+            addTestResult(
+                'Duplicate error shows warning toast',
+                toastMessages.length > 0 && toastMessages[0].type === 'warning',
+                `Toast count: ${toastMessages.length}, Type: ${toastMessages[0]?.type}`
+            );
+
+            // Test validation error toast
+            toastMessages = [];
+            ErrorHandler.handleValidationError(new Error('validation failed'));
+            addTestResult(
+                'Validation error shows warning toast',
+                toastMessages.length > 0 && toastMessages[0].type === 'warning',
+                `Toast count: ${toastMessages.length}, Type: ${toastMessages[0]?.type}`
+            );
+        }
+
+        function testAdditionalErrorTypes() {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = '<h2>Additional Error Type Tests</h2>';
+            document.getElementById('test-results').appendChild(section);
+
+            // Test authentication error
+            toastMessages = [];
+            const authResult = ErrorHandler.handleAuthError(new Error('auth failed'));
+            addTestResult(
+                'handleAuthError returns correct metadata',
+                authResult.type === 'authentication' && authResult.recoverable === true,
+                `Type: ${authResult.type}, Recoverable: ${authResult.recoverable}`
+            );
+
+            // Test authorization error
+            toastMessages = [];
+            const authzResult = ErrorHandler.handleAuthorizationError(new Error('permission denied'));
+            addTestResult(
+                'handleAuthorizationError returns correct metadata',
+                authzResult.type === 'authorization' && authzResult.recoverable === false,
+                `Type: ${authzResult.type}, Recoverable: ${authzResult.recoverable}`
+            );
+
+            // Test logError method
+            const logResult = ErrorHandler.logError('testContext', new Error('test'), { extra: 'data' });
+            addTestResult(
+                'logError returns log entry with timestamp',
+                logResult.hasOwnProperty('timestamp') && logResult.hasOwnProperty('context'),
+                `Has timestamp: ${logResult.hasOwnProperty('timestamp')}, Has context: ${logResult.hasOwnProperty('context')}`
+            );
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, ready to run tests');
+        });
+    </script>
+</body>
+</html>

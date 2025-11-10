@@ -223,6 +223,18 @@
     <script src="assets/js/analytics.js"></script>
     <script src="assets/js/warehouse.js"></script>
     <script src="assets/js/supabase.js"></script>
+    <!-- Network Status Service - Offline detection and user feedback -->
+    <script src="assets/js/networkStatusService.js"></script>
+    <!-- Data Validator - Input validation for all data operations -->
+    <script src="assets/js/dataValidator.js"></script>
+    <!-- Error Handler - Centralized error management -->
+    <script src="assets/js/errorHandler.js"></script>
+    <!-- Logger - Monitoring and debugging -->
+    <script src="assets/js/logger.js"></script>
+    <!-- Cache Service - In-memory caching for performance -->
+    <script src="assets/js/cacheService.js"></script>
+    <!-- Realtime Service - Live data synchronization -->
+    <script src="assets/js/realtimeService.js"></script>
     <script src="assets/js/dataService.js"></script>
 
     <script src="assets/js/main-fixed.js"></script>
@@ -645,14 +657,10 @@
                         if (window.dataService && typeof window.dataService.saveDelivery === 'function') {
                             await window.dataService.saveDelivery(delivery);
                             console.log('✅ INLINE UPLOAD: Saved to Supabase:', delivery.dr_number);
+                            savedCount++;
                         } else {
-                            // Fallback to localStorage
-                            window.activeDeliveries = window.activeDeliveries || [];
-                            window.activeDeliveries.push(delivery);
-                            localStorage.setItem('mci-active-deliveries', JSON.stringify(window.activeDeliveries));
-                            console.log('✅ INLINE UPLOAD: Saved to localStorage:', delivery.dr_number);
+                            throw new Error('DataService not available. Cannot save delivery.');
                         }
-                        savedCount++;
                     } catch (error) {
                         console.error('❌ INLINE UPLOAD: Error saving:', delivery.dr_number, error);
                     }
@@ -1412,6 +1420,10 @@ The page will refresh to show your new data.`);
                             </tbody>
                         </table>
                     </div>
+                    <!-- Pagination Controls -->
+                    <div id="activePaginationControls" class="d-flex justify-content-center align-items-center mt-3 mb-2" style="display: none !important;">
+                        <!-- Pagination will be dynamically generated here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -1492,6 +1504,10 @@ The page will refresh to show your new data.`);
                                 <!-- Dynamic content will be loaded here -->
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div id="historyPaginationControls" class="d-flex justify-content-center align-items-center mt-3 mb-2" style="display: none !important;">
+                        <!-- Pagination will be dynamically generated here -->
                     </div>
                 </div>
             </div>

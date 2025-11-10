@@ -1,33 +1,37 @@
-// Initialize global data arrays for analytics and booking system
+/**
+ * DATABASE-CENTRIC ARCHITECTURE
+ * 
+ * This application follows a database-centric architecture where Supabase is the single source of truth.
+ * 
+ * Key Principles:
+ * 1. NO localStorage for business data - All data is stored in Supabase
+ * 2. All data operations are asynchronous and go through DataService
+ * 3. Real-time synchronization across all connected clients
+ * 4. In-memory arrays (activeDeliveries, deliveryHistory) are used ONLY for UI state
+ * 5. Data is always loaded fresh from database on page load
+ * 
+ * Data Flow:
+ * User Action → UI Layer → DataService → Supabase → Database
+ * Database → Supabase → DataService → UI Layer → User
+ * 
+ * See docs/ARCHITECTURE.md for complete architecture documentation
+ */
+
+// Initialize global data arrays for UI state (NOT persistent storage)
+// These arrays hold data loaded from Supabase for the current session only
 if (typeof window.activeDeliveries === 'undefined') {
     window.activeDeliveries = [];
-    console.log('✅ Initialized window.activeDeliveries array');
+    console.log('✅ Initialized window.activeDeliveries array (UI state only)');
 }
 
 if (typeof window.deliveryHistory === 'undefined') {
     window.deliveryHistory = [];
-    console.log('✅ Initialized window.deliveryHistory array');
+    console.log('✅ Initialized window.deliveryHistory array (UI state only)');
 }
 
-// Load data from localStorage if available
-try {
-    const savedActiveDeliveries = localStorage.getItem('mci-active-deliveries');
-    const savedDeliveryHistory = localStorage.getItem('mci-delivery-history');
-    
-    if (savedActiveDeliveries) {
-        window.activeDeliveries = JSON.parse(savedActiveDeliveries);
-        console.log(`✅ Loaded ${window.activeDeliveries.length} active deliveries from localStorage`);
-    }
-    
-    if (savedDeliveryHistory) {
-        window.deliveryHistory = JSON.parse(savedDeliveryHistory);
-        console.log(`✅ Loaded ${window.deliveryHistory.length} delivery history from localStorage`);
-    }
-} catch (error) {
-    console.error('Error loading delivery data from localStorage:', error);
-    window.activeDeliveries = [];
-    window.deliveryHistory = [];
-}
+// Initialize data arrays (data will be loaded from Supabase database via DataService)
+window.activeDeliveries = [];
+window.deliveryHistory = [];
 
 // Main application initialization
 document.addEventListener('DOMContentLoaded', function () {
@@ -569,16 +573,10 @@ async function setupSaveSignatureButton() {
                             console.log(`✅ E-POD record saved to Supabase for DR: ${drNum}`);
                         } catch (error) {
                             console.error(`❌ Failed to save E-POD to Supabase for DR ${drNum}:`, error);
-                            // Fallback to localStorage
-                            const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                            ePodRecords.push(ePodRecord);
-                            localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                            throw error;
                         }
                     } else {
-                        // Fallback to localStorage
-                        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                        ePodRecords.push(ePodRecord);
-                        localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                        throw new Error('DataService not available. Cannot save E-POD.');
                     }
                     
                     // Update delivery status in active deliveries
@@ -620,16 +618,10 @@ async function setupSaveSignatureButton() {
                         console.log('✅ E-POD record saved to Supabase successfully');
                     } catch (error) {
                         console.error('❌ Failed to save E-POD to Supabase:', error);
-                        // Fallback to localStorage
-                        const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                        ePodRecords.push(ePodRecord);
-                        localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                        throw error;
                     }
                 } else {
-                    // Fallback to localStorage
-                    const ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
-                    ePodRecords.push(ePodRecord);
-                    localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
+                    throw new Error('DataService not available. Cannot save E-POD.');
                 }
                 
                 // Update delivery status in active deliveries
@@ -1005,9 +997,8 @@ function filterEPodDeliveries(searchTerm) {
     // Get E-POD records from localStorage
     let ePodRecords = [];
     try {
-        const ePodData = localStorage.getItem('ePodRecords');
-        if (ePodData) {
-            ePodRecords = JSON.parse(ePodData);
+        if (window.dataService) {
+            ePodRecords = await window.dataService.getEPodRecords();
         }
     } catch (error) {
         console.error('Error loading EPOD records:', error);
@@ -1042,10 +1033,13 @@ function filterEPodDeliveries(searchTerm) {
 }
 
 // Export E-POD records as PDF
-function exportEPodToPdf() {
+async function exportEPodToPdf() {
     try {
-        // Get E-POD records from localStorage
-        let ePodRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
+        // Get E-POD records from database
+        let ePodRecords = [];
+        if (window.dataService) {
+            ePodRecords = await window.dataService.getEPodRecords();
+        }
         
         // Check if any checkboxes are selected
         const selectedCheckboxes = document.querySelectorAll('#ePodTableBody tr input.delivery-checkbox:checked');
@@ -1454,7 +1448,7 @@ async function loadCustomers() {
                 await window.saveCustomer(customer);
             }
         } else {
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            console.warn('No customer save function available, mock customers not saved');
         }
     }
     
@@ -1484,30 +1478,10 @@ async function fallbackLoadCustomers() {
             await mergeDuplicateCustomers();
         } catch (error) {
             console.error('Error loading customers:', error);
-            // Fallback to localStorage
-            const savedCustomers = localStorage.getItem('mci-customers');
-            if (savedCustomers) {
-                const parsedCustomers = JSON.parse(savedCustomers);
-                // Update the global customers array
-                window.customers.length = 0; // Clear existing
-                window.customers.push(...parsedCustomers);
-                
-                // Merge duplicate customers based on name and phone number
-                await mergeDuplicateCustomers();
-            }
+            throw error;
         }
     } else {
-        // Fallback to localStorage
-        const savedCustomers = localStorage.getItem('mci-customers');
-        if (savedCustomers) {
-            const parsedCustomers = JSON.parse(savedCustomers);
-            // Update the global customers array
-            window.customers.length = 0; // Clear existing
-            window.customers.push(...parsedCustomers);
-            
-            // Merge duplicate customers based on name and phone number
-            await mergeDuplicateCustomers();
-        }
+        throw new Error('DataService not available. Cannot load customers.');
     }
 }
 
@@ -1606,11 +1580,8 @@ async function mergeDuplicateCustomers() {
             }
         } catch (error) {
             console.error('Error saving merged customers:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
-    } else {
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
     }
     
     console.log(`Merged ${mergeCount} duplicate customers`);
@@ -1723,19 +1694,17 @@ async function saveCustomer() {
             await window.dataService.saveCustomer(newCustomer);
         } catch (error) {
             console.error('Error saving customer to dataService:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else if (typeof window.saveCustomer === 'function') {
         try {
             await window.saveCustomer(newCustomer);
         } catch (error) {
             console.error('Error saving customer:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else {
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        throw new Error('No customer save function available');
     }
 
     // Clear form
@@ -1795,19 +1764,17 @@ async function updateCustomer(customerId) {
             await window.dataService.saveCustomer(window.customers[customerIndex]);
         } catch (error) {
             console.error('Error updating customer in dataService:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else if (typeof window.saveCustomer === 'function') {
         try {
             await window.saveCustomer(window.customers[customerIndex]);
         } catch (error) {
             console.error('Error updating customer:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else {
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        throw new Error('No customer save function available');
     }
 
     // Reset save button
@@ -1843,19 +1810,17 @@ async function deleteCustomer(customerId) {
             await window.dataService.deleteCustomer(customerId);
         } catch (error) {
             console.error('Error deleting customer from dataService:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else if (typeof window.deleteCustomer === 'function') {
         try {
             await window.deleteCustomer(customerId);
         } catch (error) {
             console.error('Error deleting customer:', error);
-            // Fallback to localStorage
-            localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+            throw error;
         }
     } else {
-        localStorage.setItem('mci-customers', JSON.stringify(window.customers));
+        throw new Error('No customer delete function available');
     }
 
     displayCustomers();

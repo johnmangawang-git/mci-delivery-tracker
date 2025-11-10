@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execute Data Migration - Task 15</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #ccc;
+            background-color: #f9f9f9;
+        }
+        .step.running {
+            border-left-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        .step.success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .step.error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .step h3 {
+            margin-top: 0;
+        }
+        .results {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .button.danger {
+            background-color: #dc3545;
+        }
+        .button.danger:hover {
+            background-color: #c82333;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        .log-entry.info { color: #4fc3f7; }
+        .log-entry.success { color: #81c784; }
+        .log-entry.error { color: #e57373; }
+        .log-entry.warning { color: #ffb74d; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-badge.pending { background-color: #ccc; color: #666; }
+        .status-badge.running { background-color: #007bff; color: white; }
+        .status-badge.success { background-color: #28a745; color: white; }
+        .status-badge.error { background-color: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Execute Data Migration - Task 15</h1>
+        <p>This script will execute the complete data migration from localStorage to Supabase.</p>
+        
+        <div style="margin: 20px 0;">
+            <button class="button" onclick="runCompleteMigration()">Run Complete Migration</button>
+            <button class="button" onclick="runStepByStep()">Run Step by Step</button>
+        </div>
+
+        <div id="step1" class="step">
+            <h3>Step 1: Export localStorage Data <span id="status1" class="status-badge pending">Pending</span></h3>
+            <p>Export all data from localStorage to JSON backup file</p>
+            <div id="results1" class="results" style="display: none;"></div>
+            <button class="button" onclick="runExport()" id="btn-export">Run Export</button>
+        </div>
+
+        <div id="step2" class="step">
+            <h3>Step 2: Import to Supabase <span id="status2" class="status-badge pending">Pending</span></h3>
+            <p>Import exported data to Supabase database</p>
+            <div id="results2" class="results" style="display: none;"></div>
+            <button class="button" onclick="runImport()" id="btn-import" disabled>Run Import</button>
+        </div>
+
+        <div id="step3" class="step">
+            <h3>Step 3: Verify Data Integrity <span id="status3" class="status-badge pending">Pending</span></h3>
+            <p>Verify all data was successfully imported</p>
+            <div id="results3" class="results" style="display: none;"></div>
+            <button class="button" onclick="runVerify()" id="btn-verify" disabled>Run Verify</button>
+        </div>
+
+        <div id="step4" class="step">
+            <h3>Step 4: Clear localStorage <span id="status4" class="status-badge pending">Pending</span></h3>
+            <p>Clear localStorage after successful migration</p>
+            <div id="results4" class="results" style="display: none;"></div>
+            <button class="button danger" onclick="runClear()" id="btn-clear" disabled>Clear localStorage</button>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Waiting to start migration...</div>
+        </div>
+    </div>
+
+    <script src="public/assets/js/supabase-client.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+    <script src="public/assets/js/migrationUtility.js"></script>
+    
+    <script>
+        let migrationUtility;
+        let exportedData = null;
+
+        // Initialize
+        async function init() {
+            try {
+                log('info', 'Initializing migration tool...');
+                
+                // Initialize Supabase client
+                if (typeof supabaseClient === 'function') {
+                    window.supabaseClient();
+                    log('success', 'Supabase client initialized');
+                }
+
+                // Initialize DataService
+                if (typeof dataService !== 'undefined') {
+                    await dataService.initialize();
+                    log('success', 'DataService initialized');
+                }
+
+                // Create MigrationUtility instance
+                if (typeof MigrationUtility !== 'undefined') {
+                    migrationUtility = new MigrationUtility(dataService);
+                    log('success', 'MigrationUtility created');
+                } else {
+                    throw new Error('MigrationUtility class not found');
+                }
+                
+                log('success', '✓ Migration tool ready');
+            } catch (error) {
+                log('error', `Initialization failed: ${error.message}`);
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Run complete migration
+        async function runCompleteMigration() {
+            if (!confirm('This will run the complete migration process. Continue?')) {
+                return;
+            }
+
+            try {
+                log('info', '=== Starting Complete Migration ===');
+                
+                const result = await migrationUtility.performCompleteMigration((step, current, total, message) => {
+                    log('info', `${step}: ${message}`);
+                });
+
+                if (result.success) {
+                    log('success', '=== ✓ Migration Completed Successfully ===');
+                    updateStepStatus('step1', 'success');
+                    updateStepStatus('step2', 'success');
+                    updateStepStatus('step3', 'success');
+                    updateStepStatus('step4', 'success');
+                    
+                    displayExportResults(result.export);
+                    displayImportResults(result.import);
+                    displayVerifyResults(result.verification);
+                    displayClearResults(result.cleared);
+                    
+                    alert('✓ Migration completed successfully!');
+                } else {
+                    log('warning', '=== Migration Completed with Warnings ===');
+                    alert('Migration completed but verification failed. Check the log for details.');
+                }
+            } catch (error) {
+                log('error', `=== Migration Failed: ${error.message} ===`);
+                console.error('Migration error:', error);
+                alert('Migration failed: ' + error.message);
+            }
+        }
+
+        // Run step by step
+        function runStepByStep() {
+            log('info', 'Step-by-step mode enabled. Click each step button to proceed.');
+            document.getElementById('btn-export').disabled = false;
+        }
+
+        // Step 1: Export
+        function runExport() {
+            try {
+                log('info', 'Step 1: Exporting localStorage data...');
+                updateStepStatus('step1', 'running');
+                
+                const result = migrationUtility.exportLocalStorageData();
+                exportedData = result.data;
+                
+                displayExportResults(result);
+                updateStepStatus('step1', 'success');
+                document.getElementById('btn-import').disabled = false;
+                
+                log('success', `✓ Export completed: ${result.stats.totalDeliveries} deliveries, ${result.stats.customers} customers`);
+            } catch (error) {
+                updateStepStatus('step1', 'error');
+                log('error', `Export failed: ${error.message}`);
+                console.error('Export error:', error);
+            }
+        }
+
+        // Step 2: Import
+        async function runImport() {
+            if (!exportedData) {
+                alert('Please export data first');
+                return;
+            }
+
+            try {
+                log('info', 'Step 2: Importing to Supabase...');
+                updateStepStatus('step2', 'running');
+                document.getElementById('btn-import').disabled = true;
+                
+                const result = await migrationUtility.importToSupabase(exportedData, (type, current, total, item) => {
+                    log('info', `Importing ${type}: ${current}/${total} - ${item}`);
+                });
+                
+                displayImportResults(result);
+                updateStepStatus('step2', 'success');
+                document.getElementById('btn-verify').disabled = false;
+                
+                log('success', `✓ Import completed: ${result.totalSuccess} success, ${result.totalFailed} failed`);
+            } catch (error) {
+                updateStepStatus('step2', 'error');
+                log('error', `Import failed: ${error.message}`);
+                console.error('Import error:', error);
+            }
+        }
+
+        // Step 3: Verify
+        async function runVerify() {
+            if (!exportedData) {
+                alert('Please export and import data first');
+                return;
+            }
+
+            try {
+                log('info', 'Step 3: Verifying data integrity...');
+                updateStepStatus('step3', 'running');
+                
+                const result = await migrationUtility.verifyDataIntegrity(exportedData);
+                
+                displayVerifyResults(result);
+                
+                if (result.overallSuccess) {
+                    updateStepStatus('step3', 'success');
+                    document.getElementById('btn-clear').disabled = false;
+                    log('success', '✓ Verification passed - data integrity confirmed');
+                } else {
+                    updateStepStatus('step3', 'error');
+                    log('warning', 'Verification completed with warnings');
+                }
+            } catch (error) {
+                updateStepStatus('step3', 'error');
+                log('error', `Verification failed: ${error.message}`);
+                console.error('Verification error:', error);
+            }
+        }
+
+        // Step 4: Clear
+        function runClear() {
+            try {
+                log('info', 'Step 4: Clearing localStorage...');
+                updateStepStatus('step4', 'running');
+                
+                const result = migrationUtility.clearLocalStorage(false);
+                
+                if (result) {
+                    displayClearResults(result);
+                    updateStepStatus('step4', 'success');
+                    log('success', '✓ localStorage cleared successfully');
+                } else {
+                    log('info', 'localStorage clear cancelled by user');
+                    updateStepStatus('step4', 'pending');
+                }
+            } catch (error) {
+                updateStepStatus('step4', 'error');
+                log('error', `Clear failed: ${error.message}`);
+                console.error('Clear error:', error);
+            }
+        }
+
+        // Display functions
+        function displayExportResults(result) {
+            const div = document.getElementById('results1');
+            div.innerHTML = `
+                <strong>Export Statistics:</strong><br>
+                Active Deliveries: ${result.stats.activeDeliveries}<br>
+                Delivery History: ${result.stats.deliveryHistory}<br>
+                Total Deliveries: ${result.stats.totalDeliveries}<br>
+                Customers: ${result.stats.customers}<br>
+                EPOD Records: ${result.stats.epodRecords}<br>
+                <em>Backup file downloaded</em>
+            `;
+            div.style.display = 'block';
+        }
+
+        function displayImportResults(result) {
+            const div = document.getElementById('results2');
+            div.innerHTML = `
+                <strong>Import Results:</strong><br>
+                Deliveries: ${result.deliveries.success} success, ${result.deliveries.failed} failed<br>
+                Customers: ${result.customers.success} success, ${result.customers.failed} failed<br>
+                EPOD Records: ${result.epodRecords.success} success, ${result.epodRecords.failed} failed<br>
+                <strong>Total: ${result.totalSuccess} success, ${result.totalFailed} failed</strong>
+            `;
+            div.style.display = 'block';
+        }
+
+        function displayVerifyResults(result) {
+            const div = document.getElementById('results3');
+            div.innerHTML = `
+                <strong>Verification Results:</strong><br>
+                Deliveries: ${result.deliveries.actual}/${result.deliveries.expected} ${result.deliveries.match ? '✓' : '✗'}<br>
+                Customers: ${result.customers.actual}/${result.customers.expected} ${result.customers.match ? '✓' : '✗'}<br>
+                EPOD Records: ${result.epodRecords.actual}/${result.epodRecords.expected} ${result.epodRecords.match ? '✓' : '✗'}<br>
+                <strong>${result.overallSuccess ? '✓ Verification Passed' : '✗ Verification Failed'}</strong>
+            `;
+            div.style.display = 'block';
+        }
+
+        function displayClearResults(result) {
+            const div = document.getElementById('results4');
+            div.innerHTML = `<strong>✓ localStorage cleared successfully</strong>`;
+            div.style.display = 'block';
+        }
+
+        // Helper functions
+        function updateStepStatus(stepId, status) {
+            const step = document.getElementById(stepId);
+            const statusBadge = document.getElementById(stepId.replace('step', 'status'));
+            
+            step.className = 'step ' + status;
+            statusBadge.className = 'status-badge ' + status;
+            statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        function log(level, message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${level}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Optimization Test - Task 19</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .stats-table th,
+        .stats-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .stats-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        .performance-metric {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 5px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .code-block {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        #log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        .log-success { color: #4ec9b0; }
+        .log-error { color: #f48771; }
+        .log-info { color: #9cdcfe; }
+        .log-warn { color: #dcdcaa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Query Optimization Test Suite</h1>
+        <p><strong>Task 19:</strong> Optimize database queries and add indexes</p>
+        <p><strong>Requirements:</strong> 5.2, 5.5, 8.1</p>
+
+        <div class="test-section">
+            <h2>📊 Test Controls</h2>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <button onclick="testOptimizedQueries()">Test Optimized Queries</button>
+            <button onclick="testCaching()">Test Caching</button>
+            <button onclick="testPerformance()">Test Performance</button>
+            <button onclick="testCacheInvalidation()">Test Cache Invalidation</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📈 Performance Statistics</h2>
+            <div id="stats"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test Results</h2>
+            <div id="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Test Log</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="public/assets/js/logger.js"></script>
+    <script src="public/assets/js/cacheService.js"></script>
+    <script src="public/assets/js/dataService.js"></script>
+
+    <script>
+        let testResults = [];
+
+        // Initialize services
+        async function initializeServices() {
+            try {
+                log('Initializing services...', 'info');
+
+                // Initialize cache service
+                if (typeof CacheService !== 'undefined') {
+                    window.cacheService = new CacheService(60000); // 1 minute TTL
+                    log('✅ CacheService initialized', 'success');
+                } else {
+                    log('⚠️ CacheService not available', 'warn');
+                }
+
+                // Initialize logger
+                if (typeof Logger !== 'undefined') {
+                    window.Logger = Logger;
+                    log('✅ Logger initialized', 'success');
+                } else {
+                    log('⚠️ Logger not available', 'warn');
+                }
+
+                // Initialize Supabase
+                const supabaseUrl = localStorage.getItem('supabaseUrl');
+                const supabaseKey = localStorage.getItem('supabaseAnonKey');
+
+                if (!supabaseUrl || !supabaseKey) {
+                    throw new Error('Supabase credentials not found. Please configure in main app first.');
+                }
+
+                window.supabaseClient = () => supabase.createClient(supabaseUrl, supabaseKey);
+                log('✅ Supabase client initialized', 'success');
+
+                // Initialize DataService
+                if (window.dataService) {
+                    await window.dataService.initialize();
+                    log('✅ DataService initialized', 'success');
+                } else {
+                    throw new Error('DataService not available');
+                }
+
+                return true;
+            } catch (error) {
+                log(`❌ Initialization error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            testResults = [];
+            clearResults();
+            log('🚀 Starting all tests...', 'info');
+
+            const initialized = await initializeServices();
+            if (!initialized) {
+                addResult('Initialization Failed', 'Services could not be initialized', 'error');
+                return;
+            }
+
+            await testOptimizedQueries();
+            await testCaching();
+            await testPerformance();
+            await testCacheInvalidation();
+
+            displayStats();
+            log('✅ All tests completed', 'success');
+        }
+
+        // Test 1: Optimized Queries
+        async function testOptimizedQueries() {
+            log('📊 Testing optimized queries...', 'info');
+
+            try {
+                // Test getDeliveriesOptimized
+                log('Testing getDeliveriesOptimized()...', 'info');
+                const startTime1 = performance.now();
+                const deliveries = await window.dataService.getDeliveriesOptimized({
+                    status: ['Active', 'In Transit'],
+                    limit: 50,
+                    useCache: false // First run without cache
+                });
+                const queryTime1 = performance.now() - startTime1;
+                
+                addResult(
+                    'getDeliveriesOptimized()',
+                    `Retrieved ${deliveries.length} deliveries in ${queryTime1.toFixed(2)}ms`,
+                    queryTime1 < 100 ? 'success' : 'warning'
+                );
+                log(`✅ Query completed in ${queryTime1.toFixed(2)}ms`, 'success');
+
+                // Test searchCustomersByName
+                log('Testing searchCustomersByName()...', 'info');
+                const startTime2 = performance.now();
+                const customers = await window.dataService.searchCustomersByName('test', {
+                    limit: 50,
+                    useCache: false
+                });
+                const queryTime2 = performance.now() - startTime2;
+                
+                addResult(
+                    'searchCustomersByName()',
+                    `Found ${customers.length} customers in ${queryTime2.toFixed(2)}ms`,
+                    queryTime2 < 50 ? 'success' : 'warning'
+                );
+                log(`✅ Search completed in ${queryTime2.toFixed(2)}ms`, 'success');
+
+                // Test getRecentDeliveries
+                log('Testing getRecentDeliveries()...', 'info');
+                const startTime3 = performance.now();
+                const recent = await window.dataService.getRecentDeliveries(10, {
+                    useCache: false
+                });
+                const queryTime3 = performance.now() - startTime3;
+                
+                addResult(
+                    'getRecentDeliveries()',
+                    `Retrieved ${recent.length} recent deliveries in ${queryTime3.toFixed(2)}ms`,
+                    queryTime3 < 30 ? 'success' : 'warning'
+                );
+                log(`✅ Query completed in ${queryTime3.toFixed(2)}ms`, 'success');
+
+                // Test batch lookup
+                if (deliveries.length > 0) {
+                    log('Testing getDeliveriesByDrNumbers()...', 'info');
+                    const drNumbers = deliveries.slice(0, 5).map(d => d.dr_number);
+                    const startTime4 = performance.now();
+                    const batchResults = await window.dataService.getDeliveriesByDrNumbers(drNumbers);
+                    const queryTime4 = performance.now() - startTime4;
+                    
+                    addResult(
+                        'getDeliveriesByDrNumbers()',
+                        `Batch lookup of ${drNumbers.length} DR numbers in ${queryTime4.toFixed(2)}ms`,
+                        queryTime4 < 50 ? 'success' : 'warning'
+                    );
+                    log(`✅ Batch query completed in ${queryTime4.toFixed(2)}ms`, 'success');
+                }
+
+            } catch (error) {
+                addResult('Optimized Queries Test', `Error: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 2: Caching
+        async function testCaching() {
+            log('💾 Testing caching functionality...', 'info');
+
+            try {
+                // Clear cache first
+                if (window.cacheService) {
+                    window.cacheService.clear();
+                    log('Cache cleared', 'info');
+                }
+
+                // First query (no cache)
+                log('First query (no cache)...', 'info');
+                const startTime1 = performance.now();
+                const result1 = await window.dataService.getDeliveriesOptimized({
+                    status: 'Active',
+                    limit: 50,
+                    useCache: true
+                });
+                const queryTime1 = performance.now() - startTime1;
+                log(`Query time without cache: ${queryTime1.toFixed(2)}ms`, 'info');
+
+                // Second query (should hit cache)
+                log('Second query (should hit cache)...', 'info');
+                const startTime2 = performance.now();
+                const result2 = await window.dataService.getDeliveriesOptimized({
+                    status: 'Active',
+                    limit: 50,
+                    useCache: true
+                });
+                const queryTime2 = performance.now() - startTime2;
+                log(`Query time with cache: ${queryTime2.toFixed(2)}ms`, 'info');
+
+                const speedup = (queryTime1 / queryTime2).toFixed(1);
+                const cacheWorking = queryTime2 < queryTime1 * 0.1; // Cache should be 10x+ faster
+
+                addResult(
+                    'Cache Performance',
+                    `First query: ${queryTime1.toFixed(2)}ms, Cached query: ${queryTime2.toFixed(2)}ms (${speedup}x faster)`,
+                    cacheWorking ? 'success' : 'warning'
+                );
+
+                if (cacheWorking) {
+                    log(`✅ Cache working correctly (${speedup}x speedup)`, 'success');
+                } else {
+                    log(`⚠️ Cache may not be working optimally`, 'warn');
+                }
+
+                // Test cache stats
+                if (window.cacheService) {
+                    const stats = window.cacheService.getStats();
+                    addResult(
+                        'Cache Statistics',
+                        `Hits: ${stats.hits}, Misses: ${stats.misses}, Hit Rate: ${stats.hitRate}`,
+                        'info'
+                    );
+                    log(`Cache stats: ${JSON.stringify(stats)}`, 'info');
+                }
+
+            } catch (error) {
+                addResult('Caching Test', `Error: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 3: Performance Benchmarks
+        async function testPerformance() {
+            log('⚡ Running performance benchmarks...', 'info');
+
+            try {
+                const benchmarks = [];
+
+                // Benchmark 1: Active deliveries query
+                const times1 = [];
+                for (let i = 0; i < 3; i++) {
+                    const start = performance.now();
+                    await window.dataService.getDeliveriesOptimized({
+                        status: ['Active', 'In Transit'],
+                        useCache: false
+                    });
+                    times1.push(performance.now() - start);
+                }
+                const avg1 = times1.reduce((a, b) => a + b, 0) / times1.length;
+                benchmarks.push({ name: 'Active Deliveries Query', avgTime: avg1 });
+                log(`Active deliveries avg: ${avg1.toFixed(2)}ms`, 'info');
+
+                // Benchmark 2: Customer search
+                const times2 = [];
+                for (let i = 0; i < 3; i++) {
+                    const start = performance.now();
+                    await window.dataService.searchCustomersByName('test', { useCache: false });
+                    times2.push(performance.now() - start);
+                }
+                const avg2 = times2.reduce((a, b) => a + b, 0) / times2.length;
+                benchmarks.push({ name: 'Customer Search', avgTime: avg2 });
+                log(`Customer search avg: ${avg2.toFixed(2)}ms`, 'info');
+
+                // Benchmark 3: Recent deliveries
+                const times3 = [];
+                for (let i = 0; i < 3; i++) {
+                    const start = performance.now();
+                    await window.dataService.getRecentDeliveries(10, { useCache: false });
+                    times3.push(performance.now() - start);
+                }
+                const avg3 = times3.reduce((a, b) => a + b, 0) / times3.length;
+                benchmarks.push({ name: 'Recent Deliveries', avgTime: avg3 });
+                log(`Recent deliveries avg: ${avg3.toFixed(2)}ms`, 'info');
+
+                // Display benchmarks
+                let benchmarkHTML = '<table class="stats-table"><tr><th>Operation</th><th>Avg Time</th><th>Status</th></tr>';
+                benchmarks.forEach(b => {
+                    const status = b.avgTime < 100 ? '✅ Excellent' : b.avgTime < 200 ? '⚠️ Good' : '❌ Needs Optimization';
+                    benchmarkHTML += `<tr><td>${b.name}</td><td>${b.avgTime.toFixed(2)}ms</td><td>${status}</td></tr>`;
+                });
+                benchmarkHTML += '</table>';
+
+                addResult('Performance Benchmarks', benchmarkHTML, 'info');
+                log('✅ Performance benchmarks completed', 'success');
+
+            } catch (error) {
+                addResult('Performance Test', `Error: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test 4: Cache Invalidation
+        async function testCacheInvalidation() {
+            log('🔄 Testing cache invalidation...', 'info');
+
+            try {
+                // Clear and populate cache
+                if (window.cacheService) {
+                    window.cacheService.clear();
+                }
+
+                // Populate cache
+                await window.dataService.getDeliveriesOptimized({
+                    status: 'Active',
+                    useCache: true
+                });
+                log('Cache populated', 'info');
+
+                // Check cache has data
+                const statsBefore = window.cacheService ? window.cacheService.getStats() : null;
+                log(`Cache size before invalidation: ${statsBefore?.size || 0}`, 'info');
+
+                // Invalidate deliveries cache
+                window.dataService.invalidateCache('deliveries');
+                log('Cache invalidated', 'info');
+
+                // Check cache is cleared
+                const statsAfter = window.cacheService ? window.cacheService.getStats() : null;
+                log(`Cache size after invalidation: ${statsAfter?.size || 0}`, 'info');
+
+                const invalidationWorked = !statsAfter || statsAfter.size === 0;
+
+                addResult(
+                    'Cache Invalidation',
+                    `Before: ${statsBefore?.size || 0} entries, After: ${statsAfter?.size || 0} entries`,
+                    invalidationWorked ? 'success' : 'error'
+                );
+
+                if (invalidationWorked) {
+                    log('✅ Cache invalidation working correctly', 'success');
+                } else {
+                    log('❌ Cache invalidation failed', 'error');
+                }
+
+            } catch (error) {
+                addResult('Cache Invalidation Test', `Error: ${error.message}`, 'error');
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Display performance statistics
+        function displayStats() {
+            const stats = window.dataService.getPerformanceStats();
+            const statsDiv = document.getElementById('stats');
+            
+            let html = '<div class="code-block">';
+            html += '<strong>DataService Performance Statistics:</strong><br>';
+            html += `Cache Enabled: ${stats.cacheEnabled ? '✅ Yes' : '❌ No'}<br>`;
+            html += `Optimizations Active: ${stats.optimizationsActive ? '✅ Yes' : '❌ No'}<br>`;
+            
+            if (stats.cacheStats) {
+                html += '<br><strong>Cache Statistics:</strong><br>';
+                html += `Hits: ${stats.cacheStats.hits}<br>`;
+                html += `Misses: ${stats.cacheStats.misses}<br>`;
+                html += `Sets: ${stats.cacheStats.sets}<br>`;
+                html += `Size: ${stats.cacheStats.size}<br>`;
+                html += `Hit Rate: ${stats.cacheStats.hitRate}<br>`;
+            }
+            
+            html += '</div>';
+            statsDiv.innerHTML = html;
+        }
+
+        // Helper functions
+        function addResult(title, message, type) {
+            testResults.push({ title, message, type });
+            displayResults();
+        }
+
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            let html = '';
+            
+            testResults.forEach(result => {
+                html += `<div class="test-result ${result.type}">`;
+                html += `<strong>${result.title}:</strong> ${result.message}`;
+                html += '</div>';
+            });
+            
+            resultsDiv.innerHTML = html || '<p class="info">No test results yet. Run tests to see results.</p>';
+        }
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('results').innerHTML = '<p class="info">Running tests...</p>';
+        }
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Initialize on load
+        window.addEventListener('load', async () => {
+            log('Page loaded. Ready to run tests.', 'info');
+            log('Click "Run All Tests" to begin testing query optimizations.', 'info');
+        });
+    </script>
+</body>
+</html>

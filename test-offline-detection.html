@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Offline Detection and User Feedback</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online {
+            background-color: #28a745;
+        }
+        .status-offline {
+            background-color: #dc3545;
+        }
+        .log-entry {
+            padding: 8px;
+            margin: 4px 0;
+            border-left: 3px solid #007bff;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+        }
+        .log-entry.warning {
+            border-left-color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">
+            <i class="bi bi-wifi"></i> Offline Detection & User Feedback Test
+        </h1>
+        
+        <div class="alert alert-info">
+            <strong>Test Requirements:</strong>
+            <ul class="mb-0">
+                <li>Requirement 9.1: Display offline indicator when connection lost</li>
+                <li>Requirement 9.2: Show appropriate error messages for offline operations</li>
+                <li>Requirement 9.3: Implement automatic reconnection on network restore</li>
+            </ul>
+        </div>
+
+        <!-- Network Status Display -->
+        <div class="test-section">
+            <h3>Current Network Status</h3>
+            <div id="networkStatus" class="mb-3">
+                <span class="status-indicator status-online"></span>
+                <strong>Status:</strong> <span id="statusText">Checking...</span>
+            </div>
+            <div>
+                <strong>Browser Online:</strong> <span id="browserOnline">-</span>
+            </div>
+            <div>
+                <strong>Service Status:</strong> <span id="serviceStatus">-</span>
+            </div>
+        </div>
+
+        <!-- Test Controls -->
+        <div class="test-section">
+            <h3>Test Controls</h3>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <button class="btn btn-primary w-100" onclick="testSimulateOffline()">
+                        <i class="bi bi-wifi-off"></i> Simulate Offline
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-success w-100" onclick="testSimulateOnline()">
+                        <i class="bi bi-wifi"></i> Simulate Online
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-warning w-100" onclick="testOfflineOperation()">
+                        <i class="bi bi-database-x"></i> Test Offline Operation
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-info w-100" onclick="testReconnection()">
+                        <i class="bi bi-arrow-repeat"></i> Test Reconnection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Log -->
+        <div class="test-section">
+            <h3>Test Log</h3>
+            <button class="btn btn-sm btn-secondary mb-2" onclick="clearLog()">
+                <i class="bi bi-trash"></i> Clear Log
+            </button>
+            <div id="testLog" style="max-height: 400px; overflow-y: auto;">
+                <!-- Log entries will appear here -->
+            </div>
+        </div>
+
+        <!-- Manual Testing Instructions -->
+        <div class="test-section">
+            <h3>Manual Testing Instructions</h3>
+            <ol>
+                <li><strong>Test Browser Offline Mode:</strong>
+                    <ul>
+                        <li>Open DevTools (F12)</li>
+                        <li>Go to Network tab</li>
+                        <li>Check "Offline" checkbox</li>
+                        <li>Verify offline indicator appears at top of page</li>
+                        <li>Uncheck "Offline" to restore connection</li>
+                        <li>Verify indicator disappears and reconnection occurs</li>
+                    </ul>
+                </li>
+                <li><strong>Test Offline Operations:</strong>
+                    <ul>
+                        <li>While offline, click "Test Offline Operation"</li>
+                        <li>Verify appropriate error message is shown</li>
+                        <li>Verify no database operations are attempted</li>
+                    </ul>
+                </li>
+                <li><strong>Test Automatic Reconnection:</strong>
+                    <ul>
+                        <li>Go offline using DevTools</li>
+                        <li>Wait for offline indicator</li>
+                        <li>Go back online</li>
+                        <li>Verify "Reconnecting..." message appears</li>
+                        <li>Verify indicator disappears after successful reconnection</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+    <!-- Load NetworkStatusService -->
+    <script src="public/assets/js/networkStatusService.js"></script>
+
+    <script>
+        // Initialize test
+        let logCounter = 0;
+
+        function log(message, type = 'info') {
+            logCounter++;
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+            logCounter = 0;
+            log('Log cleared', 'info');
+        }
+
+        function updateStatusDisplay() {
+            const isOnline = window.networkStatusService.getStatus();
+            const statusIndicator = document.querySelector('.status-indicator');
+            const statusText = document.getElementById('statusText');
+            const browserOnline = document.getElementById('browserOnline');
+            const serviceStatus = document.getElementById('serviceStatus');
+
+            if (isOnline) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Online';
+                statusText.className = 'text-success fw-bold';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Offline';
+                statusText.className = 'text-danger fw-bold';
+            }
+
+            browserOnline.textContent = navigator.onLine ? 'Online' : 'Offline';
+            serviceStatus.textContent = window.networkStatusService.initialized ? 'Initialized' : 'Not Initialized';
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const bgClass = type === 'success' ? 'bg-success' : 
+                           type === 'danger' ? 'bg-danger' : 
+                           type === 'warning' ? 'bg-warning' : 'bg-info';
+            
+            const toastHtml = `
+                <div id="${toastId}" class="toast ${bgClass} text-white" role="alert">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // Test functions
+        function testSimulateOffline() {
+            log('Simulating offline state...', 'warning');
+            window.dispatchEvent(new Event('offline'));
+            setTimeout(updateStatusDisplay, 100);
+        }
+
+        function testSimulateOnline() {
+            log('Simulating online state...', 'success');
+            window.dispatchEvent(new Event('online'));
+            setTimeout(updateStatusDisplay, 100);
+        }
+
+        function testOfflineOperation() {
+            log('Testing offline operation...', 'info');
+            
+            if (!window.networkStatusService.getStatus()) {
+                log('Network is offline - showing error message', 'error');
+                window.networkStatusService.showOfflineError('Cannot perform this operation while offline');
+            } else {
+                log('Network is online - operation would proceed', 'success');
+                showToast('Operation would proceed normally', 'success');
+            }
+        }
+
+        function testReconnection() {
+            log('Testing reconnection callback...', 'info');
+            
+            // Add a test reconnection callback
+            const testCallback = async () => {
+                log('Reconnection callback executed!', 'success');
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        log('Simulated service reconnection complete', 'success');
+                        resolve();
+                    }, 1000);
+                });
+            };
+            
+            window.networkStatusService.addReconnectCallback(testCallback);
+            log('Reconnection callback registered', 'info');
+            log('Now simulate going online to trigger reconnection', 'info');
+        }
+
+        // Initialize NetworkStatusService
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Initializing NetworkStatusService...', 'info');
+            
+            if (window.networkStatusService) {
+                window.networkStatusService.initialize();
+                log('NetworkStatusService initialized successfully', 'success');
+                
+                // Add listener for status changes
+                window.networkStatusService.addListener((isOnline, wasOnline) => {
+                    log(`Network status changed: ${wasOnline ? 'online' : 'offline'} → ${isOnline ? 'online' : 'offline'}`, 
+                        isOnline ? 'success' : 'error');
+                    updateStatusDisplay();
+                });
+                
+                updateStatusDisplay();
+            } else {
+                log('NetworkStatusService not found!', 'error');
+            }
+        });
+
+        // Update status every 2 seconds
+        setInterval(updateStatusDisplay, 2000);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

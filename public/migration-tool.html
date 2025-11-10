@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Migration Tool - MCI Delivery Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .migration-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .step-card.active {
+            border-color: #0d6efd;
+            background-color: #f0f7ff;
+        }
+        .step-card.success {
+            border-color: #198754;
+            background-color: #f0fff4;
+        }
+        .step-card.error {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            border-radius: 50%;
+            background-color: #6c757d;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .step-card.active .step-number {
+            background-color: #0d6efd;
+        }
+        .step-card.success .step-number {
+            background-color: #198754;
+        }
+        .step-card.error .step-number {
+            background-color: #dc3545;
+        }
+        .progress-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .results-table {
+            margin-top: 15px;
+        }
+        .log-entry {
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-left: 3px solid #6c757d;
+            background-color: #f8f9fa;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+        .log-entry.success {
+            border-left-color: #198754;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+        }
+        .log-entry.warning {
+            border-left-color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="migration-container">
+        <h1 class="mb-4">
+            <i class="bi bi-database"></i> Data Migration Tool
+        </h1>
+        <p class="lead">Migrate your data from localStorage to Supabase database</p>
+        
+        <div class="alert alert-warning" role="alert">
+            <strong>⚠️ Important:</strong> This tool will migrate all your local data to Supabase. 
+            Make sure you have a stable internet connection and Supabase is properly configured.
+        </div>
+
+        <!-- Step 1: Export -->
+        <div class="step-card" id="step-export">
+            <h4>
+                <span class="step-number">1</span>
+                Export localStorage Data
+            </h4>
+            <p>Export all data from localStorage to a JSON backup file.</p>
+            <button class="btn btn-primary" id="btn-export" onclick="runExport()">
+                Export Data
+            </button>
+            <div id="export-results" class="results-table" style="display: none;"></div>
+        </div>
+
+        <!-- Step 2: Import -->
+        <div class="step-card" id="step-import">
+            <h4>
+                <span class="step-number">2</span>
+                Import to Supabase
+            </h4>
+            <p>Import the exported data to Supabase database.</p>
+            <button class="btn btn-primary" id="btn-import" onclick="runImport()" disabled>
+                Import to Supabase
+            </button>
+            <div id="import-progress" class="progress-info" style="display: none;"></div>
+            <div id="import-results" class="results-table" style="display: none;"></div>
+        </div>
+
+        <!-- Step 3: Verify -->
+        <div class="step-card" id="step-verify">
+            <h4>
+                <span class="step-number">3</span>
+                Verify Data Integrity
+            </h4>
+            <p>Verify that all data was successfully imported to Supabase.</p>
+            <button class="btn btn-primary" id="btn-verify" onclick="runVerify()" disabled>
+                Verify Data
+            </button>
+            <div id="verify-results" class="results-table" style="display: none;"></div>
+        </div>
+
+        <!-- Step 4: Clear -->
+        <div class="step-card" id="step-clear">
+            <h4>
+                <span class="step-number">4</span>
+                Clear localStorage
+            </h4>
+            <p>Clear localStorage data after successful migration.</p>
+            <button class="btn btn-danger" id="btn-clear" onclick="runClear()" disabled>
+                Clear localStorage
+            </button>
+            <div id="clear-results" class="results-table" style="display: none;"></div>
+        </div>
+
+        <!-- Complete Migration Button -->
+        <div class="mt-4 text-center">
+            <button class="btn btn-success btn-lg" id="btn-complete" onclick="runCompleteMigration()">
+                🚀 Run Complete Migration
+            </button>
+            <p class="text-muted mt-2">This will run all steps automatically</p>
+        </div>
+
+        <!-- Migration Log -->
+        <div class="mt-5">
+            <h4>Migration Log</h4>
+            <div id="migration-log" style="max-height: 300px; overflow-y: auto;"></div>
+            <button class="btn btn-sm btn-outline-secondary mt-2" onclick="downloadLog()">
+                Download Log
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/supabase-client.js"></script>
+    <script src="assets/js/dataService.js"></script>
+    <script src="assets/js/migrationUtility.js"></script>
+    
+    <script>
+        let migrationUtility;
+        let exportedData = null;
+
+        // Initialize
+        async function init() {
+            try {
+                // Initialize Supabase client
+                if (typeof supabaseClient === 'function') {
+                    window.supabaseClient();
+                }
+
+                // Initialize DataService
+                if (typeof dataService !== 'undefined') {
+                    await dataService.initialize();
+                }
+
+                // Create MigrationUtility instance
+                migrationUtility = new MigrationUtility(dataService);
+                
+                addLog('info', 'Migration tool initialized successfully');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                addLog('error', `Initialization failed: ${error.message}`);
+                alert('Failed to initialize migration tool. Check console for details.');
+            }
+        }
+
+        // Export localStorage data
+        function runExport() {
+            try {
+                addLog('info', 'Starting export...');
+                setStepActive('step-export');
+                
+                const result = migrationUtility.exportLocalStorageData();
+                exportedData = result.data;
+                
+                // Display results
+                const resultsDiv = document.getElementById('export-results');
+                resultsDiv.innerHTML = `
+                    <table class="table table-sm">
+                        <tr><td>Active Deliveries:</td><td>${result.stats.activeDeliveries}</td></tr>
+                        <tr><td>Delivery History:</td><td>${result.stats.deliveryHistory}</td></tr>
+                        <tr><td>Total Deliveries:</td><td><strong>${result.stats.totalDeliveries}</strong></td></tr>
+                        <tr><td>Customers:</td><td>${result.stats.customers}</td></tr>
+                        <tr><td>EPOD Records:</td><td>${result.stats.epodRecords}</td></tr>
+                    </table>
+                `;
+                resultsDiv.style.display = 'block';
+                
+                setStepSuccess('step-export');
+                document.getElementById('btn-import').disabled = false;
+                addLog('success', `Export completed: ${result.stats.totalDeliveries} deliveries, ${result.stats.customers} customers`);
+            } catch (error) {
+                setStepError('step-export');
+                addLog('error', `Export failed: ${error.message}`);
+                alert('Export failed: ' + error.message);
+            }
+        }
+
+        // Import to Supabase
+        async function runImport() {
+            if (!exportedData) {
+                alert('Please export data first');
+                return;
+            }
+
+            try {
+                addLog('info', 'Starting import to Supabase...');
+                setStepActive('step-import');
+                document.getElementById('btn-import').disabled = true;
+                
+                const progressDiv = document.getElementById('import-progress');
+                progressDiv.style.display = 'block';
+                
+                const result = await migrationUtility.importToSupabase(exportedData, (type, current, total, item) => {
+                    progressDiv.textContent = `Importing ${type}: ${current}/${total} - ${item}`;
+                });
+                
+                // Display results
+                const resultsDiv = document.getElementById('import-results');
+                resultsDiv.innerHTML = `
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Type</th><th>Success</th><th>Failed</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Deliveries</td><td class="text-success">${result.deliveries.success}</td><td class="text-danger">${result.deliveries.failed}</td></tr>
+                            <tr><td>Customers</td><td class="text-success">${result.customers.success}</td><td class="text-danger">${result.customers.failed}</td></tr>
+                            <tr><td>EPOD Records</td><td class="text-success">${result.epodRecords.success}</td><td class="text-danger">${result.epodRecords.failed}</td></tr>
+                            <tr><th>Total</th><th class="text-success">${result.totalSuccess}</th><th class="text-danger">${result.totalFailed}</th></tr>
+                        </tbody>
+                    </table>
+                `;
+                resultsDiv.style.display = 'block';
+                
+                setStepSuccess('step-import');
+                document.getElementById('btn-verify').disabled = false;
+                addLog('success', `Import completed: ${result.totalSuccess} records imported, ${result.totalFailed} failed`);
+            } catch (error) {
+                setStepError('step-import');
+                addLog('error', `Import failed: ${error.message}`);
+                alert('Import failed: ' + error.message);
+            }
+        }
+
+        // Verify data integrity
+        async function runVerify() {
+            if (!exportedData) {
+                alert('Please export and import data first');
+                return;
+            }
+
+            try {
+                addLog('info', 'Starting verification...');
+                setStepActive('step-verify');
+                
+                const result = await migrationUtility.verifyDataIntegrity(exportedData);
+                
+                // Display results
+                const resultsDiv = document.getElementById('verify-results');
+                resultsDiv.innerHTML = `
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Type</th><th>Expected</th><th>Actual</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Deliveries</td>
+                                <td>${result.deliveries.expected}</td>
+                                <td>${result.deliveries.actual}</td>
+                                <td>${result.deliveries.match ? '✓' : '✗'}</td>
+                            </tr>
+                            <tr>
+                                <td>Customers</td>
+                                <td>${result.customers.expected}</td>
+                                <td>${result.customers.actual}</td>
+                                <td>${result.customers.match ? '✓' : '✗'}</td>
+                            </tr>
+                            <tr>
+                                <td>EPOD Records</td>
+                                <td>${result.epodRecords.expected}</td>
+                                <td>${result.epodRecords.actual}</td>
+                                <td>${result.epodRecords.match ? '✓' : '✗'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="alert ${result.overallSuccess ? 'alert-success' : 'alert-warning'}">
+                        ${result.overallSuccess ? '✓ Verification passed!' : '⚠ Verification has warnings'}
+                    </div>
+                `;
+                resultsDiv.style.display = 'block';
+                
+                if (result.overallSuccess) {
+                    setStepSuccess('step-verify');
+                    document.getElementById('btn-clear').disabled = false;
+                    addLog('success', 'Verification passed - data integrity confirmed');
+                } else {
+                    setStepError('step-verify');
+                    addLog('warning', 'Verification completed with warnings');
+                }
+            } catch (error) {
+                setStepError('step-verify');
+                addLog('error', `Verification failed: ${error.message}`);
+                alert('Verification failed: ' + error.message);
+            }
+        }
+
+        // Clear localStorage
+        function runClear() {
+            try {
+                addLog('info', 'Clearing localStorage...');
+                setStepActive('step-clear');
+                
+                const result = migrationUtility.clearLocalStorage(false);
+                
+                if (result) {
+                    const resultsDiv = document.getElementById('clear-results');
+                    resultsDiv.innerHTML = '<div class="alert alert-success">✓ localStorage cleared successfully</div>';
+                    resultsDiv.style.display = 'block';
+                    
+                    setStepSuccess('step-clear');
+                    addLog('success', 'localStorage cleared successfully');
+                } else {
+                    addLog('info', 'localStorage clear cancelled by user');
+                }
+            } catch (error) {
+                setStepError('step-clear');
+                addLog('error', `Clear failed: ${error.message}`);
+                alert('Clear failed: ' + error.message);
+            }
+        }
+
+        // Run complete migration
+        async function runCompleteMigration() {
+            if (!confirm('This will run the complete migration process. Continue?')) {
+                return;
+            }
+
+            try {
+                addLog('info', '=== Starting Complete Migration ===');
+                document.getElementById('btn-complete').disabled = true;
+                
+                const result = await migrationUtility.performCompleteMigration((step, current, total, message) => {
+                    addLog('info', `${step}: ${message}`);
+                });
+                
+                if (result.success) {
+                    addLog('success', '=== Migration Completed Successfully ===');
+                    alert('Migration completed successfully! Your data has been migrated to Supabase.');
+                } else {
+                    addLog('warning', '=== Migration Completed with Warnings ===');
+                    alert('Migration completed but verification failed. Please check the log for details.');
+                }
+            } catch (error) {
+                addLog('error', `=== Migration Failed: ${error.message} ===`);
+                alert('Migration failed: ' + error.message);
+            } finally {
+                document.getElementById('btn-complete').disabled = false;
+            }
+        }
+
+        // Helper functions
+        function setStepActive(stepId) {
+            const step = document.getElementById(stepId);
+            step.classList.remove('success', 'error');
+            step.classList.add('active');
+        }
+
+        function setStepSuccess(stepId) {
+            const step = document.getElementById(stepId);
+            step.classList.remove('active', 'error');
+            step.classList.add('success');
+        }
+
+        function setStepError(stepId) {
+            const step = document.getElementById(stepId);
+            step.classList.remove('active', 'success');
+            step.classList.add('error');
+        }
+
+        function addLog(level, message) {
+            const logDiv = document.getElementById('migration-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${level}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function downloadLog() {
+            if (migrationUtility) {
+                migrationUtility.downloadMigrationLog();
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

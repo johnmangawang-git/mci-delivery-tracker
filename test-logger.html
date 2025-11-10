@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logger Class Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+        .result-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .log-info { color: #4fc3f7; }
+        .log-warn { color: #ffb74d; }
+        .log-error { color: #e57373; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Logger Class Test Suite</h1>
+        <p>This page tests the Logger class implementation for monitoring and debugging.</p>
+
+        <div class="test-section">
+            <h2>Basic Logging Tests</h2>
+            <button onclick="testBasicInfo()">Test info()</button>
+            <button onclick="testBasicWarn()">Test warn()</button>
+            <button onclick="testBasicError()">Test error()</button>
+            <button onclick="testLogWithData()">Test log() with data</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Advanced Logging Tests</h2>
+            <button onclick="testDatabaseOperation()">Test Database Operation Log</button>
+            <button onclick="testUserAction()">Test User Action Log</button>
+            <button onclick="testPerformance()">Test Performance Log</button>
+            <button onclick="testNetworkError()">Test Network Error Log</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Timer Tests</h2>
+            <button onclick="testTimer()">Test Performance Timer</button>
+            <button onclick="testAsyncTimer()">Test Async Timer</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Monitoring Service Integration</h2>
+            <button onclick="testMonitoringService()">Test with Monitoring Service</button>
+            <button onclick="testWithoutMonitoringService()">Test without Monitoring Service</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Utility Tests</h2>
+            <button onclick="testEnableDisable()">Test Enable/Disable</button>
+            <button onclick="testInvalidLogLevel()">Test Invalid Log Level</button>
+            <button onclick="runAllTests()">🚀 Run All Tests</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="results">
+            <h3>Test Results:</h3>
+            <p>Click a test button to see results. Check the browser console for detailed logs.</p>
+        </div>
+
+        <div class="log-output" id="logOutput">
+            <strong>Console Output Preview:</strong><br>
+            (Check browser console for full output)
+        </div>
+    </div>
+
+    <script src="public/assets/js/logger.js"></script>
+    <script>
+        let testResults = [];
+        let logOutputLines = [];
+
+        // Override console methods to capture output
+        const originalConsole = {
+            info: console.info,
+            warn: console.warn,
+            error: console.error,
+            log: console.log
+        };
+
+        function captureConsoleOutput(method, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const line = `[${timestamp}] ${method.toUpperCase()}: ${args.join(' ')}`;
+            logOutputLines.push({ method, line });
+            updateLogOutput();
+            originalConsole[method](...args);
+        }
+
+        console.info = (...args) => captureConsoleOutput('info', ...args);
+        console.warn = (...args) => captureConsoleOutput('warn', ...args);
+        console.error = (...args) => captureConsoleOutput('error', ...args);
+
+        function updateLogOutput() {
+            const output = document.getElementById('logOutput');
+            const lines = logOutputLines.slice(-20).map(item => {
+                const className = `log-${item.method}`;
+                return `<div class="${className}">${item.line}</div>`;
+            }).join('');
+            output.innerHTML = '<strong>Console Output Preview (last 20 lines):</strong><br>' + lines;
+        }
+
+        function addResult(testName, passed, message) {
+            testResults.push({ testName, passed, message });
+            displayResults();
+        }
+
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            let html = '<h3>Test Results:</h3>';
+            
+            testResults.forEach(result => {
+                const statusClass = result.passed ? 'success' : 'error';
+                const icon = result.passed ? '✓' : '✗';
+                html += `
+                    <div class="result-item">
+                        <span class="${statusClass}">${icon} ${result.testName}</span>: ${result.message}
+                    </div>
+                `;
+            });
+
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            html += `<p><strong>Total: ${passed}/${total} tests passed</strong></p>`;
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function clearResults() {
+            testResults = [];
+            logOutputLines = [];
+            document.getElementById('results').innerHTML = '<h3>Test Results:</h3><p>Results cleared.</p>';
+            document.getElementById('logOutput').innerHTML = '<strong>Console Output Preview:</strong><br>(Check browser console for full output)';
+        }
+
+        // Test Functions
+        function testBasicInfo() {
+            try {
+                const result = Logger.info('This is an info message');
+                const passed = result && result.level === 'info' && result.message === 'This is an info message';
+                addResult('Basic info()', passed, passed ? 'Info log created successfully' : 'Failed to create info log');
+            } catch (error) {
+                addResult('Basic info()', false, error.message);
+            }
+        }
+
+        function testBasicWarn() {
+            try {
+                const result = Logger.warn('This is a warning message');
+                const passed = result && result.level === 'warn' && result.message === 'This is a warning message';
+                addResult('Basic warn()', passed, passed ? 'Warning log created successfully' : 'Failed to create warning log');
+            } catch (error) {
+                addResult('Basic warn()', false, error.message);
+            }
+        }
+
+        function testBasicError() {
+            try {
+                const result = Logger.error('This is an error message');
+                const passed = result && result.level === 'error' && result.message === 'This is an error message';
+                addResult('Basic error()', passed, passed ? 'Error log created successfully' : 'Failed to create error log');
+            } catch (error) {
+                addResult('Basic error()', false, error.message);
+            }
+        }
+
+        function testLogWithData() {
+            try {
+                const testData = { userId: 123, action: 'test', timestamp: Date.now() };
+                const result = Logger.log('info', 'Log with data', testData);
+                const passed = result && result.data && result.data.userId === 123;
+                addResult('Log with data', passed, passed ? 'Log with data created successfully' : 'Failed to include data in log');
+            } catch (error) {
+                addResult('Log with data', false, error.message);
+            }
+        }
+
+        function testDatabaseOperation() {
+            try {
+                Logger.logDatabaseOperation('saveDelivery', 'started', { drNumber: 'DR-001' });
+                Logger.logDatabaseOperation('saveDelivery', 'success', { drNumber: 'DR-001', duration: 150 });
+                Logger.logDatabaseOperation('deleteCustomer', 'failed', { customerId: 'C-123', error: 'Not found' });
+                addResult('Database Operation Log', true, 'Database operation logs created successfully');
+            } catch (error) {
+                addResult('Database Operation Log', false, error.message);
+            }
+        }
+
+        function testUserAction() {
+            try {
+                Logger.logUserAction('button_click', { buttonId: 'saveBtn', page: 'deliveries' });
+                Logger.logUserAction('form_submit', { formId: 'customerForm', fields: 5 });
+                addResult('User Action Log', true, 'User action logs created successfully');
+            } catch (error) {
+                addResult('User Action Log', false, error.message);
+            }
+        }
+
+        function testPerformance() {
+            try {
+                Logger.logPerformance('page_load', 1250, 'ms');
+                Logger.logPerformance('api_response', 350, 'ms');
+                Logger.logPerformance('database_query', 45, 'ms');
+                addResult('Performance Log', true, 'Performance logs created successfully');
+            } catch (error) {
+                addResult('Performance Log', false, error.message);
+            }
+        }
+
+        function testNetworkError() {
+            try {
+                const mockError = new Error('Connection timeout');
+                mockError.stack = 'Error: Connection timeout\n    at testNetworkError';
+                Logger.logNetworkError('/api/deliveries', mockError, { statusCode: 504 });
+                addResult('Network Error Log', true, 'Network error log created successfully');
+            } catch (error) {
+                addResult('Network Error Log', false, error.message);
+            }
+        }
+
+        function testTimer() {
+            try {
+                const timer = Logger.startTimer('test_operation');
+                // Simulate some work
+                let sum = 0;
+                for (let i = 0; i < 1000000; i++) {
+                    sum += i;
+                }
+                const duration = timer.stop();
+                const passed = duration >= 0;
+                addResult('Performance Timer', passed, `Timer measured ${duration.toFixed(2)}ms`);
+            } catch (error) {
+                addResult('Performance Timer', false, error.message);
+            }
+        }
+
+        async function testAsyncTimer() {
+            try {
+                const timer = Logger.startTimer('async_operation');
+                // Simulate async work
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const duration = timer.stop();
+                const passed = duration >= 100;
+                addResult('Async Timer', passed, `Async timer measured ${duration.toFixed(2)}ms`);
+            } catch (error) {
+                addResult('Async Timer', false, error.message);
+            }
+        }
+
+        function testMonitoringService() {
+            try {
+                // Create mock monitoring service
+                window.monitoringService = {
+                    logs: [],
+                    log: function(entry) {
+                        this.logs.push(entry);
+                    }
+                };
+
+                Logger.info('Test with monitoring service', { test: true });
+                const passed = window.monitoringService.logs.length > 0;
+                addResult('Monitoring Service Integration', passed, 
+                    passed ? `Monitoring service received ${window.monitoringService.logs.length} log(s)` : 'Monitoring service not called');
+                
+                // Clean up
+                delete window.monitoringService;
+            } catch (error) {
+                addResult('Monitoring Service Integration', false, error.message);
+            }
+        }
+
+        function testWithoutMonitoringService() {
+            try {
+                // Ensure no monitoring service exists
+                delete window.monitoringService;
+                
+                Logger.info('Test without monitoring service');
+                addResult('Without Monitoring Service', true, 'Logger works without monitoring service');
+            } catch (error) {
+                addResult('Without Monitoring Service', false, error.message);
+            }
+        }
+
+        function testEnableDisable() {
+            try {
+                Logger.setEnabled(false);
+                const disabled = !Logger.isEnabled();
+                
+                Logger.setEnabled(true);
+                const enabled = Logger.isEnabled();
+                
+                const passed = disabled && enabled;
+                addResult('Enable/Disable', passed, passed ? 'Enable/disable functionality works' : 'Enable/disable failed');
+            } catch (error) {
+                addResult('Enable/Disable', false, error.message);
+            }
+        }
+
+        function testInvalidLogLevel() {
+            try {
+                const result = Logger.log('invalid_level', 'Test message');
+                const passed = result && result.level === 'info'; // Should default to info
+                addResult('Invalid Log Level', passed, passed ? 'Invalid level defaults to info' : 'Invalid level handling failed');
+            } catch (error) {
+                addResult('Invalid Log Level', false, error.message);
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            testBasicInfo();
+            testBasicWarn();
+            testBasicError();
+            testLogWithData();
+            testDatabaseOperation();
+            testUserAction();
+            testPerformance();
+            testNetworkError();
+            testTimer();
+            await testAsyncTimer();
+            testMonitoringService();
+            testWithoutMonitoringService();
+            testEnableDisable();
+            testInvalidLogLevel();
+            
+            Logger.info('All tests completed', { totalTests: testResults.length });
+        }
+
+        // Log page load
+        Logger.info('Logger test page loaded', { 
+            url: window.location.href,
+            timestamp: new Date().toISOString()
+        });
+    </script>
+</body>
+</html>
