@@ -1672,8 +1672,15 @@ async function initApp() {
     }
     
     // Load initial views (they will fetch from DataService directly)
-    loadActiveDeliveries();
-    loadDeliveryHistory();
+    // IMPORTANT: Await these to ensure they complete before moving on
+    try {
+        await loadActiveDeliveries();
+        await loadDeliveryHistory();
+        console.log('✅ Initial data loaded successfully');
+    } catch (error) {
+        console.error('❌ Failed to load initial data:', error);
+        showToast('Failed to load data. Please refresh the page.', 'danger');
+    }
     
     // Update booking view dashboard with real data
     if (typeof window.updateBookingViewDashboard === 'function') {
@@ -1685,7 +1692,7 @@ async function initApp() {
     // Initialize real-time subscriptions
     initRealtimeSubscriptions();
     
-    console.log('App initialized successfully');
+    console.log('✅ App initialized successfully');
 }
 
 // Initialize real-time subscriptions for deliveries
