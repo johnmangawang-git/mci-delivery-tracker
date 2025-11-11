@@ -4,6 +4,21 @@ console.log('=== CUSTOMERS.JS LOADED ===');
 // Real-time service instance
 let realtimeService = null;
 
+/**
+ * Ensure DataService is initialized before use
+ * This is a defensive check to handle race conditions
+ */
+async function ensureDataServiceInitialized() {
+    if (!window.dataService) {
+        throw new Error('DataService not available');
+    }
+    
+    if (!window.dataService.isInitialized) {
+        console.warn('⚠️ DataService not initialized yet, initializing now...');
+        await window.dataService.initialize();
+    }
+}
+
 // Show toast notification
 function showToast(message, type = 'success') {
     // Create toast element if it doesn't exist
@@ -61,10 +76,8 @@ async function loadCustomers() {
     window.loadingCustomers = true;
     
     try {
-        // Ensure dataService is available
-        if (!window.dataService || typeof window.dataService.getCustomers !== 'function') {
-            throw new Error('DataService not available. Please ensure the application is properly initialized.');
-        }
+        // Ensure DataService is initialized
+        await ensureDataServiceInitialized();
         
         // Load customers from Supabase
         const customers = await window.dataService.getCustomers();
@@ -225,10 +238,8 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
         console.log('Vendor Number:', vendorNumber);
         console.log('Destination:', destination);
         
-        // Ensure dataService is available
-        if (!window.dataService || typeof window.dataService.getCustomers !== 'function') {
-            throw new Error('DataService not available');
-        }
+        // Ensure DataService is initialized
+        await ensureDataServiceInitialized();
         
         // Load current customers from database
         const customers = await window.dataService.getCustomers();
@@ -264,6 +275,9 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
                     throw new Error(window.DataValidator.formatErrors(validation.errors));
                 }
             }
+            
+            // Ensure DataService is initialized
+            await ensureDataServiceInitialized();
             
             // Save updated customer to Supabase
             await window.dataService.saveCustomer(updatedCustomer);
@@ -305,6 +319,9 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
             }
         }
 
+        // Ensure DataService is initialized
+        await ensureDataServiceInitialized();
+        
         // Save to Supabase
         await window.dataService.saveCustomer(newCustomer);
         console.log('New customer auto-created:', newCustomer.name);
@@ -394,6 +411,9 @@ async function saveEditedCustomer() {
             throw new Error('DataService not available');
         }
         
+        // Ensure DataService is initialized
+        await ensureDataServiceInitialized();
+        
         // Save to Supabase
         await window.dataService.saveCustomer(updatedCustomer);
         
@@ -441,6 +461,9 @@ async function deleteCustomer(customerId) {
         if (!window.dataService || typeof window.dataService.deleteCustomer !== 'function') {
             throw new Error('DataService not available');
         }
+        
+        // Ensure DataService is initialized
+        await ensureDataServiceInitialized();
         
         // Delete from Supabase
         await window.dataService.deleteCustomer(customerId);
@@ -761,6 +784,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!window.dataService || typeof window.dataService.saveCustomer !== 'function') {
                     throw new Error('DataService not available');
                 }
+                
+                // Ensure DataService is initialized
+                await ensureDataServiceInitialized();
                 
                 // Save customer to Supabase
                 await window.dataService.saveCustomer(newCustomer);
