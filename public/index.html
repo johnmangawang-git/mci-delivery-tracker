@@ -154,10 +154,10 @@
         }
     </script>
 
-    <!-- Supabase CDN with fallback -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"
-        onload="this.onload=null;window.supabaseLoaded=true;"
-        onerror="this.onerror=null;window.supabaseLoaded=false;loadLocalSupabase();"></script>
+    <!-- Supabase CDN with fallback - trying unpkg CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"
+        onload="this.onload=null;window.supabaseLoaded=true;console.log('✅ Supabase loaded from unpkg CDN');"
+        onerror="this.onerror=null;window.supabaseLoaded=false;console.error('❌ Supabase CDN failed');loadLocalSupabase();"></script>
 
     <!-- SUPABASE CLIENT COMPREHENSIVE FIX - Must load first -->
     <script src="assets/js/supabase-client-fix.js"></script>
