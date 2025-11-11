@@ -573,66 +573,38 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 }
             }
             
-            console.log('🔄 Step 6: Refreshing delivery views from database...');
+            console.log('🔄 Step 6: Updating UI immediately...');
             
-            // Force clear pagination state to ensure fresh query
-            if (window.paginationState) {
-                console.log('  🔄 Resetting pagination state and forcing reload...');
-                if (window.paginationState.active) {
-                    window.paginationState.active.isLoading = false;
-                    window.paginationState.active.currentPage = 1; // Reset to page 1
-                }
-                if (window.paginationState.history) {
-                    window.paginationState.history.isLoading = false;
-                    window.paginationState.history.currentPage = 1; // Reset to page 1
-                }
-            }
-            
-            // Wait a bit more to ensure state is cleared
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            await refreshDeliveryViews();
-            
-            // CRITICAL: Directly manipulate the activeDeliveries array to remove the signed DR
-            console.log('  🗑️ Directly removing signed DR from window.activeDeliveries...');
+            // STEP 1: Remove from activeDeliveries array
+            console.log('  🗑️ Removing signed DR from activeDeliveries array...');
             if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
                 const beforeCount = window.activeDeliveries.length;
                 window.activeDeliveries = window.activeDeliveries.filter(d => {
                     const drNum = d.dr_number || d.drNumber;
-                    const isSignedDR = drNum === signatureInfo.drNumber;
-                    if (isSignedDR) {
-                        console.log(`    ❌ Removing DR ${drNum} from activeDeliveries`);
-                    }
-                    return !isSignedDR;
+                    return drNum !== signatureInfo.drNumber;
                 });
-                const afterCount = window.activeDeliveries.length;
-                console.log(`    📊 Removed ${beforeCount - afterCount} delivery(ies)`);
+                console.log(`    ✅ Removed ${beforeCount - window.activeDeliveries.length} item(s)`);
             }
             
-            // Force repopulate the table to ensure UI is updated
+            // STEP 2: Update the active deliveries table immediately
             if (typeof window.populateActiveDeliveriesTable === 'function') {
-                console.log('  🔄 Force repopulating active deliveries table...');
+                console.log('  🔄 Updating active deliveries table...');
                 window.populateActiveDeliveriesTable();
             }
             
-            console.log('✅ Workflow complete! DR should now be in history.');
-            
-            // Double-check: Log what's in active deliveries after refresh
-            console.log('📊 Active deliveries count after refresh:', window.activeDeliveries?.length);
-            console.log('📊 History count after refresh:', window.deliveryHistory?.length);
-            
-            // Check if the signed DR is still in active deliveries (it shouldn't be)
-            if (window.activeDeliveries) {
-                const stillInActive = window.activeDeliveries.find(d => 
-                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
-                );
-                if (stillInActive) {
-                    console.error('❌ WARNING: DR is still in active deliveries!', stillInActive);
-                    console.error('   Status:', stillInActive.status);
-                } else {
-                    console.log('✅ Confirmed: DR is no longer in active deliveries');
+            // STEP 3: Reload history to show the new completed delivery
+            if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
+                console.log('  📚 Reloading delivery history...');
+                // Reset pagination state for history
+                if (window.paginationState?.history) {
+                    window.paginationState.history.isLoading = false;
                 }
+                await window.loadDeliveryHistoryWithPagination(1);
             }
+            
+            console.log('✅ Workflow complete! DR moved to history.');
+            console.log('📊 Active deliveries count:', window.activeDeliveries?.length);
+            console.log('📊 History count:', window.deliveryHistory?.length);
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)
