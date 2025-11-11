@@ -1922,7 +1922,8 @@ function handleDeliveryUpdate(newRecord, oldRecord) {
         if (activeIndex !== -1) {
             activeDeliveries[activeIndex] = newRecord;
             window.activeDeliveries = activeDeliveries;
-            loadActiveDeliveries();
+            // Just refresh the UI, don't reload from database (prevents duplicates)
+            populateActiveDeliveriesTable();
         }
     }
 }
