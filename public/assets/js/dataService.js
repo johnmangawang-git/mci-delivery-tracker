@@ -37,14 +37,38 @@ class DataService {
         if (!this.client) {
             console.error('❌ Supabase client returned null - Supabase may not be configured');
             
-            // Wait a bit and retry (in case Supabase is still loading)
-            console.log('⏳ Waiting for Supabase to initialize...');
+            // Check if Supabase library is loaded
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase library not loaded from CDN');
+                console.log('⏳ Waiting for Supabase library to load...');
+                
+                // Wait up to 5 seconds for Supabase library to load
+                for (let i = 0; i < 10; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (typeof window.supabase !== 'undefined') {
+                        console.log('✅ Supabase library loaded!');
+                        break;
+                    }
+                }
+                
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error('Supabase library failed to load from CDN. Check your internet connection.');
+                }
+            }
+            
+            // Try to initialize Supabase client
+            console.log('⏳ Attempting to initialize Supabase client...');
+            if (typeof window.initSupabase === 'function') {
+                window.initSupabase();
+            }
+            
+            // Wait a bit for initialization
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             this.client = window.supabaseClient();
             
             if (!this.client) {
-                throw new Error('Supabase client initialization failed. Check your Supabase configuration (URL and API key).');
+                throw new Error('Supabase client initialization failed. Check your Supabase configuration (URL and API key in index.html).');
             }
         }
         
