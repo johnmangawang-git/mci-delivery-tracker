@@ -555,6 +555,15 @@ console.log('app.js loaded');
             const delivery = activeDeliveries[deliveryIndex];
             const oldStatus = delivery.status;
             
+            // CRITICAL: Verify delivery has an ID before saving
+            if (!delivery.id) {
+                console.error('❌ Delivery missing ID! This will create a duplicate.', delivery);
+                showToast('Error: Delivery missing ID. Cannot update status.', 'danger');
+                return;
+            }
+            
+            console.log('📦 Delivery ID verified:', delivery.id);
+            
             // Optimistic UI update
             delivery.status = newStatus;
             
@@ -608,6 +617,7 @@ console.log('app.js loaded');
                     });
                 }
                 
+                console.log('💾 Saving delivery with ID:', delivery.id, 'DR:', delivery.dr_number || delivery.drNumber);
                 await window.dataService.saveDelivery(delivery);
                 console.log('✅ Delivery saved to Supabase');
                 
