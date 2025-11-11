@@ -540,6 +540,13 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
             console.log('✅ Status update result:', updateResult);
             
+            // Verify the status was actually updated
+            if (updateResult && updateResult.status === 'Completed') {
+                console.log('✅ Verified: Status is now Completed in database');
+            } else {
+                console.error('❌ WARNING: Status may not have been updated correctly!', updateResult);
+            }
+            
             // Step 3: Invalidate cache to ensure fresh data is loaded
             if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
                 console.log('🗑️ Step 3: Invalidating deliveries cache');
@@ -567,8 +574,24 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             }
             
             console.log('🔄 Step 6: Refreshing delivery views from database...');
+            
+            // Force clear pagination state to ensure fresh query
+            if (window.paginationState) {
+                console.log('  🔄 Resetting pagination state...');
+                if (window.paginationState.active) {
+                    window.paginationState.active.isLoading = false;
+                }
+                if (window.paginationState.history) {
+                    window.paginationState.history.isLoading = false;
+                }
+            }
+            
             await refreshDeliveryViews();
             console.log('✅ Workflow complete! DR should now be in history.');
+            
+            // Double-check: Log what's in active deliveries after refresh
+            console.log('📊 Active deliveries count after refresh:', window.activeDeliveries?.length);
+            console.log('📊 History count after refresh:', window.deliveryHistory?.length);
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)
