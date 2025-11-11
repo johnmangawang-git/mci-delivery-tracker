@@ -433,25 +433,41 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
             // Save using dataService if available, otherwise fallback to localStorage
             if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveEPodRecord === 'function') {
                 console.log('Saving EPOD record via dataService for DR:', drNum);
-                promises.push(window.dataService.saveEPodRecord(ePodRecord));
+                // Chain both the EPOD save and status update
+                const savePromise = window.dataService.saveEPodRecord(ePodRecord)
+                    .then(() => {
+                        console.log('Updating delivery status to Completed for DR:', drNum);
+                        return window.dataService.updateDeliveryStatus(drNum, 'Completed');
+                    });
+                promises.push(savePromise);
             } else {
                 console.log('Saving EPOD record via localStorage for DR:', drNum);
                 // Fallback to localStorage
                 let existingRecords = JSON.parse(localStorage.getItem('ePodRecords') || '[]');
                 existingRecords.push(ePodRecord);
                 localStorage.setItem('ePodRecords', JSON.stringify(existingRecords));
+                // Update delivery status locally
+                updateDeliveryStatus(drNum, 'Completed');
             }
-            
-            // Update delivery status
-            updateDeliveryStatus(drNum, 'Completed');
         });
         
         // Wait for all saves to complete if there are promises
         if (promises.length > 0) {
             console.log('Waiting for', promises.length, 'EPOD save operations to complete');
-            Promise.all(promises).then((results) => {
+            Promise.all(promises).then(async (results) => {
                 console.log('All EPOD records saved successfully:', results.length);
+                
+                // Invalidate cache to ensure fresh data is loaded
+                if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
+                    console.log('Invalidating deliveries cache');
+                    window.dataService.invalidateCache('deliveries');
+                }
+                
                 showToast(`Saved signatures for ${drNumbers.length} deliveries`, 'success');
+                
+                // Small delay to ensure database propagation
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
                 // Refresh views after all saves complete
                 refreshDeliveryViews();
             }).catch(error => {
@@ -521,10 +537,19 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
 
             // Step 2: Await the update of the delivery status in the main 'deliveries' table.
             console.log('Updating delivery status to Completed in Supabase for DR:', signatureInfo.drNumber);
-            await window.dataService.updateDeliveryStatusInSupabase(signatureInfo.drNumber, 'Completed');
+            await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
             
-            // Step 3: If both are successful, show toast and refresh UI from the source of truth (database).
+            // Step 3: Invalidate cache to ensure fresh data is loaded
+            if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
+                console.log('Invalidating deliveries cache');
+                window.dataService.invalidateCache('deliveries');
+            }
+            
+            // Step 4: If both are successful, show toast and refresh UI from the source of truth (database).
             showToast('E-POD saved and status updated successfully!', 'success');
+            
+            // Small delay to ensure database propagation
+            await new Promise(resolve => setTimeout(resolve, 300));
             refreshDeliveryViews();
 
         } else {
