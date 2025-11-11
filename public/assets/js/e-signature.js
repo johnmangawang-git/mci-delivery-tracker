@@ -536,21 +536,27 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             console.log('EPOD record saved via dataService:', epodResult);
 
             // Step 2: Await the update of the delivery status in the main 'deliveries' table.
-            console.log('Updating delivery status to Completed in Supabase for DR:', signatureInfo.drNumber);
-            await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+            console.log('📝 Step 2: Updating delivery status to Completed in Supabase for DR:', signatureInfo.drNumber);
+            const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+            console.log('✅ Status update result:', updateResult);
             
             // Step 3: Invalidate cache to ensure fresh data is loaded
             if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
-                console.log('Invalidating deliveries cache');
+                console.log('🗑️ Step 3: Invalidating deliveries cache');
                 window.dataService.invalidateCache('deliveries');
             }
             
             // Step 4: If both are successful, show toast and refresh UI from the source of truth (database).
+            console.log('✅ Step 4: E-POD saved and status updated successfully!');
             showToast('E-POD saved and status updated successfully!', 'success');
             
             // Small delay to ensure database propagation
+            console.log('⏳ Waiting 300ms for database propagation...');
             await new Promise(resolve => setTimeout(resolve, 300));
+            
+            console.log('🔄 Step 5: Refreshing delivery views...');
             refreshDeliveryViews();
+            console.log('✅ Workflow complete! DR should now be in history.');
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)

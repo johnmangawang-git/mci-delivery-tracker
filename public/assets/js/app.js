@@ -1868,27 +1868,42 @@ function handleDeliveryInsert(newRecord) {
 // Handle delivery update
 function handleDeliveryUpdate(newRecord, oldRecord) {
     const deliveryId = newRecord.id;
+    const drNumber = newRecord.dr_number || newRecord.drNumber;
+    
+    console.log('🔔 Real-time: Delivery update received', {
+        dr: drNumber,
+        oldStatus: oldRecord.status,
+        newStatus: newRecord.status
+    });
     
     // Check if status changed to/from Completed
     const wasCompleted = oldRecord.status === 'Completed' || oldRecord.status === 'Signed';
     const isCompleted = newRecord.status === 'Completed' || newRecord.status === 'Signed';
     
     if (!wasCompleted && isCompleted) {
+        console.log('📦 Real-time: Moving delivery from Active to History', drNumber);
+        
         // Moved from active to completed
         const activeIndex = activeDeliveries.findIndex(d => d.id === deliveryId);
         if (activeIndex !== -1) {
+            console.log('  ✅ Removed from activeDeliveries array');
             activeDeliveries.splice(activeIndex, 1);
             window.activeDeliveries = activeDeliveries;
+        } else {
+            console.log('  ⚠️ Not found in activeDeliveries array');
         }
         
         const historyIndex = deliveryHistory.findIndex(d => d.id === deliveryId);
         if (historyIndex === -1) {
+            console.log('  ✅ Added to deliveryHistory array');
             deliveryHistory.unshift(newRecord);
         } else {
+            console.log('  ✅ Updated in deliveryHistory array');
             deliveryHistory[historyIndex] = newRecord;
         }
         window.deliveryHistory = deliveryHistory;
         
+        console.log('  🔄 Refreshing both views...');
         loadActiveDeliveries();
         loadDeliveryHistory();
         
