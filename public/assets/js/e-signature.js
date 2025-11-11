@@ -468,12 +468,12 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
                 // Small delay to ensure database propagation
                 await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Refresh views after all saves complete
-                refreshDeliveryViews();
-            }).catch(error => {
+                // Refresh views after all saves complete - AWAIT the refresh
+                await refreshDeliveryViews();
+            }).catch(async (error) => {
                 console.error('Error saving E-POD records:', error);
                 // Even if there's an error, still refresh views to show what we can
-                refreshDeliveryViews();
+                await refreshDeliveryViews();
                 showToast('Error saving some E-POD records. Please try again.', 'error');
             }).finally(() => {
                 // Always close modal
@@ -485,8 +485,8 @@ function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, origin
             // If no promises (using localStorage), show success and refresh immediately
             console.log('EPOD records saved to localStorage, refreshing views');
             showToast(`Saved signatures for ${drNumbers.length} deliveries`, 'success');
-            // Refresh views
-            refreshDeliveryViews();
+            // Refresh views - AWAIT the refresh
+            await refreshDeliveryViews();
             // Close modal
             closeESignatureModal();
             // Reset save button
@@ -551,11 +551,23 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             showToast('E-POD saved and status updated successfully!', 'success');
             
             // Small delay to ensure database propagation
-            console.log('⏳ Waiting 300ms for database propagation...');
-            await new Promise(resolve => setTimeout(resolve, 300));
+            console.log('⏳ Waiting 500ms for database propagation...');
+            await new Promise(resolve => setTimeout(resolve, 500));
             
-            console.log('🔄 Step 5: Refreshing delivery views...');
-            refreshDeliveryViews();
+            console.log('🔄 Step 5: Manually removing DR from active deliveries array...');
+            // Manually remove from activeDeliveries array to ensure immediate UI update
+            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                const indexToRemove = window.activeDeliveries.findIndex(d => 
+                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
+                );
+                if (indexToRemove !== -1) {
+                    window.activeDeliveries.splice(indexToRemove, 1);
+                    console.log('  ✅ Removed DR from activeDeliveries array');
+                }
+            }
+            
+            console.log('🔄 Step 6: Refreshing delivery views from database...');
+            await refreshDeliveryViews();
             console.log('✅ Workflow complete! DR should now be in history.');
 
         } else {
@@ -604,25 +616,38 @@ function closeESignatureModal() {
 /**
  * Refresh delivery views after saving signature
  */
-function refreshDeliveryViews() {
-    console.log('Refreshing delivery views');
+async function refreshDeliveryViews() {
+    console.log('🔄 Refreshing delivery views...');
     
-    // Refresh active deliveries view
-    if (typeof loadActiveDeliveries === 'function') {
-        try {
-            loadActiveDeliveries();
-            console.log('Active deliveries view refreshed');
-        } catch (error) {
-            console.error('Error refreshing active deliveries view:', error);
+    // Force reload from page 1 for both views
+    try {
+        // Refresh active deliveries view - use pagination function to force reload
+        if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
+            console.log('  📋 Reloading active deliveries from database...');
+            await window.loadActiveDeliveriesWithPagination(1);
+            console.log('  ✅ Active deliveries reloaded');
+        } else if (typeof loadActiveDeliveries === 'function') {
+            console.log('  📋 Reloading active deliveries (legacy)...');
+            await loadActiveDeliveries();
+            console.log('  ✅ Active deliveries reloaded');
         }
+    } catch (error) {
+        console.error('  ❌ Error refreshing active deliveries:', error);
     }
     
-    // Refresh delivery history view
-    if (typeof loadDeliveryHistory === 'function') {
-        try {
-            loadDeliveryHistory();
-            console.log('Delivery history view refreshed');
-        } catch (error) {
+    try {
+        // Refresh delivery history view - use pagination function to force reload
+        if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
+            console.log('  📚 Reloading delivery history from database...');
+            await window.loadDeliveryHistoryWithPagination(1);
+            console.log('  ✅ Delivery history reloaded');
+        } else if (typeof loadDeliveryHistory === 'function') {
+            console.log('  📚 Reloading delivery history (legacy)...');
+            await loadDeliveryHistory();
+            console.log('  ✅ Delivery history reloaded');
+        }
+    } catch (error) {
+        console.error('  ❌ Error refreshing delivery history:', error);
             console.error('Error refreshing delivery history view:', error);
         }
     }
