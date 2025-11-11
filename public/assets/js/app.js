@@ -1673,8 +1673,12 @@ async function initApp() {
             console.log('✅ DataService initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize DataService:', error);
-            showToast('Failed to initialize application. Please refresh the page.', 'danger');
-            return; // Stop initialization if DataService fails
+            // Show more detailed error message
+            const errorMsg = error.message || 'Unknown error';
+            showToast(`Failed to initialize: ${errorMsg}`, 'danger');
+            console.error('Full error details:', error);
+            // Don't return - let the app try to continue
+            console.warn('⚠️ Continuing without DataService initialization...');
         }
     } else {
         console.error('❌ DataService not available');
