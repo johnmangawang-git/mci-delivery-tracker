@@ -2655,7 +2655,13 @@ async function createBookingFromDR(bookingData) {
         
         // Save to Supabase using dataService - SAME APPROACH AS MANUAL BOOKING
         if (window.dataService) {
-            try {
+            // Ensure DataService is initialized
+            if (!window.dataService.isInitialized) {
+                console.log('⏳ DataService not initialized, initializing now...');
+                await window.dataService.initialize();
+            }
+            
+            try{
                 // Create delivery object with Supabase-compatible field names (same as manual booking)
                 const newDelivery = {
                     // Remove custom ID - let Supabase generate UUID
