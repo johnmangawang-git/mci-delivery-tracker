@@ -15,12 +15,39 @@ class DataService {
     /**
      * Initialize Supabase client
      * Must be called before any data operations
+     * Includes retry logic for race conditions
      */
     async initialize() {
-        if (!window.supabaseClient) {
-            throw new Error('Supabase client not available. Ensure supabase is loaded before DataService.');
+        // If already initialized, return immediately
+        if (this.isInitialized && this.client) {
+            console.log('✅ DataService already initialized');
+            return;
         }
+        
+        // Check if supabaseClient function exists
+        if (!window.supabaseClient) {
+            console.error('❌ window.supabaseClient function not available');
+            throw new Error('Supabase client not available. Ensure supabase.js is loaded before DataService.');
+        }
+        
+        // Get the client instance
         this.client = window.supabaseClient();
+        
+        // Check if client is actually initialized
+        if (!this.client) {
+            console.error('❌ Supabase client returned null - Supabase may not be configured');
+            
+            // Wait a bit and retry (in case Supabase is still loading)
+            console.log('⏳ Waiting for Supabase to initialize...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            this.client = window.supabaseClient();
+            
+            if (!this.client) {
+                throw new Error('Supabase client initialization failed. Check your Supabase configuration (URL and API key).');
+            }
+        }
+        
         this.isInitialized = true;
         console.log('✅ DataService initialized with Supabase client');
     }
