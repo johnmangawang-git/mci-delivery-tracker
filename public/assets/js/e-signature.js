@@ -648,8 +648,6 @@ async function refreshDeliveryViews() {
         }
     } catch (error) {
         console.error('  ❌ Error refreshing delivery history:', error);
-            console.error('Error refreshing delivery history view:', error);
-        }
     }
     
     // Refresh E-POD view
