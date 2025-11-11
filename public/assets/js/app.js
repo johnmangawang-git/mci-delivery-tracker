@@ -696,31 +696,44 @@ console.log('app.js loaded');
                 
                 if (delivery) {
                     console.log('📦 Found delivery for signature:', delivery);
+                    console.log('📦 All available fields:', Object.keys(delivery));
                     
-                    // Map fields with fallbacks for both naming conventions
-                    customerName = delivery.customerName || delivery.customer_name || 
-                                 delivery.consigneeName || delivery.consignee_name || '';
+                    // Use the same field mapper as the table population
+                    const getField = window.getFieldValue || ((obj, field) => obj[field]);
                     
-                    customerContact = delivery.vendorNumber || delivery.vendor_number || 
-                                    delivery.customerContact || delivery.customer_contact ||
-                                    delivery.mobileNumber || delivery.mobile_number || '';
+                    // Map fields using the same logic as populateActiveDeliveriesTable
+                    customerName = getField(delivery, 'customerName') || getField(delivery, 'customer_name') || '';
                     
-                    truckPlate = delivery.truckPlateNumber || delivery.truck_plate_number || 
-                               delivery.truckPlate || delivery.truck_plate || '';
+                    // Vendor number (customer contact)
+                    customerContact = getField(delivery, 'vendorNumber') || getField(delivery, 'vendor_number') || 
+                                    getField(delivery, 'mobileNumber') || getField(delivery, 'mobile_number') || '';
                     
-                    deliveryRoute = (delivery.origin && delivery.destination) ? 
-                        `${delivery.origin} to ${delivery.destination}` : 
-                        (delivery.route || '');
+                    // Truck plate
+                    const truckType = getField(delivery, 'truckType') || getField(delivery, 'truck_type') || '';
+                    const truckPlateNum = getField(delivery, 'truckPlateNumber') || getField(delivery, 'truck_plate_number') || '';
+                    truckPlate = delivery.truck || 
+                               (truckType && truckPlateNum ? `${truckType} (${truckPlateNum})` : truckPlateNum);
+                    
+                    // Delivery route
+                    const origin = getField(delivery, 'origin') || '';
+                    const destination = getField(delivery, 'destination') || '';
+                    deliveryRoute = (origin && destination) ? `${origin} to ${destination}` : '';
                     
                     console.log('📋 Mapped delivery details:', {
+                        drNumber,
                         customerName,
                         customerContact,
                         truckPlate,
-                        deliveryRoute
+                        deliveryRoute,
+                        origin,
+                        destination
                     });
                 } else {
                     console.warn('⚠️ Delivery not found in activeDeliveries for DR:', drNumber);
+                    console.log('Available DRs:', window.activeDeliveries.map(d => d.dr_number || d.drNumber));
                 }
+            } else {
+                console.warn('⚠️ activeDeliveries array not available');
             }
             
             window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
