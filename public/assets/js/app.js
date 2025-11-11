@@ -249,6 +249,12 @@ console.log('app.js loaded');
                     throw new Error('DataService not available');
                 }
                 
+                // CRITICAL: Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
+                }
+                
                 console.log('💾 Updating status via DataService...');
                 
                 // Log the operation
@@ -387,6 +393,12 @@ console.log('app.js loaded');
                 // Save to Supabase using DataService
                 if (!window.dataService) {
                     throw new Error('DataService not available');
+                }
+                
+                // CRITICAL: Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
                 }
                 
                 // Log the operation
@@ -578,6 +590,12 @@ console.log('app.js loaded');
                 // Save to database using DataService
                 if (!window.dataService) {
                     throw new Error('DataService not available');
+                }
+                
+                // CRITICAL: Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
                 }
                 
                 // Log the operation
@@ -1472,6 +1490,12 @@ async function populateDeliveryHistoryTable() {
         let ePodRecords = [];
         try {
             if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
+                // CRITICAL: Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
+                }
+                
                 ePodRecords = await window.dataService.getEPodRecords() || [];
                 console.log('📄 Loaded E-POD records from Supabase:', ePodRecords.length);
             }
@@ -2221,6 +2245,12 @@ async function exportDeliveryHistoryToPdf() {
         let ePodRecords = [];
         try {
             if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
+                // CRITICAL: Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
+                }
+                
                 ePodRecords = await window.dataService.getEPodRecords() || [];
                 console.log('📄 Loaded E-POD records from Supabase:', ePodRecords.length);
             }
