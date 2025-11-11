@@ -2066,9 +2066,13 @@ function initDRUpload() {
     }
     
     if (confirmDrUploadBtn) {
+        console.log('✅ confirmDrUploadBtn found, attaching event listener');
         confirmDrUploadBtn.addEventListener('click', function() {
+            console.log('🖱️ Create Bookings button clicked!');
             confirmDRUpload();
         });
+    } else {
+        console.error('❌ confirmDrUploadBtn not found in DOM');
     }
     
     if (addDrCostBtn) {
@@ -2488,6 +2492,7 @@ function showDRUploadContent() {
 
 // Confirm DR upload and create bookings - Complete Version 2 Integration
 async function confirmDRUpload() {
+    console.log('🚀 confirmDRUpload function called!');
     try {
         console.log('=== CONFIRMING DR UPLOAD - VERSION 2 INTEGRATION ===');
         console.log('Pending bookings count:', pendingDRBookings.length);
