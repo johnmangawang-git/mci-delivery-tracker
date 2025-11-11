@@ -253,22 +253,24 @@ function moveDeliveryToHistoryDROnly(delivery) {
             });
             // ISO timestamp for precise sorting and data integrity
             historyEntry.completedTimestamp = new Date().toISOString();
-            // Ensure critical fields are preserved with both naming conventions
-            historyEntry.itemNumber = delivery.itemNumber || delivery.item_number || '';
-            historyEntry.item_number = delivery.item_number || delivery.itemNumber || '';
-            historyEntry.mobileNumber = delivery.mobileNumber || delivery.mobile_number || '';
-            historyEntry.mobile_number = delivery.mobile_number || delivery.mobileNumber || '';
-            historyEntry.itemDescription = delivery.itemDescription || delivery.item_description || '';
-            historyEntry.item_description = delivery.item_description || delivery.itemDescription || '';
-            historyEntry.serialNumber = delivery.serialNumber || delivery.serial_number || '';
-            historyEntry.serial_number = delivery.serial_number || delivery.serialNumber || '';
-            // Preserve other important fields
-            historyEntry.drNumber = delivery.drNumber || delivery.dr_number || '';
-            historyEntry.dr_number = delivery.dr_number || delivery.drNumber || '';
-            historyEntry.customerName = delivery.customerName || delivery.customer_name || '';
-            historyEntry.customer_name = delivery.customer_name || delivery.customerName || '';
-            historyEntry.vendorNumber = delivery.vendorNumber || delivery.vendor_number || '';
-            historyEntry.vendor_number = delivery.vendor_number || delivery.vendorNumber || '';
+        }
+        
+        // Ensure critical fields are preserved with both naming conventions
+        historyEntry.itemNumber = delivery.itemNumber || delivery.item_number || '';
+        historyEntry.item_number = delivery.item_number || delivery.itemNumber || '';
+        historyEntry.mobileNumber = delivery.mobileNumber || delivery.mobile_number || '';
+        historyEntry.mobile_number = delivery.mobile_number || delivery.mobileNumber || '';
+        historyEntry.itemDescription = delivery.itemDescription || delivery.item_description || '';
+        historyEntry.item_description = delivery.item_description || delivery.itemDescription || '';
+        historyEntry.serialNumber = delivery.serialNumber || delivery.serial_number || '';
+        historyEntry.serial_number = delivery.serial_number || delivery.serialNumber || '';
+        // Preserve other important fields
+        historyEntry.drNumber = delivery.drNumber || delivery.dr_number || '';
+        historyEntry.dr_number = delivery.dr_number || delivery.drNumber || '';
+        historyEntry.customerName = delivery.customerName || delivery.customer_name || '';
+        historyEntry.customer_name = delivery.customer_name || delivery.customerName || '';
+        historyEntry.vendorNumber = delivery.vendorNumber || delivery.vendor_number || '';
+        historyEntry.vendor_number = delivery.vendor_number || delivery.vendorNumber || '';
         
         // Check if already in history to prevent duplicates
         const alreadyInHistory = window.deliveryHistory.some(h => {

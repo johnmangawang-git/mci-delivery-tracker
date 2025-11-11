@@ -1376,6 +1376,12 @@ async function loadCustomers() {
     // Use dataService to load customers if available
     if (typeof window.dataService !== 'undefined') {
         try {
+            // Ensure DataService is initialized before using it
+            if (!window.dataService.isInitialized) {
+                console.log('⏳ DataService not initialized, initializing now...');
+                await window.dataService.initialize();
+            }
+            
             const customers = await window.dataService.getCustomers();
             // Update the global customers array
             window.customers.length = 0; // Clear existing
@@ -1465,10 +1471,12 @@ async function fallbackLoadCustomers() {
             await mergeDuplicateCustomers();
         } catch (error) {
             console.error('Error loading customers:', error);
-            throw error;
+            // Don't throw - just log and continue with empty array
+            console.warn('⚠️ Continuing with empty customers array');
         }
     } else {
-        throw new Error('DataService not available. Cannot load customers.');
+        console.warn('⚠️ No customer loading method available. Using empty customers array.');
+        // Don't throw - just continue with empty array
     }
 }
 
