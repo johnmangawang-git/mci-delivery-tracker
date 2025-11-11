@@ -1124,9 +1124,13 @@ console.log('app.js loaded');
         }
         
         // Ensure we have the latest data and filter out completed deliveries
-        activeDeliveries = (window.activeDeliveries || []).filter(delivery => 
-            delivery.status !== 'Completed'
-        );
+        activeDeliveries = (window.activeDeliveries || []).filter(delivery => {
+            const isCompleted = delivery.status === 'Completed' || delivery.status === 'Signed';
+            if (isCompleted) {
+                console.log(`  🚫 Filtering out completed delivery: ${delivery.dr_number || delivery.drNumber} (Status: ${delivery.status})`);
+            }
+            return !isCompleted;
+        });
         
         // Apply search filter using global field mapper
         filteredDeliveries = currentSearchTerm ? 

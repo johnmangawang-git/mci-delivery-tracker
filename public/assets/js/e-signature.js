@@ -587,11 +587,31 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             }
             
             await refreshDeliveryViews();
+            
+            // Force repopulate the table to ensure UI is updated
+            if (typeof window.populateActiveDeliveriesTable === 'function') {
+                console.log('  🔄 Force repopulating active deliveries table...');
+                window.populateActiveDeliveriesTable();
+            }
+            
             console.log('✅ Workflow complete! DR should now be in history.');
             
             // Double-check: Log what's in active deliveries after refresh
             console.log('📊 Active deliveries count after refresh:', window.activeDeliveries?.length);
             console.log('📊 History count after refresh:', window.deliveryHistory?.length);
+            
+            // Check if the signed DR is still in active deliveries (it shouldn't be)
+            if (window.activeDeliveries) {
+                const stillInActive = window.activeDeliveries.find(d => 
+                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
+                );
+                if (stillInActive) {
+                    console.error('❌ WARNING: DR is still in active deliveries!', stillInActive);
+                    console.error('   Status:', stillInActive.status);
+                } else {
+                    console.log('✅ Confirmed: DR is no longer in active deliveries');
+                }
+            }
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)
