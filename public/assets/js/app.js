@@ -689,13 +689,37 @@ console.log('app.js loaded');
             
             // Find the delivery in activeDeliveries array
             if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-                const delivery = window.activeDeliveries.find(d => d.drNumber === drNumber);
+                // Support both naming conventions (camelCase and snake_case)
+                const delivery = window.activeDeliveries.find(d => 
+                    (d.drNumber === drNumber || d.dr_number === drNumber)
+                );
+                
                 if (delivery) {
-                    customerName = delivery.customerName || '';
-                    customerContact = delivery.vendorNumber || '';
-                    truckPlate = delivery.truckPlateNumber || '';
+                    console.log('📦 Found delivery for signature:', delivery);
+                    
+                    // Map fields with fallbacks for both naming conventions
+                    customerName = delivery.customerName || delivery.customer_name || 
+                                 delivery.consigneeName || delivery.consignee_name || '';
+                    
+                    customerContact = delivery.vendorNumber || delivery.vendor_number || 
+                                    delivery.customerContact || delivery.customer_contact ||
+                                    delivery.mobileNumber || delivery.mobile_number || '';
+                    
+                    truckPlate = delivery.truckPlateNumber || delivery.truck_plate_number || 
+                               delivery.truckPlate || delivery.truck_plate || '';
+                    
                     deliveryRoute = (delivery.origin && delivery.destination) ? 
-                        `${delivery.origin} to ${delivery.destination}` : '';
+                        `${delivery.origin} to ${delivery.destination}` : 
+                        (delivery.route || '');
+                    
+                    console.log('📋 Mapped delivery details:', {
+                        customerName,
+                        customerContact,
+                        truckPlate,
+                        deliveryRoute
+                    });
+                } else {
+                    console.warn('⚠️ Delivery not found in activeDeliveries for DR:', drNumber);
                 }
             }
             
