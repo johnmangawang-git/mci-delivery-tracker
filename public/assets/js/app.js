@@ -719,7 +719,7 @@ console.log('app.js loaded');
                     const destination = getField(delivery, 'destination') || '';
                     deliveryRoute = (origin && destination) ? `${origin} to ${destination}` : '';
                     
-                    console.log('📋 Mapped delivery details:', {
+                            console.log('📋 Mapped delivery details:', {
                         drNumber,
                         customerName,
                         customerContact,
@@ -728,6 +728,12 @@ console.log('app.js loaded');
                         origin,
                         destination
                     });
+                    
+                    // Log if any fields are empty
+                    if (!customerName) console.warn('⚠️ Customer name is empty');
+                    if (!customerContact) console.warn('⚠️ Customer contact is empty');
+                    if (!truckPlate) console.warn('⚠️ Truck plate is empty');
+                    if (!deliveryRoute) console.warn('⚠️ Delivery route is empty');
                 } else {
                     console.warn('⚠️ Delivery not found in activeDeliveries for DR:', drNumber);
                     console.log('Available DRs:', window.activeDeliveries.map(d => d.dr_number || d.drNumber));
@@ -2212,7 +2218,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             const deliveryId = selectedDeliveries[0];
             const delivery = activeDeliveries.find(d => d.id === deliveryId);
             if (delivery) {
-                showESignatureModal(delivery.drNumber);
+                // Handle both naming conventions
+                const drNumber = delivery.drNumber || delivery.dr_number || '';
+                console.log('🖊️ Opening E-Signature for delivery:', delivery);
+                showESignatureModal(drNumber);
             }
         });
     }
