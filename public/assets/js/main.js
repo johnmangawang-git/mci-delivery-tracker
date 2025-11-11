@@ -212,22 +212,9 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // Auto-migrate data if this is first time using Supabase
         setTimeout(async () => {
-            if (window.dataService && window.isSupabaseOnline && window.isSupabaseOnline()) {
-                const hasLocalData = localStorage.getItem('mci-active-deliveries') || 
-                                   localStorage.getItem('mci-delivery-history') || 
-                                   localStorage.getItem('mci-customers');
-                
-                if (hasLocalData) {
-                    console.log('🔄 Detected local data, starting migration...');
-                    const migrated = await window.dataService.migrateLocalStorageToSupabase();
-                    if (migrated) {
-                        console.log('✅ Data migration completed');
-                        // Refresh views to show migrated data
-                        if (typeof loadActiveDeliveries === 'function') loadActiveDeliveries();
-                        if (typeof loadCustomers === 'function') loadCustomers();
-                    }
-                }
-            }
+            // Migration removed - using database-centric architecture
+            // All data is now stored in Supabase only
+            console.log('✅ Using database-centric architecture - no localStorage migration needed');
         }, 2000);
     }
 
