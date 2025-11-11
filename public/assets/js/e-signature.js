@@ -577,16 +577,37 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             
             // Force clear pagination state to ensure fresh query
             if (window.paginationState) {
-                console.log('  🔄 Resetting pagination state...');
+                console.log('  🔄 Resetting pagination state and forcing reload...');
                 if (window.paginationState.active) {
                     window.paginationState.active.isLoading = false;
+                    window.paginationState.active.currentPage = 1; // Reset to page 1
                 }
                 if (window.paginationState.history) {
                     window.paginationState.history.isLoading = false;
+                    window.paginationState.history.currentPage = 1; // Reset to page 1
                 }
             }
             
+            // Wait a bit more to ensure state is cleared
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             await refreshDeliveryViews();
+            
+            // CRITICAL: Directly manipulate the activeDeliveries array to remove the signed DR
+            console.log('  🗑️ Directly removing signed DR from window.activeDeliveries...');
+            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                const beforeCount = window.activeDeliveries.length;
+                window.activeDeliveries = window.activeDeliveries.filter(d => {
+                    const drNum = d.dr_number || d.drNumber;
+                    const isSignedDR = drNum === signatureInfo.drNumber;
+                    if (isSignedDR) {
+                        console.log(`    ❌ Removing DR ${drNum} from activeDeliveries`);
+                    }
+                    return !isSignedDR;
+                });
+                const afterCount = window.activeDeliveries.length;
+                console.log(`    📊 Removed ${beforeCount - afterCount} delivery(ies)`);
+            }
             
             // Force repopulate the table to ensure UI is updated
             if (typeof window.populateActiveDeliveriesTable === 'function') {
