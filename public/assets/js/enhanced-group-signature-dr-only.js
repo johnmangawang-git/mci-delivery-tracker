@@ -263,13 +263,12 @@ function moveDeliveryToHistoryDROnly(delivery) {
             historyEntry.serialNumber = delivery.serialNumber || delivery.serial_number || '';
             historyEntry.serial_number = delivery.serial_number || delivery.serialNumber || '';
             // Preserve other important fields
-            drNumber: delivery.drNumber || delivery.dr_number || '',
-            dr_number: delivery.dr_number || delivery.drNumber || '',
-            customerName: delivery.customerName || delivery.customer_name || '',
-            customer_name: delivery.customer_name || delivery.customerName || '',
-            vendorNumber: delivery.vendorNumber || delivery.vendor_number || '',
-            vendor_number: delivery.vendor_number || delivery.vendorNumber || ''
-        };
+            historyEntry.drNumber = delivery.drNumber || delivery.dr_number || '';
+            historyEntry.dr_number = delivery.dr_number || delivery.drNumber || '';
+            historyEntry.customerName = delivery.customerName || delivery.customer_name || '';
+            historyEntry.customer_name = delivery.customer_name || delivery.customerName || '';
+            historyEntry.vendorNumber = delivery.vendorNumber || delivery.vendor_number || '';
+            historyEntry.vendor_number = delivery.vendor_number || delivery.vendorNumber || '';
         
         // Check if already in history to prevent duplicates
         const alreadyInHistory = window.deliveryHistory.some(h => {
