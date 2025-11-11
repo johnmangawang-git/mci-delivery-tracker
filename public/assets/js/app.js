@@ -737,9 +737,45 @@ console.log('app.js loaded');
                 } else {
                     console.warn('⚠️ Delivery not found in activeDeliveries for DR:', drNumber);
                     console.log('Available DRs:', window.activeDeliveries.map(d => d.dr_number || d.drNumber));
+                    console.log('Full activeDeliveries array:', window.activeDeliveries);
                 }
             } else {
                 console.warn('⚠️ activeDeliveries array not available');
+            }
+            
+            // If we still don't have data, try to fetch it directly from the database
+            if (!customerName && !customerContact && !truckPlate && !deliveryRoute) {
+                console.log('⚠️ No delivery details found, attempting to fetch from database...');
+                
+                if (window.dataService && window.dataService.isInitialized) {
+                    // Try to fetch the delivery directly
+                    window.dataService.getDeliveries({ filters: { dr_number: drNumber }, limit: 1 })
+                        .then(deliveries => {
+                            if (deliveries && deliveries.length > 0) {
+                                const delivery = deliveries[0];
+                                console.log('📦 Fetched delivery from database:', delivery);
+                                
+                                const getField = window.getFieldValue || ((obj, field) => obj[field]);
+                                customerName = getField(delivery, 'customerName') || getField(delivery, 'customer_name') || '';
+                                customerContact = getField(delivery, 'vendorNumber') || getField(delivery, 'vendor_number') || '';
+                                const origin = getField(delivery, 'origin') || '';
+                                const destination = getField(delivery, 'destination') || '';
+                                deliveryRoute = (origin && destination) ? `${origin} to ${destination}` : '';
+                                
+                                // Re-open with fetched data
+                                window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                            } else {
+                                // Open with empty data
+                                window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching delivery:', error);
+                            // Open with empty data
+                            window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);
+                        });
+                    return; // Don't open yet, wait for fetch
+                }
             }
             
             window.openRobustSignaturePad(drNumber, customerName, customerContact, truckPlate, deliveryRoute);

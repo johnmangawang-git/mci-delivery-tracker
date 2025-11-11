@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     }
                     // Initialize E-POD functionality for E-Signature button
-                    initEPod();
+                    // initEPod(); // Removed - function doesn't exist, e-signature is initialized in e-signature.js
                 }
 
                 // Special handling for delivery history view

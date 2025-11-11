@@ -401,7 +401,7 @@ function resetSaveButton(button, originalText) {
 /**
  * Save multiple signatures for multiple DR numbers
  */
-function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
+async function saveMultipleSignatures(drNumbers, signatureInfo, saveBtn = null, originalText = '<i class="bi bi-save me-2"></i>Save Signature') {
     console.log('Saving multiple signatures for DR numbers:', drNumbers);
     
     try {
