@@ -993,8 +993,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Filter E-POD deliveries based on search term
-function filterEPodDeliveries(searchTerm) {
-    // Get E-POD records from localStorage
+async function filterEPodDeliveries(searchTerm) {
+    // Get E-POD records from database
     let ePodRecords = [];
     try {
         if (window.dataService) {

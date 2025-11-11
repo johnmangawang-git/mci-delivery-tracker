@@ -913,6 +913,10 @@ async function saveBooking() {
                     window.activeDeliveries.push(newDelivery);
                     console.log('✅ Initialized and added to activeDeliveries');
                 }
+            } catch (error) {
+                console.error('❌ Error saving delivery to Supabase:', error);
+                showToast('Failed to save booking. Please try again.', 'danger');
+                return;
             }
         }
 

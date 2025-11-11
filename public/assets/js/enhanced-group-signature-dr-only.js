@@ -250,18 +250,18 @@ function moveDeliveryToHistoryDROnly(delivery) {
                 minute: '2-digit',
                 second: '2-digit',
                 hour12: true
-            }),
+            });
             // ISO timestamp for precise sorting and data integrity
-            completedTimestamp: new Date().toISOString(),
+            historyEntry.completedTimestamp = new Date().toISOString();
             // Ensure critical fields are preserved with both naming conventions
-            itemNumber: delivery.itemNumber || delivery.item_number || '',
-            item_number: delivery.item_number || delivery.itemNumber || '',
-            mobileNumber: delivery.mobileNumber || delivery.mobile_number || '',
-            mobile_number: delivery.mobile_number || delivery.mobileNumber || '',
-            itemDescription: delivery.itemDescription || delivery.item_description || '',
-            item_description: delivery.item_description || delivery.itemDescription || '',
-            serialNumber: delivery.serialNumber || delivery.serial_number || '',
-            serial_number: delivery.serial_number || delivery.serialNumber || '',
+            historyEntry.itemNumber = delivery.itemNumber || delivery.item_number || '';
+            historyEntry.item_number = delivery.item_number || delivery.itemNumber || '';
+            historyEntry.mobileNumber = delivery.mobileNumber || delivery.mobile_number || '';
+            historyEntry.mobile_number = delivery.mobile_number || delivery.mobileNumber || '';
+            historyEntry.itemDescription = delivery.itemDescription || delivery.item_description || '';
+            historyEntry.item_description = delivery.item_description || delivery.itemDescription || '';
+            historyEntry.serialNumber = delivery.serialNumber || delivery.serial_number || '';
+            historyEntry.serial_number = delivery.serial_number || delivery.serialNumber || '';
             // Preserve other important fields
             drNumber: delivery.drNumber || delivery.dr_number || '',
             dr_number: delivery.dr_number || delivery.drNumber || '',
