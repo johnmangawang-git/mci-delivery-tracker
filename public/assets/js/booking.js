@@ -2678,9 +2678,7 @@ async function createBookingFromDR(bookingData) {
                     truck_type: bookingData.truckType || '',
                     truck_plate_number: bookingData.truckPlateNumber || '',
                     status: 'Active', // Changed to match manual booking
-                    distance: '', // Add distance field
                     additional_costs: parseFloat(bookingData.additionalCosts) || 0.00,
-                    created_date: bookingData.bookedDate || new Date().toISOString(),
                     created_by: 'Excel Upload',
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
