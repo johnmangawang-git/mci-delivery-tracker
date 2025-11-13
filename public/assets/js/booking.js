@@ -2691,20 +2691,14 @@ async function createBookingFromDR(bookingData) {
 
                 console.log('🔧 Converted delivery data for Supabase:', newDelivery);
 
-                // Save to Supabase using dataService with storage priority
+                // Save to Supabase using dataService (no upsert to avoid conflicts)
                 if (window.dataService) {
                     try {
-                        // NEW APPROACH: Use storage priority service
-                        if (window.storagePriorityService) {
-                            const result = await window.storagePriorityService.executeWithPriority('upsert', 'deliveries', newDelivery);
-                            console.log('✅ Delivery saved with storage priority successfully:', result);
-                        } else {
-                            // Fallback to original dataService approach
-                            const savedDelivery = await window.dataService.saveDelivery(newDelivery);
-                            console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
-                        }
+                        // Use dataService.saveDelivery which handles check-and-insert logic
+                        const savedDelivery = await window.dataService.saveDelivery(newDelivery);
+                        console.log('✅ Delivery saved to Supabase successfully:', savedDelivery);
                     } catch (error) {
-                        console.error('❌ Failed to save with storage priority:', error);
+                        console.error('❌ Failed to save delivery:', error);
                         throw error;
                     }
                 } else {

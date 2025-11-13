@@ -1257,18 +1257,42 @@ class DataService {
         this._ensureInitialized();
         
         try {
-            const { data, error } = await this.client
+            const profileData = {
+                ...profile,
+                updated_at: new Date().toISOString()
+            };
+            
+            // Check if profile exists
+            const { data: existing } = await this.client
                 .from('user_profiles')
-                .upsert({
-                    ...profile,
-                    updated_at: new Date().toISOString()
-                })
-                .select();
+                .select('id')
+                .eq('id', profile.id)
+                .single();
             
-            if (error) throw error;
+            let result;
+            if (existing) {
+                // Update existing profile
+                const { data, error } = await this.client
+                    .from('user_profiles')
+                    .update(profileData)
+                    .eq('id', profile.id)
+                    .select();
+                
+                if (error) throw error;
+                result = data[0];
+            } else {
+                // Insert new profile
+                const { data, error } = await this.client
+                    .from('user_profiles')
+                    .insert(profileData)
+                    .select();
+                
+                if (error) throw error;
+                result = data[0];
+            }
             
-            console.log('✅ Saved user profile:', data[0]);
-            return data[0];
+            console.log('✅ Saved user profile:', result);
+            return result;
             
         } catch (error) {
             console.error('❌ Error saving user profile:', error);
