@@ -877,6 +877,13 @@ class DataService {
             }
             
             console.log(`✅ Inserted DR ${drNumber} into delivery_history`);
+            console.log(`📊 History record details:`, {
+                id: historyData.id,
+                dr_number: historyData.dr_number,
+                status: historyData.status,
+                completed_at: historyData.completed_at,
+                moved_to_history_at: historyData.moved_to_history_at
+            });
             
             // Step 3: Delete from active deliveries table
             const { error: deleteError } = await this.client

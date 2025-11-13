@@ -1344,22 +1344,29 @@ console.log('app.js loaded');
             const normalizedDeliveries = window.normalizeDeliveryArray ? 
                 window.normalizeDeliveryArray(result.data) : result.data;
             
-            // Update delivery history
-            deliveryHistory = normalizedDeliveries;
-            window.deliveryHistory = deliveryHistory;
+            // Update delivery history - DON'T OVERWRITE, just update the reference
+            // The table will display from the database query result
+            // But we keep the global array for compatibility with other code
+            window.deliveryHistory = normalizedDeliveries;
+            deliveryHistory = window.deliveryHistory;
             
             // Update pagination state
             paginationState.history.currentPage = result.pagination.page;
             paginationState.history.totalPages = result.pagination.totalPages;
             paginationState.history.totalCount = result.pagination.totalCount;
             
-            console.log('✅ Loaded from Supabase:', {
+            console.log('✅ Loaded delivery history from database:', {
                 page: result.pagination.page,
                 pageSize: result.pagination.pageSize,
                 totalPages: result.pagination.totalPages,
                 totalCount: result.pagination.totalCount,
-                deliveriesOnPage: deliveryHistory.length
+                deliveriesOnPage: deliveryHistory.length,
+                drNumbers: deliveryHistory.map(d => d.dr_number || d.drNumber).join(', ')
             });
+            
+            console.log('📊 IMPORTANT: window.deliveryHistory contains ONLY the current page');
+            console.log('📊 Total records in database:', result.pagination.totalCount);
+            console.log('📊 Use pagination controls to see other pages');
             
             // Populate table with fresh data from database
             await populateDeliveryHistoryTable();

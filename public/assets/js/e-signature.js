@@ -572,7 +572,7 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
             
             // Manually trigger the local update logic
-            updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+            updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
             showToast('E-POD saved successfully (local)!', 'success');
             refreshDeliveryViews();
         }
