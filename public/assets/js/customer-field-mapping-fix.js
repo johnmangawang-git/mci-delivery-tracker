@@ -34,8 +34,7 @@ console.log('🔧 Loading Customer Field Mapping Fix...');
             // Vendor/Account type fields
             vendorNumber: customer.vendorNumber || customer.vendor_number || customer.phone || '',
             vendor_number: customer.vendorNumber || customer.vendor_number || customer.phone || '',
-            accountType: customer.accountType || customer.account_type || 'Individual',
-            account_type: customer.accountType || customer.account_type || 'Individual',
+            // Note: accountType removed - not in Supabase schema
             
             // Status fields
             status: customer.status || 'active',
@@ -384,8 +383,7 @@ console.log('🔧 Loading Customer Field Mapping Fix...');
                 address: destination,
                 vendorNumber: vendorNumber,
                 vendor_number: vendorNumber,
-                accountType: 'Individual',
-                account_type: 'Individual',
+                // Note: accountType removed - not in Supabase schema
                 status: 'active',
                 notes: 'Auto-created from delivery booking',
                 bookingsCount: 1,

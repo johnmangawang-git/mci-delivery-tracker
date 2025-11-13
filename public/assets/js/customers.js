@@ -298,7 +298,7 @@ async function autoCreateCustomer(customerName, vendorNumber, destination) {
             contact_person: customerName,
             phone: vendorNumber,
             address: destination,
-            account_type: 'Individual',
+            // Note: account_type removed - not in Supabase schema
             email: '',
             status: 'active',
             notes: 'Auto-created from delivery booking',
@@ -393,7 +393,7 @@ async function saveEditedCustomer() {
             phone: document.getElementById('editCustomerPhone').value,
             email: document.getElementById('editCustomerEmail').value,
             address: document.getElementById('editCustomerAddress').value,
-            account_type: document.getElementById('editCustomerAccountType').value,
+            // Note: account_type removed - not in Supabase schema
             status: document.getElementById('editCustomerStatus').value,
             notes: document.getElementById('editNotes').value
         };
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     phone: phone,
                     email: email,
                     address: address,
-                    account_type: accountType,
+                    // Note: account_type removed - not in Supabase schema
                     status: status,
                     notes: notes,
                     bookings_count: 0,

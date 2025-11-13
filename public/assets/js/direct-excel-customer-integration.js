@@ -27,8 +27,7 @@ console.log('🔧 Loading Direct Excel Customer Integration...');
                 address: destination,
                 vendorNumber: vendorNumber,
                 vendor_number: vendorNumber,
-                accountType: 'Individual',
-                account_type: 'Individual',
+                // Note: accountType removed - not in Supabase schema
                 status: 'active',
                 notes: 'Auto-created from Excel upload (Direct Integration)',
                 bookingsCount: 1,

@@ -980,6 +980,10 @@ class DataService {
                 updated_at: new Date().toISOString()
             };
             
+            // Remove fields that don't exist in Supabase schema
+            delete customerData.accountType;
+            delete customerData.account_type;
+            
             // Validate required fields
             if (!customerData.name || customerData.name.trim() === '') {
                 throw new Error('Customer name is required and cannot be empty');

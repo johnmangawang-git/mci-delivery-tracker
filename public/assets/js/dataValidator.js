@@ -156,13 +156,7 @@ class DataValidator {
             }
         }
 
-        // Account type validation
-        const validAccountTypes = ['Individual', 'Corporate', 'Government'];
-        if (customer.account_type !== undefined && customer.account_type !== null) {
-            if (!validAccountTypes.includes(customer.account_type)) {
-                errors.push(`Account type must be one of: ${validAccountTypes.join(', ')}`);
-            }
-        }
+        // Note: account_type validation removed - field not in Supabase schema
 
         // Status validation
         const validStatuses = ['active', 'inactive', 'suspended'];
