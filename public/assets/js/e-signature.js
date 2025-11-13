@@ -561,10 +561,40 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             
             // Step 3: Reload active deliveries to show grayed out row
             console.log('🔄 Step 3: Reloading active deliveries...');
-            await new Promise(resolve => setTimeout(resolve, 300)); // Brief delay for DB propagation
+            await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for DB propagation
+            
+            // Invalidate cache first
+            if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
+                console.log('  🗑️ Invalidating deliveries cache');
+                window.dataService.invalidateCache('deliveries');
+            }
             
             if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
+                console.log('  📋 Calling loadActiveDeliveriesWithPagination...');
                 await window.loadActiveDeliveriesWithPagination();
+                console.log('  ✅ Active deliveries reloaded');
+            } else {
+                console.error('  ❌ loadActiveDeliveriesWithPagination function not found!');
+            }
+            
+            // Check if the DR is now in activeDeliveries with Archived status
+            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                const archivedDR = window.activeDeliveries.find(d => 
+                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
+                );
+                if (archivedDR) {
+                    console.log('  ✅ Found DR in activeDeliveries:', {
+                        drNumber: archivedDR.dr_number || archivedDR.drNumber,
+                        status: archivedDR.status
+                    });
+                    if (archivedDR.status === 'Archived') {
+                        console.log('  ✅ Status is Archived - row should be grayed out');
+                    } else {
+                        console.warn('  ⚠️ Status is NOT Archived:', archivedDR.status);
+                    }
+                } else {
+                    console.warn('  ⚠️ DR not found in activeDeliveries array');
+                }
             }
             
             console.log('✅ Workflow complete! DR archived and grayed out.');

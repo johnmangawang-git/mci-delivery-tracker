@@ -786,9 +786,16 @@ class DataService {
             }
             
             console.log(`✅ Successfully updated status to ${newStatus} for DR ${drNumber}`);
+            console.log(`📊 Updated delivery data:`, {
+                id: data[0].id,
+                dr_number: data[0].dr_number,
+                status: data[0].status,
+                updated_at: data[0].updated_at
+            });
             
             // Invalidate cache to ensure fresh data on next load
             this.invalidateCache('deliveries');
+            console.log(`🗑️ Cache invalidated for deliveries`);
             
             return data[0];
             
