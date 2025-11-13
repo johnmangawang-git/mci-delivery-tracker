@@ -58,6 +58,18 @@ function openRobustSignaturePad(drNumber = '', customerName = '', customerContac
         const initHandler = function() {
             console.log('E-Signature modal fully shown, populating fields');
             
+            // Check if tempDeliveryDetails exists
+            if (!window.tempDeliveryDetails) {
+                console.error('❌ No tempDeliveryDetails found! Modal opened without data.');
+                showError('Error: No delivery information available. Please try again.');
+                // Close the modal
+                const eSignatureModal = bootstrap.Modal.getInstance(modalElement);
+                if (eSignatureModal) {
+                    eSignatureModal.hide();
+                }
+                return;
+            }
+            
             // Set delivery details in modal after it's visible
             const drNumberField = document.getElementById('ePodDrNumber');
             const customerNameField = document.getElementById('ePodCustomerName');
@@ -88,11 +100,19 @@ function openRobustSignaturePad(drNumber = '', customerName = '', customerContac
             // Remove event listener to prevent duplicates
             modalElement.removeEventListener('shown.bs.modal', initHandler);
             
-            // Clean up temp data
+            // DON'T delete tempDeliveryDetails here - keep it until modal closes
+            // It will be cleaned up when modal is hidden
+        };
+        
+        // Clean up temp data when modal is hidden
+        const cleanupHandler = function() {
+            console.log('E-Signature modal closed, cleaning up temp data');
             delete window.tempDeliveryDetails;
+            modalElement.removeEventListener('hidden.bs.modal', cleanupHandler);
         };
         
         modalElement.addEventListener('shown.bs.modal', initHandler);
+        modalElement.addEventListener('hidden.bs.modal', cleanupHandler);
         
         // Show the modal
         const eSignatureModal = new bootstrap.Modal(modalElement);
