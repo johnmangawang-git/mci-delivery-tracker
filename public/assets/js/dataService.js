@@ -837,14 +837,22 @@ class DataService {
             }
             
             // Step 2: Insert into delivery_history table
+            // Build history record with only fields that exist in the table
             const historyRecord = {
                 ...delivery,
-                original_delivery_id: delivery.id,
-                completed_at: new Date().toISOString(),
-                moved_to_history_at: new Date().toISOString(),
-                moved_by_user_id: delivery.user_id,
                 status: 'Archived' // Ensure status is Archived
             };
+            
+            // Add optional fields if they might exist in the table
+            // These will be ignored if the columns don't exist
+            try {
+                historyRecord.original_delivery_id = delivery.id;
+                historyRecord.completed_at = new Date().toISOString();
+                historyRecord.moved_to_history_at = new Date().toISOString();
+                historyRecord.moved_by_user_id = delivery.user_id;
+            } catch (e) {
+                console.warn('⚠️ Some optional history fields may not be set:', e);
+            }
             
             // Remove the id so a new one is generated for history
             delete historyRecord.id;
@@ -857,6 +865,14 @@ class DataService {
             
             if (insertError) {
                 console.error(`❌ Error inserting into delivery_history:`, insertError);
+                console.error(`❌ Error details:`, insertError.message);
+                
+                // If error is about missing columns, provide helpful message
+                if (insertError.message && insertError.message.includes('does not exist')) {
+                    console.error(`❌ Missing columns in delivery_history table!`);
+                    console.error(`❌ Please run: supabase/add-missing-history-columns.sql`);
+                }
+                
                 throw insertError;
             }
             
