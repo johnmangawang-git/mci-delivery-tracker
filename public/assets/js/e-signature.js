@@ -236,6 +236,7 @@ function setupRobustSignatureControls() {
             
             // Add click event
             newSaveBtn.addEventListener('click', function(e) {
+                console.log('💾 Save Signature button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
                 saveRobustSignature();
@@ -334,11 +335,21 @@ function getRobustSignatureData() {
  * Save the signature and associated delivery information
  */
 function saveRobustSignature() {
-    console.log('Saving robust signature');
+    console.log('🚀 saveRobustSignature function called!');
+    console.log('📊 Signature pad state:', {
+        robustSignaturePad: !!robustSignaturePad,
+        signaturePadInitialized: signaturePadInitialized,
+        isEmpty: robustSignaturePad ? robustSignaturePad.isEmpty() : 'N/A'
+    });
     
     try {
         // Show loading state
         const saveBtn = document.getElementById('saveSignatureBtn');
+        if (!saveBtn) {
+            console.error('❌ Save button not found in DOM!');
+            return;
+        }
+        console.log('✅ Save button found');
         const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
         saveBtn.disabled = true;
