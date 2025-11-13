@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.delivery_history (
     created_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE,
     completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    signed_at TIMESTAMP WITH TIME ZONE,
     created_by TEXT,
     process_by TEXT,
     item_number TEXT,
@@ -35,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.delivery_history (
 CREATE INDEX IF NOT EXISTS idx_delivery_history_user_id ON public.delivery_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_history_dr_number ON public.delivery_history(dr_number);
 CREATE INDEX IF NOT EXISTS idx_delivery_history_completed_at ON public.delivery_history(completed_at);
+CREATE INDEX IF NOT EXISTS idx_delivery_history_signed_at ON public.delivery_history(signed_at);
 CREATE INDEX IF NOT EXISTS idx_delivery_history_status ON public.delivery_history(status);
 
 -- Row Level Security Policies
@@ -52,3 +54,4 @@ CREATE POLICY "Users can insert their own delivery history" ON public.delivery_h
 COMMENT ON TABLE public.delivery_history IS 'Permanent storage for completed deliveries. Records here should never be modified or deleted.';
 COMMENT ON COLUMN public.delivery_history.moved_to_history_at IS 'Timestamp when the delivery was moved from active to history';
 COMMENT ON COLUMN public.delivery_history.completed_at IS 'Timestamp when the delivery was marked as completed';
+COMMENT ON COLUMN public.delivery_history.signed_at IS 'Timestamp when the e-signature was captured';
