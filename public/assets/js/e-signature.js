@@ -575,6 +575,15 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             
             console.log('🔄 Step 6: Updating UI immediately...');
             
+            // CRITICAL: Add to global blacklist to prevent it from EVER showing in active again
+            console.log('  🚫 Adding DR to permanent blacklist...');
+            if (!window.signedDRBlacklist) {
+                window.signedDRBlacklist = new Set();
+            }
+            window.signedDRBlacklist.add(signatureInfo.drNumber);
+            console.log(`    ✅ DR ${signatureInfo.drNumber} blacklisted permanently`);
+            console.log(`    📊 Blacklist now contains ${window.signedDRBlacklist.size} DR(s)`);
+            
             // STEP 1: Remove from activeDeliveries array
             console.log('  🗑️ Removing signed DR from activeDeliveries array...');
             if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {

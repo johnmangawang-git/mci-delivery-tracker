@@ -1113,6 +1113,11 @@ console.log('app.js loaded');
         await loadActiveDeliveriesWithPagination(1);
     }
 
+    // Global blacklist for signed DRs - these will NEVER show in active deliveries
+    if (!window.signedDRBlacklist) {
+        window.signedDRBlacklist = new Set();
+    }
+
     // Separate function to populate the Active Deliveries table
     function populateActiveDeliveriesTable() {
         console.log('📊 Populating Active Deliveries table...');
@@ -1123,13 +1128,20 @@ console.log('app.js loaded');
             return;
         }
         
-        // Ensure we have the latest data and filter out completed deliveries
+        // Ensure we have the latest data and filter out completed deliveries AND blacklisted DRs
         activeDeliveries = (window.activeDeliveries || []).filter(delivery => {
+            const drNum = delivery.dr_number || delivery.drNumber;
             const isCompleted = delivery.status === 'Completed' || delivery.status === 'Signed';
+            const isBlacklisted = window.signedDRBlacklist.has(drNum);
+            
             if (isCompleted) {
-                console.log(`  🚫 Filtering out completed delivery: ${delivery.dr_number || delivery.drNumber} (Status: ${delivery.status})`);
+                console.log(`  🚫 Filtering out completed delivery: ${drNum} (Status: ${delivery.status})`);
             }
-            return !isCompleted;
+            if (isBlacklisted) {
+                console.log(`  🚫 Filtering out blacklisted (signed) delivery: ${drNum}`);
+            }
+            
+            return !isCompleted && !isBlacklisted;
         });
         
         // Apply search filter using global field mapper
