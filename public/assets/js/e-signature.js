@@ -644,13 +644,16 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
         }
 
     } catch (error) {
-        console.error('Error in saveSingleSignature flow:', error);
+        console.error('❌ Error in saveSingleSignature flow:', error);
+        console.error('❌ Error details:', error.message, error.stack);
         showError('Failed to save signature and update status. Please check connection and try again.');
         // Do not refresh views on error to avoid inconsistent state
     } finally {
         // Always close modal and reset the button
+        console.log('🔄 Closing modal and resetting button...');
         closeESignatureModal();
         resetSaveButton(saveBtn, originalText);
+        console.log('✅ Cleanup complete');
     }
 }
 
