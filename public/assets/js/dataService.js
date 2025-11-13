@@ -777,11 +777,7 @@ class DataService {
                 updated_at: new Date().toISOString()
             };
             
-            // If status is Archived, also set signed_at timestamp
-            if (newStatus === 'Archived') {
-                updateData.signed_at = new Date().toISOString();
-                // Note: completed_at removed - not in Supabase schema
-            }
+            // Note: signed_at is stored in e_pod_records table, not deliveries table
             
             const { data, error } = await this.client
                 .from('deliveries')
