@@ -570,8 +570,29 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
             console.log('✅ Status updated to Archived:', updateResult);
             
-            // Step 3: Reload active deliveries to show grayed out row
-            console.log('🔄 Step 3: Reloading active deliveries...');
+            // Step 3: COPY to delivery history (not move - DR stays in active too)
+            console.log('📝 Step 3: Copying DR to delivery history...');
+            if (updateResult) {
+                // Add to deliveryHistory array
+                if (!window.deliveryHistory) {
+                    window.deliveryHistory = [];
+                }
+                
+                // Create history record with archived status
+                const historyRecord = {
+                    ...updateResult,
+                    status: 'Archived',
+                    completed_at: new Date().toISOString(),
+                    signed_at: new Date().toISOString()
+                };
+                
+                // Add to beginning of history array (most recent first)
+                window.deliveryHistory.unshift(historyRecord);
+                console.log('✅ Added to delivery history. History count:', window.deliveryHistory.length);
+            }
+            
+            // Step 4: Reload active deliveries to show grayed out row
+            console.log('🔄 Step 4: Reloading active deliveries...');
             await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for DB propagation
             
             // Invalidate cache first
@@ -586,6 +607,13 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 console.log('  ✅ Active deliveries reloaded');
             } else {
                 console.error('  ❌ loadActiveDeliveriesWithPagination function not found!');
+            }
+            
+            // Also refresh delivery history view
+            if (typeof window.populateDeliveryHistoryTable === 'function') {
+                console.log('  📚 Refreshing delivery history table...');
+                window.populateDeliveryHistoryTable();
+                console.log('  ✅ Delivery history refreshed');
             }
             
             // Check if the DR is now in activeDeliveries with Archived status
@@ -608,8 +636,8 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 }
             }
             
-            console.log('✅ Workflow complete! DR archived and grayed out.');
-            showToast('E-POD saved successfully! Delivery archived.', 'success');
+            console.log('✅ Workflow complete! DR archived (grayed out in active) and copied to history.');
+            showToast('E-POD saved! Delivery archived and added to history.', 'success');
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)
@@ -623,15 +651,38 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             }
             localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
             
-            // Manually trigger the local update logic (just update status, don't move)
+            // Manually trigger the local update logic (update status and copy to history)
             if (typeof updateDeliveryStatus === 'function') {
                 updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
             }
-            showToast('E-POD saved successfully!', 'success');
             
-            // Reload active deliveries to show grayed out row
+            // Copy to delivery history
+            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+                const delivery = window.activeDeliveries.find(d => 
+                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
+                );
+                if (delivery) {
+                    if (!window.deliveryHistory) {
+                        window.deliveryHistory = [];
+                    }
+                    const historyRecord = {
+                        ...delivery,
+                        status: 'Archived',
+                        completed_at: new Date().toISOString(),
+                        signed_at: new Date().toISOString()
+                    };
+                    window.deliveryHistory.unshift(historyRecord);
+                }
+            }
+            
+            showToast('E-POD saved! Delivery archived and added to history.', 'success');
+            
+            // Reload both views
             if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
                 window.loadActiveDeliveriesWithPagination();
+            }
+            if (typeof window.populateDeliveryHistoryTable === 'function') {
+                window.populateDeliveryHistoryTable();
             }
         }
 

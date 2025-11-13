@@ -1334,10 +1334,13 @@ console.log('app.js loaded');
                 await window.dataService.initialize();
             }
             
-            // Load from delivery_history table instead of deliveries table
-            const result = await window.dataService.getDeliveryHistoryWithPagination({
+            // Load Archived deliveries from main deliveries table
+            const result = await window.dataService.getDeliveriesWithPagination({
                 page: targetPage,
-                pageSize: paginationState.history.pageSize
+                pageSize: paginationState.history.pageSize,
+                filters: {
+                    status: ['Archived', 'Completed', 'Signed'] // Include all completed statuses
+                }
             });
             
             // Normalize field names
