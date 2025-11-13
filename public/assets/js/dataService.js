@@ -985,10 +985,55 @@ class DataService {
                 throw new Error('Customer name is required and cannot be empty');
             }
             
-            const { data, error } = await this.client
-                .from('customers')
-                .upsert(customerData)
-                .select();
+            // Check if customer already exists (by ID or name)
+            let existingCustomer = null;
+            
+            // Check by ID if provided
+            if (customerData.id) {
+                const { data: byId } = await this.client
+                    .from('customers')
+                    .select('*')
+                    .eq('id', customerData.id)
+                    .maybeSingle();
+                if (byId) existingCustomer = byId;
+            }
+            
+            // Check by name if not found by ID
+            if (!existingCustomer && customerData.name) {
+                const { data: byName } = await this.client
+                    .from('customers')
+                    .select('*')
+                    .eq('name', customerData.name)
+                    .maybeSingle();
+                if (byName) {
+                    existingCustomer = byName;
+                    customerData.id = byName.id; // Use existing ID
+                }
+            }
+            
+            let data, error;
+            
+            if (existingCustomer) {
+                // UPDATE existing customer
+                console.log('🔄 Updating existing customer:', customerData.name);
+                const updateData = { ...customerData };
+                delete updateData.id; // Remove ID from update data
+                
+                ({ data, error } = await this.client
+                    .from('customers')
+                    .update(updateData)
+                    .eq('id', existingCustomer.id)
+                    .select());
+            } else {
+                // INSERT new customer
+                console.log('➕ Inserting new customer:', customerData.name);
+                delete customerData.id; // Let database generate ID
+                
+                ({ data, error } = await this.client
+                    .from('customers')
+                    .insert(customerData)
+                    .select());
+            }
             
             if (error) {
                 console.error('❌ Customer save error:', error);
