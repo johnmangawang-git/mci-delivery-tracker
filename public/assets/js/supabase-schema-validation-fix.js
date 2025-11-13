@@ -338,17 +338,46 @@ async function safeInsertCustomer(customerData) {
 
         console.log('📤 Sending customer data to Supabase:', validation.data);
 
-        // Try upsert to handle duplicates
-        const { data, error } = await client
-            .from('customers')
-            .upsert(validation.data, {
-                onConflict: 'name,vendor_number',
-                ignoreDuplicates: false
-            })
-            .select();
+        // Check if customer already exists
+        let existingCustomer = null;
+        
+        // Check by name
+        if (validation.data.name) {
+            const { data: byName } = await client
+                .from('customers')
+                .select('*')
+                .eq('name', validation.data.name)
+                .maybeSingle();
+            if (byName) existingCustomer = byName;
+        }
+        
+        let data, error;
+        
+        if (existingCustomer) {
+            // UPDATE existing customer
+            console.log('🔄 Updating existing customer:', validation.data.name);
+            const updateData = { ...validation.data };
+            delete updateData.id; // Remove ID from update data
+            
+            ({ data, error } = await client
+                .from('customers')
+                .update(updateData)
+                .eq('id', existingCustomer.id)
+                .select());
+        } else {
+            // INSERT new customer
+            console.log('➕ Inserting new customer:', validation.data.name);
+            const insertData = { ...validation.data };
+            delete insertData.id; // Let database generate ID
+            
+            ({ data, error } = await client
+                .from('customers')
+                .insert(insertData)
+                .select());
+        }
 
         if (error) {
-            console.error('❌ Supabase customer insert error:', error);
+            console.error('❌ Supabase customer save error:', error);
             console.error('Error details:', {
                 code: error.code,
                 message: error.message,
@@ -358,7 +387,7 @@ async function safeInsertCustomer(customerData) {
             throw error;
         }
 
-        console.log('✅ Customer inserted successfully:', data);
+        console.log('✅ Customer saved successfully:', data);
         return { data, error: null };
 
     } catch (error) {
