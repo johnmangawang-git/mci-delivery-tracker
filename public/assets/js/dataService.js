@@ -378,6 +378,8 @@ class DataService {
      * @returns {Promise<object>} Saved delivery
      */
     async saveDelivery(delivery) {
+        // Ensure initialized
+        this._ensureInitialized();
         this._ensureInitialized();
         
         try {
@@ -477,10 +479,24 @@ class DataService {
             } else {
                 // Fallback: direct insert
                 console.log('⚠️ Using direct insert (no schema validation available)');
-                const result = await this.client
-                    .from('deliveries')
-                    .insert(insertData)
-                    .select();
+                
+                // Ensure client is initialized
+                if (!this.client || typeof this.client.from !== 'function') {
+                    console.error('❌ Supabase client not initialized!');
+                    throw new Error('Supabase client not initialized. Call dataService.initialize() first.');
+                }
+                
+                const insertQuery = this.client.from('deliveries').insert(insertData);
+                
+                // Check if select() method exists
+                if (typeof insertQuery.select !== 'function') {
+                    console.error('❌ Insert query does not have select() method');
+                    console.error('Client type:', typeof this.client);
+                    console.error('Client.from type:', typeof this.client.from);
+                    throw new Error('Invalid Supabase client - missing select() method');
+                }
+                
+                const result = await insertQuery.select();
                 data = result.data;
                 error = result.error;
             }
