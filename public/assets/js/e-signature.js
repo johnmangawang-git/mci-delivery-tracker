@@ -592,14 +592,24 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 window.populateActiveDeliveriesTable();
             }
             
-            // STEP 3: Reload history to show the new completed delivery
-            if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
-                console.log('  📚 Reloading delivery history...');
-                // Reset pagination state for history
-                if (window.paginationState?.history) {
-                    window.paginationState.history.isLoading = false;
-                }
-                await window.loadDeliveryHistoryWithPagination(1);
+            // STEP 3: Add to history array manually (don't reload from database)
+            console.log('  📚 Adding signed DR to delivery history array...');
+            if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
+                // Find the delivery that was just signed
+                const signedDelivery = {
+                    ...updateResult, // Use the updated delivery from database
+                    status: 'Completed',
+                    signed_at: timestamp
+                };
+                // Add to beginning of history array
+                window.deliveryHistory.unshift(signedDelivery);
+                console.log('  ✅ Added to history array');
+            }
+            
+            // STEP 4: Update history table
+            if (typeof window.populateDeliveryHistoryTable === 'function') {
+                console.log('  🔄 Updating delivery history table...');
+                window.populateDeliveryHistoryTable();
             }
             
             console.log('✅ Workflow complete! DR moved to history.');
@@ -651,39 +661,30 @@ function closeESignatureModal() {
 
 /**
  * Refresh delivery views after saving signature
+ * NOTE: This does NOT reload from database to avoid bringing back signed DRs
  */
 async function refreshDeliveryViews() {
-    console.log('🔄 Refreshing delivery views...');
+    console.log('🔄 Refreshing delivery views (UI only, no database reload)...');
     
-    // Force reload from page 1 for both views
+    // Just update the UI with the current filtered arrays
     try {
-        // Refresh active deliveries view - use pagination function to force reload
-        if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
-            console.log('  📋 Reloading active deliveries from database...');
-            await window.loadActiveDeliveriesWithPagination(1);
-            console.log('  ✅ Active deliveries reloaded');
-        } else if (typeof loadActiveDeliveries === 'function') {
-            console.log('  📋 Reloading active deliveries (legacy)...');
-            await loadActiveDeliveries();
-            console.log('  ✅ Active deliveries reloaded');
+        if (typeof window.populateActiveDeliveriesTable === 'function') {
+            console.log('  📋 Updating active deliveries table...');
+            window.populateActiveDeliveriesTable();
+            console.log('  ✅ Active deliveries table updated');
         }
     } catch (error) {
-        console.error('  ❌ Error refreshing active deliveries:', error);
+        console.error('  ❌ Error updating active deliveries table:', error);
     }
     
     try {
-        // Refresh delivery history view - use pagination function to force reload
-        if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
-            console.log('  📚 Reloading delivery history from database...');
-            await window.loadDeliveryHistoryWithPagination(1);
-            console.log('  ✅ Delivery history reloaded');
-        } else if (typeof loadDeliveryHistory === 'function') {
-            console.log('  📚 Reloading delivery history (legacy)...');
-            await loadDeliveryHistory();
-            console.log('  ✅ Delivery history reloaded');
+        if (typeof window.populateDeliveryHistoryTable === 'function') {
+            console.log('  📚 Updating delivery history table...');
+            window.populateDeliveryHistoryTable();
+            console.log('  ✅ Delivery history table updated');
         }
     } catch (error) {
-        console.error('  ❌ Error refreshing delivery history:', error);
+        console.error('  ❌ Error updating delivery history table:', error);
     }
     
     // Refresh E-POD view
