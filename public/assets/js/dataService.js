@@ -787,16 +787,8 @@ class DataService {
             
             console.log(`✅ Successfully updated status to ${newStatus} for DR ${drNumber}`);
             
-            // If status is Archived, automatically move to history
-            if (newStatus === 'Archived' && data && data[0]) {
-                console.log(`🔄 Auto-moving DR ${drNumber} to history...`);
-                try {
-                    await this.moveDeliveryToHistory(drNumber);
-                } catch (historyError) {
-                    console.error(`⚠️ Failed to move to history, but status was updated:`, historyError);
-                    // Don't throw - status update succeeded
-                }
-            }
+            // Invalidate cache to ensure fresh data on next load
+            this.invalidateCache('deliveries');
             
             return data[0];
             

@@ -1024,7 +1024,7 @@ console.log('app.js loaded');
                 page: targetPage,
                 pageSize: paginationState.active.pageSize,
                 filters: {
-                    status: ['In Transit', 'On Schedule', 'Sold Undelivered', 'Active']
+                    status: ['In Transit', 'On Schedule', 'Sold Undelivered', 'Active', 'Archived']
                 }
             });
             

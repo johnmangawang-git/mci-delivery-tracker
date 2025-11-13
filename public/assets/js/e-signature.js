@@ -554,30 +554,21 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             const epodResult = await window.dataService.saveEPodRecord(ePodRecord);
             console.log('✅ EPOD record saved:', epodResult);
 
-            // Step 2: Update delivery status to Archived
-            // This will automatically trigger moveToHistory in dataService
-            console.log('📝 Step 2: Updating delivery status to Archived (will auto-move to history)');
+            // Step 2: Update delivery status to Archived (stays in active deliveries)
+            console.log('📝 Step 2: Updating delivery status to Archived');
             const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
-            console.log('✅ Status updated and moved to history:', updateResult);
+            console.log('✅ Status updated to Archived:', updateResult);
             
-            // Step 3: Reload data from database to get fresh state
-            console.log('🔄 Step 3: Reloading deliveries from database...');
-            await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for DB propagation
+            // Step 3: Reload active deliveries to show grayed out row
+            console.log('🔄 Step 3: Reloading active deliveries...');
+            await new Promise(resolve => setTimeout(resolve, 300)); // Brief delay for DB propagation
             
-            // Reload active deliveries (should NOT include the signed DR anymore)
             if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
-                console.log('  📋 Reloading active deliveries...');
                 await window.loadActiveDeliveriesWithPagination();
             }
             
-            // Reload delivery history (should include the signed DR now)
-            if (typeof window.loadDeliveryHistory === 'function') {
-                console.log('  📚 Reloading delivery history...');
-                await window.loadDeliveryHistory();
-            }
-            
-            console.log('✅ Workflow complete! DR permanently moved to history in database.');
-            showToast('E-POD saved and delivery moved to history successfully!', 'success');
+            console.log('✅ Workflow complete! DR archived and grayed out.');
+            showToast('E-POD saved successfully! Delivery archived.', 'success');
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)
@@ -591,10 +582,16 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             }
             localStorage.setItem('ePodRecords', JSON.stringify(ePodRecords));
             
-            // Manually trigger the local update logic
-            updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
-            showToast('E-POD saved successfully (local)!', 'success');
-            refreshDeliveryViews();
+            // Manually trigger the local update logic (just update status, don't move)
+            if (typeof updateDeliveryStatus === 'function') {
+                updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
+            }
+            showToast('E-POD saved successfully!', 'success');
+            
+            // Reload active deliveries to show grayed out row
+            if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
+                window.loadActiveDeliveriesWithPagination();
+            }
         }
 
     } catch (error) {
