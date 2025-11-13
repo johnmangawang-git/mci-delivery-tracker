@@ -1986,9 +1986,14 @@ function handleDeliveryUpdate(newRecord, oldRecord) {
         }
         window.deliveryHistory = deliveryHistory;
         
-        console.log('  🔄 Refreshing both views...');
-        loadActiveDeliveries();
-        loadDeliveryHistory();
+        console.log('  🔄 Updating UI...');
+        // Don't reload from database - just update the UI with the filtered arrays
+        if (typeof window.populateActiveDeliveriesTable === 'function') {
+            window.populateActiveDeliveriesTable();
+        }
+        if (typeof window.populateDeliveryHistoryTable === 'function') {
+            window.populateDeliveryHistoryTable();
+        }
         
     } else if (wasCompleted && !isCompleted) {
         // Moved from completed to active
