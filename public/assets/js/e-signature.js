@@ -582,7 +582,7 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 const historyRecord = {
                     ...updateResult,
                     status: 'Archived',
-                    completed_at: new Date().toISOString(),
+                    // Note: completed_at removed - not in schema
                     signed_at: new Date().toISOString()
                 };
                 
@@ -668,7 +668,7 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                     const historyRecord = {
                         ...delivery,
                         status: 'Archived',
-                        completed_at: new Date().toISOString(),
+                        // Note: completed_at removed - not in schema
                         signed_at: new Date().toISOString()
                     };
                     window.deliveryHistory.unshift(historyRecord);

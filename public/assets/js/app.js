@@ -1130,20 +1130,22 @@ console.log('app.js loaded');
             return;
         }
         
-        // Ensure we have the latest data and filter out completed deliveries AND blacklisted DRs
+        // Ensure we have the latest data - keep Archived deliveries (grayed out), filter out old Completed/Signed
         activeDeliveries = (window.activeDeliveries || []).filter(delivery => {
             const drNum = delivery.dr_number || delivery.drNumber;
-            const isCompleted = delivery.status === 'Completed' || delivery.status === 'Signed';
+            // Keep Archived deliveries (they show grayed out)
+            // Filter out old Completed/Signed statuses and blacklisted DRs
+            const isOldCompleted = delivery.status === 'Completed' || delivery.status === 'Signed';
             const isBlacklisted = window.signedDRBlacklist.has(drNum);
             
-            if (isCompleted) {
-                console.log(`  🚫 Filtering out completed delivery: ${drNum} (Status: ${delivery.status})`);
+            if (isOldCompleted) {
+                console.log(`  🚫 Filtering out old completed delivery: ${drNum} (Status: ${delivery.status})`);
             }
             if (isBlacklisted) {
                 console.log(`  🚫 Filtering out blacklisted (signed) delivery: ${drNum}`);
             }
             
-            return !isCompleted && !isBlacklisted;
+            return !isOldCompleted && !isBlacklisted;
         });
         
         // Apply search filter using global field mapper
@@ -1334,13 +1336,10 @@ console.log('app.js loaded');
                 await window.dataService.initialize();
             }
             
-            // Load Archived deliveries from main deliveries table
-            const result = await window.dataService.getDeliveriesWithPagination({
+            // Load from delivery_history table for better performance
+            const result = await window.dataService.getDeliveryHistoryWithPagination({
                 page: targetPage,
-                pageSize: paginationState.history.pageSize,
-                filters: {
-                    status: ['Archived', 'Completed', 'Signed'] // Include all completed statuses
-                }
+                pageSize: paginationState.history.pageSize
             });
             
             // Normalize field names
@@ -1739,7 +1738,7 @@ async function populateDeliveryHistoryTable() {
                     </td>
                     <td>${(() => {
                         // Format signed date/time
-                        const signedAt = delivery.signed_at || delivery.signedAt || delivery.completed_at || delivery.completedAt;
+                        const signedAt = delivery.signed_at || delivery.signedAt;
                         if (!signedAt) return 'Not signed';
                         
                         try {

@@ -684,7 +684,7 @@ class DataService {
                 query = query.eq(key, value);
             });
             
-            const { data, error } = await query.order('completed_at', { ascending: false });
+            const { data, error } = await query.order('signed_at', { ascending: false });
             
             if (error) throw error;
             
@@ -732,7 +732,7 @@ class DataService {
             
             // Apply pagination and ordering
             query = query
-                .order('completed_at', { ascending: false })
+                .order('signed_at', { ascending: false })
                 .range(from, to);
             
             const { data, error, count } = await query;
@@ -780,7 +780,7 @@ class DataService {
             // If status is Archived, also set signed_at timestamp
             if (newStatus === 'Archived') {
                 updateData.signed_at = new Date().toISOString();
-                updateData.completed_at = new Date().toISOString();
+                // Note: completed_at removed - not in Supabase schema
             }
             
             const { data, error } = await this.client
@@ -855,7 +855,7 @@ class DataService {
             // These will be ignored if the columns don't exist
             try {
                 historyRecord.original_delivery_id = delivery.id;
-                historyRecord.completed_at = new Date().toISOString();
+                // Note: completed_at removed - not in schema, using signed_at instead
                 historyRecord.moved_to_history_at = new Date().toISOString();
                 historyRecord.moved_by_user_id = delivery.user_id;
             } catch (e) {
@@ -889,7 +889,7 @@ class DataService {
                 id: historyData.id,
                 dr_number: historyData.dr_number,
                 status: historyData.status,
-                completed_at: historyData.completed_at,
+                signed_at: historyData.signed_at,
                 moved_to_history_at: historyData.moved_to_history_at
             });
             
