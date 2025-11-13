@@ -1737,6 +1737,28 @@ async function populateDeliveryHistoryTable() {
                     <td>
                         ${statusDisplay}
                     </td>
+                    <td>${(() => {
+                        // Format signed date/time
+                        const signedAt = delivery.signed_at || delivery.signedAt || delivery.completed_at || delivery.completedAt;
+                        if (!signedAt) return 'Not signed';
+                        
+                        try {
+                            const date = new Date(signedAt);
+                            if (isNaN(date.getTime())) return 'Invalid date';
+                            
+                            // Format as: MM/DD/YYYY HH:mm:ss
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const year = date.getFullYear();
+                            const hours = String(date.getHours()).padStart(2, '0');
+                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                            const seconds = String(date.getSeconds()).padStart(2, '0');
+                            
+                            return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
+                        } catch (e) {
+                            return 'Invalid date';
+                        }
+                    })()}</td>
                     <td>${itemNumber}</td>
                     <td>${mobileNumber}</td>
                     <td>${itemDescription}</td>

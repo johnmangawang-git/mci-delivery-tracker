@@ -771,12 +771,21 @@ class DataService {
         this._ensureInitialized();
         
         try {
+            // Build update object
+            const updateData = { 
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            };
+            
+            // If status is Archived, also set signed_at timestamp
+            if (newStatus === 'Archived') {
+                updateData.signed_at = new Date().toISOString();
+                updateData.completed_at = new Date().toISOString();
+            }
+            
             const { data, error } = await this.client
                 .from('deliveries')
-                .update({ 
-                    status: newStatus,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateData)
                 .eq('dr_number', drNumber)
                 .select();
 
