@@ -144,6 +144,8 @@ console.log('app.js loaded');
                 return { class: 'bg-success', icon: 'bi-check-circle-fill', color: '#198754' };
             case 'Signed':
                 return { class: 'bg-success', icon: 'bi-check-circle-fill', color: '#198754' };
+            case 'Archived':
+                return { class: 'bg-secondary', icon: 'bi-archive-fill', color: '#6c757d' };
             default:
                 return { class: 'bg-secondary', icon: 'bi-question-circle', color: '#6c757d' };
         }
@@ -153,8 +155,8 @@ console.log('app.js loaded');
     function generateStatusOptions(currentStatus, deliveryId) {
         const availableStatuses = ['In Transit', 'On Schedule', 'Sold Undelivered', 'Active'];
         
-        // Don't allow changing from Completed or Signed status
-        if (currentStatus === 'Completed' || currentStatus === 'Signed') {
+        // Don't allow changing from Completed, Signed, or Archived status
+        if (currentStatus === 'Completed' || currentStatus === 'Signed' || currentStatus === 'Archived') {
             return `<div class="status-option disabled" style="padding: 10px; text-align: center; color: #6c757d;">Status cannot be changed</div>`;
         }
         
@@ -1245,8 +1247,12 @@ console.log('app.js loaded');
             const itemDescription = getField(delivery, 'itemDescription') || getField(delivery, 'item_description') || '';
             const serialNumber = getField(delivery, 'serialNumber') || getField(delivery, 'serial_number') || '';
             
+            // Add archived styling class if status is Archived
+            const archivedClass = delivery.status === 'Archived' ? 'archived-row' : '';
+            const archivedStyle = delivery.status === 'Archived' ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : '';
+            
             return `
-                <tr data-delivery-id="${delivery.id}">
+                <tr data-delivery-id="${delivery.id}" class="${archivedClass}" ${archivedStyle}>
                     <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
                     <td><strong>${drNumber}</strong></td>
                     <td>${customerName}</td>
@@ -1328,12 +1334,10 @@ console.log('app.js loaded');
                 await window.dataService.initialize();
             }
             
-            const result = await window.dataService.getDeliveriesWithPagination({
+            // Load from delivery_history table instead of deliveries table
+            const result = await window.dataService.getDeliveryHistoryWithPagination({
                 page: targetPage,
-                pageSize: paginationState.history.pageSize,
-                filters: {
-                    status: ['Completed', 'Signed']
-                }
+                pageSize: paginationState.history.pageSize
             });
             
             // Normalize field names
@@ -1660,8 +1664,12 @@ async function populateDeliveryHistoryTable() {
             const itemDescription = getField(delivery, 'itemDescription') || getField(delivery, 'item_description') || '';
             const serialNumber = getField(delivery, 'serialNumber') || getField(delivery, 'serial_number') || '';
             
+            // Add archived styling class if status is Archived
+            const archivedClass = delivery.status === 'Archived' ? 'archived-row' : '';
+            const archivedStyle = delivery.status === 'Archived' ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : '';
+            
             return `
-                <tr>
+                <tr class="${archivedClass}" ${archivedStyle}>
                     <td>
                         <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>

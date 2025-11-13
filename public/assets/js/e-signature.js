@@ -534,10 +534,10 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             const epodResult = await window.dataService.saveEPodRecord(ePodRecord);
             console.log('✅ EPOD record saved:', epodResult);
 
-            // Step 2: Update delivery status to Completed
+            // Step 2: Update delivery status to Archived
             // This will automatically trigger moveToHistory in dataService
-            console.log('📝 Step 2: Updating delivery status to Completed (will auto-move to history)');
-            const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
+            console.log('📝 Step 2: Updating delivery status to Archived (will auto-move to history)');
+            const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
             console.log('✅ Status updated and moved to history:', updateResult);
             
             // Step 3: Reload data from database to get fresh state

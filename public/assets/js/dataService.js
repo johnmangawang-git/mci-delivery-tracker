@@ -698,6 +698,70 @@ class DataService {
     }
 
     /**
+     * Get delivery history with pagination support
+     * @param {object} options - Pagination and filter options
+     * @returns {Promise<object>} Paginated result with data and metadata
+     */
+    async getDeliveryHistoryWithPagination(options = {}) {
+        this._ensureInitialized();
+        
+        const {
+            page = 1,
+            pageSize = 50,
+            filters = {}
+        } = options;
+        
+        try {
+            // Calculate range for pagination
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            
+            // Build query
+            let query = this.client
+                .from('delivery_history')
+                .select('*', { count: 'exact' });
+            
+            // Apply filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (Array.isArray(value)) {
+                    query = query.in(key, value);
+                } else {
+                    query = query.eq(key, value);
+                }
+            });
+            
+            // Apply pagination and ordering
+            query = query
+                .order('completed_at', { ascending: false })
+                .range(from, to);
+            
+            const { data, error, count } = await query;
+            
+            if (error) throw error;
+            
+            const totalPages = Math.ceil(count / pageSize);
+            
+            console.log(`✅ Retrieved page ${page}/${totalPages} (${data?.length || 0} of ${count} history records)`);
+            
+            return {
+                data: data || [],
+                pagination: {
+                    page,
+                    pageSize,
+                    totalCount: count,
+                    totalPages,
+                    hasNextPage: page < totalPages,
+                    hasPreviousPage: page > 1
+                }
+            };
+            
+        } catch (error) {
+            console.error('❌ Error getting delivery history with pagination:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Update delivery status
      * @param {string} drNumber - DR number
      * @param {string} newStatus - New status
@@ -723,8 +787,8 @@ class DataService {
             
             console.log(`✅ Successfully updated status to ${newStatus} for DR ${drNumber}`);
             
-            // If status is Completed, automatically move to history
-            if (newStatus === 'Completed' && data && data[0]) {
+            // If status is Archived, automatically move to history
+            if (newStatus === 'Archived' && data && data[0]) {
                 console.log(`🔄 Auto-moving DR ${drNumber} to history...`);
                 try {
                     await this.moveDeliveryToHistory(drNumber);
@@ -779,7 +843,7 @@ class DataService {
                 completed_at: new Date().toISOString(),
                 moved_to_history_at: new Date().toISOString(),
                 moved_by_user_id: delivery.user_id,
-                status: 'Completed' // Ensure status is Completed
+                status: 'Archived' // Ensure status is Archived
             };
             
             // Remove the id so a new one is generated for history
