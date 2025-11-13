@@ -530,100 +530,34 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
         console.log('Created EPOD record:', ePodRecord);
 
         if (typeof window.dataService !== 'undefined' && typeof window.dataService.saveEPodRecord === 'function') {
-            console.log('Saving EPOD record via dataService');
-            // Step 1: Await saving of the EPOD record.
+            console.log('📝 Step 1: Saving EPOD record via dataService');
             const epodResult = await window.dataService.saveEPodRecord(ePodRecord);
-            console.log('EPOD record saved via dataService:', epodResult);
+            console.log('✅ EPOD record saved:', epodResult);
 
-            // Step 2: Await the update of the delivery status in the main 'deliveries' table.
-            console.log('📝 Step 2: Updating delivery status to Completed in Supabase for DR:', signatureInfo.drNumber);
+            // Step 2: Update delivery status to Completed
+            // This will automatically trigger moveToHistory in dataService
+            console.log('📝 Step 2: Updating delivery status to Completed (will auto-move to history)');
             const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Completed');
-            console.log('✅ Status update result:', updateResult);
+            console.log('✅ Status updated and moved to history:', updateResult);
             
-            // Verify the status was actually updated
-            if (updateResult && updateResult.status === 'Completed') {
-                console.log('✅ Verified: Status is now Completed in database');
-            } else {
-                console.error('❌ WARNING: Status may not have been updated correctly!', updateResult);
+            // Step 3: Reload data from database to get fresh state
+            console.log('🔄 Step 3: Reloading deliveries from database...');
+            await new Promise(resolve => setTimeout(resolve, 500)); // Brief delay for DB propagation
+            
+            // Reload active deliveries (should NOT include the signed DR anymore)
+            if (typeof window.loadActiveDeliveriesWithPagination === 'function') {
+                console.log('  📋 Reloading active deliveries...');
+                await window.loadActiveDeliveriesWithPagination();
             }
             
-            // Step 3: Invalidate cache to ensure fresh data is loaded
-            if (window.dataService && typeof window.dataService.invalidateCache === 'function') {
-                console.log('🗑️ Step 3: Invalidating deliveries cache');
-                window.dataService.invalidateCache('deliveries');
+            // Reload delivery history (should include the signed DR now)
+            if (typeof window.loadDeliveryHistory === 'function') {
+                console.log('  📚 Reloading delivery history...');
+                await window.loadDeliveryHistory();
             }
             
-            // Step 4: If both are successful, show toast and refresh UI from the source of truth (database).
-            console.log('✅ Step 4: E-POD saved and status updated successfully!');
-            showToast('E-POD saved and status updated successfully!', 'success');
-            
-            // Small delay to ensure database propagation
-            console.log('⏳ Waiting 500ms for database propagation...');
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            console.log('🔄 Step 5: Manually removing DR from active deliveries array...');
-            // Manually remove from activeDeliveries array to ensure immediate UI update
-            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-                const indexToRemove = window.activeDeliveries.findIndex(d => 
-                    (d.dr_number || d.drNumber) === signatureInfo.drNumber
-                );
-                if (indexToRemove !== -1) {
-                    window.activeDeliveries.splice(indexToRemove, 1);
-                    console.log('  ✅ Removed DR from activeDeliveries array');
-                }
-            }
-            
-            console.log('🔄 Step 6: Updating UI immediately...');
-            
-            // CRITICAL: Add to global blacklist to prevent it from EVER showing in active again
-            console.log('  🚫 Adding DR to permanent blacklist...');
-            if (!window.signedDRBlacklist) {
-                window.signedDRBlacklist = new Set();
-            }
-            window.signedDRBlacklist.add(signatureInfo.drNumber);
-            console.log(`    ✅ DR ${signatureInfo.drNumber} blacklisted permanently`);
-            console.log(`    📊 Blacklist now contains ${window.signedDRBlacklist.size} DR(s)`);
-            
-            // STEP 1: Remove from activeDeliveries array
-            console.log('  🗑️ Removing signed DR from activeDeliveries array...');
-            if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
-                const beforeCount = window.activeDeliveries.length;
-                window.activeDeliveries = window.activeDeliveries.filter(d => {
-                    const drNum = d.dr_number || d.drNumber;
-                    return drNum !== signatureInfo.drNumber;
-                });
-                console.log(`    ✅ Removed ${beforeCount - window.activeDeliveries.length} item(s)`);
-            }
-            
-            // STEP 2: Update the active deliveries table immediately
-            if (typeof window.populateActiveDeliveriesTable === 'function') {
-                console.log('  🔄 Updating active deliveries table...');
-                window.populateActiveDeliveriesTable();
-            }
-            
-            // STEP 3: Add to history array manually (don't reload from database)
-            console.log('  📚 Adding signed DR to delivery history array...');
-            if (window.deliveryHistory && Array.isArray(window.deliveryHistory)) {
-                // Find the delivery that was just signed
-                const signedDelivery = {
-                    ...updateResult, // Use the updated delivery from database
-                    status: 'Completed',
-                    signed_at: timestamp
-                };
-                // Add to beginning of history array
-                window.deliveryHistory.unshift(signedDelivery);
-                console.log('  ✅ Added to history array');
-            }
-            
-            // STEP 4: Update history table
-            if (typeof window.populateDeliveryHistoryTable === 'function') {
-                console.log('  🔄 Updating delivery history table...');
-                window.populateDeliveryHistoryTable();
-            }
-            
-            console.log('✅ Workflow complete! DR moved to history.');
-            console.log('📊 Active deliveries count:', window.activeDeliveries?.length);
-            console.log('📊 History count:', window.deliveryHistory?.length);
+            console.log('✅ Workflow complete! DR permanently moved to history in database.');
+            showToast('E-POD saved and delivery moved to history successfully!', 'success');
 
         } else {
             // Fallback to localStorage (less ideal, but maintained for offline)

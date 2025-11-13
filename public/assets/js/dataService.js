@@ -669,6 +669,35 @@ class DataService {
     }
 
     /**
+     * Get delivery history (completed deliveries)
+     * @param {object} filters - Optional filters
+     * @returns {Promise<Array>} Array of historical deliveries
+     */
+    async getDeliveryHistory(filters = {}) {
+        this._ensureInitialized();
+        
+        try {
+            let query = this.client.from('delivery_history').select('*');
+            
+            // Apply filters
+            Object.entries(filters).forEach(([key, value]) => {
+                query = query.eq(key, value);
+            });
+            
+            const { data, error } = await query.order('completed_at', { ascending: false });
+            
+            if (error) throw error;
+            
+            console.log(`✅ Retrieved ${data?.length || 0} delivery history records`);
+            return data || [];
+            
+        } catch (error) {
+            console.error('❌ Error getting delivery history:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Update delivery status
      * @param {string} drNumber - DR number
      * @param {string} newStatus - New status
@@ -693,10 +722,105 @@ class DataService {
             }
             
             console.log(`✅ Successfully updated status to ${newStatus} for DR ${drNumber}`);
+            
+            // If status is Completed, automatically move to history
+            if (newStatus === 'Completed' && data && data[0]) {
+                console.log(`🔄 Auto-moving DR ${drNumber} to history...`);
+                try {
+                    await this.moveDeliveryToHistory(drNumber);
+                } catch (historyError) {
+                    console.error(`⚠️ Failed to move to history, but status was updated:`, historyError);
+                    // Don't throw - status update succeeded
+                }
+            }
+            
             return data[0];
             
         } catch (error) {
             console.error('❌ Error updating delivery status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Move a delivery to history table (PERMANENT)
+     * This physically moves the record from 'deliveries' to 'delivery_history' table
+     * Once moved, the delivery will NEVER appear in active deliveries again
+     * @param {string} drNumber - DR number to move
+     * @returns {Promise<object>} The history record created
+     */
+    async moveDeliveryToHistory(drNumber) {
+        this._ensureInitialized();
+        
+        try {
+            console.log(`📦 Moving DR ${drNumber} to permanent history...`);
+            
+            // Step 1: Get the delivery from active deliveries
+            const { data: delivery, error: fetchError } = await this.client
+                .from('deliveries')
+                .select('*')
+                .eq('dr_number', drNumber)
+                .single();
+            
+            if (fetchError) {
+                console.error(`❌ Error fetching delivery ${drNumber}:`, fetchError);
+                throw fetchError;
+            }
+            
+            if (!delivery) {
+                console.warn(`⚠️ Delivery ${drNumber} not found in active deliveries`);
+                return null;
+            }
+            
+            // Step 2: Insert into delivery_history table
+            const historyRecord = {
+                ...delivery,
+                original_delivery_id: delivery.id,
+                completed_at: new Date().toISOString(),
+                moved_to_history_at: new Date().toISOString(),
+                moved_by_user_id: delivery.user_id,
+                status: 'Completed' // Ensure status is Completed
+            };
+            
+            // Remove the id so a new one is generated for history
+            delete historyRecord.id;
+            
+            const { data: historyData, error: insertError } = await this.client
+                .from('delivery_history')
+                .insert(historyRecord)
+                .select()
+                .single();
+            
+            if (insertError) {
+                console.error(`❌ Error inserting into delivery_history:`, insertError);
+                throw insertError;
+            }
+            
+            console.log(`✅ Inserted DR ${drNumber} into delivery_history`);
+            
+            // Step 3: Delete from active deliveries table
+            const { error: deleteError } = await this.client
+                .from('deliveries')
+                .delete()
+                .eq('dr_number', drNumber);
+            
+            if (deleteError) {
+                console.error(`❌ Error deleting from deliveries:`, deleteError);
+                // This is critical - we don't want duplicates
+                throw deleteError;
+            }
+            
+            console.log(`✅ Deleted DR ${drNumber} from active deliveries`);
+            console.log(`🎉 DR ${drNumber} permanently moved to history!`);
+            
+            // Invalidate caches
+            this.invalidateCache('deliveries');
+            this.invalidateCache('delivery_history');
+            
+            return historyData;
+            
+        } catch (error) {
+            console.error(`❌ Error moving delivery to history:`, error);
             throw error;
         }
     }
