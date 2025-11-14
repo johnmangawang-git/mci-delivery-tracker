@@ -2458,8 +2458,10 @@ async function exportDeliveryHistoryToPdf() {
             const row = checkbox.closest('tr');
             const drNumber = row.querySelector('td:nth-child(3) strong').textContent;
             
-            // Find the delivery in window.deliveryHistory
-            const delivery = window.deliveryHistory.find(d => d.drNumber === drNumber);
+            // Find the delivery in window.deliveryHistory - support both field name variations
+            const delivery = window.deliveryHistory.find(d => 
+                (d.drNumber || d.dr_number) === drNumber
+            );
             if (delivery) {
                 // ENHANCED: Find signature with multiple field name support
                 // Original logic (commented but preserved)
@@ -2621,15 +2623,15 @@ async function exportDeliveryHistoryToPdf() {
                 </div>
                 <div class="field">
                     <span class="field-label">DR Number:</span>
-                    <span>${record.drNumber || 'N/A'}</span>
+                    <span>${record.drNumber || record.dr_number || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Customer Name:</span>
-                    <span>${record.customerName || 'N/A'}</span>
+                    <span>${record.customerName || record.customer_name || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Vendor Number:</span>
-                    <span>${record.vendorNumber || 'N/A'}</span>
+                    <span>${record.vendorNumber || record.vendor_number || 'N/A'}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Origin:</span>
