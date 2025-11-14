@@ -2020,7 +2020,7 @@ async function logout() {
 window.exportEPodToPdf = exportEPodToPdf;
 
 // Export Delivery History to PDF with signatures
-function exportDeliveryHistoryToPdf() {
+async function exportDeliveryHistoryToPdf() {
     try {
         // Show loading state
         const exportBtn = document.getElementById('exportDeliveryHistoryPdfBtn');
@@ -2028,15 +2028,21 @@ function exportDeliveryHistoryToPdf() {
         exportBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Exporting...';
         exportBtn.disabled = true;
 
-        // Get EPOD records from localStorage to find signatures
+        // Get EPOD records from Supabase to find signatures
         let ePodRecords = [];
         try {
-            const ePodData = localStorage.getItem('ePodRecords');
-            if (ePodData) {
-                ePodRecords = JSON.parse(ePodData);
+            if (window.dataService && typeof window.dataService.getEPodRecords === 'function') {
+                // Check if DataService is initialized
+                if (!window.dataService.isInitialized) {
+                    console.warn('⚠️ DataService not initialized yet, initializing now...');
+                    await window.dataService.initialize();
+                }
+                
+                ePodRecords = await window.dataService.getEPodRecords() || [];
+                console.log('📄 Loaded E-POD records from Supabase:', ePodRecords.length);
             }
         } catch (error) {
-            console.error('Error loading EPOD records:', error);
+            console.error('Error loading EPOD records from Supabase:', error);
         }
 
         // Get selected deliveries
@@ -2059,9 +2065,18 @@ function exportDeliveryHistoryToPdf() {
             if (delivery) {
                 // Find signature if available - FIXED: Use correct field names
                 const ePodRecord = ePodRecords.find(record => (record.dr_number || record.drNumber) === drNumber);
+                
+                let signatureData = null;
+                if (ePodRecord) {
+                    signatureData = ePodRecord.signature_data || ePodRecord.signature || ePodRecord.signatureData || null;
+                    console.log(`📄 Found E-POD record for DR ${drNumber}, signature available:`, !!signatureData);
+                } else {
+                    console.warn(`⚠️ No E-POD record found for DR ${drNumber}`);
+                }
+                
                 selectedDeliveries.push({
                     ...delivery,
-                    signature: ePodRecord ? (ePodRecord.signature_data || ePodRecord.signature) : null
+                    signature: signatureData
                 });
             }
         });

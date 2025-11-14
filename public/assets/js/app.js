@@ -2532,7 +2532,14 @@ async function exportDeliveryHistoryToPdf() {
                 if (ePodRecord) {
                     // Check for signature in multiple field names
                     signatureData = ePodRecord.signature_data || ePodRecord.signature || ePodRecord.signatureData || null;
-                    console.log(`📄 Found E-POD record for DR ${drNumber}, signature available:`, !!signatureData);
+                    console.log(`📄 Found E-POD record for DR ${drNumber}:`, {
+                        hasSignature: !!signatureData,
+                        fields: Object.keys(ePodRecord),
+                        signatureLength: signatureData ? signatureData.length : 0
+                    });
+                } else {
+                    console.warn(`⚠️ No E-POD record found for DR ${drNumber}`);
+                    console.log('Available E-POD records:', ePodRecords.map(r => r.dr_number || r.drNumber));
                 }
                 
                 selectedDeliveries.push({
