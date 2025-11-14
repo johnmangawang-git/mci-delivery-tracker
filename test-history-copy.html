@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Delivery History Copy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Delivery History Copy Diagnostic</h1>
+    
+    <div class="test-section">
+        <h2>Step 1: Check Supabase Connection</h2>
+        <button onclick="testSupabaseConnection()">Test Connection</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 2: Check delivery_history Table</h2>
+        <button onclick="checkHistoryTable()">Check Table</button>
+        <div id="tableResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 3: Check deliveries Table</h2>
+        <button onclick="checkDeliveriesTable()">Check Deliveries</button>
+        <div id="deliveriesResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 4: Test copyDeliveryToHistory Function</h2>
+        <input type="text" id="testDrNumber" placeholder="Enter DR Number" style="padding: 8px; width: 200px;">
+        <button onclick="testCopyFunction()">Test Copy Function</button>
+        <div id="copyResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Step 5: View All History Records</h2>
+        <button onclick="viewAllHistory()">View History</button>
+        <div id="historyResult"></div>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://ntyvrezyhrmflswxefbk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50eXZyZXp5aHJtZmxzd3hlZmJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNjUzNTgsImV4cCI6MjA3MDY0MTM1OH0.JX0YP42_40lKQ1ghUmIA_Lu0YVZB_Ytl0EdQinU0Nm4';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function testSupabaseConnection() {
+            const result = document.getElementById('connectionResult');
+            result.innerHTML = '<p>Testing connection...</p>';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deliveries')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) throw error;
+                
+                result.innerHTML = '<p class="success">✅ Supabase connection successful!</p>';
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Connection failed: ${error.message}</p>`;
+            }
+        }
+
+        async function checkHistoryTable() {
+            const result = document.getElementById('tableResult');
+            result.innerHTML = '<p>Checking delivery_history table...</p>';
+            
+            try {
+                // Try to query the table
+                const { data, error, count } = await supabaseClient
+                    .from('delivery_history')
+                    .select('*', { count: 'exact', head: true });
+                
+                if (error) {
+                    if (error.code === '42P01') {
+                        result.innerHTML = `
+                            <p class="error">❌ Table 'delivery_history' does NOT exist!</p>
+                            <p class="warning">⚠️ You need to create it. Run: supabase/create-delivery-history-table.sql</p>
+                        `;
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    result.innerHTML = `
+                        <p class="success">✅ Table 'delivery_history' exists!</p>
+                        <p>Total records: ${count || 0}</p>
+                    `;
+                    
+                    // Check columns
+                    const { data: sample } = await supabaseClient
+                        .from('delivery_history')
+                        .select('*')
+                        .limit(1);
+                    
+                    if (sample && sample.length > 0) {
+                        const columns = Object.keys(sample[0]);
+                        result.innerHTML += `
+                            <p><strong>Columns:</strong></p>
+                            <pre>${columns.join(', ')}</pre>
+                            <p class="${columns.includes('signed_at') ? 'success' : 'error'}">
+                                ${columns.includes('signed_at') ? '✅' : '❌'} signed_at column
+                            </p>
+                        `;
+                    }
+                }
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function checkDeliveriesTable() {
+            const result = document.getElementById('deliveriesResult');
+            result.innerHTML = '<p>Checking deliveries table...</p>';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('deliveries')
+                    .select('*')
+                    .eq('status', 'Archived')
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                result.innerHTML = `
+                    <p class="success">✅ Found ${data.length} Archived deliveries</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testCopyFunction() {
+            const result = document.getElementById('copyResult');
+            const drNumber = document.getElementById('testDrNumber').value;
+            
+            if (!drNumber) {
+                result.innerHTML = '<p class="error">❌ Please enter a DR number</p>';
+                return;
+            }
+            
+            result.innerHTML = '<p>Testing copy function...</p>';
+            
+            try {
+                // Step 1: Get delivery
+                console.log('Step 1: Fetching delivery...');
+                const { data: delivery, error: fetchError } = await supabaseClient
+                    .from('deliveries')
+                    .select('*')
+                    .eq('dr_number', drNumber)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                if (!delivery) throw new Error('Delivery not found');
+                
+                result.innerHTML += '<p class="success">✅ Found delivery</p>';
+                
+                // Step 2: Build history record
+                console.log('Step 2: Building history record...');
+                const historyRecord = {
+                    ...delivery,
+                    status: 'Archived',
+                    signed_at: new Date().toISOString(),
+                    original_delivery_id: delivery.id,
+                    moved_to_history_at: new Date().toISOString(),
+                    moved_by_user_id: delivery.user_id
+                };
+                delete historyRecord.id;
+                
+                result.innerHTML += '<p class="success">✅ Built history record</p>';
+                
+                // Step 3: Insert into history
+                console.log('Step 3: Inserting into delivery_history...');
+                const { data: historyData, error: insertError } = await supabaseClient
+                    .from('delivery_history')
+                    .insert(historyRecord)
+                    .select()
+                    .single();
+                
+                if (insertError) throw insertError;
+                
+                result.innerHTML += `
+                    <p class="success">✅ Successfully copied to delivery_history!</p>
+                    <pre>${JSON.stringify(historyData, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+                console.error('Full error:', error);
+            }
+        }
+
+        async function viewAllHistory() {
+            const result = document.getElementById('historyResult');
+            result.innerHTML = '<p>Loading history...</p>';
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('delivery_history')
+                    .select('*')
+                    .order('moved_to_history_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) throw error;
+                
+                result.innerHTML = `
+                    <p class="success">✅ Found ${data.length} history records</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
