@@ -962,7 +962,7 @@ class DataService {
                 return null;
             }
             
-            // Step 2: Build history record
+            // Step 2: Build history record - only include fields that exist in delivery_history table
             const historyRecord = {
                 ...delivery,
                 ...additionalData, // Include any additional data (like signed_at)
@@ -974,6 +974,14 @@ class DataService {
             
             // Remove the id so a new one is generated for history
             delete historyRecord.id;
+            
+            // Remove fields that don't exist in delivery_history table
+            // These fields exist in deliveries but not in delivery_history
+            delete historyRecord.additional_cost_items; // JSON field not in history table
+            delete historyRecord.proof_of_delivery; // Not in history table
+            delete historyRecord.delivery_notes; // Not in history table
+            
+            console.log('📋 History record prepared (filtered fields):', Object.keys(historyRecord));
             
             // Step 3: Insert into delivery_history table
             const { data: historyData, error: insertError } = await this.client
