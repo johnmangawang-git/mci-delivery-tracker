@@ -2580,6 +2580,38 @@ async function exportDeliveryHistoryToPdf() {
                 `<img src="${record.signature}" class="signature-image" alt="Signature">` : 
                 '<div>No signature available</div>';
                 
+            // Get truck info
+            const truckType = record.truckType || record.truck_type || '';
+            const truckPlate = record.truckPlateNumber || record.truck_plate_number || '';
+            const truckInfo = record.truck || 
+                             (truckType && truckPlate ? `${truckPlate} (${truckType})` : truckPlate || truckType || 'N/A');
+            
+            // Format signed date
+            const signedAt = record.signed_at || record.signedAt;
+            let signedDate = 'Not signed';
+            if (signedAt) {
+                try {
+                    const date = new Date(signedAt);
+                    if (!isNaN(date.getTime())) {
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const year = date.getFullYear();
+                        const hours = String(date.getHours()).padStart(2, '0');
+                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                        const seconds = String(date.getSeconds()).padStart(2, '0');
+                        signedDate = `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
+                    }
+                } catch (e) {
+                    signedDate = 'Invalid date';
+                }
+            }
+            
+            // Get item details
+            const itemNumber = record.itemNumber || record.item_number || 'N/A';
+            const mobileNumber = record.mobileNumber || record.mobile_number || 'N/A';
+            const itemDescription = record.itemDescription || record.item_description || 'N/A';
+            const serialNumber = record.serialNumber || record.serial_number || 'N/A';
+            
             htmlContent += `
             <div class="record">
                 <div class="record-title">Record #${i + 1}</div>
@@ -2608,16 +2640,32 @@ async function exportDeliveryHistoryToPdf() {
                     <span>${record.destination || 'N/A'}</span>
                 </div>
                 <div class="field">
-                    <span class="field-label">Distance:</span>
-                    <span>${record.distance || 'N/A'}</span>
-                </div>
-                <div class="field">
-                    <span class="field-label">Additional Costs:</span>
-                    <span>${record.additionalCosts ? `₱${record.additionalCosts.toFixed(2)}` : '₱0.00'}</span>
+                    <span class="field-label">Truck:</span>
+                    <span>${truckInfo}</span>
                 </div>
                 <div class="field">
                     <span class="field-label">Status:</span>
                     <span>${record.status || 'N/A'}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Signed Date:</span>
+                    <span>${signedDate}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Item #:</span>
+                    <span>${itemNumber}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Mobile #:</span>
+                    <span>${mobileNumber}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Item Description:</span>
+                    <span>${itemDescription}</span>
+                </div>
+                <div class="field">
+                    <span class="field-label">Serial Number:</span>
+                    <span>${serialNumber}</span>
                 </div>
                 <div class="signature-container">
                     <div><strong>Signature:</strong></div>
