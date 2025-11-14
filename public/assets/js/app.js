@@ -1683,18 +1683,18 @@ async function populateDeliveryHistoryTable() {
                         <input type="checkbox" class="form-check-input delivery-history-checkbox" style="display: none;" data-dr-number="${deliveryDrNumber}">
                     </td>
                     <td>${(() => {
-                        // FORCE MMDDYYYYHHmmss format for delivery history
+                        // Show booking date (when DR was created) - matches Active Deliveries "Booked Date"
                         let date = null;
                         const dateSources = [
-                            delivery.completedDateTime,
-                            delivery.completed_date_time,
-                            delivery.signedAt,
-                            delivery.signed_at,
-                            delivery.completedDate,
-                            delivery.completed_date,
-                            delivery.lastStatusUpdate,
-                            delivery.timestamp,
-                            delivery.created_at
+                            delivery.created_at,             // 1st priority - booking date
+                            delivery.timestamp,              // 2nd priority - booking timestamp
+                            delivery.created_date,           // 3rd priority - alternate booking date
+                            delivery.deliveryDate,           // 4th priority - delivery date
+                            delivery.delivery_date,          // 5th priority - alternate delivery date
+                            delivery.completedDateTime,      // 6th priority - completion date
+                            delivery.completed_date_time,    // 7th priority
+                            delivery.completedDate,          // 8th priority
+                            delivery.completed_date          // 9th priority (fallback)
                         ];
                         
                         // Find first valid date
