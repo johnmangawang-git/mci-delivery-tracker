@@ -601,7 +601,11 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 console.error('  ❌ loadActiveDeliveriesWithPagination function not found!');
             }
             
-            // Also refresh delivery history view from database
+            // Invalidate cache and refresh delivery history view from database
+            if (typeof window.invalidateHistoryCache === 'function') {
+                window.invalidateHistoryCache();
+            }
+            
             if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
                 console.log('  📚 Reloading delivery history from database...');
                 await window.loadDeliveryHistoryWithPagination();

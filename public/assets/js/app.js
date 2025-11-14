@@ -81,18 +81,18 @@ console.log('app.js loaded');
         }
     }
 
-    // Pagination state
+    // Pagination state - Reduced default page size for faster loading
     let paginationState = {
         active: {
             currentPage: 1,
-            pageSize: 50,
+            pageSize: 25, // Reduced from 50 for faster loading
             totalPages: 1,
             totalCount: 0,
             isLoading: false
         },
         history: {
             currentPage: 1,
-            pageSize: 50,
+            pageSize: 25, // Reduced from 50 for faster loading
             totalPages: 1,
             totalCount: 0,
             isLoading: false
@@ -1311,6 +1311,20 @@ console.log('app.js loaded');
         }
     }
 
+    // Cache for delivery history to avoid repeated database queries
+    let historyCache = {
+        data: null,
+        timestamp: null,
+        ttl: 30000 // 30 seconds cache
+    };
+    
+    // Function to invalidate history cache (call when new data is added)
+    window.invalidateHistoryCache = function() {
+        historyCache.data = null;
+        historyCache.timestamp = null;
+        console.log('🗑️ History cache invalidated');
+    };
+
     // Load delivery history with pagination
     async function loadDeliveryHistoryWithPagination(page = null) {
         console.log('=== LOAD DELIVERY HISTORY WITH PAGINATION ===');
@@ -1324,9 +1338,21 @@ console.log('app.js loaded');
             return;
         }
         
+        // Check cache first (only for page 1)
+        if (targetPage === 1 && historyCache.data && historyCache.timestamp) {
+            const cacheAge = Date.now() - historyCache.timestamp;
+            if (cacheAge < historyCache.ttl) {
+                console.log('✅ Using cached delivery history (age:', Math.round(cacheAge/1000), 'seconds)');
+                window.deliveryHistory = historyCache.data;
+                deliveryHistory = window.deliveryHistory;
+                await populateDeliveryHistoryTable();
+                return;
+            }
+        }
+        
         paginationState.history.isLoading = true;
         
-        // Show loading state
+        // Show loading state with progress
         const deliveryHistoryTableBody = document.getElementById('deliveryHistoryTableBody');
         if (deliveryHistoryTableBody) {
             deliveryHistoryTableBody.innerHTML = `
@@ -1335,7 +1361,8 @@ console.log('app.js loaded');
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-3 text-muted">Loading delivery history (Page ${targetPage})...</p>
+                        <p class="mt-3 text-muted">Loading delivery history...</p>
+                        <small class="text-muted">Page ${targetPage}</small>
                     </td>
                 </tr>
             `;
@@ -1368,6 +1395,13 @@ console.log('app.js loaded');
             // But we keep the global array for compatibility with other code
             window.deliveryHistory = normalizedDeliveries;
             deliveryHistory = window.deliveryHistory;
+            
+            // Cache the results (only for page 1)
+            if (targetPage === 1) {
+                historyCache.data = normalizedDeliveries;
+                historyCache.timestamp = Date.now();
+                console.log('💾 Cached delivery history for faster subsequent loads');
+            }
             
             // Update pagination state
             paginationState.history.currentPage = result.pagination.page;
