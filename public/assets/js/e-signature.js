@@ -570,25 +570,17 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
             const updateResult = await window.dataService.updateDeliveryStatus(signatureInfo.drNumber, 'Archived');
             console.log('✅ Status updated to Archived:', updateResult);
             
-            // Step 3: COPY to delivery history (not move - DR stays in active too)
-            console.log('📝 Step 3: Copying DR to delivery history...');
-            if (updateResult) {
-                // Add to deliveryHistory array
-                if (!window.deliveryHistory) {
-                    window.deliveryHistory = [];
-                }
-                
-                // Create history record with archived status
-                const historyRecord = {
-                    ...updateResult,
-                    status: 'Archived',
-                    // Note: completed_at removed - not in schema
-                    signed_at: new Date().toISOString()
-                };
-                
-                // Add to beginning of history array (most recent first)
-                window.deliveryHistory.unshift(historyRecord);
-                console.log('✅ Added to delivery history. History count:', window.deliveryHistory.length);
+            // Step 3: COPY to delivery_history table (DR stays in active deliveries too)
+            console.log('📝 Step 3: Copying DR to delivery_history table...');
+            try {
+                const historyResult = await window.dataService.copyDeliveryToHistory(
+                    signatureInfo.drNumber,
+                    { signed_at: timestamp } // Include signature timestamp
+                );
+                console.log('✅ Copied to delivery_history table:', historyResult);
+            } catch (historyError) {
+                console.error('❌ Failed to copy to delivery_history:', historyError);
+                // Don't throw - signature is saved, just history copy failed
             }
             
             // Step 4: Reload active deliveries to show grayed out row
@@ -609,11 +601,15 @@ async function saveSingleSignature(signatureInfo, saveBtn = null, originalText =
                 console.error('  ❌ loadActiveDeliveriesWithPagination function not found!');
             }
             
-            // Also refresh delivery history view
-            if (typeof window.populateDeliveryHistoryTable === 'function') {
-                console.log('  📚 Refreshing delivery history table...');
-                window.populateDeliveryHistoryTable();
-                console.log('  ✅ Delivery history refreshed');
+            // Also refresh delivery history view from database
+            if (typeof window.loadDeliveryHistoryWithPagination === 'function') {
+                console.log('  📚 Reloading delivery history from database...');
+                await window.loadDeliveryHistoryWithPagination();
+                console.log('  ✅ Delivery history reloaded');
+            } else if (typeof window.loadDeliveryHistory === 'function') {
+                console.log('  📚 Reloading delivery history (legacy)...');
+                await window.loadDeliveryHistory();
+                console.log('  ✅ Delivery history reloaded');
             }
             
             // Check if the DR is now in activeDeliveries with Archived status

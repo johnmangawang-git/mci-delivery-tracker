@@ -933,6 +933,88 @@ class DataService {
     }
 
     /**
+     * Copy a delivery to history table WITHOUT deleting from active deliveries
+     * Used for e-signature workflow where DR stays in active (grayed out) AND appears in history
+     * @param {string} drNumber - DR number to copy
+     * @param {object} additionalData - Additional data to include (e.g., signed_at)
+     * @returns {Promise<object>} The history record created
+     */
+    async copyDeliveryToHistory(drNumber, additionalData = {}) {
+        this._ensureInitialized();
+        
+        try {
+            console.log(`📋 Copying DR ${drNumber} to delivery history...`);
+            
+            // Step 1: Get the delivery from active deliveries
+            const { data: delivery, error: fetchError } = await this.client
+                .from('deliveries')
+                .select('*')
+                .eq('dr_number', drNumber)
+                .single();
+            
+            if (fetchError) {
+                console.error(`❌ Error fetching delivery ${drNumber}:`, fetchError);
+                throw fetchError;
+            }
+            
+            if (!delivery) {
+                console.warn(`⚠️ Delivery ${drNumber} not found in active deliveries`);
+                return null;
+            }
+            
+            // Step 2: Build history record
+            const historyRecord = {
+                ...delivery,
+                ...additionalData, // Include any additional data (like signed_at)
+                status: 'Archived', // Ensure status is Archived
+                original_delivery_id: delivery.id,
+                moved_to_history_at: new Date().toISOString(),
+                moved_by_user_id: delivery.user_id
+            };
+            
+            // Remove the id so a new one is generated for history
+            delete historyRecord.id;
+            
+            // Step 3: Insert into delivery_history table
+            const { data: historyData, error: insertError } = await this.client
+                .from('delivery_history')
+                .insert(historyRecord)
+                .select()
+                .single();
+            
+            if (insertError) {
+                console.error(`❌ Error inserting into delivery_history:`, insertError);
+                console.error(`❌ Error details:`, insertError.message);
+                
+                // If error is about missing columns, provide helpful message
+                if (insertError.message && insertError.message.includes('does not exist')) {
+                    console.error(`❌ Missing columns in delivery_history table!`);
+                    console.error(`❌ Please run: supabase/add-missing-history-columns.sql`);
+                }
+                
+                throw insertError;
+            }
+            
+            console.log(`✅ Copied DR ${drNumber} to delivery_history`);
+            console.log(`📊 History record:`, {
+                id: historyData.id,
+                dr_number: historyData.dr_number,
+                status: historyData.status,
+                signed_at: historyData.signed_at
+            });
+            
+            // Invalidate history cache
+            this.invalidateCache('delivery_history');
+            
+            return historyData;
+            
+        } catch (error) {
+            console.error(`❌ Error copying delivery to history:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Delete a delivery
      * @param {string} deliveryId - Delivery ID
      * @returns {Promise<boolean>} Success status
