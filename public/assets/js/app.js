@@ -681,6 +681,19 @@ console.log('app.js loaded');
     function showESignatureModal(drNumber) {
         console.log(`Showing E-Signature modal for DR: ${drNumber}`);
         
+        // Check if DR is already archived - prevent re-signing
+        if (window.activeDeliveries && Array.isArray(window.activeDeliveries)) {
+            const delivery = window.activeDeliveries.find(d => 
+                (d.drNumber === drNumber || d.dr_number === drNumber)
+            );
+            
+            if (delivery && delivery.status === 'Archived') {
+                console.warn(`⚠️ Cannot sign archived delivery: ${drNumber}`);
+                showToast('This delivery is already archived and cannot be signed again.', 'warning');
+                return;
+            }
+        }
+        
         // Use the new robust E-Signature implementation if available
         if (typeof window.openRobustSignaturePad === 'function') {
             // Try to get real delivery data from active deliveries
@@ -1250,12 +1263,15 @@ console.log('app.js loaded');
             const serialNumber = getField(delivery, 'serialNumber') || getField(delivery, 'serial_number') || '';
             
             // Add archived styling class if status is Archived
-            const archivedClass = delivery.status === 'Archived' ? 'archived-row' : '';
-            const archivedStyle = delivery.status === 'Archived' ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : '';
+            const isArchived = delivery.status === 'Archived';
+            const archivedClass = isArchived ? 'archived-row' : '';
+            const archivedStyle = isArchived ? 'style="opacity: 0.6; background-color: #f8f9fa; pointer-events: none; user-select: none;"' : '';
+            const checkboxDisabled = isArchived ? 'disabled' : '';
+            const statusClickable = isArchived ? '' : 'status-clickable';
             
             return `
-                <tr data-delivery-id="${delivery.id}" class="${archivedClass}" ${archivedStyle}>
-                    <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}"></td>
+                <tr data-delivery-id="${delivery.id}" class="${archivedClass}" ${archivedStyle} data-status="${delivery.status}">
+                    <td><input type="checkbox" class="form-check-input delivery-checkbox" data-delivery-id="${delivery.id}" ${checkboxDisabled}></td>
                     <td><strong>${drNumber}</strong></td>
                     <td>${customerName}</td>
                     <td>${vendorNumber}</td>
@@ -1264,15 +1280,16 @@ console.log('app.js loaded');
                     <td>${truckInfo}</td>
                     <td>
                         <div class="status-dropdown-container">
-                            <span class="badge ${statusInfo.class} status-clickable" 
+                            <span class="badge ${statusInfo.class} ${statusClickable}" 
                                   data-delivery-id="${delivery.id}" 
-                                  data-current-status="${delivery.status}">
+                                  data-current-status="${delivery.status}"
+                                  ${isArchived ? 'style="cursor: not-allowed;"' : ''}>
                                 <i class="bi ${statusInfo.icon}"></i> ${delivery.status}
-                                <i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>
+                                ${isArchived ? '' : '<i class="bi bi-chevron-down ms-1" style="font-size: 0.8em;"></i>'}
                             </span>
-                            <div class="status-dropdown" id="statusDropdown-${delivery.id}" style="display: none;">
+                            ${isArchived ? '' : `<div class="status-dropdown" id="statusDropdown-${delivery.id}" style="display: none;">
                                 ${generateStatusOptions(delivery.status, delivery.id)}
-                            </div>
+                            </div>`}
                         </div>
                     </td>
                     <td>${deliveryDate}</td>
